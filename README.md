@@ -12,7 +12,6 @@ See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master
 ## Resources
 * [Getting Started](https://react.syncfusion.com/getting-started/introduction)
 * [View Online Demos](https://react.syncfusion.com/button)
-* [Product Page](https://www.syncfusion.com/react-ui-components?utm_source=npm&utm_campaign=ej2-react-ui-components)
 
 ## Framework highlights
  ### Lightweight and user friendly
@@ -35,7 +34,7 @@ See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master
 <table>
       <tr>
        <td>
-           <a href="https://www.syncfusion.com/react-ui-components/react-button"><b>Button</b></a>
+           <b>Button</b>
        </td>
         <td rowspan="4">
            <a href="https://www.npmjs.com/package/@syncfusion/react-buttons"><img src="https://ej2.syncfusion.com/github/images/npm-logo.png" alt="npm package @syncfusion/react-buttons" title="@syncfusion/react-buttons" style="height:20px;" />
@@ -49,7 +48,7 @@ See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master
    </tr>
    <tr>
        <td>
-           <a href="https://www.syncfusion.com/react-ui-components/react-chips"><b>Chip</b></a>
+           <b>Chip</b>
        </td>
        <td>
            <a href="components/buttons/src/chip">Source</a>
@@ -60,7 +59,7 @@ See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master
    </tr>
    <tr>
        <td>
-           <a href="https://www.syncfusion.com/react-ui-components/react-chips"><b>ChipList</b></a>
+           <b>ChipList</b>
        </td>
        <td>
            <a href="components/buttons/src/chipList">Source</a>
@@ -71,7 +70,7 @@ See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master
    </tr>
    <tr>
        <td>
-           <a href="https://www.syncfusion.com/react-components/react-fab"><b>Floating Action Button</b></a>
+           <b>Floating Action Button</b>
        </td>
        <td>
            <a href="components/buttons/src/floating-action-button">Source</a>
@@ -82,7 +81,7 @@ See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master
    </tr>
    <tr>
        <td>
-           <a href="https://www.syncfusion.com/react-ui-components/react-dropdown-menu"><b>Dropdown Button</b></a>
+          <b>Dropdown Button</b>
        </td>
         <td rowspan="2">
            <a href="https://www.npmjs.com/package/@syncfusion/react-splitbuttons"><img src="https://ej2.syncfusion.com/github/images/npm-logo.png" alt="npm package @syncfusion/react-splitbuttons" title="@syncfusion/react-splitbuttons" style="height:20px;" />
@@ -96,7 +95,7 @@ See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master
    </tr>
    <tr>
        <td>
-           <a href="https://www.syncfusion.com/react-ui-components/react-split-button"><b>Split Button</b></a>
+          <b>Split Button</b>
        </td>
        <td>
            <a href="components/splitbuttons/src/split-button">Source</a>
@@ -112,7 +111,7 @@ See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master
 <table>
    <tr>
        <td>
-           <a href="https://www.syncfusion.com/react-ui-components/react-toast"><b>Toast</b></a>
+           <b>Toast</b>
        </td>
         <td rowspan="3">
            <a href="https://www.npmjs.com/package/@syncfusion/react-notifications"><img src="https://ej2.syncfusion.com/github/images/npm-logo.png" alt="npm package @syncfusion/react-notifications" title="@syncfusion/react-notifications" style="height:20px;" />
@@ -126,7 +125,7 @@ See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master
    </tr>
    <tr>
        <td>
-           <a href="https://www.syncfusion.com/react-ui-components/react-skeleton"><b>Skeleton</b></a>
+          <b>Skeleton</b>
        </td>
        <td>
            <a href="components/notifications/src/skeleton">Source</a>
@@ -137,7 +136,7 @@ See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master
    </tr>
    <tr>
        <td>
-           <a href="https://www.syncfusion.com/react-ui-components/react-message"><b>Message</b></a>
+          <b>Message</b>
        </td>
        <td>
            <a href="components/notifications/src/message">Source</a>
@@ -153,7 +152,7 @@ See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master
 <table>
    <tr>
        <td>
-           <a href="https://www.syncfusion.com/react-ui-components/react-numeric-textbox"><b>Numeric TextBox</b></a>
+           <b>Numeric TextBox</b>
        </td>
         <td rowspan="3">
            <a href="https://www.npmjs.com/package/@syncfusion/react-inputs"><img src="https://ej2.syncfusion.com/github/images/npm-logo.png" alt="npm package @syncfusion/react-inputs" title="@syncfusion/react-inputs" style="height:20px;" />
@@ -167,7 +166,7 @@ See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master
    </tr>
    <tr>
        <td>
-           <a href="https://www.syncfusion.com/react-ui-components/react-textbox"><b>TextBox</b></a>
+           <b>TextBox</b>
        </td>
        <td>
            <a href="components/inputs/src/textbox">Source</a>
@@ -178,7 +177,7 @@ See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master
    </tr>
    <tr>
        <td>
-           <a href="https://www.syncfusion.com/react-ui-components/react-textarea"><b>TextArea</b></a>
+           <b>TextArea</b>
        </td>
        <td>
            <a href="components/inputs/src/textarea">Source</a>
@@ -189,7 +188,7 @@ See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master
    </tr>
    <tr>
        <td>
-           <a href="https://www.syncfusion.com/react-ui-components/react-checkbox"><b>Checkbox</b></a>
+          <b>Checkbox</b>
        </td>
         <td rowspan="3">
            <a href="https://www.npmjs.com/package/@syncfusion/react-buttons"><img src="https://ej2.syncfusion.com/github/images/npm-logo.png" alt="npm package @syncfusion/react-buttons" title="@syncfusion/react-buttons" style="height:20px;" />
@@ -203,7 +202,7 @@ See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master
    </tr>
    <tr>
        <td>
-           <a href="https://www.syncfusion.com/react-components/react-radio-button"><b>Radio Button</b></a>
+          <b>Radio Button</b>
        </td>
        <td>
            <a href="components/buttons/src/radio-button">Source</a>
@@ -214,7 +213,7 @@ See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master
    </tr>
    <tr>
        <td>
-           <a href="https://www.syncfusion.com/react-ui-components/react-toggle-switch-button"><b>Switch Button</b></a>
+           <b>Switch Button</b>
        </td>
        <td>
            <a href="components/buttons/src/switch">Source</a>
@@ -230,7 +229,7 @@ See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master
 <table>
    <tr>
        <td>
-           <a href="https://www.syncfusion.com/react-ui-components/react-tooltip"><b>Tooltip</b></a>
+           <b>Tooltip</b>
        </td>
         <td>
            <a href="https://www.npmjs.com/package/@syncfusion/react-popups"><img src="https://ej2.syncfusion.com/github/images/npm-logo.png" alt="npm package @syncfusion/react-popups" title="@syncfusion/react-popups" style="height:20px;" />
