@@ -1,0 +1,393 @@
+.sf-dark-mode {
+  --color-sf-black: 0, 0, 0;
+  --color-sf-white: 255, 255, 255;
+  --color-sf-primary: 208, 188, 255;
+  --color-sf-primary-container: 79, 55, 139;
+  --color-sf-secondary: 204, 194, 220;
+  --color-sf-secondary-container: 74, 68, 88;
+  --color-sf-tertiary: 239, 184, 200;
+  --color-sf-tertiary-container: 99, 59, 72;
+  --color-sf-surface: 28, 27, 31;
+  --color-sf-surface-variant: 73, 69, 79;
+  --color-sf-background: var(--color-sf-surface);
+  --color-sf-on-primary: 55, 30, 115;
+  --color-sf-on-primary-container: 234, 221, 255;
+  --color-sf-on-secondary: 51, 45, 65;
+  --color-sf-on-secondary-container: 232, 222, 248;
+  --color-sf-on-tertiary: 73, 37, 50;
+  --color-sf-on-tertiary-containe: 255, 216, 228;
+  --color-sf-on-surface: 230, 225, 229;
+  --color-sf-on-surface-variant: 202, 196, 208;
+  --color-sf-on-background: 230, 225, 229;
+  --color-sf-outline: 147, 143, 153;
+  --color-sf-outline-variant: 68, 71, 70;
+  --color-sf-shadow: 0, 0, 0;
+  --color-sf-surface-tint-color: 208, 188, 255;
+  --color-sf-inverse-surface: 230, 225, 229;
+  --color-sf-inverse-on-surface: 49, 48, 51;
+  --color-sf-inverse-primary: 103, 80, 164;
+  --color-sf-scrim: 0, 0, 0;
+  --color-sf-error: 242, 184, 181;
+  --color-sf-error-container: 140, 29, 24;
+  --color-sf-on-error: 96, 20, 16;
+  --color-sf-on-error-container: 249, 222, 220;
+  --color-sf-success: 83, 202, 23;
+  --color-sf-success-container: 22, 62, 2;
+  --color-sf-on-success: 13, 39, 0;
+  --color-sf-on-success-container: 183, 250, 150;
+  --color-sf-info: 71, 172, 251;
+  --color-sf-info-container: 0, 67, 120;
+  --color-sf-on-info: 0, 51, 91;
+  --color-sf-on-info-container: 173, 219, 255;
+  --color-sf-warning: 245, 180, 130;
+  --color-sf-warning-container: 123, 65, 0;
+  --color-sf-on-warning: 99, 52, 0;
+  --color-sf-on-warning-container: 255, 220, 193;
+  --color-sf-spreadsheet-gridline: 231, 224, 236;
+  --color-sf-shadow-focus-ring1: 0 0 0 1px #000, 0 0 0 3px #fff;
+  --color-sf-success-text: 0, 0, 0;
+  --color-sf-warning-text: 0, 0, 0;
+  --color-sf-info-text: 0, 0, 0;
+  --color-sf-danger-text: 0, 0, 0;
+  --color-sf-diagram-palette-background: var(--color-sf-inverse-surface);
+  --color-sf-content-text-color-alt2: var(--color-sf-on-secondary);
+}
+.sf-checkbox-wrapper,
+.sf-css.sf-checkbox-wrapper {
+  cursor: pointer;
+  display: inline-block;
+  line-height: 1;
+  outline: none;
+  user-select: none;
+}
+.sf-checkbox-wrapper label,
+.sf-css.sf-checkbox-wrapper label {
+  cursor: pointer;
+  display: inline-block;
+  line-height: 0;
+  margin: 0;
+  position: relative;
+  white-space: nowrap;
+}
+.sf-checkbox-wrapper:hover .sf-ripple-container,
+.sf-css.sf-checkbox-wrapper:hover .sf-ripple-container {
+  background: rgba(var(--color-sf-on-surface), 0.08);
+}
+.sf-checkbox-wrapper:hover .sf-ripple-container.sf-ripple-check,
+.sf-css.sf-checkbox-wrapper:hover .sf-ripple-container.sf-ripple-check {
+  background: rgba(var(--color-sf-primary), 0.08);
+}
+.sf-checkbox-wrapper:hover .sf-frame,
+.sf-css.sf-checkbox-wrapper:hover .sf-frame {
+  background-color: transparent;
+  border-color: rgba(var(--color-sf-on-surface));
+}
+.sf-checkbox-wrapper:hover .sf-frame.sf-check,
+.sf-css.sf-checkbox-wrapper:hover .sf-frame.sf-check {
+  background-color: rgba(var(--color-sf-primary));
+  border-color: rgba(var(--color-sf-primary));
+  color: rgba(var(--color-sf-on-primary));
+}
+.sf-checkbox-wrapper:hover .sf-frame.sf-stop,
+.sf-css.sf-checkbox-wrapper:hover .sf-frame.sf-stop {
+  background-color: rgba(var(--color-sf-primary));
+  border-color: rgba(var(--color-sf-primary));
+}
+.sf-checkbox-wrapper:hover .sf-label,
+.sf-css.sf-checkbox-wrapper:hover .sf-label {
+  color: rgba(var(--color-sf-on-surface));
+}
+.sf-checkbox-wrapper:focus .sf-ripple-container, .sf-checkbox-wrapper.sf-focus .sf-ripple-container,
+.sf-css.sf-checkbox-wrapper:focus .sf-ripple-container,
+.sf-css.sf-checkbox-wrapper.sf-focus .sf-ripple-container {
+  background-color: rgba(var(--color-sf-on-surface), 0.12);
+}
+.sf-checkbox-wrapper:focus .sf-ripple-container.sf-ripple-check, .sf-checkbox-wrapper.sf-focus .sf-ripple-container.sf-ripple-check,
+.sf-css.sf-checkbox-wrapper:focus .sf-ripple-container.sf-ripple-check,
+.sf-css.sf-checkbox-wrapper.sf-focus .sf-ripple-container.sf-ripple-check {
+  background-color: rgba(var(--color-sf-primary), 0.08);
+}
+.sf-checkbox-wrapper:focus .sf-frame, .sf-checkbox-wrapper:focus .sf-frame.sf-check, .sf-checkbox-wrapper.sf-focus .sf-frame, .sf-checkbox-wrapper.sf-focus .sf-frame.sf-check,
+.sf-css.sf-checkbox-wrapper:focus .sf-frame,
+.sf-css.sf-checkbox-wrapper:focus .sf-frame.sf-check,
+.sf-css.sf-checkbox-wrapper.sf-focus .sf-frame,
+.sf-css.sf-checkbox-wrapper.sf-focus .sf-frame.sf-check {
+  outline: rgba(var(--color-sf-primary), 0.25);
+  outline-offset: 0;
+}
+.sf-checkbox-wrapper:focus .sf-frame, .sf-checkbox-wrapper.sf-focus .sf-frame,
+.sf-css.sf-checkbox-wrapper:focus .sf-frame,
+.sf-css.sf-checkbox-wrapper.sf-focus .sf-frame {
+  box-shadow: none;
+}
+.sf-checkbox-wrapper:active .sf-ripple-element,
+.sf-css.sf-checkbox-wrapper:active .sf-ripple-element {
+  background: rgba(var(--color-sf-on-surface), 0.08);
+}
+.sf-checkbox-wrapper:active .sf-ripple-check .sf-ripple-element,
+.sf-css.sf-checkbox-wrapper:active .sf-ripple-check .sf-ripple-element {
+  background: rgba(var(--color-sf-primary), 0.08);
+}
+.sf-checkbox-wrapper .sf-ripple-check .sf-ripple-element,
+.sf-css.sf-checkbox-wrapper .sf-ripple-check .sf-ripple-element {
+  background: rgba(var(--color-sf-on-surface), 0.08);
+}
+.sf-checkbox-wrapper .sf-ripple-container,
+.sf-css.sf-checkbox-wrapper .sf-ripple-container {
+  border-radius: 50%;
+  bottom: -9.5px;
+  height: 34px;
+  left: -9.5px;
+  pointer-events: none;
+  position: absolute;
+  right: -9.5px;
+  top: -9.5px;
+  width: 34px;
+  z-index: 1;
+}
+.sf-checkbox-wrapper .sf-ripple-container .sf-ripple-element,
+.sf-css.sf-checkbox-wrapper .sf-ripple-container .sf-ripple-element {
+  border-radius: 50%;
+}
+.sf-checkbox-wrapper .sf-ripple-element,
+.sf-css.sf-checkbox-wrapper .sf-ripple-element {
+  background: rgba(var(--color-sf-primary), 0.08);
+}
+.sf-checkbox-wrapper .sf-label,
+.sf-css.sf-checkbox-wrapper .sf-label {
+  color: rgba(var(--color-sf-on-surface));
+  cursor: pointer;
+  display: inline-block;
+  font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  font-weight: normal;
+  line-height: 16px;
+  user-select: none;
+  vertical-align: middle;
+  white-space: normal;
+}
+.sf-checkbox-wrapper .sf-checkbox,
+.sf-css.sf-checkbox-wrapper .sf-checkbox {
+  height: 1px;
+  opacity: 0;
+  position: absolute;
+  width: 1px;
+}
+.sf-checkbox-wrapper .sf-checkbox + .sf-label,
+.sf-css.sf-checkbox-wrapper .sf-checkbox + .sf-label {
+  margin-right: 8px;
+}
+.sf-checkbox-wrapper .sf-checkbox:focus + .sf-frame, .sf-checkbox-wrapper .sf-checkbox:active + .sf-frame,
+.sf-css.sf-checkbox-wrapper .sf-checkbox:focus + .sf-frame,
+.sf-css.sf-checkbox-wrapper .sf-checkbox:active + .sf-frame {
+  background-color: transparent;
+  border-color: linear-gradient(0deg, rgba(var(--color-sf-on-primary), 0.12), rgba(var(--color-sf-on-primary), 0.12)), rgba(var(--color-sf-primary));
+  box-shadow: none;
+}
+.sf-checkbox-wrapper .sf-checkbox:focus + .sf-frame.sf-check, .sf-checkbox-wrapper .sf-checkbox:active + .sf-frame.sf-check,
+.sf-css.sf-checkbox-wrapper .sf-checkbox:focus + .sf-frame.sf-check,
+.sf-css.sf-checkbox-wrapper .sf-checkbox:active + .sf-frame.sf-check {
+  background-color: rgba(var(--color-sf-primary));
+  border-color: rgba(var(--color-sf-primary));
+  box-shadow: none;
+  color: rgba(var(--color-sf-on-primary));
+}
+.sf-checkbox-wrapper .sf-checkbox:focus + .sf-frame.sf-stop, .sf-checkbox-wrapper .sf-checkbox:active + .sf-frame.sf-stop,
+.sf-css.sf-checkbox-wrapper .sf-checkbox:focus + .sf-frame.sf-stop,
+.sf-css.sf-checkbox-wrapper .sf-checkbox:active + .sf-frame.sf-stop {
+  background-color: rgba(var(--color-sf-primary));
+  border-color: rgba(var(--color-sf-primary));
+  box-shadow: none;
+  color: rgba(var(--color-sf-on-primary));
+}
+.sf-checkbox-wrapper .sf-frame,
+.sf-css.sf-checkbox-wrapper .sf-frame {
+  background-color: transparent;
+  border-color: rgba(var(--color-sf-on-surface));
+  border: 2px solid;
+  border-radius: 2px;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: inline-block;
+  font-family: "e-icons";
+  height: 16px;
+  padding: 0;
+  text-align: center;
+  vertical-align: middle;
+  width: 16px;
+}
+.sf-checkbox-wrapper .sf-frame + .sf-label,
+.sf-css.sf-checkbox-wrapper .sf-frame + .sf-label {
+  margin-left: 8px;
+}
+.sf-checkbox-wrapper .sf-frame + .sf-ripple-container,
+.sf-css.sf-checkbox-wrapper .sf-frame + .sf-ripple-container {
+  left: auto;
+}
+.sf-checkbox-wrapper .sf-frame.sf-check,
+.sf-css.sf-checkbox-wrapper .sf-frame.sf-check {
+  background-color: rgba(var(--color-sf-primary));
+  border-color: rgba(var(--color-sf-primary));
+  color: rgba(var(--color-sf-on-primary));
+}
+.sf-checkbox-wrapper .sf-frame.sf-stop,
+.sf-css.sf-checkbox-wrapper .sf-frame.sf-stop {
+  background-color: rgba(var(--color-sf-primary));
+  border-color: rgba(var(--color-sf-primary));
+  color: rgba(var(--color-sf-on-primary));
+}
+.sf-checkbox-wrapper .sf-check,
+.sf-css.sf-checkbox-wrapper .sf-check {
+  font-size: 10px;
+}
+.sf-checkbox-wrapper .sf-stop,
+.sf-css.sf-checkbox-wrapper .sf-stop {
+  font-size: 10px;
+}
+.sf-checkbox-wrapper.sf-checkbox-disabled,
+.sf-css.sf-checkbox-wrapper.sf-checkbox-disabled {
+  cursor: default;
+  pointer-events: none;
+}
+.sf-checkbox-wrapper.sf-checkbox-disabled .sf-frame,
+.sf-css.sf-checkbox-wrapper.sf-checkbox-disabled .sf-frame {
+  cursor: default;
+  background-color: transparent;
+  border: 2px solid rgba(var(--color-sf-on-surface), 0.38);
+  color: rgba(var(--color-sf-on-surface), 0.38);
+}
+.sf-checkbox-wrapper.sf-checkbox-disabled .sf-frame.sf-check,
+.sf-css.sf-checkbox-wrapper.sf-checkbox-disabled .sf-frame.sf-check {
+  background-color: rgba(var(--color-sf-on-surface), 0.38);
+  border: none;
+  border-color: rgba(var(--color-sf-on-surface), 0.38);
+  line-height: 14px;
+  color: rgba(var(--color-sf-on-primary));
+}
+.sf-checkbox-wrapper.sf-checkbox-disabled .sf-frame.sf-stop,
+.sf-css.sf-checkbox-wrapper.sf-checkbox-disabled .sf-frame.sf-stop {
+  background-color: rgba(var(--color-sf-on-surface), 0.38);
+  border: none;
+  border: rgba(var(--color-sf-on-surface), 0.38);
+  line-height: 14px;
+  color: rgba(var(--color-sf-on-primary));
+}
+.sf-checkbox-wrapper.sf-checkbox-disabled .sf-label,
+.sf-css.sf-checkbox-wrapper.sf-checkbox-disabled .sf-label {
+  color: rgba(var(--color-sf-on-surface), 0.38);
+  cursor: default;
+}
+.sf-checkbox-wrapper.sf-rtl .sf-ripple-container,
+.sf-css.sf-checkbox-wrapper.sf-rtl .sf-ripple-container {
+  right: -9.5px;
+}
+.sf-checkbox-wrapper.sf-rtl .sf-frame,
+.sf-css.sf-checkbox-wrapper.sf-rtl .sf-frame {
+  margin: 0;
+}
+.sf-checkbox-wrapper.sf-rtl .sf-frame:hover,
+.sf-css.sf-checkbox-wrapper.sf-rtl .sf-frame:hover {
+  background-color: transparent;
+  border-color: rgba(var(--color-sf-on-surface));
+}
+.sf-checkbox-wrapper.sf-rtl .sf-frame + .sf-ripple-container,
+.sf-css.sf-checkbox-wrapper.sf-rtl .sf-frame + .sf-ripple-container {
+  left: -9.5px;
+  right: auto;
+}
+.sf-checkbox-wrapper.sf-rtl .sf-label,
+.sf-css.sf-checkbox-wrapper.sf-rtl .sf-label {
+  margin-left: 0;
+  margin-right: 8px;
+}
+.sf-checkbox-wrapper.sf-rtl .sf-label + .sf-frame,
+.sf-css.sf-checkbox-wrapper.sf-rtl .sf-label + .sf-frame {
+  margin: 0;
+}
+.sf-checkbox-wrapper.sf-rtl .sf-checkbox + .sf-label,
+.sf-css.sf-checkbox-wrapper.sf-rtl .sf-checkbox + .sf-label {
+  margin-left: 8px;
+  margin-right: 0;
+}
+.sf-checkbox-wrapper.sf-small .sf-frame,
+.sf-css.sf-checkbox-wrapper.sf-small .sf-frame {
+  height: 14px;
+  line-height: 11px;
+  width: 14px;
+}
+.sf-checkbox-wrapper.sf-small .sf-check,
+.sf-css.sf-checkbox-wrapper.sf-small .sf-check {
+  font-size: 8px;
+}
+.sf-checkbox-wrapper.sf-small .sf-stop,
+.sf-css.sf-checkbox-wrapper.sf-small .sf-stop {
+  font-size: 8px;
+  line-height: 11px;
+}
+.sf-checkbox-wrapper.sf-small .sf-label,
+.sf-css.sf-checkbox-wrapper.sf-small .sf-label {
+  font-size: 10px;
+  line-height: 14px;
+}
+.sf-checkbox-wrapper.sf-small .sf-ripple-container,
+.sf-css.sf-checkbox-wrapper.sf-small .sf-ripple-container {
+  bottom: -5px;
+  height: 24px;
+  left: -5px;
+  right: -5px;
+  top: -5px;
+  width: 24px;
+}
+.sf-css.sf-checkbox-wrapper .sf-ripple-container {
+  right: -9.5px;
+  top: -4.5px;
+}
+.sf-checkbox-wrapper[readonly] {
+  pointer-events: none;
+}
+.sf-small .sf-checkbox-wrapper .sf-frame,
+.sf-small.sf-checkbox-wrapper .sf-frame,
+.sf-small .sf-css.sf-checkbox-wrapper .sf-frame,
+.sf-small.sf-css.sf-checkbox-wrapper .sf-frame {
+  height: 14px;
+  line-height: 11px;
+  width: 14px;
+}
+.sf-small .sf-checkbox-wrapper .sf-frame:hover,
+.sf-small.sf-checkbox-wrapper .sf-frame:hover,
+.sf-small .sf-css.sf-checkbox-wrapper .sf-frame:hover,
+.sf-small.sf-css.sf-checkbox-wrapper .sf-frame:hover {
+  background-color: transparent;
+  border-color: rgba(var(--color-sf-on-surface));
+}
+.sf-small .sf-checkbox-wrapper .sf-check,
+.sf-small.sf-checkbox-wrapper .sf-check,
+.sf-small .sf-css.sf-checkbox-wrapper .sf-check,
+.sf-small.sf-css.sf-checkbox-wrapper .sf-check {
+  font-size: 8px;
+}
+.sf-small .sf-checkbox-wrapper .sf-stop,
+.sf-small.sf-checkbox-wrapper .sf-stop,
+.sf-small .sf-css.sf-checkbox-wrapper .sf-stop,
+.sf-small.sf-css.sf-checkbox-wrapper .sf-stop {
+  font-size: 8px;
+  line-height: 11px;
+}
+.sf-small .sf-checkbox-wrapper .sf-label,
+.sf-small.sf-checkbox-wrapper .sf-label,
+.sf-small .sf-css.sf-checkbox-wrapper .sf-label,
+.sf-small.sf-css.sf-checkbox-wrapper .sf-label {
+  font-size: 10px;
+  line-height: 14px;
+}
+.sf-small .sf-checkbox-wrapper .sf-ripple-container,
+.sf-small.sf-checkbox-wrapper .sf-ripple-container,
+.sf-small .sf-css.sf-checkbox-wrapper .sf-ripple-container,
+.sf-small.sf-css.sf-checkbox-wrapper .sf-ripple-container {
+  bottom: -5px;
+  height: 24px;
+  left: -5px;
+  right: -5px;
+  top: -5px;
+  width: 24px;
+}

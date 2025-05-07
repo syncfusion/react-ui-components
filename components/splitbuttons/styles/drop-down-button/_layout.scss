@@ -1,0 +1,303 @@
+@include export-module('drop-down-button-layout-and-theme') {
+  .sf-dropdown-btn,
+  .sf-dropdown-btn.sf-btn {
+    @if not index(('bootstrap5.3', 'fluent2', 'tailwind3'), $skin-name) {
+      box-shadow: none;
+    }
+    text-transform: none;
+    white-space: normal;
+    
+    @if $skin-name == 'Material3' {
+      border-radius: $btn-border-radius;
+      box-shadow: $drop-down-btn-box-shadow;
+      padding: 7px 16px;
+    }
+
+    &:hover, &:focus {
+      @if not index(('bootstrap5.3', 'Material3', 'tailwind3'), $skin-name) {
+        box-shadow: none;
+      }
+    }
+
+    &:focus-visible { // only for keyboard
+      @if index(('Material3', 'fluent2'), $skin-name) {
+        box-shadow: $btn-keyboard-focus-box-shadow;
+      }
+    }
+
+    &:active {
+      box-shadow: $btn-active-box-shadow;
+    }
+
+    .sf-btn-icon {
+      font-size: $drop-down-btn-icon-font-size;
+    }
+
+    .sf-caret {
+      font-size: $drop-down-btn-caret-icon-font-size;
+    }
+
+    &.sf-vertical {
+      line-height: 1;
+      padding: $drop-down-btn-vertical-btn-padding;
+    }
+
+    &.sf-caret-hide .sf-caret {
+      display: none;
+    }
+
+    &.sf-outline {
+      box-shadow: none !important;
+    }
+
+    &.sf-flat {
+      box-shadow: none !important;
+    }
+
+    &.sf-small {
+      .sf-dropdown-popup ul {
+        padding: $drop-down-btn-ul-small-padding;
+
+        .sf-item {
+          padding: $drop-down-btn-small-li-padding;
+          @if $skin-name == 'Material3' {
+            height: $drop-down-btn-small-li-height;
+          }
+        }
+      }
+
+      &.sf-vertical {
+        line-height: 1;
+        padding: $drop-down-btn-vertical-btn-padding;
+      }
+
+      .sf-btn-icon {
+        @if $skin-name == 'tailwind3' {
+          font-size: $drop-down-btn-small-icon-font-size;
+        }
+      }
+
+      .sf-btn-icon.sf-caret {
+        @if $skin-name == 'fluent2' {
+          font-size: 12px;
+        }
+      }
+    }
+
+    &.sf-inherit {
+      background: inherit;
+      border-color: transparent;
+      box-shadow: none;
+      color: inherit;
+
+      &:hover,
+      &:focus,
+      &:active,
+      &.sf-active {
+        background: rgba(transparent, .056);
+        border-color: transparent;
+        box-shadow: none;
+        color: inherit;
+      }
+    }
+  }
+
+  .sf-dropdown-popup {
+    background: $drop-down-btn-ul-bgcolor;
+    color: $drop-down-btn-color;
+    position: absolute;
+    
+    @if index(('bootstrap5.3', 'fluent2'), $skin-name) {
+      border-radius: $drop-down-btn-ul-border-radius;
+    }
+
+    @if $skin-name == 'bootstrap5.3' {
+      margin-top: $drop-down-btn-popup-margin-top;
+    }
+
+    ul {
+      border: $drop-down-btn-ul-border;
+      border-radius: $drop-down-btn-ul-border-radius;
+      box-shadow: $drop-down-btn-parent-ul-box-shadow;
+      box-sizing: border-box;
+      font-size: $drop-down-btn-font-size;
+      font-weight: $drop-down-btn-font-weight;
+      list-style: none;
+      margin: 0;
+      min-width: $drop-down-btn-min-width;
+      overflow: hidden;
+      padding: $drop-down-btn-ul-padding;
+      user-select: none;
+      white-space: nowrap;
+
+      .sf-item {
+        cursor: pointer;
+        display: flex;
+        height: $drop-down-btn-li-height;
+        line-height: $drop-down-btn-li-height;
+        padding: $drop-down-btn-li-padding;
+
+        @if $skin-name == 'fluent2' {
+          line-height: 19px;
+          margin: 4px;
+          border-radius: 4px;
+        }
+
+        &.sf-separator {
+          padding: 0 !important;
+          border-bottom-style: $drop-down-btn-li-border-style;
+          border-bottom-width: $drop-down-btn-li-border-width;
+          cursor: auto;
+          height: auto;
+          line-height: normal;
+          margin: $drop-down-btn-seperator-padding;
+          pointer-events: none;
+        }
+
+        &.sf-url {
+          padding: 0;
+          color: $drop-down-btn-color;
+        }
+
+        .sf-menu-url {
+          display: block;
+          padding: $drop-down-btn-li-padding;
+          text-decoration: none;
+          width: 100%;
+        }
+
+        .sf-menu-icon {
+          float: left;
+          font-size: $drop-down-btn-menu-icon-font-size;
+          color: $drop-down-btn-menu-icon-color;
+          margin-right: $drop-down-btn-icon-margin-right;
+          line-height: $drop-down-btn-li-height;
+          vertical-align: middle;
+          width: 1em;
+          @if $skin-name == 'fluent2' {
+            line-height: 18px;
+            padding: 2px;
+          }
+        }
+
+        &.sf-disabled {
+          cursor: auto;
+          pointer-events: none;
+          @if index(('Material3', 'fluent2', 'tailwind3'), $skin-name) {
+            box-shadow: $drop-down-btn-sub-ul-box-shadow;
+            color: $flyout-text-color-disabled;
+            opacity: 1;
+            .sf-menu-icon {
+              color: $flyout-text-color-disabled;
+            }
+          }
+        }
+
+        &:hover {
+          background: if($skin-name == 'bootstrap5' or $skin-name == 'bootstrap5.3', $drop-down-btn-li-hover-bgcolor, $drop-down-btn-li-bgcolor);
+          color: $drop-down-btn-li-selection-font-color;
+        }
+
+        &:active, &.sf-selected {
+          background: $drop-down-btn-li-selection-bgcolor;
+          color: $drop-down-btn-selected-color;
+        }
+      }
+    }
+  }
+
+  .sf-rtl.sf-dropdown-popup .sf-item .sf-menu-icon {
+    float: right;
+    margin-left: $drop-down-btn-icon-margin-right;
+    margin-right: 0;
+  }
+
+  .sf-dropdown-popup-width ul {
+    min-width: 0 !important;
+  }
+
+  .sf-dropdown-popup-width ul li {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    display: block !important;
+  }
+}
+
+@include export-module('drop-down-button-bigger') {
+  .sf-bigger .sf-dropdown-btn,
+  .sf-bigger.sf-dropdown-btn {
+    .sf-btn-icon {
+      font-size: $drop-down-btn-icon-font-size-bigger;
+    }
+
+    .sf-caret {
+      font-size: $drop-down-btn-caret-icon-font-size-bigger;
+    }
+
+    &.sf-vertical {
+      line-height: 1;
+      padding: $drop-down-btn-vertical-bigger-padding;
+    }
+
+    &.sf-small {
+      &.sf-vertical {
+        line-height: 1;
+        padding: $drop-down-btn-vertical-bigger-padding;
+      }
+      .sf-btn-icon {
+        @if $skin-name == 'material' or $skin-name == 'material-dark' or $skin-name == 'fabric' or $skin-name == 'fabric-dark' or $skin-name == 'FluentUI' or $skin-name == 'tailwind' or $skin-name == 'tailwind3' or $skin-name == 'Material3' or $skin-name == 'bootstrap5.3' or $skin-name == 'bootstrap5' or $skin-name == 'bootstrap' or $skin-name == 'bootstrap-dark' or $skin-name == 'bootstrap4' or $skin-name == 'highcontrast' {
+          font-size: $drop-down-btn-small-icon-font-size-bigger;
+        }
+      }
+      .sf-btn-icon.sf-caret {
+        @if $skin-name == 'Material3' {
+          font-size: $drop-down-btn-small-caret-icon-font-size-bigger;
+        }
+      }
+    }
+  }
+
+  #{if(&, '&', '*')}.sf-bigger .sf-dropdown-popup ul,
+  #{if(&, '&', '*')}.sf-bigger.sf-dropdown-popup ul {
+    box-shadow: $drop-down-btn-parent-ul-box-shadow;
+    font-size: $drop-down-btn-bigger-font-size;
+    min-width: $drop-down-btn-bigger-min-width;
+    padding: $drop-down-btn-ul-bigger-padding;
+
+    & .sf-item  {
+      height: $drop-down-btn-bigger-li-height;
+      @if $skin-name != 'fluent2' {
+        line-height: $drop-down-btn-bigger-li-height;
+      }
+      @if $skin-name == 'fluent2' {
+        height: 40px;
+        line-height: 22px;
+      }
+      padding: $drop-down-btn-bigger-li-padding;
+
+      &.sf-url {
+        padding: 0;
+      }
+
+      & .sf-menu-url {
+        @if $skin-name == 'fluent2' {
+          padding: 8px 8px 10px;
+        }
+      }
+
+      & .sf-menu-icon {
+        font-size: $drop-down-btn-menu-icon-bigger-font-size;
+        line-height: $drop-down-btn-bigger-li-height;
+        @if $skin-name == 'fluent2' {
+          line-height: 22px;
+        }
+      }
+
+      &.sf-separator {
+        height: auto;
+        line-height: normal;
+      }
+    }
+  }
+}

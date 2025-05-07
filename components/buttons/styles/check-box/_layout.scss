@@ -1,0 +1,460 @@
+@mixin ripple-container {
+  bottom: $cbox-ripple-small-size;
+  height: $cbox-ripple-small-height;
+  left: $cbox-ripple-small-size;
+  right: $cbox-ripple-small-size;
+  top: $cbox-ripple-small-size;
+  width: $cbox-ripple-small-width;
+}
+
+@include export-module('checkbox-layout') {
+  .sf-checkbox-wrapper,
+  .sf-css.sf-checkbox-wrapper {
+    cursor: pointer;
+    display: inline-block;
+    line-height: 1;
+    outline: none;
+    user-select: none;
+    @if $skin-name == 'fluent2' {
+      border-radius: 4px;
+      border: 1px solid transparent;
+      line-height: 0;
+    }
+    @at-root {
+      & label {
+        cursor: pointer;
+        display: inline-block;
+        line-height: 0;
+        margin: 0;
+        position: relative;
+        white-space: nowrap;
+      }
+
+      &:hover {
+        & .sf-ripple-container {
+          @if $skin-name == 'Material3' {
+            background: $cbox-ripple-bgcolor;
+          }
+          &.sf-ripple-check {
+            @if $skin-name == 'Material3' {
+              background: $cbox-checked-ripple-bgcolo;
+            }
+          }
+        }
+
+        & .sf-frame {
+          background-color: $cbox-hover-bgcolor;
+          border-color: $cbox-hover-border-color;
+
+          &.sf-check {
+            background-color: $cbox-checkmark-hover-bgcolor;
+            border-color: $cbox-checkmark-hover-border-color;
+            color: $cbox-checkmark-hover-color;
+          }
+
+          &.sf-stop {
+            @if $skin-name == 'bootstrap5.3' or $skin-name == 'Material3' {
+              background-color: $cbox-checkmark-hover-bgcolor;
+              border-color: $cbox-checkmark-hover-border-color;
+            }
+            @else if $skin-name == 'fluent2' {
+              border-color: $cbox-checkmark-hover-border-color;
+            }
+            @else {
+              color: $cbox-indeterminate-hover-color;
+            }
+            @if $skin-name == 'fluent2' {
+              color: $primary-bg-color-hover;
+            }
+            @if $skin-name == 'tailwind3' {
+              background-color: $cbox-focussed-checkmark-bgcolor;
+              border-color: $cbox-indeterminate-border-color;
+            }
+          }
+        }
+
+        & .sf-label {
+          color: $cbox-hover-color;
+        }
+      }
+      
+
+      &:focus,
+      &.sf-focus {
+        & .sf-ripple-container {
+          background-color: $cbox-key-focussed-bgcolor;
+
+          &.sf-ripple-check {
+            background-color: $cbox-checked-ripple-bgcolo;
+          }
+        }
+
+        & .sf-frame,
+        & .sf-frame.sf-check {
+          outline: $cbox-focus-outline;
+          outline-offset: $cbox-focus-outline-offset;
+        }
+
+        & .sf-frame {
+          & {
+            box-shadow: $cbox-focussed-box-shadow;
+          }
+          @if $skin-name == 'bootstrap5.3' {
+            & {
+              border-color: $border-focus;
+            }
+          }
+        }
+        @if $skin-name == 'fluent2' {
+          & {
+            border-radius: 4px;
+            box-shadow: $shadow-focus-ring1;
+          }
+        }
+      }
+
+      &:active {
+        & .sf-frame {
+          @if $skin-name == 'bootstrap5.3' {
+            box-shadow: $cbox-focussed-box-shadow;
+            border-color: $border-focus !important; /* stylelint-disable-line declaration-no-important */
+            background-color: $content-bg-color-pressed;
+          }
+          @if $skin-name == 'tailwind3' {
+            box-shadow: $cbox-focussed-box-shadow;
+          }
+        }
+
+        & .sf-ripple-element {
+          background: $cbox-ripple-bgcolor;
+        }
+
+        & .sf-ripple-check {
+          & .sf-ripple-element {
+            background: $cbox-checked-ripple-bgcolo;
+          }
+        }
+      }
+
+      & .sf-ripple-check {
+        & .sf-ripple-element {
+          background: $cbox-ripple-bgcolor;
+        }
+      }
+
+      & .sf-ripple-container {
+        border-radius: 50%;
+        bottom: $cbox-ripple-size;
+        height: $cbox-ripple-height;
+        left: $cbox-ripple-size;
+        pointer-events: none;
+        position: absolute;
+        right: $cbox-ripple-size;
+        top: $cbox-ripple-size;
+        width: $cbox-ripple-width;
+        z-index: 1;
+
+        & .sf-ripple-element {
+          @if $skin-name == 'Material3' {
+            border-radius: 50%;
+          }
+        }
+      }
+
+      & .sf-ripple-element {
+        background: $cbox-checked-ripple-bgcolo;
+      }
+
+      & .sf-label {
+        color: $cbox-color;
+        cursor: pointer;
+        display: inline-block;
+        font-family: $font-family;
+        font-size: $cbox-font-size;
+        font-weight: normal;
+        line-height: $cbox-height;
+        user-select: none;
+        vertical-align: middle;
+        white-space: normal;
+        @if $skin-name == 'tailwind3' {
+          font-weight: $font-weight-medium;
+        }
+      }
+
+      & .sf-checkbox {
+        height: 1px;
+        opacity: 0;
+        position: absolute;
+        width: 1px;
+
+        +.sf-label {
+          @if $skin-name == 'fluent2' {
+            margin: 6px 4px 6px 8px;
+          }
+          @else {
+            margin-right: $cbox-margin;
+          }
+        }
+      }
+
+      & .sf-checkbox {
+        &:focus,
+        &:active {
+          +.sf-frame {
+            background-color: $cbox-focussed-bgcolor;
+            border-color: $cbox-focussed-border-color;
+            box-shadow: $cbox-focussed-box-shadow;
+
+            &.sf-check {
+              background-color: $cbox-focussed-checkmark-bgcolor;
+              border-color: $cbox-focussed-checkmark-border-color;
+              box-shadow: $cbox-focussed-box-shadow;
+              color: $cbox-focussed-checkmark-color;
+            }
+
+            &.sf-stop {
+              background-color: $cbox-focussed-checkmark-bgcolor;
+              border-color: $cbox-focussed-checkmark-border-color;
+              box-shadow: $cbox-focussed-box-shadow;
+              color: $cbox-indeterminate-hover-color;
+            }
+          }
+        }
+      }
+
+      & .sf-frame {
+        background-color: $cbox-bgcolor;
+        border-color: $cbox-border-color;
+        border: $cbox-border;
+        border-radius: $cbox-border-radius;
+        box-sizing: border-box;
+        cursor: pointer;
+        display: inline-block;
+        font-family: 'e-icons';
+        height: $cbox-height;
+        padding: $cbox-padding;
+        text-align: center;
+        vertical-align: middle;
+        width: $cbox-width;
+        @if $skin-name == 'fluent2' {
+          margin: 7.2px 8px;
+        }
+
+        +.sf-label {
+          @if $skin-name == 'fluent2' {
+            margin: 6px 8px 6px 4px;
+          }
+          @else {
+            margin-left: $cbox-margin;
+          }
+        }
+
+        +.sf-ripple-container {
+          left: auto;
+        }
+
+        &.sf-check {
+          background-color: $cbox-checkmark-bgcolor;
+          border-color: $cbox-checkmark-border-color;
+          color: $cbox-checkmark-color;
+        }
+
+        &.sf-stop {
+          background-color: $cbox-indeterminate-bgcolor;
+          border-color: $cbox-indeterminate-border-color;
+          color: $cbox-indeterminate-color;
+        }
+      }
+
+      & .sf-check {
+        font-size: $cbox-check-fontsize;
+      }
+
+      & .sf-stop {
+        font-size: $cbox-indeterminate-fontsize;
+      }
+
+      &.sf-checkbox-disabled {
+        cursor: default;
+        pointer-events: none;
+        @if $skin-name == 'bootstrap5.3' {
+          opacity: .5;
+        }
+
+        & .sf-frame {
+          cursor: default;
+          background-color: $cbox-disabled-bgcolor;
+          @if $skin-name == 'Material3' {
+            border: $cbox-border $cbox-disabled-border-color;
+          }
+          @else {
+            border-color: $cbox-disabled-border-color;
+          }
+          color: $cbox-disabled-color;
+
+          &.sf-check {
+            background-color: $cbox-checkmark-disabled-bgcolor;
+            @if $skin-name == 'Material3' {
+              border: none;
+              border-color: $cbox-checkmark-disabled-border-color;
+              line-height: 14px;
+            }
+            @else {
+              border-color: $cbox-checkmark-disabled-border-color;
+            }
+            color: $cbox-checkmark-disabled-color;
+          }
+
+          &.sf-stop {
+            background-color: $cbox-indeterminate-disabled-bgcolor;
+            @if $skin-name == 'Material3' {
+              border: none;
+              border: $cbox-indeterminate-disabled-border-color;
+              line-height: 14px;
+            }
+            @else {
+              border-color: $cbox-indeterminate-disabled-border-color;
+            }
+            color: $cbox-indeterminate-disabled-color;
+          }
+        }
+
+        & .sf-label {
+          color: $cbox-disabled-color;
+          cursor: default;
+        }
+      }
+
+      &.sf-rtl {
+        .sf-ripple-container {
+          right: $cbox-ripple-size;
+        }
+
+        & .sf-frame {
+          @if $skin-name != 'fluent2' {
+            margin: 0;
+          }
+
+          &:hover {
+            background-color: $cbox-hover-bgcolor;
+            border-color: $cbox-hover-border-color;
+          }
+
+          + .sf-ripple-container {
+            left: $cbox-ripple-size;
+            right: auto;
+          }
+        }
+
+        & .sf-label {
+          @if $skin-name == 'fluent2' {
+            margin: 6px 4px 6px 8px;
+          }
+          @else {
+            margin-left: 0;
+            margin-right: $cbox-margin;
+          }
+
+          +.sf-frame {
+            @if $skin-name != 'fluent2' {
+              margin: 0;
+            }
+          }
+        }
+
+        & .sf-checkbox {
+          +.sf-label {
+            @if $skin-name == 'fluent2' {
+              margin: 6px 4px 6px 8px;
+            }
+            @else {
+              margin-left: $cbox-margin;
+              margin-right: 0;
+            }
+          }
+        }
+      }
+
+      &.sf-small {
+        & .sf-frame {
+          height: $cbox-small-height;
+          line-height: $cbox-small-lineheight;
+          width: $cbox-small-width;
+        }
+
+        & .sf-check {
+          font-size: $cbox-small-check-fontsize;
+        }
+
+        & .sf-stop {
+          font-size: $cbox-small-indeterminate-fontsize;
+          line-height: $cbox-small-indeterminate-lineheight;
+        }
+
+        & .sf-label {
+          font-size: $cbox-small-font-size;
+          line-height: $cbox-small-height;
+        }
+
+        & .sf-ripple-container {
+          @include ripple-container;
+        }
+      }
+
+      &:hover .sf-checkbox:focus + .sf-frame.sf-check {
+        @if $theme-name == 'fluent2-highcontrast' {
+          background-color: $primary-border-color-hover !important; /* stylelint-disable-line declaration-no-important */
+          border-color: $primary-border-color-hover !important; /* stylelint-disable-line declaration-no-important */
+        }
+      }
+    }
+  }
+
+  .sf-css.sf-checkbox-wrapper {
+    & .sf-ripple-container {
+      right: $cbox-ripple-size;
+      top: -4.5px;
+    }
+  }
+
+  .sf-checkbox-wrapper[readonly] {
+    pointer-events: none;
+  }
+
+  .sf-small .sf-checkbox-wrapper,
+  .sf-small.sf-checkbox-wrapper,
+  .sf-small .sf-css.sf-checkbox-wrapper,
+  .sf-small.sf-css.sf-checkbox-wrapper {
+    & .sf-frame {
+      height: $cbox-small-height;
+      line-height: $cbox-small-lineheight;
+      width: $cbox-small-width;
+      @if $skin-name == 'fluent2' {
+        margin: 6.2px 8px;
+      }
+
+      &:hover {
+        background-color: $cbox-hover-bgcolor;
+        border-color: $cbox-hover-border-color;
+      }
+    }
+
+    & .sf-check {
+      font-size: $cbox-small-check-fontsize;
+    }
+
+    & .sf-stop {
+      font-size: $cbox-small-indeterminate-fontsize;
+      line-height: $cbox-small-indeterminate-lineheight;
+    }
+
+    & .sf-label {
+      font-size: $cbox-small-font-size;
+      line-height: $cbox-small-height;
+    }
+
+    & .sf-ripple-container {
+      @include ripple-container;
+    }
+  }
+}

@@ -1,0 +1,152 @@
+.sf-tooltip-popup-container {
+  position: relative;
+}
+.sf-tooltip-wrap {
+  max-width: 350px;
+  min-width: 30px;
+  padding: 0;
+  position: absolute;
+  visibility: visible;
+}
+.sf-tooltip-wrap .sf-arrow-tip {
+  overflow: hidden;
+  position: absolute;
+}
+.sf-tooltip-wrap .sf-arrow-tip.sf-tip-bottom {
+  height: 8px;
+  left: 50%;
+  top: 100%;
+  width: 16px;
+}
+.sf-tooltip-wrap .sf-arrow-tip.sf-tip-top {
+  height: 8px;
+  left: 50%;
+  top: -9px;
+  width: 16px;
+}
+.sf-tooltip-wrap .sf-arrow-tip.sf-tip-left {
+  height: 16px;
+  left: -9px;
+  top: 48%;
+  width: 8px;
+}
+.sf-tooltip-wrap .sf-arrow-tip.sf-tip-right {
+  height: 16px;
+  left: 100%;
+  top: 50%;
+  width: 8px;
+}
+.sf-tooltip-wrap .sf-tooltip-close {
+  cursor: pointer;
+  float: right;
+  position: absolute;
+  right: -9px;
+  top: -9px;
+  z-index: inherit;
+  height: 16px;
+  width: 16px;
+  border-width: 1px;
+  box-shadow: 0 1px 3px 1px rgba(0, 0, 0, 0.15), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  box-sizing: border-box;
+}
+.sf-tooltip-wrap .sf-tip-content {
+  background-color: inherit;
+  height: 100%;
+  line-height: 20px;
+  overflow-wrap: break-word;
+  overflow-x: hidden;
+  padding: 4px 8px 4px 8px;
+  position: relative;
+  white-space: normal;
+  width: 100%;
+  word-break: break-word;
+  z-index: 1;
+}
+.sf-tooltip-wrap .sf-tooltip-close svg {
+  font-size: 12px;
+  left: calc(50% - 6px);
+  position: absolute;
+  top: calc(50% - 6px);
+}
+.sf-tooltip-wrap {
+  border-radius: 4px;
+  filter: 0 1px 3px 1px rgba(0, 0, 0, 0.15), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  opacity: 1;
+}
+.sf-tooltip-wrap.sf-popup {
+  background-color: rgba(var(--color-sf-inverse-surface));
+  border: 1px solid rgba(var(--color-sf-inverse-surface));
+  box-shadow: 0 1px 3px 1px rgba(0, 0, 0, 0.15), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  filter: none;
+}
+.sf-tooltip-wrap .sf-arrow-tip-outer {
+  height: 0;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 0;
+}
+.sf-tooltip-wrap .sf-arrow-tip-outer.sf-tip-bottom {
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid rgba(var(--color-sf-inverse-surface));
+}
+.sf-tooltip-wrap .sf-arrow-tip-outer.sf-tip-top {
+  border-bottom: 8px solid rgba(var(--color-sf-inverse-surface));
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+}
+.sf-tooltip-wrap .sf-arrow-tip-outer.sf-tip-left {
+  border-bottom: 8px solid transparent;
+  border-right: 8px solid rgba(var(--color-sf-inverse-surface));
+  border-top: 8px solid transparent;
+}
+.sf-tooltip-wrap .sf-arrow-tip-outer.sf-tip-right {
+  border-bottom: 8px solid transparent;
+  border-left: 8px solid rgba(var(--color-sf-inverse-surface));
+  border-top: 8px solid transparent;
+}
+.sf-tooltip-wrap .sf-arrow-tip-inner {
+  height: 0;
+  position: absolute;
+  width: 0;
+  z-index: 10;
+}
+.sf-tooltip-wrap .sf-arrow-tip-inner.sf-tip-right, .sf-tooltip-wrap .sf-arrow-tip-inner.sf-tip-left, .sf-tooltip-wrap .sf-arrow-tip-inner.sf-tip-bottom, .sf-tooltip-wrap .sf-arrow-tip-inner.sf-tip-top {
+  font-size: 16px;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: normal;
+  line-height: 1;
+  text-transform: none;
+}
+.sf-tooltip-wrap .sf-arrow-tip-inner.sf-tip-right path, .sf-tooltip-wrap .sf-arrow-tip-inner.sf-tip-left path, .sf-tooltip-wrap .sf-arrow-tip-inner.sf-tip-bottom path, .sf-tooltip-wrap .sf-arrow-tip-inner.sf-tip-top path {
+  fill: rgba(var(--color-sf-inverse-surface));
+}
+.sf-tooltip-wrap .sf-arrow-tip-inner.sf-tip-bottom, .sf-tooltip-wrap .sf-arrow-tip-inner.sf-tip-top {
+  right: 16px;
+}
+.sf-tooltip-wrap .sf-arrow-tip-inner.sf-tip-right, .sf-tooltip-wrap .sf-arrow-tip-inner.sf-tip-left {
+  bottom: 16px;
+}
+.sf-tooltip-wrap .sf-tooltip-close {
+  background-color: rgba(var(--color-sf-inverse-surface));
+  border-color: linear-gradient(0deg, rgba(var(--color-sf-primary), 0.05), rgba(var(--color-sf-primary), 0.05)), rgba(var(--color-sf-surface));
+  border-radius: 8px;
+  border: 1px solid rgba(var(--color-sf-inverse-on-surface));
+}
+.sf-tooltip-wrap .sf-tooltip-close path {
+  fill: rgba(var(--color-sf-inverse-on-surface));
+}
+.sf-tooltip-wrap .sf-tooltip-close:hover {
+  background-color: rgba(var(--color-sf-inverse-on-surface));
+}
+.sf-tooltip-wrap .sf-tooltip-close:hover path {
+  fill: rgba(var(--color-sf-inverse-surface));
+}
+.sf-tooltip-wrap .sf-tip-content {
+  border-radius: inherit;
+  color: rgba(var(--color-sf-inverse-on-surface));
+  font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif;
+  font-size: 14px;
+}

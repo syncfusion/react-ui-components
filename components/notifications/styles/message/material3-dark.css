@@ -1,0 +1,362 @@
+.sf-message {
+  background: linear-gradient(0deg, rgba(var(--color-sf-primary), 0.05), rgba(var(--color-sf-primary), 0.05)), rgba(var(--color-sf-surface));
+  border: 1px solid;
+  border-radius: 0;
+  box-sizing: border-box;
+  color: rgba(var(--color-sf-on-surface));
+  display: flex;
+  font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+  padding: 7px 5px;
+  border-image: linear-gradient(0deg, rgba(var(--color-sf-primary), 0.05), rgba(var(--color-sf-primary), 0.05));
+}
+.sf-message.sf-hidden {
+  display: none;
+}
+.sf-message .sf-msg-icon,
+.sf-message .sf-msg-close-icon {
+  box-sizing: border-box;
+  display: flex;
+  line-height: 14px;
+}
+.sf-message .sf-msg-icon {
+  color: rgba(var(--color-sf-on-surface-variant));
+  font-size: 14px;
+  height: 14px;
+  margin: 2px 6px;
+}
+.sf-message .sf-msg-icon path {
+  fill: currentColor;
+}
+.sf-message .sf-msg-close-icon {
+  color: rgba(var(--color-sf-on-surface-variant));
+  background: transparent;
+  border-width: 0;
+  cursor: pointer;
+  font-size: 14px;
+  margin: 0 4px 0 auto;
+  padding: 2px;
+  height: 18px;
+}
+.sf-message .sf-msg-close-icon path {
+  fill: currentColor;
+}
+.sf-message .sf-msg-close-icon:hover, .sf-message .sf-msg-close-icon:focus {
+  background-color: rgba(var(--color-sf-on-surface-variant), 0.12);
+  box-shadow: 0 0 0 2px rgba(var(--color-sf-on-surface-variant), 0.12);
+  border-radius: 50%;
+}
+.sf-message .sf-msg-content {
+  box-sizing: border-box;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 0 6px;
+  vertical-align: top;
+}
+.sf-message.sf-content-right {
+  justify-content: flex-end;
+}
+.sf-message.sf-content-center .sf-msg-content-wrap {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+}
+.sf-message.sf-content-right .sf-msg-close-icon, .sf-message.sf-content-center .sf-msg-close-icon {
+  margin: 2px 6px;
+}
+.sf-message.sf-rtl .sf-msg-close-icon {
+  margin: 0 auto 0 4px;
+}
+.sf-message.sf-success {
+  background-color: rgba(var(--color-sf-success-container));
+  border-color: rgba(var(--color-sf-success-container));
+  color: rgba(var(--color-sf-on-success-container));
+}
+.sf-message.sf-success .sf-msg-icon {
+  color: rgba(var(--color-sf-success));
+}
+.sf-message.sf-success .sf-msg-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-success .sf-msg-close-icon {
+  color: rgba(var(--color-sf-on-surface-variant));
+}
+.sf-message.sf-success .sf-msg-close-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-success .sf-msg-close-icon:hover, .sf-message.sf-success .sf-msg-close-icon:focus {
+  background-color: rgba(var(--color-sf-on-surface-variant), 0.12);
+  box-shadow: 0 0 0 2px rgba(var(--color-sf-on-surface-variant), 0.12);
+}
+.sf-message.sf-warning {
+  background-color: rgba(var(--color-sf-warning-container));
+  border-color: rgba(var(--color-sf-warning-container));
+  color: rgba(var(--color-sf-on-warning-container));
+}
+.sf-message.sf-warning .sf-msg-icon {
+  color: rgba(var(--color-sf-warning));
+}
+.sf-message.sf-warning .sf-msg-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-warning .sf-msg-close-icon {
+  color: rgba(var(--color-sf-on-surface-variant));
+}
+.sf-message.sf-warning .sf-msg-close-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-warning .sf-msg-close-icon:hover, .sf-message.sf-warning .sf-msg-close-icon:focus {
+  background-color: rgba(var(--color-sf-on-surface-variant), 0.12);
+  box-shadow: 0 0 0 2px rgba(var(--color-sf-on-surface-variant), 0.12);
+}
+.sf-message.sf-info {
+  background-color: rgba(var(--color-sf-info-container));
+  border-color: rgba(var(--color-sf-info-container));
+  color: rgba(var(--color-sf-on-info-container));
+}
+.sf-message.sf-info .sf-msg-icon {
+  color: rgba(var(--color-sf-info));
+}
+.sf-message.sf-info .sf-msg-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-info .sf-msg-close-icon {
+  color: rgba(var(--color-sf-on-surface-variant));
+}
+.sf-message.sf-info .sf-msg-close-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-info .sf-msg-close-icon:hover, .sf-message.sf-info .sf-msg-close-icon:focus {
+  background-color: rgba(var(--color-sf-on-surface-variant), 0.12);
+  box-shadow: 0 0 0 2px rgba(var(--color-sf-on-surface-variant), 0.12);
+}
+.sf-message.sf-error {
+  background-color: rgba(var(--color-sf-error-container));
+  border-color: rgba(var(--color-sf-error-container));
+  color: rgba(var(--color-sf-on-error-container));
+}
+.sf-message.sf-error .sf-msg-icon {
+  color: rgba(var(--color-sf-error));
+}
+.sf-message.sf-error .sf-msg-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-error .sf-msg-close-icon {
+  color: rgba(var(--color-sf-on-surface-variant));
+}
+.sf-message.sf-error .sf-msg-close-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-error .sf-msg-close-icon:hover, .sf-message.sf-error .sf-msg-close-icon:focus {
+  background-color: rgba(var(--color-sf-on-surface-variant), 0.12);
+  box-shadow: 0 0 0 2px rgba(var(--color-sf-on-surface-variant), 0.12);
+}
+.sf-message.sf-outlined {
+  background: transparent;
+  border-image: none;
+  border-color: rgba(var(--color-sf-outline));
+  color: rgba(var(--color-sf-on-surface));
+}
+.sf-message.sf-outlined .sf-msg-icon {
+  color: rgba(var(--color-sf-on-surface-variant));
+}
+.sf-message.sf-outlined .sf-msg-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-outlined .sf-msg-close-icon {
+  color: rgba(var(--color-sf-on-surface-variant));
+}
+.sf-message.sf-outlined .sf-msg-close-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-outlined .sf-msg-close-icon:hover, .sf-message.sf-outlined .sf-msg-close-icon:focus {
+  background-color: rgba(var(--color-sf-on-surface-variant), 0.12);
+  box-shadow: 0 0 0 2px rgba(var(--color-sf-on-surface-variant), 0.12);
+}
+.sf-message.sf-outlined.sf-success {
+  border-color: rgba(var(--color-sf-success));
+  color: rgba(var(--color-sf-on-success-container));
+}
+.sf-message.sf-outlined.sf-success .sf-msg-icon {
+  color: rgba(var(--color-sf-on-success-container));
+}
+.sf-message.sf-outlined.sf-success .sf-msg-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-outlined.sf-success .sf-msg-close-icon {
+  color: rgba(var(--color-sf-on-surface-variant));
+}
+.sf-message.sf-outlined.sf-success .sf-msg-close-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-outlined.sf-success .sf-msg-close-icon:hover, .sf-message.sf-outlined.sf-success .sf-msg-close-icon:focus {
+  background-color: rgba(var(--color-sf-on-surface-variant), 0.12);
+  box-shadow: 0 0 0 2px rgba(var(--color-sf-on-surface-variant), 0.12);
+}
+.sf-message.sf-outlined.sf-warning {
+  border-color: rgba(var(--color-sf-warning));
+  color: rgba(var(--color-sf-on-warning-container));
+}
+.sf-message.sf-outlined.sf-warning .sf-msg-icon {
+  color: rgba(var(--color-sf-on-warning-container));
+}
+.sf-message.sf-outlined.sf-warning .sf-msg-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-outlined.sf-warning .sf-msg-close-icon {
+  color: rgba(var(--color-sf-on-surface-variant));
+}
+.sf-message.sf-outlined.sf-warning .sf-msg-close-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-outlined.sf-warning .sf-msg-close-icon:hover, .sf-message.sf-outlined.sf-warning .sf-msg-close-icon:focus {
+  background-color: rgba(var(--color-sf-on-surface-variant), 0.12);
+  box-shadow: 0 0 0 2px rgba(var(--color-sf-on-surface-variant), 0.12);
+}
+.sf-message.sf-outlined.sf-info {
+  border-color: rgba(var(--color-sf-info));
+  color: rgba(var(--color-sf-on-info-container));
+}
+.sf-message.sf-outlined.sf-info .sf-msg-icon {
+  color: rgba(var(--color-sf-on-info-container));
+}
+.sf-message.sf-outlined.sf-info .sf-msg-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-outlined.sf-info .sf-msg-close-icon {
+  color: rgba(var(--color-sf-on-surface-variant));
+}
+.sf-message.sf-outlined.sf-info .sf-msg-close-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-outlined.sf-info .sf-msg-close-icon:hover, .sf-message.sf-outlined.sf-info .sf-msg-close-icon:focus {
+  background-color: rgba(var(--color-sf-on-surface-variant), 0.12);
+  box-shadow: 0 0 0 2px rgba(var(--color-sf-on-surface-variant), 0.12);
+}
+.sf-message.sf-outlined.sf-error {
+  border-color: rgba(var(--color-sf-error));
+  color: rgba(var(--color-sf-on-error-container));
+}
+.sf-message.sf-outlined.sf-error .sf-msg-icon {
+  color: rgba(var(--color-sf-on-error-container));
+}
+.sf-message.sf-outlined.sf-error .sf-msg-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-outlined.sf-error .sf-msg-close-icon {
+  color: rgba(var(--color-sf-on-surface-variant));
+}
+.sf-message.sf-outlined.sf-error .sf-msg-close-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-outlined.sf-error .sf-msg-close-icon:hover, .sf-message.sf-outlined.sf-error .sf-msg-close-icon:focus {
+  background-color: rgba(var(--color-sf-on-surface-variant), 0.12);
+  box-shadow: 0 0 0 2px rgba(var(--color-sf-on-surface-variant), 0.12);
+}
+.sf-message.sf-filled {
+  background: rgba(var(--color-sf-inverse-surface));
+  border-image: none;
+  border-color: rgba(var(--color-sf-inverse-surface));
+  color: rgba(var(--color-sf-inverse-on-surface));
+}
+.sf-message.sf-filled .sf-msg-icon {
+  color: rgba(var(--color-sf-inverse-on-surface));
+}
+.sf-message.sf-filled .sf-msg-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-filled .sf-msg-close-icon {
+  color: rgba(var(--color-sf-inverse-on-surface));
+}
+.sf-message.sf-filled .sf-msg-close-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-filled .sf-msg-close-icon:hover, .sf-message.sf-filled .sf-msg-close-icon:focus {
+  background-color: rgba(var(--color-sf-inverse-on-surface), 0.12);
+  box-shadow: 0 0 0 2px rgba(var(--color-sf-inverse-on-surface), 0.12);
+}
+.sf-message.sf-filled.sf-success {
+  background-color: rgba(var(--color-sf-success));
+  border-color: rgba(var(--color-sf-success));
+  color: rgba(var(--color-sf-on-success));
+}
+.sf-message.sf-filled.sf-success .sf-msg-icon {
+  color: rgba(var(--color-sf-on-success));
+}
+.sf-message.sf-filled.sf-success .sf-msg-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-filled.sf-success .sf-msg-close-icon {
+  color: rgba(var(--color-sf-on-success));
+}
+.sf-message.sf-filled.sf-success .sf-msg-close-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-filled.sf-success .sf-msg-close-icon:hover, .sf-message.sf-filled.sf-success .sf-msg-close-icon:focus {
+  background-color: ragba(var(--color-sf-on-success), 0.12);
+  box-shadow: 0 0 0 2px ragba(var(--color-sf-on-success), 0.12);
+}
+.sf-message.sf-filled.sf-warning {
+  background-color: rgba(var(--color-sf-warning));
+  border-color: rgba(var(--color-sf-warning));
+  color: rgba(var(--color-sf-on-warning));
+}
+.sf-message.sf-filled.sf-warning .sf-msg-icon {
+  color: rgba(var(--color-sf-on-warning));
+}
+.sf-message.sf-filled.sf-warning .sf-msg-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-filled.sf-warning .sf-msg-close-icon {
+  color: rgba(var(--color-sf-on-warning));
+}
+.sf-message.sf-filled.sf-warning .sf-msg-close-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-filled.sf-warning .sf-msg-close-icon:hover, .sf-message.sf-filled.sf-warning .sf-msg-close-icon:focus {
+  background-color: rgba(var(--color-sf-on-warning), 0.12);
+  box-shadow: 0 0 0 2px rgba(var(--color-sf-on-warning), 0.12);
+}
+.sf-message.sf-filled.sf-info {
+  background-color: rgba(var(--color-sf-info));
+  border-color: rgba(var(--color-sf-info));
+  color: rgba(var(--color-sf-on-info));
+}
+.sf-message.sf-filled.sf-info .sf-msg-icon {
+  color: rgba(var(--color-sf-on-info));
+}
+.sf-message.sf-filled.sf-info .sf-msg-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-filled.sf-info .sf-msg-close-icon {
+  color: rgba(var(--color-sf-on-info));
+}
+.sf-message.sf-filled.sf-info .sf-msg-close-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-filled.sf-info .sf-msg-close-icon:hover, .sf-message.sf-filled.sf-info .sf-msg-close-icon:focus {
+  background-color: rgba(var(--color-sf-on-info), 0.12);
+  box-shadow: 0 0 0 2px rgba(var(--color-sf-on-info), 0.12);
+}
+.sf-message.sf-filled.sf-error {
+  background-color: rgba(var(--color-sf-error));
+  border-color: rgba(var(--color-sf-error));
+  color: rgba(var(--color-sf-on-error));
+}
+.sf-message.sf-filled.sf-error .sf-msg-icon {
+  color: rgba(var(--color-sf-on-error));
+}
+.sf-message.sf-filled.sf-error .sf-msg-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-filled.sf-error .sf-msg-close-icon {
+  color: rgba(var(--color-sf-on-error));
+}
+.sf-message.sf-filled.sf-error .sf-msg-close-icon path {
+  fill: currentColor;
+}
+.sf-message.sf-filled.sf-error .sf-msg-close-icon:hover, .sf-message.sf-filled.sf-error .sf-msg-close-icon:focus {
+  background-color: rgba(var(--color-sf-on-error), 0.12);
+  box-shadow: 0 0 0 2px rgba(var(--color-sf-on-error), 0.12);
+}

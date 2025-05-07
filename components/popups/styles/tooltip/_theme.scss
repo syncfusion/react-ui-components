@@ -1,0 +1,106 @@
+@include export-module('tooltip-theme') {
+
+  .sf-tooltip-wrap {
+    border-radius: $tooltip-border-radius;
+    filter: $tooltip-drop-shadow;
+    opacity: $tooltip-opacity;
+
+    &.sf-popup {
+      background-color: $tooltip-content-bg-color;
+      border: $border-size $border-type $tooltip-content-border-color;
+      box-shadow: $tooltip-drop-shadow;
+      filter: $tooltip-drop-shadow-filter;
+    }
+
+    .sf-arrow-tip-outer {
+      height: 0;
+      left: 0;
+      position: absolute;
+      top: 0;
+      width: 0;
+
+      &.sf-tip-bottom {
+        border-left: $tooltip-arrow-outer-border $border-type transparent;
+        border-right: $tooltip-arrow-outer-border $border-type transparent;
+        border-top: $tooltip-arrow-outer-border $border-type $tooltip-content-border-color;
+      }
+
+      &.sf-tip-top {
+        border-bottom: $tooltip-arrow-outer-border $border-type $tooltip-content-border-color;
+        border-left: $tooltip-arrow-outer-border $border-type transparent;
+        border-right: $tooltip-arrow-outer-border $border-type transparent;
+      }
+
+      &.sf-tip-left {
+        border-bottom: $tooltip-arrow-outer-border $border-type transparent;
+        border-right: $tooltip-arrow-outer-border $border-type $tooltip-content-border-color;
+        border-top: $tooltip-arrow-outer-border $border-type transparent;
+      }
+
+      &.sf-tip-right {
+        border-bottom: $tooltip-arrow-outer-border $border-type transparent;
+        border-left: $tooltip-arrow-outer-border $border-type $tooltip-content-border-color;
+        border-top: $tooltip-arrow-outer-border $border-type transparent;
+      }
+    }
+
+    .sf-arrow-tip-inner {
+      height: 0;
+      position: absolute;
+      width: 0;
+      z-index: 10;
+
+      &.sf-tip-right,
+      &.sf-tip-left,
+      &.sf-tip-bottom,
+      &.sf-tip-top {
+        font-size: $tooltip-arrow-icon-font-size;
+        font-style: normal;
+        font-variant: normal;
+        font-weight: normal;
+        line-height: 1;
+        text-transform: none;
+
+        path {
+          fill: $tooltip-content-bg-color;
+        }
+      }
+
+      &.sf-tip-bottom,
+      &.sf-tip-top {
+        right: $tooltip-arrow-icon-font-size;
+      }
+
+      &.sf-tip-right,
+      &.sf-tip-left {
+        bottom: $tooltip-arrow-icon-font-size;
+      }
+    }
+
+    .sf-tooltip-close {
+      background-color: $tooltip-icon-bg-color;
+      border-color: $tooltip-icon-border-color;
+      border-radius: $tooltip-close-icon-border-radius;
+      border: $tooltip-close-icon-border;
+
+      path {
+        fill: $tooltip-icon-color;
+      }
+
+      &:hover {
+        background-color: $tooltip-icon-bg-hover;
+
+        path {
+          fill: $tooltip-icon-hover-color;
+        }
+      }
+    }
+
+    .sf-tip-content {
+      border-radius: inherit;
+      color: $tooltip-content-font-color;
+      font-family: $font-family;
+      font-size: $tooltip-font-size;
+    }
+  }
+}

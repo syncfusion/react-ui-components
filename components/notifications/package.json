@@ -1,0 +1,28 @@
+{
+  "name": "@syncfusion/react-notifications",
+  "version": "29.1.33",
+  "description": "A package of Pure React notification components such as Toast and Badge which used to notify important information to end-users.",
+  "author": "Syncfusion Inc.",
+  "license": "SEE LICENSE IN license",
+  "keywords": [
+    "syncfusion",
+    "web-components",
+    "react",
+    "syncfusion-react",
+    "react-notifications"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/syncfusion/react-ui-components.git"
+  },
+  "homepage": "https://www.syncfusion.com/react-ui-components",
+  "module": "./index.js",
+  "readme": "README.md",
+  "dependencies": {
+    "@syncfusion/react-base": "~29.1.33",
+    "@syncfusion/react-buttons": "~29.1.33"
+  },
+  "devDependencies": {},
+  "typings": "index.d.ts",
+  "sideEffects": false
+}

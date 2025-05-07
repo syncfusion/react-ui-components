@@ -1,0 +1,118 @@
+@mixin shimmer-animation($animation-name) {
+  animation: $animation-name $shimmer-effect-duration infinite;
+  animation-timing-function: $shimmer-effect-timing-function;
+}
+
+@include export-module('skeleton-layout-and-themes') {
+  .sf-skeleton {
+    display: inline-block;
+    position: relative;
+    overflow: hidden;
+    border: $skeleton-boder;
+
+    @at-root {
+      &.sf-skeleton-text,
+      &.sf-skeleton-square,
+      &.sf-skeleton-rectangle {
+        border-radius: $skeleton-border-radius;
+      }
+
+      &.sf-skeleton-circle {
+        border-radius: 50%;
+      }
+
+      &.sf-visible-none {
+        display: none;
+      }
+
+      &.sf-shimmer-wave::after {
+        @include shimmer-animation(e-shimmer-wave);
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        right: 0;
+        width: calc(200% + 200px);
+      }
+
+      &.sf-shimmer-fade {
+        @include shimmer-animation(e-shimmer-fade);
+      }
+
+      &.sf-shimmer-pulse {
+        @include shimmer-animation(e-shimmer-pulse);
+      }
+    }
+  }
+
+  .sf-rtl .sf-shimmer-wave::after,
+  .sf-rtl.sf-shimmer-wave::after {
+    animation: e-shimmer-wave-rtl $shimmer-effect-duration infinite;
+  }
+
+  @keyframes e-shimmer-wave {
+    to {
+      transform: translateX(calc(50% + 100px));
+    }
+  }
+
+  @keyframes e-shimmer-wave-rtl {
+    from {
+      transform: translateX(calc(50% + 100px));
+    }
+  }
+
+  @keyframes e-shimmer-fade {
+    0% {
+      opacity: 1;
+    }
+    50% {
+      opacity: .4;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes e-shimmer-pulse {
+    0% {
+      transform: scale(1);
+    }
+    40% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(.975);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  .sf-skeleton {
+    @at-root {
+      &.sf-shimmer-wave::after {
+        @if ($skin-name =='Material3') {
+          background-image: linear-gradient($shimmer-wave-angle, $shimmer-background-color calc($shimmer-wave-pos - $shimmer-wave-length), $shimmer-wave-color $shimmer-wave-pos, $shimmer-background-color calc($shimmer-wave-pos + $shimmer-wave-length));
+        }
+        @else if ($skin-name == 'fluent2') {
+          background-image: linear-gradient($shimmer-wave-angle, #fafafa calc($shimmer-wave-pos - $shimmer-wave-length), #e6e6e6 $shimmer-wave-pos, #fafafa calc($shimmer-wave-pos + $shimmer-wave-length));
+        }
+        @else {
+          background-image: linear-gradient($shimmer-wave-angle, $shimmer-background-color calc($shimmer-wave-pos - $shimmer-wave-length), #e6e1e5 $shimmer-wave-pos, $shimmer-background-color calc($shimmer-wave-pos + $shimmer-wave-length));
+        }
+      }
+  
+      &.sf-skeleton-text,
+      &.sf-skeleton-square,
+      &.sf-skeleton-rectangle,
+      &.sf-skeleton-circle {
+        @if ($skin-name =='Material3') {
+          background: $skeleton-background-color;
+        }
+        @else {
+          background-color: $skeleton-background-color;
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+/*! popup layout */
+.sf-popup {
+  height: auto;
+  position: absolute;
+  width: auto;
+  z-index: 1000;
+}
+.sf-popup.sf-popup-open {
+  display: block;
+}
+.sf-popup.sf-popup-close {
+  display: none;
+}

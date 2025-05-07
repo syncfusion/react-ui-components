@@ -1,0 +1,316 @@
+.sf-dark-mode {
+  --color-sf-black: 0, 0, 0;
+  --color-sf-white: 255, 255, 255;
+  --color-sf-primary: 208, 188, 255;
+  --color-sf-primary-container: 79, 55, 139;
+  --color-sf-secondary: 204, 194, 220;
+  --color-sf-secondary-container: 74, 68, 88;
+  --color-sf-tertiary: 239, 184, 200;
+  --color-sf-tertiary-container: 99, 59, 72;
+  --color-sf-surface: 28, 27, 31;
+  --color-sf-surface-variant: 73, 69, 79;
+  --color-sf-background: var(--color-sf-surface);
+  --color-sf-on-primary: 55, 30, 115;
+  --color-sf-on-primary-container: 234, 221, 255;
+  --color-sf-on-secondary: 51, 45, 65;
+  --color-sf-on-secondary-container: 232, 222, 248;
+  --color-sf-on-tertiary: 73, 37, 50;
+  --color-sf-on-tertiary-containe: 255, 216, 228;
+  --color-sf-on-surface: 230, 225, 229;
+  --color-sf-on-surface-variant: 202, 196, 208;
+  --color-sf-on-background: 230, 225, 229;
+  --color-sf-outline: 147, 143, 153;
+  --color-sf-outline-variant: 68, 71, 70;
+  --color-sf-shadow: 0, 0, 0;
+  --color-sf-surface-tint-color: 208, 188, 255;
+  --color-sf-inverse-surface: 230, 225, 229;
+  --color-sf-inverse-on-surface: 49, 48, 51;
+  --color-sf-inverse-primary: 103, 80, 164;
+  --color-sf-scrim: 0, 0, 0;
+  --color-sf-error: 242, 184, 181;
+  --color-sf-error-container: 140, 29, 24;
+  --color-sf-on-error: 96, 20, 16;
+  --color-sf-on-error-container: 249, 222, 220;
+  --color-sf-success: 83, 202, 23;
+  --color-sf-success-container: 22, 62, 2;
+  --color-sf-on-success: 13, 39, 0;
+  --color-sf-on-success-container: 183, 250, 150;
+  --color-sf-info: 71, 172, 251;
+  --color-sf-info-container: 0, 67, 120;
+  --color-sf-on-info: 0, 51, 91;
+  --color-sf-on-info-container: 173, 219, 255;
+  --color-sf-warning: 245, 180, 130;
+  --color-sf-warning-container: 123, 65, 0;
+  --color-sf-on-warning: 99, 52, 0;
+  --color-sf-on-warning-container: 255, 220, 193;
+  --color-sf-spreadsheet-gridline: 231, 224, 236;
+  --color-sf-shadow-focus-ring1: 0 0 0 1px #000, 0 0 0 3px #fff;
+  --color-sf-success-text: 0, 0, 0;
+  --color-sf-warning-text: 0, 0, 0;
+  --color-sf-info-text: 0, 0, 0;
+  --color-sf-danger-text: 0, 0, 0;
+  --color-sf-diagram-palette-background: var(--color-sf-inverse-surface);
+  --color-sf-content-text-color-alt2: var(--color-sf-on-secondary);
+}
+.sf-dropdown-btn,
+.sf-dropdown-btn.sf-btn {
+  box-shadow: none;
+  text-transform: none;
+  white-space: normal;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px 1px rgba(0, 0, 0, 0.15), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  padding: 7px 16px;
+}
+.sf-dropdown-btn:focus-visible,
+.sf-dropdown-btn.sf-btn:focus-visible {
+  box-shadow: 0 0 0 1px #fff, 0 0 0 3px #000;
+}
+.sf-dropdown-btn:active,
+.sf-dropdown-btn.sf-btn:active {
+  box-shadow: 0 1px 3px 1px rgba(0, 0, 0, 0.15), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+}
+.sf-dropdown-btn .sf-btn-icon,
+.sf-dropdown-btn.sf-btn .sf-btn-icon {
+  font-size: 16px;
+}
+.sf-dropdown-btn .sf-caret,
+.sf-dropdown-btn.sf-btn .sf-caret {
+  font-size: 14px;
+}
+.sf-dropdown-btn.sf-vertical,
+.sf-dropdown-btn.sf-btn.sf-vertical {
+  line-height: 1;
+  padding: 6px 12px;
+}
+.sf-dropdown-btn.sf-caret-hide .sf-caret,
+.sf-dropdown-btn.sf-btn.sf-caret-hide .sf-caret {
+  display: none;
+}
+.sf-dropdown-btn.sf-outline,
+.sf-dropdown-btn.sf-btn.sf-outline {
+  box-shadow: none !important;
+}
+.sf-dropdown-btn.sf-flat,
+.sf-dropdown-btn.sf-btn.sf-flat {
+  box-shadow: none !important;
+}
+.sf-dropdown-btn.sf-small .sf-dropdown-popup ul,
+.sf-dropdown-btn.sf-btn.sf-small .sf-dropdown-popup ul {
+  padding: 4px 0;
+}
+.sf-dropdown-btn.sf-small .sf-dropdown-popup ul .sf-item,
+.sf-dropdown-btn.sf-btn.sf-small .sf-dropdown-popup ul .sf-item {
+  padding: 0 8px;
+  height: 24px;
+}
+.sf-dropdown-btn.sf-small.sf-vertical,
+.sf-dropdown-btn.sf-btn.sf-small.sf-vertical {
+  line-height: 1;
+  padding: 6px 12px;
+}
+.sf-dropdown-btn.sf-inherit,
+.sf-dropdown-btn.sf-btn.sf-inherit {
+  background: inherit;
+  border-color: transparent;
+  box-shadow: none;
+  color: inherit;
+}
+.sf-dropdown-btn.sf-inherit:hover, .sf-dropdown-btn.sf-inherit:focus, .sf-dropdown-btn.sf-inherit:active, .sf-dropdown-btn.sf-inherit.sf-active,
+.sf-dropdown-btn.sf-btn.sf-inherit:hover,
+.sf-dropdown-btn.sf-btn.sf-inherit:focus,
+.sf-dropdown-btn.sf-btn.sf-inherit:active,
+.sf-dropdown-btn.sf-btn.sf-inherit.sf-active {
+  background: rgba(0, 0, 0, 0.056);
+  border-color: transparent;
+  box-shadow: none;
+  color: inherit;
+}
+.sf-dropdown-popup {
+  background: linear-gradient(0deg, rgba(var(--color-sf-surface), 1), rgba(var(--color-sf-surface), 1)), rgba(var(--color-sf-surface));
+  color: rgba(var(--color-sf-on-surface));
+  position: absolute;
+}
+.sf-dropdown-popup ul {
+  border: 0 solid rgba(var(--color-sf-outline-variant));
+  border-radius: 4px;
+  box-shadow: 0 2px 6px 2px rgba(0, 0, 0, 0.15), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  box-sizing: border-box;
+  font-size: 14px;
+  font-weight: 400;
+  list-style: none;
+  margin: 0;
+  min-width: 120px;
+  overflow: hidden;
+  padding: 4px 0;
+  user-select: none;
+  white-space: nowrap;
+}
+.sf-dropdown-popup ul .sf-item {
+  cursor: pointer;
+  display: flex;
+  height: 32px;
+  line-height: 32px;
+  padding: 0 12px;
+}
+.sf-dropdown-popup ul .sf-item.sf-separator {
+  padding: 0 !important;
+  border-bottom-style: solid;
+  border-bottom-width: 1px;
+  cursor: auto;
+  height: auto;
+  line-height: normal;
+  margin: 3px 0;
+  pointer-events: none;
+}
+.sf-dropdown-popup ul .sf-item.sf-url {
+  padding: 0;
+  color: rgba(var(--color-sf-on-surface));
+}
+.sf-dropdown-popup ul .sf-item .sf-menu-url {
+  display: block;
+  padding: 0 12px;
+  text-decoration: none;
+  width: 100%;
+}
+.sf-dropdown-popup ul .sf-item .sf-menu-icon {
+  float: left;
+  font-size: 16px;
+  color: rgba(var(--color-sf-on-surface-variant));
+  margin-right: 11px;
+  line-height: 32px;
+  vertical-align: middle;
+  width: 1em;
+}
+.sf-dropdown-popup ul .sf-item.sf-disabled {
+  cursor: auto;
+  pointer-events: none;
+  box-shadow: none;
+  color: rgba(var(--color-sf-on-surface), 0.38);
+  opacity: 1;
+}
+.sf-dropdown-popup ul .sf-item.sf-disabled .sf-menu-icon {
+  color: rgba(var(--color-sf-on-surface), 0.38);
+}
+.sf-dropdown-popup ul .sf-item:hover {
+  background: rgba(var(--color-sf-on-surface), 0.05);
+  color: rgba(var(--color-sf-on-surface));
+}
+.sf-dropdown-popup ul .sf-item:active, .sf-dropdown-popup ul .sf-item.sf-selected {
+  background: rgba(var(--color-sf-primary-container), 0.65);
+  color: rgba(var(--color-sf-on-surface));
+}
+.sf-rtl.sf-dropdown-popup .sf-item .sf-menu-icon {
+  float: right;
+  margin-left: 11px;
+  margin-right: 0;
+}
+.sf-dropdown-popup-width ul {
+  min-width: 0 !important;
+}
+.sf-dropdown-popup-width ul li {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  display: block !important;
+}
+.sf-bigger .sf-dropdown-btn .sf-btn-icon,
+.sf-bigger.sf-dropdown-btn .sf-btn-icon {
+  font-size: 18px;
+}
+.sf-bigger .sf-dropdown-btn .sf-caret,
+.sf-bigger.sf-dropdown-btn .sf-caret {
+  font-size: 16px;
+}
+.sf-bigger .sf-dropdown-btn.sf-vertical,
+.sf-bigger.sf-dropdown-btn.sf-vertical {
+  line-height: 1;
+  padding: 8px 16px;
+}
+.sf-bigger .sf-dropdown-btn.sf-small.sf-vertical,
+.sf-bigger.sf-dropdown-btn.sf-small.sf-vertical {
+  line-height: 1;
+  padding: 8px 16px;
+}
+.sf-bigger .sf-dropdown-btn.sf-small .sf-btn-icon,
+.sf-bigger.sf-dropdown-btn.sf-small .sf-btn-icon {
+  font-size: 18px;
+}
+.sf-bigger .sf-dropdown-btn.sf-small .sf-btn-icon.sf-caret,
+.sf-bigger.sf-dropdown-btn.sf-small .sf-btn-icon.sf-caret {
+  font-size: 18px;
+}
+*.sf-bigger .sf-dropdown-popup ul,
+*.sf-bigger.sf-dropdown-popup ul {
+  box-shadow: 0 2px 6px 2px rgba(0, 0, 0, 0.15), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  font-size: 16px;
+  min-width: 112px;
+  padding: 8px 0;
+}
+*.sf-bigger .sf-dropdown-popup ul .sf-item,
+*.sf-bigger.sf-dropdown-popup ul .sf-item {
+  height: 40px;
+  line-height: 40px;
+  padding: 0 16px;
+}
+*.sf-bigger .sf-dropdown-popup ul .sf-item.sf-url,
+*.sf-bigger.sf-dropdown-popup ul .sf-item.sf-url {
+  padding: 0;
+}
+*.sf-bigger .sf-dropdown-popup ul .sf-item .sf-menu-icon,
+*.sf-bigger.sf-dropdown-popup ul .sf-item .sf-menu-icon {
+  font-size: 20px;
+  line-height: 40px;
+}
+*.sf-bigger .sf-dropdown-popup ul .sf-item.sf-separator,
+*.sf-bigger.sf-dropdown-popup ul .sf-item.sf-separator {
+  height: auto;
+  line-height: normal;
+}
+.sf-dropdown-popup {
+  background: linear-gradient(0deg, rgba(var(--color-sf-surface), 1), rgba(var(--color-sf-surface), 1)), rgba(var(--color-sf-surface));
+  color: rgba(var(--color-sf-on-surface));
+}
+.sf-dropdown-popup ul .sf-item .sf-menu-url {
+  color: rgba(var(--color-sf-on-surface));
+}
+.sf-dropdown-popup ul .sf-item .sf-menu-icon path {
+  fill: rgba(var(--color-sf-on-surface-variant));
+}
+.sf-dropdown-popup ul .sf-item.sf-focused {
+  background: rgba(var(--color-sf-on-surface), 0.04);
+  box-shadow: none;
+}
+.sf-dropdown-popup ul .sf-item:hover {
+  background: rgba(var(--color-sf-on-surface), 0.05);
+  color: rgba(var(--color-sf-on-surface));
+}
+.sf-dropdown-popup ul .sf-item:active, .sf-dropdown-popup ul .sf-item.sf-selected {
+  background: rgba(var(--color-sf-primary-container), 0.65);
+  color: rgba(var(--color-sf-on-surface));
+}
+.sf-dropdown-popup ul .sf-item:active .sf-menu-url, .sf-dropdown-popup ul .sf-item.sf-selected .sf-menu-url {
+  color: rgba(var(--color-sf-on-surface));
+}
+.sf-dropdown-popup ul .sf-item:active .sf-menu-icon path, .sf-dropdown-popup ul .sf-item.sf-selected .sf-menu-icon path {
+  fill: rgba(var(--color-sf-on-surface));
+}
+.sf-dropdown-popup ul .sf-item .sf-separator {
+  border-bottom-color: rgba(var(--color-sf-outline-variant));
+}
+.sf-dropdown-btn.sf-inherit,
+.sf-dropdown-btn.sf-btn.sf-inherit {
+  background: inherit;
+  border-color: transparent;
+  box-shadow: none;
+  color: inherit;
+}
+.sf-dropdown-btn.sf-inherit:hover, .sf-dropdown-btn.sf-inherit:focus, .sf-dropdown-btn.sf-inherit:active, .sf-dropdown-btn.sf-inherit.sf-active,
+.sf-dropdown-btn.sf-btn.sf-inherit:hover,
+.sf-dropdown-btn.sf-btn.sf-inherit:focus,
+.sf-dropdown-btn.sf-btn.sf-inherit:active,
+.sf-dropdown-btn.sf-btn.sf-inherit.sf-active {
+  background: rgba(0, 0, 0, 0.056);
+  border-color: transparent;
+  box-shadow: none;
+  color: inherit;
+}

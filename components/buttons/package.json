@@ -1,0 +1,50 @@
+{
+  "name": "@syncfusion/react-buttons",
+  "version": "29.1.33",
+  "description": "A package of feature-rich Pure React components such as Button, CheckBox, RadioButton and Switch.",
+  "author": "Syncfusion Inc.",
+  "license": "SEE LICENSE IN license",
+  "keywords": [
+    "syncfusion",
+    "web-components",
+    "react",
+    "syncfusion-react",
+    "react-buttons",
+    "button",
+    "react button",
+    "checkbox",
+    "react checkbox",
+    "checkboxes",
+    "radio button",
+    "radiobutton",
+    "radiobuttons",
+    "react radiobutton",
+    "switch",
+    "react switch",
+    "primary button",
+    "flat button",
+    "round button",
+    "icon button",
+    "togglebutton",
+    "toggle button",
+    "form control",
+    "form controls",
+    "input",
+    "floating action button",
+    "floating button",
+    "fab"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/syncfusion/react-ui-components.git"
+  },
+  "homepage": "https://www.syncfusion.com/react-ui-components",
+  "module": "./index.js",
+  "readme": "README.md",
+  "dependencies": {
+    "@syncfusion/react-base": "~29.1.33"
+  },
+  "devDependencies": {},
+  "typings": "index.d.ts",
+  "sideEffects": false
+}

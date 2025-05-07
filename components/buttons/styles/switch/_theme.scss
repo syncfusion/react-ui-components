@@ -1,0 +1,406 @@
+@include export-module('switch-theme') {
+  .sf-switch-wrapper,
+  .sf-css.sf-switch-wrapper {
+    /* stylelint-disable property-no-vendor-prefix */
+    -webkit-tap-highlight-color: transparent;
+
+    & .sf-switch-off {
+      background-color: $switch-off-bg-color;
+      color: $switch-inner-off-font-color;
+    }
+
+    & .sf-switch-handle {
+      background-color: $switch-handle-bg-color;
+      box-shadow: $switch-handle-shadow;
+    }
+
+    & .sf-switch-on {
+      background-color: $switch-on-bg-color;
+      color: $switch-inner-on-font-color;
+    }
+
+    & .sf-switch-handle.sf-switch-active {
+      background-color: $switch-active-handle-bg;
+      @if $skin-name == 'bootstrap5.3' {
+        opacity: 1;
+      }
+    }
+
+    & .sf-switch-inner.sf-switch-active {
+      background-color: $switch-inner-active-bg;
+      border-color: $switch-inner-active-border-color;
+    }
+
+    & .sf-switch-inner {
+      background-color: $switch-inner-bg;
+    }
+
+    & .sf-ripple-element {
+      background-color: $switch-checked-ripple-bg-color;
+    }
+
+    & .sf-ripple-check .sf-ripple-element {
+      background-color: $switch-ripple-bg-color;
+    }
+
+    &.sf-switch-disabled {
+      & .sf-switch-handle.sf-switch-active {
+        box-shadow: $switch-handle-shadow-disabled;
+        @if $skin-name == 'bootstrap5.3' {
+          background-color: $content-bg-color;
+          @if $skin-name == 'bootstrap5.3' {
+            opacity: 1;
+          }
+          @else {
+            opacity: $switch-on-off-disabled-bg-color-opacity;
+          }
+        }
+      }
+
+      & .sf-switch-handle:not(.sf-switch-active) {
+        @if $skin-name == 'Material3' {
+          background-color: $switch-on-disabled-bg-color;
+        }
+      }
+
+      & .sf-switch-handle {
+        background-color: $switch-handle-disabled-bg-color;
+        box-shadow: $switch-handle-shadow-disabled;
+      }
+
+      & .sf-switch-inner.sf-switch-active {
+        @if $skin-name == 'bootstrap5.3' {
+          background-color: $primary;
+        }
+        @if $skin-name == 'tailwind3' {
+          background-color: $switch-inner-active-bg;
+          border-color: $switch-inner-active-bg;
+        }
+      }
+
+      & .sf-switch-inner .sf-switch-off {
+        opacity: $switch-on-off-disabled-bg-color-opacity;
+        background-color: $switch-on-off-disabled-bg-color;
+        @if $skin-name == 'Material3' {
+          border-color: $switch-handle-disabled-border-color;
+        }
+        @else {
+          border-color: $switch-handle-disabled-bg-color;
+        }
+        color: $switch-disabled-font-color;
+      }
+
+      & .sf-switch-inner .sf-switch-on {
+        color: $switch-disabled-font-color;
+        opacity: $switch-on-off-disabled-bg-color-opacity;
+        background-color: $switch-on-disabled-bg-color;
+        @if $skin-name == 'fluent2' {
+          border-color: $toggle-switch-border-disabled !important; /* stylelint-disable-line declaration-no-important */
+        }
+      }
+
+      & .sf-switch-inner {
+        @if $skin-name == 'fluent2' {
+          background-color: transparent;
+        }
+        @else {
+          background-color: $switch-on-off-disabled-bg-color;
+        }
+        @if $skin-name != 'bootstrap5.3' {
+          opacity: $switch-on-off-disabled-bg-color-opacity;
+        }
+        border-color: $switch-border-disabled-bg-color;
+      }
+
+      &:hover {
+        & .sf-switch-inner.sf-switch-active {
+          @if $skin-name != 'bootstrap5.3' {
+            background-color: $switch-on-off-disabled-bg-color;
+          }
+          border-color: $switch-border-disabled-bg-color;
+        }
+        & .sf-switch-handle:not(.sf-switch-active) {
+          @if $skin-name == 'Material3' {
+            background-color: $switch-on-disabled-bg-color;
+          }
+        }
+
+        & .sf-switch-inner {
+          border-color: $switch-border-disabled-bg-color;
+          color: $switch-disabled-font-color;
+        }
+
+        & .sf-switch-inner.sf-switch-active .sf-switch-on {
+          color: $switch-disabled-font-color;
+          background-color: $switch-on-disabled-bg-color;
+        }
+
+        & .sf-switch-handle {
+          background-color: $switch-handle-disabled-bg-color;
+        }
+
+        & .sf-switch-handle.sf-switch-active {
+          background-color: $switch-handle-disabled-bg-color;
+        }
+      }
+    }
+
+    &:hover {
+      & .sf-switch-inner.sf-switch-active {
+        background-color: $switch-inner-hover-border-color;
+        border-color: $switch-inner-hover-border-color;
+      }
+
+      & .sf-switch-inner {
+        background-color: $switch-hover-bg-color;
+        border-color: $switch-hover-border;
+      }
+
+      & .sf-switch-inner.sf-switch-active .sf-switch-on {
+        background-color: $switch-on-hover-bg-color;
+        color: $switch-inner-hover-on-font-color;
+      }
+
+      & .sf-switch-handle.sf-switch-active {
+        background-color: $switch-handle-hover-bg-color;
+        & .sf-ripple-container {
+          @if $skin-name == 'Material3' {
+            background-color: $switch-checked-ripple-bg-color;
+          }
+        }
+  
+        & .sf-ripple-check.sf-ripple-container {
+          @if $skin-name == 'Material3' {
+            background-color: $switch-ripple-bg-color;
+          }
+        }
+      }
+    }
+
+    &:not(.sf-switch-disabled):hover {
+      & .sf-switch-handle:not(.sf-switch-active) {
+        @if $skin-name != 'bootstrap5.3' {
+          background-color: $switch-handle-off-hover-bg-color;
+        }
+        @if $skin-name == 'tailwind3' {
+          background-color: $switch-handle-bg-color;
+        }
+      }
+    }
+
+    &.sf-focus,
+    &:focus {
+      & .sf-switch-inner {
+        background-color: $switch-inner-focus-off-bg;
+        border-color: $switch-inner-focus-border;
+        box-shadow: $switch-focus-inner-box-shadow;
+        outline: $switch-focused-outline;
+        outline-offset: $switch-focused-outline-offset;
+      }
+
+      & .sf-switch-inner.sf-switch-active {
+        background-color: $switch-inner-focus-bg-color;
+        border-color: $switch-focus-border-color-active;
+        outline: $switch-focused-outline-active;
+      }
+
+      & .sf-ripple-container {
+        background-color: $switch-checked-ripple-bg-color;
+      }
+
+      & .sf-ripple-check.sf-ripple-container {
+        background-color: $switch-ripple-bg-color;
+      }
+    }
+
+    &.sf-active,
+    &:active {
+      & .sf-switch-inner {
+        @if $skin-name == 'fluent2' {
+          background-color: $content-bg-color;
+          border-color: $border-pressed;
+        }
+        @else {
+          background-color: $switch-inner-focus-off-bg;
+          border-color: $switch-inner-focus-border;
+        }
+        box-shadow: $switch-focus-inner-box-shadow;
+        outline: $switch-focused-outline;
+        outline-offset: $switch-focused-outline-offset;
+
+        &.sf-switch-active {
+          @if $skin-name == 'fluent2' {
+            background-color: $primary-border-color-selected;
+            border-color: $primary-border-color-selected;
+          }
+        }
+      }
+
+      & .sf-switch-inner.sf-switch-active {
+        background-color: $switch-inner-focus-bg-color;
+        border-color: $switch-focus-border-color-active;
+        outline: $switch-focused-outline-active;
+      }
+
+      & .sf-ripple-container {
+        background-color: $switch-checked-ripple-bg-color;
+      }
+
+      & .sf-ripple-check.sf-ripple-container {
+        background-color: $switch-ripple-bg-color;
+      }
+    }
+
+    &.sf-rtl {
+      &.sf-focus {
+
+        & .sf-switch-on {
+          @if $skin-name != 'bootstrap5.3' {
+            background-color: $switch-on-off-hover-bg-color;
+          }
+        }
+
+        & .sf-switch-off {
+          background-color: $switch-on-off-hover-bg-color;
+        }
+
+        & .sf-switch-inner.sf-switch-active {
+          background-color: $switch-inner-focus-bg-color;
+          border-color: $switch-focus-border-color-active;
+          color: $switch-inner-on-font-color;
+          outline: $switch-focused-outline-active;
+        }
+      }
+
+      & .sf-switch-on {
+        background-color: $switch-inner-active;
+      }
+
+      & .sf-switch-handle {
+        background-color: $switch-handle-bg-color;
+        box-shadow: $switch-handle-shadow;
+      }
+
+      & .sf-switch-inner.sf-switch-active .sf-switch-off {
+        background-color: $switch-off-bg-color;
+      }
+
+      & .sf-switch-handle.sf-switch-active {
+        background-color: $switch-active-handle-bg;
+      }
+
+      & .sf-switch-inner.sf-switch-active {
+        background-color: $switch-inner-active-bg;
+        border-color: $switch-inner-active-border-color;
+      }
+
+      &:hover {
+        & .sf-switch-inner.sf-switch-active {
+          background-color: $switch-inner-hover-bg-color;
+          border-color: $switch-inner-hover-border-color;
+        }
+
+        & .sf-switch-inner {
+          border-color: $switch-hover-border;
+        }
+
+        & .sf-switch-inner.sf-switch-active .sf-switch-on {
+          background-color: $switch-on-hover-bg-color;
+        }
+
+        & .sf-switch-handle.sf-switch-active {
+          background-color: $switch-handle-hover-bg-color;
+        }
+      }
+
+      &.sf-switch-disabled {
+        & .sf-switch-inner .sf-switch-on {
+          color: $switch-disabled-font-color;
+          opacity: $switch-on-off-disabled-bg-color-opacity;
+          background-color: $switch-on-disabled-bg-color;
+          @if $skin-name == 'fluent2' {
+            border-color: $toggle-switch-border-disabled;
+          }
+        }
+
+        & .sf-switch-inner.sf-switch-active {
+          @if $skin-name == 'tailwind3' {
+            background-color: $switch-inner-active-bg;
+            border-color: $switch-inner-active-bg;
+          }
+        }
+
+        & .sf-switch-inner .sf-switch-off {
+          opacity: $switch-on-off-disabled-bg-color-opacity;
+          background-color: $switch-on-off-disabled-bg-color;
+          color: $switch-disabled-font-color;
+        }
+
+        & .sf-switch-handle {
+          background-color: $switch-handle-disabled-bg-color;
+          box-shadow: $switch-handle-shadow-disabled;
+        }
+
+        & .sf-switch-handle.sf-switch-active {
+          background-color: $switch-handle-on-disabled-bg-color;
+          box-shadow: $switch-handle-shadow-disabled;
+        }
+
+        & .sf-switch-inner {
+          background-color: $switch-on-off-disabled-bg-color;
+          border-color: $switch-border-disabled-bg-color;
+          opacity: $switch-on-off-disabled-bg-color-opacity;
+        }
+
+        &:hover {
+          & .sf-switch-inner.sf-switch-active .sf-switch-on {
+            color: $switch-disabled-font-color;
+            background-color: $switch-on-disabled-bg-color;
+          }
+
+          & .sf-switch-inner.sf-switch-active {
+            background-color: $switch-on-off-disabled-bg-color;
+            border-color: $switch-border-disabled-bg-color;
+          }
+
+          & .sf-switch-inner {
+            border-color: $switch-border-disabled-bg-color;
+            color: $switch-disabled-font-color;
+          }
+
+          & .sf-switch-handle.sf-switch-active {
+            background-color: $switch-handle-on-disabled-bg-color;
+          }
+
+          & .sf-switch-handle {
+            background-color: $switch-handle-disabled-bg-color;
+          }
+        }
+      }
+    }
+
+    & .sf-switch {
+      &:focus {
+        box-shadow: $switch-focus-inner-box-shadow;
+      }
+    }
+
+    &.sf-small {
+      &.sf-rtl.sf-switch-disabled {
+        &:hover {
+          & .sf-switch-inner.sf-switch-active {
+            background-color: $switch-small-disabled-rtl-active-bg-color;
+          }
+        }
+      }
+    }
+  }
+}
+
+.sf-switch-wrapper:focus .sf-switch-handle:not(.sf-switch-active),
+.sf-switch-wrapper:active .sf-switch-handle:not(.sf-switch-active),
+.sf-switch-wrapper.sf-focus .sf-switch-handle:not(.sf-switch-active) {
+  @if $skin-name == 'bootstrap5.3' {
+    background-color: $primary-light;
+  }
+}

@@ -1,0 +1,360 @@
+.sf-dark-mode {
+  --color-sf-black: 0, 0, 0;
+  --color-sf-white: 255, 255, 255;
+  --color-sf-primary: 208, 188, 255;
+  --color-sf-primary-container: 79, 55, 139;
+  --color-sf-secondary: 204, 194, 220;
+  --color-sf-secondary-container: 74, 68, 88;
+  --color-sf-tertiary: 239, 184, 200;
+  --color-sf-tertiary-container: 99, 59, 72;
+  --color-sf-surface: 28, 27, 31;
+  --color-sf-surface-variant: 73, 69, 79;
+  --color-sf-background: var(--color-sf-surface);
+  --color-sf-on-primary: 55, 30, 115;
+  --color-sf-on-primary-container: 234, 221, 255;
+  --color-sf-on-secondary: 51, 45, 65;
+  --color-sf-on-secondary-container: 232, 222, 248;
+  --color-sf-on-tertiary: 73, 37, 50;
+  --color-sf-on-tertiary-containe: 255, 216, 228;
+  --color-sf-on-surface: 230, 225, 229;
+  --color-sf-on-surface-variant: 202, 196, 208;
+  --color-sf-on-background: 230, 225, 229;
+  --color-sf-outline: 147, 143, 153;
+  --color-sf-outline-variant: 68, 71, 70;
+  --color-sf-shadow: 0, 0, 0;
+  --color-sf-surface-tint-color: 208, 188, 255;
+  --color-sf-inverse-surface: 230, 225, 229;
+  --color-sf-inverse-on-surface: 49, 48, 51;
+  --color-sf-inverse-primary: 103, 80, 164;
+  --color-sf-scrim: 0, 0, 0;
+  --color-sf-error: 242, 184, 181;
+  --color-sf-error-container: 140, 29, 24;
+  --color-sf-on-error: 96, 20, 16;
+  --color-sf-on-error-container: 249, 222, 220;
+  --color-sf-success: 83, 202, 23;
+  --color-sf-success-container: 22, 62, 2;
+  --color-sf-on-success: 13, 39, 0;
+  --color-sf-on-success-container: 183, 250, 150;
+  --color-sf-info: 71, 172, 251;
+  --color-sf-info-container: 0, 67, 120;
+  --color-sf-on-info: 0, 51, 91;
+  --color-sf-on-info-container: 173, 219, 255;
+  --color-sf-warning: 245, 180, 130;
+  --color-sf-warning-container: 123, 65, 0;
+  --color-sf-on-warning: 99, 52, 0;
+  --color-sf-on-warning-container: 255, 220, 193;
+  --color-sf-spreadsheet-gridline: 231, 224, 236;
+  --color-sf-shadow-focus-ring1: 0 0 0 1px #000, 0 0 0 3px #fff;
+  --color-sf-success-text: 0, 0, 0;
+  --color-sf-warning-text: 0, 0, 0;
+  --color-sf-info-text: 0, 0, 0;
+  --color-sf-danger-text: 0, 0, 0;
+  --color-sf-diagram-palette-background: var(--color-sf-inverse-surface);
+  --color-sf-content-text-color-alt2: var(--color-sf-on-secondary);
+}
+.sf-toast-close-icon path {
+  fill: rgba(var(--color-sf-on-primary));
+}
+/* stylelint-disable property-no-vendor-prefix */
+.sf-toast-container {
+  display: inline-flex;
+  flex-direction: column;
+  position: relative;
+}
+.sf-toast-container.sf-toast-top-left {
+  left: 10px;
+  top: 10px;
+}
+.sf-toast-container.sf-toast-bottom-left {
+  bottom: 10px;
+  left: 10px;
+}
+.sf-toast-container.sf-toast-top-right {
+  right: 10px;
+  top: 10px;
+}
+.sf-toast-container.sf-toast-bottom-right {
+  bottom: 10px;
+  right: 10px;
+}
+.sf-toast-container.sf-toast-bottom-center {
+  bottom: 10px;
+  pointer-events: none;
+  right: 0;
+  width: 100%;
+}
+.sf-toast-container.sf-toast-bottom-center .sf-toast {
+  margin: 0 auto 10px;
+  pointer-events: auto;
+}
+.sf-toast-container.sf-toast-top-center {
+  pointer-events: none;
+  right: 0;
+  top: 10px;
+  width: 100%;
+}
+.sf-toast-container.sf-toast-top-center .sf-toast {
+  margin: 0 auto 10px;
+  pointer-events: auto;
+}
+.sf-toast-container.sf-toast-full-width {
+  left: 0;
+  right: 0;
+  width: 100%;
+}
+.sf-toast-container.sf-toast-full-width .sf-toast {
+  margin: 0 auto 10px;
+  width: 96%;
+}
+.sf-toast-container.sf-rtl .sf-toast .sf-toast-actions {
+  text-align: left;
+}
+.sf-toast-container.sf-rtl .sf-toast .sf-toast-actions > * {
+  margin-left: initial;
+  margin-right: 10px;
+}
+.sf-toast-container.sf-rtl .sf-toast .sf-toast-close-icon {
+  margin-left: initial;
+  margin-right: auto;
+}
+.sf-toast-container.sf-rtl .sf-toast .sf-toast-icon {
+  margin-left: 8px;
+  margin-right: initial;
+}
+.sf-toast-container.sf-rtl .sf-toast .sf-toast-progress {
+  left: auto;
+  right: 0;
+}
+.sf-toast-container .sf-toast {
+  border-radius: 4px;
+  display: inline-flex;
+  font-size: 14px;
+  margin: 0 0 10px;
+  overflow: hidden;
+  padding: 14px;
+  position: relative;
+  background-color: rgba(var(--color-sf-inverse-surface));
+  border: 0;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 4px 8px 3px rgba(0, 0, 0, 0.15);
+  color: rgba(var(--color-sf-surface));
+}
+.sf-toast-container .sf-toast .sf-toast-icon,
+.sf-toast-container .sf-toast .sf-toast-message {
+  display: inline-flex;
+}
+.sf-toast-container .sf-toast > * {
+  word-break: break-word;
+  word-wrap: break-word;
+}
+.sf-toast-container .sf-toast .sf-toast-message {
+  align-self: center;
+  flex-direction: column;
+  overflow: hidden;
+  width: inherit;
+  flex: 1;
+}
+.sf-toast-container .sf-toast .sf-toast-message .sf-toast-title,
+.sf-toast-container .sf-toast .sf-toast-message .sf-toast-content {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sf-toast-container .sf-toast .sf-toast-message .sf-toast-title:first-child,
+.sf-toast-container .sf-toast .sf-toast-message .sf-toast-content:first-child {
+  padding: 0;
+}
+.sf-toast-container .sf-toast .sf-toast-message .sf-toast-title:last-child,
+.sf-toast-container .sf-toast .sf-toast-message .sf-toast-content:last-child {
+  padding-bottom: 0;
+}
+.sf-toast-container .sf-toast .sf-toast-message .sf-toast-title > *,
+.sf-toast-container .sf-toast .sf-toast-message .sf-toast-content > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sf-toast-container .sf-toast .sf-toast-message .sf-toast-title {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.sf-toast-container .sf-toast .sf-toast-message .sf-toast-content {
+  padding: 8px 0 18px 0;
+  word-break: break-word;
+  word-wrap: break-word;
+}
+.sf-toast-container .sf-toast .sf-toast-message .sf-toast-content + .sf-toast-actions {
+  padding-top: 0;
+}
+.sf-toast-container .sf-toast .sf-toast-message .sf-toast-actions {
+  margin: 1px;
+  padding: 14px 20px;
+  text-align: right;
+}
+.sf-toast-container .sf-toast .sf-toast-message .sf-toast-actions > * {
+  margin-left: 10px;
+}
+.sf-toast-container .sf-toast .sf-toast-close-icon {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  font-size: 20px;
+  height: 32px;
+  justify-content: center;
+  margin-left: auto;
+  width: 32px;
+}
+.sf-toast-container .sf-toast .sf-toast-icon {
+  align-items: center;
+  font-size: 20px;
+  height: 24px;
+  justify-content: center;
+  margin-right: 8px;
+  width: 24px;
+}
+.sf-toast-container .sf-toast .sf-toast-progress {
+  bottom: 0;
+  height: 4px;
+  left: 0;
+  position: absolute;
+}
+.sf-toast-progress {
+  width: 100%;
+  height: 4px;
+  background: #e0e0e0;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+}
+.sf-toast-progress-bar {
+  width: 100%;
+  height: 100%;
+  background: #007bff;
+}
+.sf-toast-progress-rtl {
+  transform: scaleX(-1);
+}
+.sf-content-placeholder.sf-toast.sf-placeholder-toast {
+  background-size: 400px 100px;
+  min-height: 100px;
+}
+.sf-blazor-toast-hidden {
+  visibility: hidden;
+}
+.sf-toast-container .sf-toast .sf-toast-close-icon.blazor-toast-close-icon {
+  background-color: transparent;
+  border-color: transparent;
+  border-radius: 50%;
+  bottom: 6px;
+  height: 20px;
+  position: relative;
+  width: 22px;
+}
+.sf-toast-container .sf-toast .sf-toast-close-icon.sf-icons:hover,
+.sf-toast-container .sf-toast .sf-toast-close-icon.sf-icons:focus {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  height: 32px;
+}
+.sf-toast-container .sf-toast .sf-toast-close-icon.sf-icons:hover path,
+.sf-toast-container .sf-toast .sf-toast-close-icon.sf-icons:focus path {
+  fill: rgba(var(--color-sf-on-primary));
+}
+.sf-toast-container .sf-toast.sf-toast-success {
+  background-color: rgba(var(--color-sf-success));
+  color: rgba(var(--color-sf-success));
+}
+.sf-toast-container .sf-toast.sf-toast-success .sf-toast-message .sf-toast-title {
+  color: rgba(var(--color-sf-success-text));
+}
+.sf-toast-container .sf-toast.sf-toast-success .sf-toast-message .sf-toast-content {
+  color: rgba(var(--color-sf-success-text));
+}
+.sf-toast-container .sf-toast.sf-toast-success .sf-toast-icon path {
+  fill: rgba(var(--color-sf-success-text));
+}
+.sf-toast-container .sf-toast.sf-toast-success .sf-toast-close-icon path {
+  fill: rgba(var(--color-sf-success-text));
+}
+.sf-toast-container .sf-toast.sf-toast-success:hover {
+  background-color: rgba(var(--color-sf-success));
+  box-shadow: rgba(var(--color-sf-shadow));
+  color: rgba(var(--color-sf-success));
+}
+.sf-toast-container .sf-toast.sf-toast-info {
+  background-color: rgba(var(--color-sf-info));
+  color: rgba(var(--color-sf-on-primary));
+}
+.sf-toast-container .sf-toast.sf-toast-info .sf-toast-message .sf-toast-title {
+  color: rgba(var(--color-sf-info-text));
+}
+.sf-toast-container .sf-toast.sf-toast-info .sf-toast-message .sf-toast-content {
+  color: rgba(var(--color-sf-info-text));
+}
+.sf-toast-container .sf-toast.sf-toast-info .sf-toast-icon path {
+  fill: rgba(var(--color-sf-info-text));
+}
+.sf-toast-container .sf-toast.sf-toast-info .sf-toast-close-icon path {
+  fill: rgba(var(--color-sf-info-text));
+}
+.sf-toast-container .sf-toast.sf-toast-info:hover {
+  background-color: rgba(var(--color-sf-info));
+  box-shadow: rgba(var(--color-sf-shadow));
+  color: rgba(var(--color-sf-on-primary));
+}
+.sf-toast-container .sf-toast.sf-toast-warning {
+  background-color: rgba(var(--color-sf-warning));
+  color: rgba(var(--color-sf-warning));
+}
+.sf-toast-container .sf-toast.sf-toast-warning .sf-toast-message .sf-toast-title {
+  color: rgba(var(--color-sf-warning-text));
+}
+.sf-toast-container .sf-toast.sf-toast-warning .sf-toast-message .sf-toast-content {
+  color: rgba(var(--color-sf-warning-text));
+}
+.sf-toast-container .sf-toast.sf-toast-warning .sf-toast-icon path {
+  fill: rgba(var(--color-sf-warning-text));
+}
+.sf-toast-container .sf-toast.sf-toast-warning .sf-toast-close-icon path {
+  fill: rgba(var(--color-sf-warning-text));
+}
+.sf-toast-container .sf-toast.sf-toast-warning:hover {
+  background-color: rgba(var(--color-sf-warning));
+  box-shadow: rgba(var(--color-sf-shadow));
+  color: rgba(var(--color-sf-warning));
+}
+.sf-toast-container .sf-toast.sf-toast-danger {
+  background-color: rgba(var(--color-sf-error));
+  color: rgba(var(--color-sf-error));
+}
+.sf-toast-container .sf-toast.sf-toast-danger .sf-toast-message .sf-toast-title {
+  color: rgba(var(--color-sf-danger-text));
+}
+.sf-toast-container .sf-toast.sf-toast-danger .sf-toast-message .sf-toast-content {
+  color: rgba(var(--color-sf-danger-text));
+}
+.sf-toast-container .sf-toast.sf-toast-danger .sf-toast-icon path {
+  fill: rgba(var(--color-sf-danger-text));
+}
+.sf-toast-container .sf-toast.sf-toast-danger .sf-toast-close-icon path {
+  fill: rgba(var(--color-sf-danger-text));
+}
+.sf-toast-container .sf-toast.sf-toast-danger:hover {
+  background-color: rgba(var(--color-sf-error));
+  box-shadow: rgba(var(--color-sf-shadow));
+  color: rgba(var(--color-sf-error));
+}
+.sf-toast-container .sf-toast:hover {
+  background-color: rgba(var(--color-sf-inverse-surface));
+  box-shadow: rgba(var(--color-sf-shadow));
+}
+.sf-toast-container .sf-toast .sf-toast-icon path {
+  fill: rgba(var(--color-sf-inverse-on-surface));
+}
+.sf-toast-container .sf-toast .sf-toast-message .sf-toast-title {
+  color: rgba(var(--color-sf-inverse-on-surface));
+}
+.sf-toast-container .sf-toast .sf-toast-message .sf-toast-content {
+  color: rgba(var(--color-sf-inverse-on-surface));
+}
+.sf-toast-container .sf-toast .sf-toast-progress {
+  background-color: rgba(var(--color-sf-primary));
+}

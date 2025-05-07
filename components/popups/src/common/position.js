@@ -1,0 +1,54 @@
+/**
+ * Calculates the absolute position of an element based on its reference, desired position,
+ * and optionally the target values.
+ *
+ * @param {React.RefObject<HTMLElement>} elementRef - Reference to the HTML element.
+ * @param {string} positionX - Desired X position ('left', 'center', 'right').
+ * @param {string} positionY - Desired Y position ('top', 'center', 'bottom').
+ * @param {DOMRect} [targetValues] - Optional DOMRect values to adjust the position.
+ * @returns {OffsetPosition} - Returns the calculated offset position.
+ */
+export function calculatePosition(elementRef, positionX, positionY, targetValues) {
+    if (!elementRef.current) {
+        console.warn('calculatePosition: elementRef does not have a current value.');
+        return { left: 0, top: 0 };
+    }
+    const currentElement = elementRef.current;
+    const parentDocument = currentElement.ownerDocument;
+    const elementRect = currentElement.getBoundingClientRect() || targetValues;
+    const fixedElement = getComputedStyle(currentElement).position === 'fixed';
+    const scrollTop = fixedElement ? 0 : parentDocument.documentElement.scrollTop || parentDocument.body.scrollTop;
+    const scrollLeft = fixedElement ? 0 : parentDocument.documentElement.scrollLeft || parentDocument.body.scrollLeft;
+    const positionMap = {
+        'topcenter': { left: elementRect.left + elementRect.width / 2, top: elementRect.top + scrollTop },
+        'topright': { left: elementRect.right, top: elementRect.top + scrollTop },
+        'centercenter': { left: elementRect.left + elementRect.width / 2, top: elementRect.top + elementRect.height / 2 + scrollTop },
+        'centerright': { left: elementRect.right, top: elementRect.top + elementRect.height / 2 + scrollTop },
+        'centerleft': { left: elementRect.left + scrollLeft, top: elementRect.top + elementRect.height / 2 + scrollTop },
+        'bottomcenter': { left: elementRect.left + elementRect.width / 2, top: elementRect.bottom + scrollTop },
+        'bottomright': { left: elementRect.right, top: elementRect.bottom + scrollTop },
+        'bottomleft': { left: elementRect.left + scrollLeft, top: elementRect.bottom + scrollTop },
+        'topleft': { left: elementRect.left + scrollLeft, top: elementRect.top + scrollTop }
+    };
+    return positionMap[`${positionY.toLowerCase()}${positionX.toLowerCase()}`] || positionMap['topleft'];
+}
+/**
+ * Calculates the position of an element relative to an anchor element.
+ *
+ * @param {React.RefObject<HTMLElement>} anchor - Reference to the anchor HTML element.
+ * @param {React.RefObject<HTMLElement>} element - Reference to the HTML element to position.
+ * @returns {OffsetPosition} - Returns the relative offset position.
+ */
+export function calculateRelativeBasedPosition(anchor, element) {
+    if (!anchor.current || !element.current) {
+        console.warn('calculateRelativeBasedPosition: Missing anchor or element ref.');
+        return { left: 0, top: 0 };
+    }
+    const anchorRect = anchor.current.getBoundingClientRect();
+    const elementRect = element.current.getBoundingClientRect();
+    const fixedElement = getComputedStyle(element.current).position === 'fixed';
+    return {
+        left: anchorRect.left - elementRect.left + (fixedElement ? 0 : window.pageXOffset || document.documentElement.scrollLeft),
+        top: anchorRect.top - elementRect.top + (fixedElement ? 0 : window.pageYOffset || document.documentElement.scrollTop)
+    };
+}

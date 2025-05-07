@@ -1,0 +1,24 @@
+@include export-module('floating-action-button-theme') {
+  .sf-fab.sf-btn {
+    box-shadow: $fab-box-shadow;
+
+    &:hover:not(:focus),
+    &:active,
+    &.sf-active,
+    &:disabled {
+      box-shadow: $fab-box-shadow;
+    }
+
+    &:focus {
+      @if ($skin-name != 'tailwind3' and $skin-name != 'bootstrap5.3') {
+        box-shadow: $fab-box-shadow;
+      }
+    }
+  }
+}
+
+@if $skin-name == 'tailwind3' {
+  .sf-fab.sf-btn:focus-visible {
+    box-shadow: $fab-focus-box-shadow !important; /* stylelint-disable-line declaration-no-important */
+  }
+}
