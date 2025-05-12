@@ -16,8 +16,6 @@
     "url": "https://github.com/syncfusion/react-ui-components.git"
   },
   "homepage": "https://www.syncfusion.com/react-ui-components",
-  "main": "./dist/react-splitbuttons.umd.min.js",
-  "es2015": "./dist/es6/react-splitbuttons.es5.js",
   "module": "./index.js",
   "readme": "README.md",
   "dependencies": {
