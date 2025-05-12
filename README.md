@@ -13,19 +13,28 @@ See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master
 * [Getting Started](https://react.syncfusion.com/getting-started/introduction)
 * [View Online Demos](https://react.syncfusion.com/button)
 
-## Framework highlights
- ### Lightweight and user friendly
- The entire Library framework is built from scratch to be lightweight and modular. Its footprint can be reduced further by including only the specific components and features your application requires.
- ### Modular architecture
- All components have been built as modules to enable selective referencing, so only the components and features you need are included in your application.
- ### Built for performance
- Performance is critical for delivering a good user experience. We ensure that all our components are designed and built to achieve the best performance possible.
- ### Responsive and touch friendly
- All the components are touch friendly and render adaptively based on the device they are on to provide optimal usage experience on phones, tablets and desktops.
- ### Globalization simplified
- Easily build applications to be used by a global audience in various language and culture settings.
- ### Stay current
- With our commitment to at least four major updates per year, you receive the most up-to-date functionality and new components in addition to monthly service packs and bug fixes. Custom patches are available as needed.
+## Pure React Components highlights
+
+### Built for Modern React
+These components are built entirely using React’s modern architecture, leveraging functional components and hooks rather than relying on class-based components, wrappers. This ensures seamless integration with any modern React application and gives developers full control using idiomatic React patterns.
+ 
+### Fully Reactive by Design
+Components automatically respond to state and prop changes without manual refreshes, ensuring predictable UI updates.
+ 
+### Smarter Rendering for Better UX
+Optimized rendering logic refreshes only what’s necessary, improving performance and user experience.
+ 
+### Active State Preservation
+Interactions like focused inputs or selected items remain intact even when the surrounding state changes. This preserves the user's context and ensures a consistent, uninterrupted experience.
+ 
+### Native Template Rendering
+Templates are rendered using pure JSX, in line with React’s rendering lifecycle.
+ 
+### Performance-Driven Architecture
+From architecture to execution, every detail has been considered to boost performance. With fewer renders, leaner updates, and smarter state handling, apps feel faster and more responsive.
+ 
+### Material 3 Theming
+Built-in Material 3 stylesheets provide a modern, accessible design out of the box. Enjoy sharp visuals, consistent theming, and minimal setup.
 
 ## Control List
 

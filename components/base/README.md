@@ -1,6 +1,6 @@
 # React Base Library
 
-A common package of Essential® studio Pure React components which contains base libraries, providers and functions.
+A common package of Essential® studio react components which contains base libraries, providers and functions.
 
 **Key Features**
 

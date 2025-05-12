@@ -152,6 +152,7 @@
           line-height: normal;
           margin: $drop-down-btn-seperator-padding;
           pointer-events: none;
+          border-bottom-color: $drop-down-btn-li-border-color;
         }
 
         &.sf-url {

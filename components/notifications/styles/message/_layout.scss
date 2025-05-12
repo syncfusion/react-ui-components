@@ -70,7 +70,7 @@
     .sf-msg-icon {
       color: $msg-icon-color;
       font-size: $msg-icon-size;
-      height: $msg-icon-size;
+      height: $msg-icon-height;
       margin: $msg-icon-margin;
       @if $skin-name == 'fluent2' {
         padding: 0 4px 0 2px;
@@ -126,7 +126,7 @@
 
     &.sf-content-right .sf-msg-close-icon,
     &.sf-content-center .sf-msg-close-icon {
-      margin: $msg-icon-margin;
+      margin: 0 4px;
     }
 
     &.sf-rtl {
