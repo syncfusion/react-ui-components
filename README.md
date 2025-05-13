@@ -254,7 +254,7 @@ Built-in Material 3 stylesheets provide a modern, accessible design out of the b
 
 ## Support
  Product support is available for through following mediums.
- * Creating incident in Syncfusion [Direct-trac](https://www.syncfusion.com/support/directtrac/incidents?utm_source=npm&utm_campaign=ej2-react-ui-components) support system or [Community forum](https://www.syncfusion.com/forums/react-js2?utm_source=npm&utm_campaign=ej2-react-ui-components).
+ * Creating incident in Syncfusion [Direct-trac](https://www.syncfusion.com/support/directtrac/incidents?utm_source=npm&utm_campaign=react-ui-components) support system or [Community forum](https://www.syncfusion.com/forums/pure-react?utm_source=npm&utm_campaign=react-ui-components).
 * New [GitHub issue](https://github.com/syncfusion/react-ui-components/issues/new).
 * Ask your query in [Stack Overflow](https://stackoverflow.com/) with tag `syncfusion` and `react-pure`.
 ## License
