@@ -220,17 +220,6 @@ Built-in Material 3 stylesheets provide a modern, accessible design out of the b
            <a href="https://react.syncfusion.com/radio-button">Live demo</a>
        </td>
    </tr>
-   <tr>
-       <td>
-           <b>Switch Button</b>
-       </td>
-       <td>
-           <a href="components/buttons/src/switch">Source</a>
-       </td>
-       <td>
-           <a href="https://react.syncfusion.com/switch">Live demo</a>
-       </td>
-   </tr>
 </table>
 
 ### Layout
