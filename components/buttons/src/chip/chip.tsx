@@ -322,7 +322,7 @@ React.memo(forwardRef<IChip, ChipProps>((props: ChipComponentProps, ref: React.R
                     onClick={handleSpanDelete}
                 >
                     {removable && (
-                        <SvgIcon width='13' height='13' d={closeIcon} ></SvgIcon>
+                        <SvgIcon width='12' height='12' d={closeIcon} ></SvgIcon>
                     )}
                     {!removable && typeof trailingIcon !== 'string' && trailingIcon}
                     {!removable && trailingIconUrl && (

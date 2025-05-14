@@ -1,7 +1,7 @@
 {
   "name": "@syncfusion/react-notifications",
   "version": "29.2.4",
-  "description": "A package of Pure React notification components such as Toast and Badge which used to notify important information to end-users.",
+  "description": "A package of Pure React notification components such as Toast and Message which used to notify important information to end-users.",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
   "keywords": [

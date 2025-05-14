@@ -1,7 +1,7 @@
 {
   "name": "@syncfusion/react-popups",
   "version": "29.2.4",
-  "description": "A package of Pure React popup components such as Dialog and Tooltip that is used to display information or messages in separate pop-ups.",
+  "description": "A package of Pure React popup components such as Tooltip that is used to display information or messages in separate pop-ups.",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
   "keywords": [

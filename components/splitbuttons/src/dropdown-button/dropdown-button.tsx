@@ -512,7 +512,7 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
                     {...domProps}
                 >
                     {children}
-                    <span className={`sf-btn-icon sf-icons sf-icon-${iconPosition === 'Top' ? 'bottom' : 'right'} sf-caret`} ><SvgIcon fill='currentColor' width='16' height='16' viewBox="0 0 20 25" d={caretIcon}></SvgIcon></span>
+                    <span className={`sf-btn-icon sf-icons sf-icon-${iconPosition === 'Top' ? 'bottom' : 'right'} sf-caret`} ><SvgIcon fill='currentColor' width='16' height='16' viewBox="0 0 23 23" d={caretIcon}></SvgIcon></span>
                 </Button>
 
                 {(isPopupOpen || !lazyOpen) && (

@@ -261,6 +261,6 @@ Built-in Material 3 stylesheets provide a modern, accessible design out of the b
 Check the license detail [here](https://github.com/syncfusion/react-ui-components/blob/master/license).
 
 ## Changelog
-Check the changelog [here](https://react.syncfusion.com/api/release-notes/29.1.33). 
+Check the changelog [here](https://react-api.syncfusion.com/api/release-notes/29.2.4). 
 
 &copy; Copyright 2025 Syncfusion, Inc. All Rights Reserved. The Syncfusion Essential Studio license and copyright applies to this distribution.

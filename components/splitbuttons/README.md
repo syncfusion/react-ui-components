@@ -62,6 +62,10 @@ Product support is available through following mediums.
 * [Support ticket](https://support.syncfusion.com/support/tickets/create) - Guaranteed Response in 24 hours | Unlimited tickets | Holiday support
 * Live chat
 
+## Changelog
+
+Check the changelog [here](https://github.com/syncfusion/react-ui-components/blob/master/components/splitbuttons/CHANGELOG.md). Get minor improvements and bug fixes every week to stay up to date with frequent updates.
+
 ## License and copyright
 
 > This is a commercial product and requires a paid license for possession or use. Syncfusion’s licensed software, including this component, is subject to the terms and conditions of Syncfusion's [EULA](https://www.syncfusion.com/eula/es/). To acquire a license for [React UI components](https://www.syncfusion.com/react-components), you can [purchase](https://www.syncfusion.com/sales/products) or [start a free 30-day trial](https://www.syncfusion.com/account/manage-trials/start-trials).

@@ -19,12 +19,13 @@
   .sf-css.sf-btn {
     /* stylelint-disable property-no-vendor-prefix */
     position: relative;
+    align-items: center;
+    display: flex;
     -webkit-font-smoothing: antialiased;
     border: $btn-border;
     border-radius: $btn-border-radius;
     box-sizing: border-box;
     cursor: pointer;
-    display: inline-block;
     font-family: $font-family;
     font-size: $btn-font-size;
     font-weight: $btn-font-weight;
@@ -230,6 +231,10 @@
         width: 100%;
       }
     }
+
+    &.sf-outlined.sf-link {
+      border-radius: 4px;
+    }
   }
 
   .sf-small .sf-btn,
@@ -321,6 +326,11 @@
       line-height: 14px;
     }
   }
+}
+
+.sf-btn.sf-bottom,
+.sf-btn.sf-top {
+  flex-direction: column;
 }
 
 @include export-module('button-bigger') {

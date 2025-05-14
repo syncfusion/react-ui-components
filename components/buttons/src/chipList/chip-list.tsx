@@ -322,6 +322,10 @@ forwardRef<IChipList, ChipListProps>((props: ChipListComponentProps, ref: React.
         } else {
             setChipData((prevChipData: ChipData[]) => prevChipData.filter((_: string | number | ChipItemProps, i: number) => i !== index));
             if (chipData.length > 1) {
+                if (selection !== 'none') {
+                    setSelectedIndexes((prevSelected: number[]) => prevSelected.filter((i: number) => i !== index)
+                        .map((i: number) => i > index ? i - 1 : i));
+                }
                 const newFocusIndex: number = index !== 0 ? index - 1 : 0;
                 (chipListRef.current?.children[newFocusIndex as number] as HTMLElement)?.focus();
             }

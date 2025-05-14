@@ -84,7 +84,7 @@ type ICheckBoxProps = ICheckBox & InputHTMLAttributes<HTMLInputElement>;
  * ```
  */
 
-export const CheckBox: React.ForwardRefExoticComponent<ICheckBoxProps & React.RefAttributes<ICheckBox>> =
+export const Checkbox: React.ForwardRefExoticComponent<ICheckBoxProps & React.RefAttributes<ICheckBox>> =
     forwardRef<ICheckBox, ICheckBoxProps>((props: ICheckBoxProps, ref: Ref<ICheckBox>) => {
         const {
             onChange,
@@ -244,8 +244,8 @@ export const CheckBox: React.ForwardRefExoticComponent<ICheckBoxProps & React.Re
         );
     });
 
-CheckBox.displayName = 'CheckBox';
-export default CheckBox;
+Checkbox.displayName = 'CheckBox';
+export default Checkbox;
 
 // Define the type for the component's props
 interface CSSCheckBoxProps {
@@ -284,7 +284,7 @@ const createCSSCheckBox: (props: CSSCheckBoxProps) => JSX.Element = (props: CSSC
             </span>}
             <span className={`sf-frame e-icons ${checked ? 'sf-check' : ''}`}>
                 {checked && (
-                    <SvgIcon width='10' height='10' viewBox='0 0 20 26' d={checkIcon} fill="currentColor"></SvgIcon>
+                    <SvgIcon width='12' height='12' viewBox='0 0 25 20' d={checkIcon} fill="currentColor"></SvgIcon>
                 )}
             </span>
             {label && (
@@ -295,6 +295,6 @@ const createCSSCheckBox: (props: CSSCheckBoxProps) => JSX.Element = (props: CSSC
 };
 
 // Component definition for CheckBox using create function
-export const CSSCheckBox: React.FC<CSSCheckBoxProps> = (props: CSSCheckBoxProps): JSX.Element => {
+export const CSSCheckbox: React.FC<CSSCheckBoxProps> = (props: CSSCheckBoxProps): JSX.Element => {
     return createCSSCheckBox(props);
 };

@@ -103,9 +103,8 @@
         display: flex;
         height: $chip-leading-icon-size;
         width: $chip-leading-icon-size;
-        margin: $chip-multi-selection-icon-margin;
         overflow: hidden;
-        transition: width 300ms cubic-bezier(.4, 0, .2, 1);
+        transition: width 300ms cubic-bezier(.4, 0, .2, 1), margin 300ms cubic-bezier(.4, 0, .2, 1);
       }
 
       &:not(.sf-chip-icon-wrap):not(.sf-chip-avatar-wrap) {
@@ -134,6 +133,10 @@
         & .sf-chip-icon,
         & .sf-chip-avatar {
           display: none;
+        }
+
+        & .sf-selectable-icon {
+          margin: $chip-multi-selection-icon-margin;
         }
 
         &.sf-chip-icon-wrap,

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef, ButtonHTMLAttributes, Ref } from 'react';
-import { preRender, useProviderContext, useRippleEffect } from '@syncfusion/react-base';
+import { preRender, SvgIcon, useProviderContext, useRippleEffect } from '@syncfusion/react-base';
 import * as React from 'react';
 
 /**
@@ -166,6 +166,14 @@ export interface ButtonProps {
      * @default false
      */
     isLink?: boolean;
+
+    /**
+     * Specifies the dropdown button icon.
+     *
+     * @default false
+     * @private
+     */
+    dropIcon?:  boolean;
 }
 
 /**
@@ -199,6 +207,7 @@ export const Button: React.ForwardRefExoticComponent<IButtonProps & React.RefAtt
             disabled = false,
             iconPosition = IconPosition.Left,
             icon,
+            dropIcon = false,
             className = '',
             togglable = false,
             selected,
@@ -214,6 +223,7 @@ export const Button: React.ForwardRefExoticComponent<IButtonProps & React.RefAtt
         const [isActive, setIsActive] = useState<boolean>(selected ?? false);
         const { dir, ripple } = useProviderContext();
         const { rippleMouseDown, Ripple} = useRippleEffect(ripple, { duration: 500 });
+        const caretIcon: string = 'M5 8.5L12 15.5L19 8.5';
         const publicAPI: Partial<IButton> = {
             iconPosition,
             icon,
@@ -253,6 +263,7 @@ export const Button: React.ForwardRefExoticComponent<IButtonProps & React.RefAtt
             dir === 'rtl' ? 'sf-rtl' : '',
             isActive ? 'sf-active' : '',
             isLink ? 'sf-link' : '',
+            iconPosition && `sf-${iconPosition.toLowerCase()}`,
             color && color.toLowerCase() !== 'secondary' ? `sf-${color.toLowerCase()}` : '',
             variant && color.toLowerCase() !== 'secondary' ? `sf-${variant.toLowerCase() }` : '',
             size && size.toLowerCase() !== 'medium' ? `sf-${size.toLowerCase()}` : ''
@@ -268,7 +279,7 @@ export const Button: React.ForwardRefExoticComponent<IButtonProps & React.RefAtt
                 disabled={disabled}
                 {...domProps}
             >
-                {!children && (
+                {!children && icon && (
                     <span className={`sf-btn-icon ${typeof icon === 'string' ? icon : ''}`}>
                         {typeof icon !== 'string' && icon}
                     </span>
@@ -284,10 +295,12 @@ export const Button: React.ForwardRefExoticComponent<IButtonProps & React.RefAtt
                         {typeof icon !== 'string' && icon}
                     </span>
                 )}
+                {dropIcon && (
+                    <span className={'sf-btn-icon sf-icons sf-icon-right sf-caret'} ><SvgIcon fill='currentColor' width='16' height='16' viewBox='0 0 23 23' d={caretIcon}></SvgIcon></span>
+                )}
                 {ripple && <Ripple />}
             </button>
         );
     });
 
 export default React.memo(Button);
-

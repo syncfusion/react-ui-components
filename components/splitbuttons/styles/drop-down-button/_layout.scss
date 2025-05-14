@@ -4,6 +4,8 @@
     @if not index(('bootstrap5.3', 'fluent2', 'tailwind3'), $skin-name) {
       box-shadow: none;
     }
+    display: flex;
+    align-items: center;
     text-transform: none;
     white-space: normal;
     

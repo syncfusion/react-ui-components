@@ -1,14 +1,14 @@
-# React Buttons Components
+# Changelog
 
-## What's Included in the React Button Package
+## [Unreleased]
 
-The React Button package includes the following list of components.
+## 29.2.4 (2025-05-14)
 
-### React Button
+### Button
 
 The Button component is designed to create highly customizable and interactive button elements with a variety of styling and functional options. It allows for tailored interactions through different configurations such as size, color, icon positioning, and toggle capability.
 
-Explore the demo [here](https://react.syncfusion.com/button).
+Explore the demo <a href="https://react.syncfusion.com/button" target="_blank" rel="noopener noreferrer">here</a>
 
 **Key features**
 
@@ -24,11 +24,11 @@ Explore the demo [here](https://react.syncfusion.com/button).
 
 - **Selection Management:** Include prop configurations to set initial states, making it simple to handle selection states, especially useful for toggle buttons.
 
-### React Checkbox
+### Checkbox
 
 The Checkbox component offers a flexible and user-friendly way to allow users to make binary selections. It supports various states and configurations to accommodate different use cases in applications.
 
-Explore the demo [here](https://react.syncfusion.com/checkbox).
+Explore the demo <a href="https://react.syncfusion.com/checkbox" target="_blank" rel="noopener noreferrer">here</a>
 
 **Key features**
 
@@ -38,11 +38,11 @@ Explore the demo [here](https://react.syncfusion.com/checkbox).
 
 - **Label Positioning:** Configure the label placement with the `labelPlacement` prop, choosing whether the label appears before or after the Checkbox.
 
-### React Chip
+### Chip
 
 The Chip component represents information in a compact form, such as entity attribute, text, or action. It provides a versatile way to display content in a contained, interactive element.
 
-Explore the demo [here](https://react.syncfusion.com/chip).
+Explore the demo <a href="https://react.syncfusion.com/chip" target="_blank" rel="noopener noreferrer">here</a>
 
 **Key features**
 
@@ -52,11 +52,11 @@ Explore the demo [here](https://react.syncfusion.com/chip).
 
 - **Icons and Avatars:** Enhance visual representation with leading icons, trailing icons, or avatars to provide additional context.
 
-### React ChipList
+### ChipList
 
 The ChipList component displays a collection of chips that can be used to represent multiple items in a compact form. It provides a flexible way to manage and interact with a group of chip elements.
 
-Explore the demo [here](https://react.syncfusion.com/chiplist).
+Explore the demo <a href="https://react.syncfusion.com/chiplist" target="_blank" rel="noopener noreferrer">here</a>
 
 **Key features**
 
@@ -70,11 +70,11 @@ Explore the demo [here](https://react.syncfusion.com/chiplist).
 
 - **Controlled & Uncontrolled Modes:** Supports both controlled and uncontrolled component patterns for selection and deletion.
 
-### React Floating Action Button
+### Floating Action Button
 
 The Floating Action Button (FAB) component provides a prominent primary action within an application interface, positioned for high visibility and customizable with various styling options.
 
-Explore the demo [here](https://react.syncfusion.com/floating-action-button).
+Explore the demo <a href="https://react.syncfusion.com/floating-action-button" target="_blank" rel="noopener noreferrer">here</a>
 
 **Key features**
 
@@ -90,11 +90,12 @@ Explore the demo [here](https://react.syncfusion.com/floating-action-button).
 
 - **Toggle Functionality:** Activate toggle behavior for the FAB to allow it to switch states on each user interaction, which can be useful for certain UI scenarios.
 
-### React RadioButton
+
+### RadioButton
 
 The RadioButton component enables users to select a single option from a group, offering a clear circular interface for making selections. It is a simple and efficient way to present mutually exclusive choices to users.
 
-Explore the demo [here](https://react.syncfusion.com/radio-button).
+Explore the demo <a href="https://react.syncfusion.com/radio-button" target="_blank" rel="noopener noreferrer">here</a>
 
 **Key features**
 
@@ -105,55 +106,3 @@ Explore the demo [here](https://react.syncfusion.com/radio-button).
 - **Label Positioning:** Flexibly position the label relative to the RadioButton with options available for placing it before or after the button, enhancing UI layout consistency.
 
 - **Form Integration:** The value attribute of the RadioButton can be included as part of form data submitted to the server, facilitating efficient data processing.
-
-### React Switch
-
-The Switch component is a toggle interface offering a binary decision between on and off states, visually represented with an optional label for clarity. Its intuitive design makes it ideal for user interactions requiring a straightforward choice.
-
-Explore the demo [here](https://react.syncfusion.com/switch).
-
-**Key features**
-
-- **State Control:** Easily configure the switch to be in a checked (on) or unchecked (off) state, providing an immediate visual cue of its current position to users.
-
-- **Label Customization:** Customize the on and off labels to provide additional context for users, clarifying what each state signifies within the application's workflow.
-
-- **Size Options:** Adapt the size of the switch to fit various UI designs with available size options such as 'small', 'medium' and 'bigger', ensuring seamless integration with different interfaces.
-
-- **Form Integration:** Utilize the switch within forms by setting name and value attributes, ensuring that user selections are included in form submissions for backend processing.
-
-
-<p align="center">
-Trusted by the world's leading companies
-  <a href="https://www.syncfusion.com/">
-    <img src="https://raw.githubusercontent.com/SyncfusionExamples/nuget-img/master/syncfusion/syncfusion-trusted-companies.webp" alt="Syncfusion logo">
-  </a>
-</p>
-
-## Setup
-
-To install `buttons` and its dependent packages, use the following command,
-
-```sh
-npm install @syncfusion/react-buttons
-```
-
-## Support
-
-Product support is available through following mediums.
-
-* [Support ticket](https://support.syncfusion.com/support/tickets/create) - Guaranteed Response in 24 hours | Unlimited tickets | Holiday support
-* Live chat
-
-## Changelog
-Check the changelog [here](https://github.com/syncfusion/react-ui-components/blob/master/components/buttons/CHANGELOG.md). Get minor improvements and bug fixes every week to stay up to date with frequent updates.
-
-## License and copyright
-
-> This is a commercial product and requires a paid license for possession or use. Syncfusion’s licensed software, including this component, is subject to the terms and conditions of Syncfusion's [EULA](https://www.syncfusion.com/eula/es/). To acquire a license for [React UI components](https://www.syncfusion.com/react-components), you can [purchase](https://www.syncfusion.com/sales/products) or [start a free 30-day trial](https://www.syncfusion.com/account/manage-trials/start-trials).
-
-> A [free community license](https://www.syncfusion.com/products/communitylicense) is also available for companies and individuals whose organizations have less than $1 million USD in annual gross revenue and five or fewer developers.
-
-See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campaign=notification) for more info.
-
-&copy; Copyright 2025 Syncfusion, Inc. All Rights Reserved. The Syncfusion Essential Studio license and copyright applies to this distribution.

@@ -1,7 +1,7 @@
 {
   "name": "@syncfusion/react-buttons",
   "version": "29.2.4",
-  "description": "A package of feature-rich native React Pure components such as Button, CheckBox, RadioButton and Switch.",
+  "description": "A package of feature-rich native React Pure components such as Button, CheckBox and RadioButton.",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
   "keywords": [
