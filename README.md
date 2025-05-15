@@ -1,6 +1,6 @@
 # Syncfusion Pure React UI Components Library
 
-Syncfusion Pure React UI Components library has been built from the ground up to be lightweight, responsive, modular and touch friendly. It offers 14+ UI components that every applications will ever need.
+Syncfusion Pure React UI Components library has been built from the ground up to be lightweight, responsive, modular and touch friendly. It offers 15+ UI components that every applications will ever need.
 
 > This is a commercial product and requires a paid license for possession or use. Syncfusion’s licensed software, including this component, is subject to the terms and conditions of Syncfusion's [EULA](https://www.syncfusion.com/eula/es/). To acquire a license for [React UI components](https://www.syncfusion.com/react-components), you can [purchase](https://www.syncfusion.com/sales/products) or [start a free 30-day trial](https://www.syncfusion.com/account/manage-trials/start-trials).
 
