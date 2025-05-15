@@ -1,0 +1,171 @@
+@mixin severity($class, $bg-color, $border-color, $color, $icon-color, $close-icon-color, $shadow, $ignore) {
+  &.sf-#{$class} {
+    @if ($ignore !=true) {
+      background-color: $bg-color;
+    }
+
+    @include severity-base($border-color, $color, $icon-color, $close-icon-color, $shadow);
+  }
+}
+
+@mixin severity-base($border-color, $color, $icon-color, $close-icon-color, $shadow) {
+  border-color: $border-color;
+  color: $color;
+
+  .sf-msg-icon {
+    color: $icon-color;
+    
+    path {
+      fill: currentColor;
+    }
+  }
+
+  .sf-msg-close-icon {
+    color: $close-icon-color;
+    
+    path {
+      fill: currentColor;
+    }
+
+    &:hover,
+    &:focus {
+      background-color: $shadow;
+      box-shadow: 0 0 0 2px $shadow;
+    }
+  }
+}
+
+@include export-module('message-layout') {
+
+  .sf-message {
+    background: $msg-bg-color;
+    border: 1px solid;
+    border-radius: $msg-border-radius;
+    box-sizing: border-box;
+    color: $msg-color;
+    display: flex;
+    font-family: $msg-font-family;
+    font-weight: $msg-font-weight;
+    font-style: $msg-font-style;
+    padding: $msg-padding;
+
+    @if ($skin-name =='Material3') {
+      border-image: $msg-border-color;
+    }
+    @else {
+      border-color: $msg-border-color;
+    }
+
+    &.sf-hidden {
+      display: none;
+    }
+
+    .sf-msg-icon,
+    .sf-msg-close-icon {
+      box-sizing: border-box;
+      display: flex;
+      line-height: $msg-icon-size;
+    }
+
+    .sf-msg-icon {
+      color: $msg-icon-color;
+      font-size: $msg-icon-size;
+      height: $msg-icon-height;
+      margin: $msg-icon-margin;
+      @if $skin-name == 'fluent2' {
+        padding: 0 4px 0 2px;
+      }
+
+      path {
+        fill: currentColor;
+      }
+    }
+
+    .sf-msg-close-icon {
+      color: $msg-close-icon-color;
+      background: transparent;
+      border-width: 0;
+      cursor: pointer;
+      font-size: $msg-close-icon-size;
+      margin: $msg-close-icon-margin;
+      padding: $msg-close-icon-padding;
+      height: $msg-close-icon-height;
+      @if $skin-name == 'fluent2' {
+        line-height: 12px;
+      }
+
+      path {
+        fill: currentColor;
+      }
+
+      &:hover,
+      &:focus {
+        background-color: $msg-close-icon-hover-bg-color;
+        box-shadow: 0 0 0 2px $msg-close-icon-hover-bg-color;
+        border-radius: 50%;
+      }
+    }
+
+    .sf-msg-content {
+      box-sizing: border-box;
+      font-size: $msg-content-font-size;
+      line-height: $msg-content-line-height;
+      padding: $msg-content-padding;
+      vertical-align: top;
+    }
+
+    &.sf-content-right {
+      justify-content: flex-end;
+    }
+
+    &.sf-content-center .sf-msg-content-wrap {
+      display: flex;
+      flex: 1;
+      justify-content: center;
+    }
+
+    &.sf-content-right .sf-msg-close-icon,
+    &.sf-content-center .sf-msg-close-icon {
+      margin: 0 4px;
+    }
+
+    &.sf-rtl {
+      .sf-msg-close-icon {
+        margin: $msg-rtl-close-icon-margin;
+      }
+    }
+
+    @include severity(success, $msg-success-bg-color, $msg-success-border-color, $msg-success-color, $msg-success-icon-color, $msg-success-close-icon-color, $msg-success-close-icon-hover-bg-color, false);
+    @include severity(warning, $msg-warning-bg-color, $msg-warning-border-color, $msg-warning-color, $msg-warning-icon-color, $msg-warning-close-icon-color, $msg-warning-close-icon-hover-bg-color, false);
+    @include severity(info, $msg-info-bg-color, $msg-info-border-color, $msg-info-color, $msg-info-icon-color, $msg-info-close-icon-color, $msg-info-close-icon-hover-bg-color, false);
+    @include severity(error, $msg-error-bg-color, $msg-error-border-color, $msg-error-color, $msg-error-icon-color, $msg-error-close-icon-color, $msg-error-close-icon-hover-bg-color, false);
+
+    &.sf-outlined {
+      background: $msg-outline-bg-color;
+
+      @if ($skin-name =='Material3') {
+        border-image: none;
+      }
+
+      @include severity-base($msg-outline-border-color, $msg-outline-color, $msg-outline-icon-color, $msg-outline-close-icon-color, $msg-outline-close-icon-hover-bg-color);
+      @include severity(success, $msg-outline-bg-color, $msg-outline-success-border-color, $msg-outline-success-color, $msg-outline-success-icon-color, $msg-outline-success-close-icon-color, $msg-outline-success-close-icon-hover-bg-color, true);
+      @include severity(warning, $msg-outline-bg-color, $msg-outline-warning-border-color, $msg-outline-warning-color, $msg-outline-warning-icon-color, $msg-outline-warning-close-icon-color, $msg-outline-warning-close-icon-hover-bg-color, true);
+      @include severity(info, $msg-outline-bg-color, $msg-outline-info-border-color, $msg-outline-info-color, $msg-outline-info-icon-color, $msg-outline-info-close-icon-color, $msg-outline-info-close-icon-hover-bg-color, true);
+      @include severity(error, $msg-outline-bg-color, $msg-outline-error-border-color, $msg-outline-error-color, $msg-outline-error-icon-color, $msg-outline-error-close-icon-color, $msg-outline-error-close-icon-hover-bg-color, true);
+    }
+
+    &.sf-filled {
+      background: $msg-filled-bg-color;
+
+      @if ($skin-name =='Material3') {
+        border-image: none;
+      }
+
+      @include severity-base($msg-filled-border-color, $msg-filled-color, $msg-filled-icon-color, $msg-filled-close-icon-color, $msg-filled-close-icon-hover-bg-color);
+      @include severity(success, $msg-filled-success-bg-color, $msg-filled-success-border-color, $msg-filled-success-color, $msg-filled-success-icon-color, $msg-filled-success-close-icon-color, $msg-filled-success-close-icon-hover-bg-color, false);
+      @include severity(warning, $msg-filled-warning-bg-color, $msg-filled-warning-border-color, $msg-filled-warning-color, $msg-filled-warning-icon-color, $msg-filled-warning-close-icon-color, $msg-filled-warning-close-icon-hover-bg-color, false);
+      @include severity(info, $msg-filled-info-bg-color, $msg-filled-info-border-color, $msg-filled-info-color, $msg-filled-info-icon-color, $msg-filled-info-close-icon-color, $msg-filled-info-close-icon-hover-bg-color, false);
+      @include severity(error, $msg-filled-error-bg-color, $msg-filled-error-border-color, $msg-filled-error-color, $msg-filled-error-icon-color, $msg-filled-error-close-icon-color, $msg-filled-error-close-icon-hover-bg-color, false);
+    }
+  }
+}

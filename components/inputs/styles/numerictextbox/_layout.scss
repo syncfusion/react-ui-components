@@ -1,0 +1,37 @@
+.sf-numeric-container {
+  width: 100%;
+}
+
+.sf-content-placeholder.sf-numeric.sf-placeholder-numeric {
+  background-size: 300px 33px;
+  min-height: 33px;
+}
+
+// Hidden element styles
+.sf-float-input.sf-input-group.sf-control-wrapper.sf-numeric .sf-numeric-hidden,
+.sf-input-group.sf-control-wrapper.sf-numeric .sf-numeric-hidden,
+.sf-float-input.sf-control-wrapper.sf-numeric .sf-numeric-hidden,
+.sf-float-input.sf-input-group.sf-control-wrapper.sf-numeric.sf-input-focus .sf-numeric-hidden,
+.sf-input-group.sf-control-wrapper.sf-numeric.sf-input-focus .sf-numeric-hidden,
+.sf-float-input.sf-control-wrapper.sf-numeric.sf-input-focus .sf-numeric-hidden {
+  border: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  text-indent: 0;
+  visibility: hidden;
+  width: 0;
+}
+
+.sf-numeric.sf-control-wrapper {
+  #{if(&, '&', '*')}.sf-input-group:not(.sf-disabled):active:not(.sf-success):not(.sf-warning):not(.sf-error):not(.sf-input-focus) {
+    @if $numeric-skin-name == 'bootstrap' {
+      border-color: $input-group-full-border-color;
+      box-shadow: none;
+    }
+  }
+
+  #{if(&, '&', '*')}.sf-input-group .sf-input-group-icon {
+    font-size: $numeric-input-icon-size;
+  }
+}
