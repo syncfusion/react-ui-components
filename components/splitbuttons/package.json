@@ -1,6 +1,6 @@
 {
   "name": "@syncfusion/react-splitbuttons",
-  "version": "29.2.4",
+  "version": "30.1.37",
   "description": "A package of feature-rich Pure React components such as DropDownButton, SplitButton, ProgressButton and ButtonGroup.",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
@@ -19,9 +19,9 @@
   "module": "./index.js",
   "readme": "README.md",
   "dependencies": {
-    "@syncfusion/react-base": "~29.2.4",
-    "@syncfusion/react-buttons": "~29.2.4",
-    "@syncfusion/react-popups": "~29.2.4"
+    "@syncfusion/react-base": "~30.1.37",
+    "@syncfusion/react-buttons": "~30.1.37",
+    "@syncfusion/react-popups": "~30.1.37"
   },
   "devDependencies": {
     "gulp": "4.0.2",

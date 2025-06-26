@@ -1,7 +1,7 @@
 {
   "name": "@syncfusion/react-buttons",
-  "version": "29.2.4",
-  "description": "A package of feature-rich native React Pure components such as Button, CheckBox and RadioButton.",
+  "version": "30.1.37",
+  "description": "A package of feature-rich Pure React components such as Button, CheckBox and RadioButton.",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
   "keywords": [
@@ -23,8 +23,6 @@
     "flat button",
     "round button",
     "icon button",
-    "togglebutton",
-    "toggle button",
     "form control",
     "form controls",
     "input",
@@ -40,7 +38,7 @@
   "module": "./index.js",
   "readme": "README.md",
   "dependencies": {
-    "@syncfusion/react-base": "~29.2.4"
+    "@syncfusion/react-base": "~30.1.37"
   },
   "devDependencies": {
     "gulp": "4.0.2",

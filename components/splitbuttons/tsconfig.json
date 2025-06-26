@@ -21,7 +21,10 @@
     "sourceMap": true, // Generate source maps.
     "target": "ES2020", // Set ECMAScript version to ES2020.
     "types": [
+      "jest",
+      "@testing-library/jest-dom",
       "node",
+      "requirejs",
       "react",
       "react-dom"
     ], // Include type declarations.

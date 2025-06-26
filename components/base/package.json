@@ -1,7 +1,7 @@
 {
   "name": "@syncfusion/react-base",
-  "version": "29.2.4",
-  "description": "A common package of core Pure React base, methods and class definitions",
+  "version": "30.1.37",
+  "description": "A common package of core React base, methods and class definitions",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
   "keywords": [
@@ -21,6 +21,9 @@
   "homepage": "https://www.syncfusion.com/react-ui-components",
   "module": "./index.js",
   "readme": "README.md",
+  "bin": {
+    "syncfusion-license": "bin/syncfusion-license.js"
+  },
   "devDependencies": {
     "gulp": "4.0.2",
     "gulp-typescript": "5.0.1",

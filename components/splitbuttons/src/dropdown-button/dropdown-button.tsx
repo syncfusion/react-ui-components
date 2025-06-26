@@ -1,8 +1,19 @@
 import { useState, useRef, forwardRef, useImperativeHandle, useEffect, Ref, ButtonHTMLAttributes, JSX } from 'react';
 import { IPopup, Popup, CollisionType } from '@syncfusion/react-popups';
 import { Button, IconPosition, Color, Size, Variant, IButton } from '@syncfusion/react-buttons';
-import { AnimationOptions, useProviderContext, preRender, SvgIcon, IAnimation, Animation, Effect } from '@syncfusion/react-base';
+import { AnimationOptions, useProviderContext, preRender, IAnimation, Animation, Effect } from '@syncfusion/react-base';
 import * as React from 'react';
+
+export interface AnimationProps {
+    /**
+     * Specifies the animation that should happen when toast opens.
+     */
+    show?: AnimationOptions;
+    /**
+     * Specifies the animation that should happen when toast closes.
+     */
+    hide?: AnimationOptions;
+}
 
 /**
  * ItemModel interface defines properties for each dropdown item.
@@ -135,7 +146,7 @@ export interface DropDownButtonProps {
      * @default { effect: 'SlideDown', duration: 400, easing: 'ease' }
      * @private
      */
-    animation?: AnimationOptions;
+    animation?: AnimationProps;
 
     /**
      * Triggers while closing the DropDownButton popup.
@@ -228,7 +239,8 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
             iconPosition = IconPosition.Left,
             items = [],
             popupWidth = 'auto',
-            animation = { duration: 400, timingFunction: 'ease' },
+            animation = { show: {name: 'SlideDown', duration: 100, timingFunction: 'ease'},
+                hide: {name: 'SlideUp', duration: 100, timingFunction: 'ease'} },
             disabled = false,
             lazyOpen = false,
             itemTemplate,
@@ -248,7 +260,6 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
         const [isPopupOpen, setIsPopupOpen] = useState<boolean>(false);
         const [menuItems, setMenuItems] = useState<ItemModel[]>(items);
         const { dir } = useProviderContext();
-        const caretIcon: string = 'M5 8.5L12 15.5L19 8.5';
 
         const isMounted: React.RefObject<boolean> = useRef(true);
 
@@ -342,20 +353,20 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
             size
         };
 
-        const animationOptions: {
+        const animationOption: {
             name: Effect;
             duration: number | undefined;
             timingFunction: string | undefined;
-        } | null = animation?.name !== undefined ? {
-            name: animation.name,
-            duration: animation.duration,
-            timingFunction: animation.timingFunction
+        } | null = animation.show?.name !== undefined ? {
+            name: animation.show?.name,
+            duration: animation.show.duration,
+            timingFunction: animation.show.timingFunction
         } : null;
 
         const togglePopup: (event?: React.MouseEvent) => void = (event?: React.MouseEvent) => {
             if (!isPopupOpen) {
-                if (animationOptions) {
-                    const animationInstance: IAnimation = Animation(animationOptions);
+                if (animationOption) {
+                    const animationInstance: IAnimation = Animation(animationOption);
                     if (animationInstance.animate) {
                         const popupElement: HTMLElement = popupRef.current?.element?.children[0] as HTMLElement;
                         if (popupElement) {
@@ -499,6 +510,7 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
                     className={`${className} sf-dropdown-btn`}
                     icon={icon}
                     color={color}
+                    dropIcon={true}
                     variant={variant}
                     size={size}
                     iconPosition={iconPosition}
@@ -512,7 +524,6 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
                     {...domProps}
                 >
                     {children}
-                    <span className={`sf-btn-icon sf-icons sf-icon-${iconPosition === 'Top' ? 'bottom' : 'right'} sf-caret`} ><SvgIcon fill='currentColor' width='16' height='16' viewBox="0 0 23 23" d={caretIcon}></SvgIcon></span>
                 </Button>
 
                 {(isPopupOpen || !lazyOpen) && (
@@ -522,7 +533,7 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
                         targetRef={target || buttonRef.current as React.RefObject<HTMLElement> }
                         relateTo={relateTo || (buttonRef.current?.element as HTMLElement)}
                         position={{ X: 'left', Y: 'bottom' }}
-                        showAnimation={animation}
+                        animation={animation}
                         collision={(dir === 'rtl') ? { X: CollisionType.Fit, Y: CollisionType.Flip } : { X: CollisionType.Flip, Y: CollisionType.Flip }}
                         width={popupWidth}
                         className={`sf-dropdown-popup ${popupWidth !== 'auto' ? 'sfdropdown-popup-width' : ''}`}

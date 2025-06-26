@@ -48,5 +48,5 @@ gulp.task('styles', function (done) {
 /**
  * Build ts and scss files
  */
-gulp.task('build', gulp.series('scripts', 'styles'));
+gulp.task('build', gulp.series('scripts'));
 

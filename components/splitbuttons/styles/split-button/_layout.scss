@@ -46,6 +46,10 @@
         border-width: 0 1px 0 0;
       }
 
+      &:disabled {
+        border-image: none;
+      }
+
       &:focus,
       &:active {
         box-shadow: $split-btn-active-box-shadow;

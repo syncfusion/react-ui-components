@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useRef, useImperativeHandle, useState, useEffect, forwardRef, Ref, ChangeEvent, InputHTMLAttributes } from 'react';
 import { preRender, useProviderContext, useRippleEffect } from '@syncfusion/react-base';
-import {LabelPlacement} from '../button/button';
+import {Color, LabelPlacement, Size} from '../button/button';
 
 /**
  * Defines the properties for the RadioButton component.
@@ -20,6 +20,20 @@ export interface RadioButtonProps {
      * @default -
      */
     label?: string;
+
+    /**
+     * Specifies the size style of the checkbox. Options include 'Small', 'Medium' and 'Large'.
+     *
+     * @default Size.Medium
+     */
+    size?: Size;
+
+    /**
+     * Specifies the Color style of the radio-button. Options include 'Primary', 'Secondary', 'Warning', 'Success', 'Danger', and 'Info'.
+     *
+     * @default -
+     */
+    color?: Color;
 
     /**
      * Specifies the position of the label relative to the RadioButton. It determines whether the label appears before or after the radio button element in the UI.
@@ -69,6 +83,8 @@ export const RadioButton: React.ForwardRefExoticComponent<IRadioButtonProps & Re
             className = '',
             disabled = false,
             label = '',
+            color,
+            size = Size.Medium,
             labelPlacement = 'After',
             name = '',
             value = '',
@@ -95,7 +111,9 @@ export const RadioButton: React.ForwardRefExoticComponent<IRadioButtonProps & Re
             checked: isChecked,
             label,
             labelPlacement,
-            value
+            value,
+            size,
+            color
         };
 
         useImperativeHandle(ref, () => ({
@@ -115,18 +133,21 @@ export const RadioButton: React.ForwardRefExoticComponent<IRadioButtonProps & Re
         const classNames: string = [
             'sf-radio-wrapper',
             'sf-wrapper',
-            className
+            className,
+            size && size.toLowerCase() !== 'medium' ? `sf-${size.toLowerCase()}` : '',
+            color && color.toLowerCase() !== 'secondary' ? `sf-${color.toLowerCase()}` : ''
         ].filter(Boolean).join(' ');
 
         const rtlClass: string = (dir === 'rtl') ? 'sf-rtl' : '';
         const labelBefore: boolean = labelPlacement === 'Before';
+        const labelBottom: boolean = labelPlacement === 'Bottom';
 
         return (
             <div className={classNames}>
                 <input
                     ref={radioInputRef}
                     type="radio"
-                    id={`sf-${value}`}
+                    id={domProps.id ? domProps.id : `sf-${value}`}
                     name={name}
                     value={value}
                     disabled={disabled}
@@ -136,7 +157,7 @@ export const RadioButton: React.ForwardRefExoticComponent<IRadioButtonProps & Re
                     defaultChecked={!isControlled ? isChecked : undefined}
                     {...domProps}
                 />
-                <label className={`${labelBefore ? 'sf-right' : ''} ${rtlClass}`} htmlFor={`sf-${value}`}>
+                <label className={`${labelBefore ? 'sf-right' : ''} ${labelBottom ? 'sf-bottom' : ''} ${rtlClass}`} htmlFor={domProps.id ? domProps.id : `sf-${value}`}>
                     <span className="sf-ripple-container" onMouseDown={rippleMouseDown}>
                         {ripple && <Ripple />}
                     </span>

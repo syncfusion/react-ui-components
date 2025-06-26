@@ -1,0 +1,105 @@
+@include export-module('h-scroll') {
+
+  #{&}.sf-hscroll {
+    display: block;
+    position: relative;
+    width: inherit;
+    padding: $hscroll-padding;
+
+    &.sf-rtl {
+
+      .sf-nav-arrow svg {
+        transform: scaleX(-1);
+      }
+    }
+
+    &.sf-overlay {
+
+      .sf-hscroll-content {
+
+        > * {
+          pointer-events: none;
+        }
+      }
+    }
+
+    > * {
+      height: inherit;
+      line-height: normal;
+    }
+
+    .sf-hscroll-content {
+      display: inline-block;
+      height: inherit;
+      position: relative;
+
+      > * {
+        pointer-events: auto;
+      }
+    }
+
+    &.sf-rtl {
+
+      .sf-scroll-nav  {
+
+        &.sf-scroll-right-nav {
+          left: 0;
+          right: auto;
+        }
+
+        &.sf-scroll-left-nav {
+          left: auto;
+          right: 0;
+        }
+      }
+    }
+
+    .sf-scroll-nav  {
+      align-items: center;
+      bottom: 0;
+      cursor: pointer;
+      display: flex;
+      overflow: hidden;
+      position: absolute;
+      top: 0;
+      width: $hscroll-nav-width;
+
+      &.sf-scroll-left-nav {
+        left: 0;
+      }
+
+      &.sf-scroll-right-nav {
+        right: 0;
+      }
+    }
+
+    .sf-nav-arrow {
+      position: relative;
+    }
+
+    .sf-nav-arrow.sf-icons {
+      display: flex;
+      text-align: center;
+      vertical-align: middle;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      font-size: $hscroll-arrow-size;
+
+      svg {
+        height: $hscroll-arrow-size;
+        width: $hscroll-arrow-size;
+      }
+    }
+
+    .sf-hscroll-bar {
+
+      .sf-hscroll-content {
+
+        .sf-overlay {
+          pointer-events: none;
+        }
+      }
+    }
+  }
+}

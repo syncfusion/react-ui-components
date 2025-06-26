@@ -9,7 +9,7 @@ import * as React from 'react';
  * Before :- When the label is positioned Before, it appears to the left of the component.
  * ```
  */
-export type LabelPlacement = 'After' | 'Before';
+export type LabelPlacement = 'After' | 'Before' | 'Bottom';
 
 /**
  * Specifies the position of an icon relative to text content in a button component.
@@ -207,8 +207,8 @@ export const Button: React.ForwardRefExoticComponent<IButtonProps & React.RefAtt
             disabled = false,
             iconPosition = IconPosition.Left,
             icon,
-            dropIcon = false,
             className = '',
+            dropIcon = false,
             togglable = false,
             selected,
             color = Color.Primary,
@@ -263,9 +263,10 @@ export const Button: React.ForwardRefExoticComponent<IButtonProps & React.RefAtt
             dir === 'rtl' ? 'sf-rtl' : '',
             isActive ? 'sf-active' : '',
             isLink ? 'sf-link' : '',
+            icon && !children ? 'sf-icon-btn' : '',
             iconPosition && `sf-${iconPosition.toLowerCase()}`,
             color && color.toLowerCase() !== 'secondary' ? `sf-${color.toLowerCase()}` : '',
-            variant && color.toLowerCase() !== 'secondary' ? `sf-${variant.toLowerCase() }` : '',
+            variant ? `sf-${variant.toLowerCase() }` : '',
             size && size.toLowerCase() !== 'medium' ? `sf-${size.toLowerCase()}` : ''
         ].filter(Boolean).join(' ');
 
@@ -289,7 +290,13 @@ export const Button: React.ForwardRefExoticComponent<IButtonProps & React.RefAtt
                         {typeof icon !== 'string' && icon}
                     </span>
                 )}
-                {children}
+                <>
+                    {icon && children ? (
+                        <span className='sf-content'>{children}</span>
+                    ) : (
+                        children
+                    )}
+                </>
                 {children && icon && (iconPosition === 'Right' || iconPosition === 'Bottom') && (
                     <span className={`sf-btn-icon ${typeof icon === 'string' ? icon : ''} sf-icon-${iconPosition.toLowerCase()}`}>
                         {typeof icon !== 'string' && icon}

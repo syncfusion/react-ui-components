@@ -1638,6 +1638,16 @@
         }
       }
 
+      &.sf-link.sf-filled {
+        background: $btn-primary-bgcolor;
+        border-color: $btn-primary-border-color;
+        color: $btn-primary-color;
+        @if $skin-name == 'Material3' {
+          box-shadow: $btn-focus-box-shadow;
+        }
+        border-radius: 4px;
+      }
+
       &.sf-inherit {
         color: inherit;
         background: inherit;

@@ -29,8 +29,8 @@
       font-size: $fab-icon-font-size;
     }
 
-    &.sf-icon-btn {
-      padding: 0;
+    .sf-btn-icon.sf-icon-left {
+      width: $btn-icon-width;
     }
 
     &.sf-fab-fixed {
