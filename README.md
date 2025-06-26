@@ -241,6 +241,36 @@ Built-in Material 3 stylesheets provide a modern, accessible design out of the b
    </tr>
 </table>
 
+### Navigations
+
+<table>
+   <tr>
+       <td>
+           <b>Context Menu</b>
+       </td>
+        <td rowspan="2">
+           <a href="https://www.npmjs.com/package/@syncfusion/react-navigations"><img src="https://ej2.syncfusion.com/github/images/npm-logo.png" alt="npm package @syncfusion/react-navigations" title="@syncfusion/react-navigations" style="height:20px;" />
+       </td>
+       <td>
+           <a href="components/navigations/src/contextMenu">Source</a>
+       </td>
+       <td>
+           <a href="https://react.syncfusion.com/context-menu">Live demo</a>
+       </td>
+   </tr>
+   <tr>
+       <td>
+           <b>Toolbar</b>
+       </td>
+       <td>
+           <a href="components/navigations/src/toolbar">Source</a>
+       </td>
+       <td>
+           <a href="https://react.syncfusion.com/toolbar">Live demo</a>
+       </td>
+   </tr>
+</table>
+
 ## Support
  Product support is available for through following mediums.
  * Creating incident in Syncfusion [Direct-trac](https://www.syncfusion.com/support/directtrac/incidents?utm_source=npm&utm_campaign=react-ui-components) support system or [Community forum](https://www.syncfusion.com/forums/pure-react?utm_source=npm&utm_campaign=react-ui-components).
