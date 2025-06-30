@@ -10,7 +10,7 @@ See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master
 
 
 ## Resources
-* [Getting Started](https://react.syncfusion.com/getting-started/introduction)
+* [Getting Started](https://react.syncfusion.com/overview/introduction)
 * [View Online Demos](https://react.syncfusion.com/button)
 
 ## Pure React Components highlights
@@ -280,6 +280,6 @@ Built-in Material 3 stylesheets provide a modern, accessible design out of the b
 Check the license detail [here](https://github.com/syncfusion/react-ui-components/blob/master/license).
 
 ## Changelog
-Check the changelog [here](https://react-api.syncfusion.com/release-notes/29.2.4). 
+Check the changelog [here](https://react-api.syncfusion.com/release-notes/30.1.37). 
 
 &copy; Copyright 2025 Syncfusion, Inc. All Rights Reserved. The Syncfusion Essential Studio license and copyright applies to this distribution.
