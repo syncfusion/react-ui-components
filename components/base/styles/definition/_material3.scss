@@ -2,8 +2,6 @@
 @use 'sass:color';
 @use 'sass:meta';
 @use 'sass:list';
-@import '../common/mixin.scss';
-
 @function mapcolorvariable($pallete-name){
   @return var(#{'--color-sf-'+ $pallete-name});
 }
@@ -44,7 +42,7 @@
   @return rgba($r, $g, $b, $opacity);
 }
 
-:root {
+:root, .sf-light-mode {
   --color-sf-black: 0, 0, 0;
   --color-sf-white: 255, 255, 255;
   --color-sf-primary: 103, 80, 164;
@@ -619,7 +617,7 @@ $rating-pressed-color: darken-color(rgba($primary), 10%) !default;
 
 $skeleton-wave-color: rgba(255, 255, 255, 1) !default;
 
-$splitbtn-right-border: linear-gradient(to right, rgba($content-bg-color, 1) 25%, rgba($border-light, 1) 75%) 1 !default;
+$splitbtn-right-border: linear-gradient(to right, rgba(92, 72, 147, 1) 25%, rgba(92, 72, 147, 1) 75%) 1 !default;
 $splitbtn-right-border-rtl: linear-gradient(to left, rgba($content-bg-color, 1) 25%, rgba($border-light, 1) 75%) 1 !default;
 $splitbtn-right-border-vertical: linear-gradient(to bottom, rgba($content-bg-color, 1) 25%, rgba($border-light, 1) 75%) 1 !default;
 

@@ -1,0 +1,40 @@
+$cmenu-min-width: 120px !default;
+$cmenu-max-width: 240px !default;
+$cmenu-font-size: $text-sm !default;
+$cmenu-font-weight: $font-weight-normal !default;
+$cmenu-color: rgba($flyout-text-color) !default;
+
+$cmenu-ul-padding: 4px 0 !default;
+$cmenu-ul-border: 1px solid rgba($border-light) !default;
+$cmenu-ul-border-radius: 4px !default;
+$cmenu-ul-bgcolor: $flyout-bg-color !default;
+$cmenu-parent-ul-box-shadow: $shadow-md !default;
+$cmenu-sub-ul-box-shadow: $shadow-md !default;
+
+$cmenu-li-height: 32px !default;
+$cmenu-li-line-height: 20px !default;
+$cmenu-li-padding: 5px 12px !default;
+$cmenu-li-right-padding: 12px !default;
+$cmenu-li-border-width: 1px !default;
+$cmenu-li-border-style: solid !default;
+$cmenu-li-border-color: rgba($flyout-border) !default;
+$cmenu-li-bgcolor: $flyout-bg-color-hover !default;
+$cmenu-li-selection-bgcolor: $flyout-bg-color-selected !default;
+$cmenu-li-selection-font-color: rgba($flyout-text-color-selected) !default;
+$cmenu-selected-color: rgba($flyout-text-color-selected) !default;
+$cmenu-li-hover-outline: 0 solid $cmenu-li-border-color !default;
+$cmenu-li-hover-outline-offset: 0 !default;
+$cmenu-li-selected-outline: 0 solid $cmenu-li-selection-bgcolor !default;
+$cmenu-li-selected-outline-offset: 0 !default;
+$cmenu-seperator-padding: 4px 0 !default;
+$cmenu-disable-text: $flyout-text-color-disabled !default;
+
+$cmenu-icon-font-size: $text-base !default;
+$cmenu-icon-margin-right: 10px !default;
+$cmenu-icon-color: rgba($icon-color) !default;
+$cmenu-icon-disabled-color: $icon-color-disabled !default;
+$cmenu-hover-icon-color: rgba($icon-color) !default;
+$cmenu-caret-font-size: $text-base !default;
+$cmenu-caret-color: rgba($icon-color) !default;
+$cmenu-caret-hover-color: rgba($icon-color) !default;
+$cmenu-caret-blank-icon: 38px !default;

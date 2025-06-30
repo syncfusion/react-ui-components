@@ -1,5 +1,6 @@
 
 @include export-module('radiobutton-layout') {
+  
   .sf-radio-wrapper {
     display: inline-block;
     line-height: 1;
@@ -43,6 +44,13 @@
       white-space: nowrap;
       @if $skin-name == 'fluent2' {
         margin: 7.6px;
+      }
+
+      &.sf-bottom {
+        .sf-label {
+          padding-top: 22px;
+          padding-left: 0;
+        }
       }
 
       & .sf-label {
@@ -126,9 +134,9 @@
       & .sf-ripple-container {
         border-radius: 50%;
         height: $radio-btn-ripple-size;
-        left: $radio-btn-ripple-position;
+        left: $radio-btn-ripple-left-position;
         position: absolute;
-        top: $radio-btn-ripple-position;
+        top: $radio-btn-ripple-top-position;
         width: $radio-btn-ripple-size;
         z-index: 1;
 
@@ -424,6 +432,7 @@
     & .sf-label {
       line-height: $radio-btn-small-line-height;
       padding-left: $radio-btn-small-padding;
+      font-size: 12px;
       @if $skin-name == 'fluent2' or $skin-name == 'tailwind3' {
         font-size: 12px;
       }
@@ -434,6 +443,13 @@
       width: $radio-btn-small-width;
     }
 
+    &.sf-bottom {
+      .sf-label {
+        padding-top: 22px;
+        padding-left: 0;
+      }
+    }
+
     &::after {
       height: $radio-btn-small-icon-height;
       left: $radio-btn-small-icon-left;
@@ -442,6 +458,8 @@
     }
 
     & .sf-ripple-container {
+      width: $radio-btn-small-ripple-Width;
+      height: $radio-btn-small-ripple-height;
       left: $radio-btn-small-ripple-position;
       top: $radio-btn-small-ripple-position;
     }
@@ -482,5 +500,339 @@
         }
       }
     }
+  }
+
+
+  .sf-large.sf-small .sf-radio + label,
+  .sf-radio + label.sf-large.sf-small {
+    @if $skin-name == 'fluent2' {
+      margin: 8.4px;
+    }
+    & .sf-label {
+      line-height: $radio-btn-bigger-small-line-height;
+      padding-left: $radio-btn-bigger-small-padding;
+    }
+
+    &::before {
+      height: $radio-btn-bigger-small-height;
+      width: $radio-btn-bigger-small-width;
+    }
+
+    &::after {
+      height: $radio-btn-bigger-small-icon-height;
+      left: $radio-btn-bigger-small-icon-left;
+      top: $radio-btn-bigger-small-icon-top;
+      width: $radio-btn-bigger-small-icon-width;
+    }
+
+    & .sf-ripple-container {
+      height: $radio-btn-bigger-small-ripple-size;
+      left: $radio-btn-bigger-ripple-position;
+      top: $radio-btn-bigger-ripple-position;
+      width: $radio-btn-bigger-small-ripple-size;
+    }
+
+    &.sf-right,
+    &.sf-rtl {
+      & .sf-label {
+        padding-left: 0;
+        padding-right: $radio-btn-bigger-small-padding;
+      }
+
+      &::after {
+        left: auto;
+        right: $radio-btn-bigger-small-icon-right;
+      }
+
+      & .sf-ripple-container {
+        left: auto;
+        right: $radio-btn-small-ripple-position;
+      }
+    }
+
+    &.sf-right {
+      &.sf-rtl {
+        & .sf-label {
+          padding-left: $radio-btn-bigger-small-padding;
+          padding-right: 0;
+        }
+
+        &::after {
+          left: $radio-btn-bigger-small-icon-right;
+          right: auto;
+        }
+
+        & .sf-ripple-container {
+          left: -10px;
+          right: auto;
+        }
+      }
+    }
+  }
+
+  .sf-large .sf-radio {
+    &:not(:checked):hover {
+      +label,
+      +label.sf-rtl,
+      +label.sf-right {
+        @if $skin-name == 'FluentUI' {
+          &::after {
+            background-color: $radio-btn-uncheck-background-color;
+            border: 1px solid;
+            border-radius: 50%;
+            box-sizing: border-box;
+            color: $radio-btn-uncheck-color;
+            content: '';
+            height: $radio-btn-bigger-icon-height;
+            left: $radio-btn-bigger-icon-left;
+            position: absolute;
+            top: $radio-btn-bigger-icon-top;
+            transform: scale(1);
+            width: $radio-btn-bigger-icon-width;
+          }
+        }
+      }
+
+      +label.sf-rtl,
+      +label.sf-right {
+        &::after {
+          left: auto;
+        }
+      }
+    }
+
+  }
+
+  .sf-large .sf-radio + label {
+    @if $skin-name == 'FluentUI' {
+      border: 1px solid transparent;
+      height: 28px;
+    }
+  }
+
+  .sf-large .sf-radio + label,
+  .sf-radio + label.sf-large {
+    @if $skin-name == 'fluent2' {
+      margin: 10.4px;
+    }
+
+    & .sf-label {
+      font-size: $radio-btn-bigger-font-size;
+      line-height: $radio-btn-bigger-line-height;
+      padding-left: $radio-btn-bigger-padding;
+    }
+
+    &::before {
+      height: $radio-btn-bigger-height;
+      width: $radio-btn-bigger-width;
+    }
+
+    &.sf-bottom {
+      .sf-label {
+        padding-top: 22px;
+        padding-left: 0;
+      }
+    }
+
+    &::after {
+      height: $radio-btn-bigger-icon-height;
+      left: $radio-btn-bigger-icon-left;
+      top: $radio-btn-bigger-icon-top;
+      width: $radio-btn-bigger-icon-width;
+    }
+
+    & .sf-ripple-container {
+      height: $radio-btn-bigger-ripple-size;
+      left: $radio-btn-bigger-ripple-left-position;
+      top: $radio-btn-bigger-ripple-top-position;
+      width: $radio-btn-bigger-ripple-size;
+    }
+
+    &.sf-right,
+    &.sf-rtl {
+      & .sf-label {
+        padding-left: 0;
+        padding-right: $radio-btn-bigger-padding;
+      }
+
+      &::after {
+        left: auto;
+        right: $radio-btn-bigger-icon-right;
+      }
+
+      & .sf-ripple-container {
+        left: auto;
+        right: $radio-btn-bigger-ripple-position;
+      }
+    }
+
+    &.sf-right {
+      &.sf-rtl {
+        & .sf-label {
+          padding-left: $radio-btn-bigger-padding;
+          padding-right: 0;
+        }
+
+        &::after {
+          left: $radio-btn-bigger-icon-right;
+          right: auto;
+        }
+
+        & .sf-ripple-container {
+          left: -12px;
+          right: auto;
+        }
+      }
+    }
+
+    &.sf-small {
+      & .sf-label {
+        line-height: $radio-btn-bigger-small-line-height;
+        padding-left: $radio-btn-bigger-small-padding;
+      }
+
+      &::before {
+        height: $radio-btn-bigger-small-height;
+        width: $radio-btn-bigger-small-width;
+      }
+
+      &::after {
+        height: $radio-btn-bigger-small-icon-height;
+        left: $radio-btn-bigger-small-icon-left;
+        top: $radio-btn-bigger-small-icon-top;
+        width: $radio-btn-bigger-small-icon-width;
+      }
+
+      & .sf-ripple-container {
+        height: $radio-btn-bigger-small-ripple-size;
+        left: $radio-btn-bigger-ripple-position;
+        top: $radio-btn-bigger-ripple-position;
+        width: $radio-btn-bigger-small-ripple-size;
+      }
+
+      &.sf-right,
+      &.sf-rtl {
+        & .sf-label {
+          padding-left: 0;
+          padding-right: $radio-btn-bigger-small-padding;
+        }
+
+        &::after {
+          left: auto;
+          right: $radio-btn-bigger-small-icon-right;
+        }
+
+        & .sf-ripple-container {
+          left: auto;
+          right: $radio-btn-small-ripple-position;
+        }
+      }
+
+      &.sf-right {
+        &.sf-rtl {
+          & .sf-label {
+            padding-left: $radio-btn-bigger-small-padding;
+            padding-right: 0;
+          }
+
+          &::after {
+            left: $radio-btn-bigger-small-icon-right;
+            right: auto;
+          }
+
+          & .sf-ripple-container {
+            left: -10px;
+            right: auto;
+          }
+        }
+      }
+    }
+  }
+
+  .sf-success .sf-radio:checked + label::after { /* csslint allow: adjoining-classes */
+    background-color: #689f38;
+    border-color: #689f38;
+  }
+  
+  .sf-success .sf-radio:checked:focus + label::after, .sf-success .sf-radio:checked + label:hover::after { /* csslint allow: adjoining-classes */
+    background-color: #449d44;
+    border-color: #449d44;
+  }
+  
+  .sf-success .sf-radio:checked + label::before {
+    border-color: #689f38;
+  }
+  
+  .sf-success .sf-radio:checked:focus + label::before, .sf-success .sf-radio:checked + label:hover::before { /* csslint allow: adjoining-classes */
+    border-color: #449d44;
+  }
+  
+  .sf-success .sf-radio +label:hover::before {
+    border-color: #b1afaf
+  }
+  
+  .sf-info .sf-radio:checked + label::after { /* csslint allow: adjoining-classes */
+    background-color: #2196f3;
+    border-color: #2196f3;
+  }
+  
+  .sf-info .sf-radio:checked:focus + label::after, .sf-info .sf-radio:checked + label:hover::after { /* csslint allow: adjoining-classes */
+    background-color: #0b7dda;
+    border-color: #0b7dda;
+  }
+  
+  .sf-info .sf-radio:checked + label::before {
+    border-color: #2196f3;
+  }
+  
+  .sf-info .sf-radio:checked:focus + label::before, .sf-info .sf-radio:checked + label:hover::before {
+    border-color: #0b7dda;
+  }
+  
+  .sf-info .sf-radio + label:hover::before {
+    border-color: #b1afaf
+  }
+  
+  .sf-warning .sf-radio:checked + label::after { /* csslint allow: adjoining-classes */
+    background-color: #ef6c00;
+    border-color: #ef6c00;
+  }
+  
+  .sf-warning .sf-radio:checked:focus + label::after, .sf-warning .sf-radio:checked + label:hover::after { /* csslint allow: adjoining-classes */
+    background-color: #cc5c00;
+  }
+  
+  .sf-radio:checked + .sf-warning::before {
+    border-color: #ef6c00;
+  }
+  
+  .sf-warning .sf-radio:checked:focus + label::before, .sf-warning .sf-radio:checked + label:hover::before {
+    border-color: #cc5c00;
+  }
+  
+  .sf-warning .sf-radio + label:hover::before {
+    border-color: #b1afaf
+  }
+  
+  .sf-danger .sf-radio:checked + label::after { /* csslint allow: adjoining-classes */
+    background-color: #d84315;
+    border-color: #d84315;
+  }
+  
+  .sf-danger .sf-radio:checked:focus + label::after, .sf-danger .sf-radio:checked + label:hover::after { /* csslint allow: adjoining-classes */
+    background-color: #ba330a;
+    border-color: #ba330a;
+  }
+  
+  .sf-danger .sf-radio:checked + label::before {
+    border-color: #d84315;
+  }
+  
+  .sf-danger .sf-radio:checked:focus + label::before, .sf-danger .sf-radio:checked + label:hover::before {
+    border-color: #ba330a;
+  }
+  
+  .sf-danger .sf-radio + label:hover::before {
+    border-color: #b1afaf
   }
 }

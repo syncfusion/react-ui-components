@@ -2,8 +2,8 @@
   bottom: $cbox-ripple-small-size;
   height: $cbox-ripple-small-height;
   left: $cbox-ripple-small-size;
-  right: $cbox-ripple-small-size;
-  top: $cbox-ripple-small-size;
+  right: -5px;
+  top: -7.5px;
   width: $cbox-ripple-small-width;
 }
 
@@ -28,6 +28,28 @@
         margin: 0;
         position: relative;
         white-space: nowrap;
+
+        .sf-label {
+          &.sf-bottom {
+            padding-top: 4px;
+            padding-left: 0;
+            margin-left: 0;
+            font-size: 14px;
+            text-align: center;
+            display: block;
+            margin-top: 8px;
+          }
+          
+          &.sf-top {
+            padding-bottom: 4px;
+            padding-left: 0;
+            margin-left: 0;
+            font-size: 14px;
+            text-align: center;
+            display: block;
+            margin-bottom: 8px;
+          }
+        }
       }
 
       &:hover {
@@ -410,10 +432,26 @@
     }
   }
 
+
+
   .sf-css.sf-checkbox-wrapper {
     & .sf-ripple-container {
       right: $cbox-ripple-size;
       top: -4.5px;
+    }
+
+    &:hover {
+      & .sf-ripple-container {
+        @if $skin-name == 'Material3' {
+          background: transparent;
+        }
+      }
+
+      & .sf-ripple-container.sf-ripple-check {
+        @if $skin-name == 'Material3' {
+          background: transparent;
+        }
+      }
     }
   }
 
@@ -431,11 +469,6 @@
       width: $cbox-small-width;
       @if $skin-name == 'fluent2' {
         margin: 6.2px 8px;
-      }
-
-      &:hover {
-        background-color: $cbox-hover-bgcolor;
-        border-color: $cbox-hover-border-color;
       }
     }
 
@@ -456,5 +489,328 @@
     & .sf-ripple-container {
       @include ripple-container;
     }
+  }
+
+  .sf-large.sf-small .sf-checkbox-wrapper,
+  .sf-large.sf-small.sf-checkbox-wrapper,
+  .sf-large.sf-small .sf-css.sf-checkbox-wrapper,
+  .sf-large.sf-small.sf-css.sf-checkbox-wrapper {
+    & .sf-frame {
+      height: $cbox-bigger-small-height;
+      line-height: $cbox-bigger-small-lineheight;
+      width: $cbox-bigger-small-width;
+      @if $skin-name == 'fluent2' {
+        margin: 8.2px 8px;
+        +label {
+          margin: 7.2px 8px 7.2px 4px;
+        }
+      }
+
+      &:hover {
+        @if $skin-name != 'FluentUI' {
+          &.sf-check {
+            background-color: $cbox-checkmark-hover-bgcolor;
+            border-color: $cbox-checkmark-hover-border-color;
+          }
+        }
+        @if $skin-name == 'FluentUI' {
+          &:not(.sf-check),
+          &:not(.sf-stop)::before {
+            content: $cbox-check-content;
+            font-size: $cbox-bigger-small-check-fontsize;
+          }
+        }
+      }
+    }
+
+    & .sf-check {
+      font-size: $cbox-bigger-small-check-fontsize;
+    }
+
+    & .sf-stop {
+      font-size: $cbox-bigger-small-indeterminate-fontsize;
+      line-height: $cbox-bigger-small-indeterminate-lineheight;
+    }
+
+    & .sf-label {
+      font-size: $cbox-bigger-small-font-size;
+      line-height: $cbox-bigger-small-height;
+    }
+
+    & .sf-ripple-container {
+      bottom: $cbox-ripple-bigger-small-size;
+      height: $cbox-ripple-bigger-small-height;
+      left: $cbox-ripple-bigger-small-size;
+      right: $cbox-ripple-bigger-small-size;
+      top: $cbox-ripple-bigger-small-size;
+      width: $cbox-ripple-bigger-small-width;
+    }
+  }
+
+  .sf-large .sf-checkbox-wrapper,
+  .sf-large.sf-checkbox-wrapper,
+  .sf-large .sf-css.sf-checkbox-wrapper,
+  .sf-large.sf-css.sf-checkbox-wrapper {
+    & .sf-checkbox {
+      +.label {
+        @if $skin-name == 'fluent2' {
+          margin: 9px 6px 9px 8px;
+        }
+      }
+    }
+    & .sf-frame {
+      height: $cbox-bigger-height;
+      line-height: $cbox-bigger-lineheight;
+      width: $cbox-bigger-width;
+      @if $skin-name == 'fluent2' {
+        margin: 9.2px 8px;
+      }
+
+      &:hover {
+        @if $skin-name == 'FluentUI' {
+          &:not(.sf-check),
+          &:not(.sf-stop)::before {
+            content: $cbox-check-content;
+            font-size: $cbox-bigger-check-fontsize;
+          }
+        }
+      }
+
+      +.sf-label {
+        font-size: $cbox-bigger-font-size;
+        line-height: $cbox-bigger-height;
+        @if $skin-name == 'fluent2' {
+          margin: 9px 8px 9px 6px;
+        }
+        @else {
+          margin-left: $cbox-bigger-margin;
+        }
+      }
+
+      +.sf-ripple-container {
+        left: auto;
+      }
+    }
+
+    & .sf-check {
+      font-size: $cbox-bigger-check-fontsize;
+    }
+
+    & .sf-stop {
+      font-size: $cbox-bigger-indeterminate-fontsize;
+      line-height: $cbox-bigger-indeterminate-lineheight;
+    }
+
+    & .sf-label {
+      font-size: $cbox-bigger-font-size;
+    }
+
+    & .sf-ripple-container {
+      bottom: $cbox-ripple-bigger-size;
+      height: $cbox-ripple-bigger-height;
+      left: $cbox-ripple-bigger-size;
+      right: $cbox-ripple-bigger-size;
+      top: $cbox-ripple-bigger-size;
+      width: $cbox-ripple-bigger-width;
+    }
+
+    &.sf-rtl {
+      & .sf-frame {
+        @if $skin-name != 'fluent2' {
+          margin: 0;
+        }
+
+        &:hover {
+          @if $skin-name != 'FluentUI' {
+            &.sf-check {
+              background-color: $cbox-checkmark-hover-bgcolor;
+              border-color: $cbox-checkmark-hover-border-color;
+            }
+          }
+          @if $skin-name == 'FluentUI' {
+            &:not(.sf-check),
+            &:not(.sf-stop)::before {
+              content: $cbox-check-content;
+              font-size: $cbox-bigger-check-fontsize;
+            }
+          }
+        }
+
+        +.sf-label {
+          @if $skin-name == 'fluent2' {
+            margin: 9px 6px 9px 8px;
+          }
+          @else {
+            margin-left: 0;
+            margin-right: $cbox-bigger-margin;
+          }
+        }
+
+        +.sf-ripple-container {
+          left: auto;
+        }
+
+        +.sf-ripple-container {
+          right: auto;
+        }
+      }
+    }
+
+    &.sf-small {
+      & .sf-frame {
+        height: $cbox-bigger-small-height;
+        line-height: $cbox-bigger-small-lineheight;
+        width: $cbox-bigger-small-width;
+      }
+
+      & .sf-check {
+        font-size: $cbox-bigger-small-check-fontsize;
+      }
+
+      & .sf-stop {
+        font-size: $cbox-bigger-small-indeterminate-fontsize;
+        line-height: $cbox-bigger-small-indeterminate-lineheight;
+      }
+
+      & .sf-label {
+        font-size: $cbox-bigger-small-font-size;
+        line-height: $cbox-bigger-small-height;
+      }
+
+      & .sf-ripple-container {
+        bottom: $cbox-ripple-bigger-small-size;
+        height: $cbox-ripple-bigger-small-height;
+        left: $cbox-ripple-bigger-small-size;
+        right: $cbox-ripple-bigger-small-size;
+        top: $cbox-ripple-bigger-small-size;
+        width: $cbox-ripple-bigger-small-width;
+      }
+    }
+  }
+
+  .sf-large .sf-checkbox-wrapper,
+  .sf-large.sf-checkbox-wrapper,
+  .sf-large .sf-css.sf-checkbox-wrapper,
+  .sf-large.sf-css.sf-checkbox-wrapper {
+    &:hover {
+      & .sf-frame {
+        @if $skin-name == 'FluentUI' {
+          font-size: $cbox-bigger-check-fontsize;
+
+          &:not(.sf-check):not(.sf-stop) {
+            color: $cbox-icon-color;
+            @media (max-width: 768px)  {
+              color: $cbox-bgcolor;
+            }
+          }
+        }
+      }
+    }
+    
+    &.sf-checkbox-disabled {
+      & .sf-frame {
+        &.sf-check,
+        &.sf-stop {
+          @if $skin-name == 'Material3' {
+            line-height: 18px;
+          }
+        }
+      }
+    }
+  }
+
+  .sf-large.sf-small .sf-checkbox-wrapper,
+  .sf-large.sf-small.sf-checkbox-wrapper,
+  .sf-large.sf-small .sf-css.sf-checkbox-wrapper,
+  .sf-large.sf-small.sf-css.sf-checkbox-wrapper {
+    &:hover {
+      & .sf-frame {
+        @if $skin-name == 'FluentUI' {
+          font-size: $cbox-bigger-small-check-fontsize;
+
+          &:not(.sf-check):not(.sf-stop) {
+            color: $cbox-icon-color;
+          }
+        }
+        @if $skin-name == 'bootstrap4' or $skin-name == 'tailwind' {
+          background-color: $cbox-checkmark-hover-bgcolor;
+          border-color: $cbox-checkmark-hover-border-color;
+        }
+      }
+    }
+  }
+
+  .sf-small .sf-label.sf-bottom {
+    font-size: 12px;
+    margin-top: 6px;
+    margin-left: 0;
+  }
+
+  .sf-small .sf-label.sf-top {
+    font-size: 12px;
+    margin-bottom: 6px;
+    margin-left: 0;
+  }
+
+  .sf-large .sf-label.sf-bottom {
+    font-size: 16px;
+    margin-top: 10px;
+    margin-left: 0;
+  }
+
+  .sf-large .sf-label.sf-top {
+    font-size: 16px;
+    margin-top: 10px;
+    margin-left: 0;
+  }
+
+  .sf-checkbox-wrapper.sf-primary .sf-frame.sf-check,
+  .sf-checkbox-wrapper.sf-primary:hover .sf-frame.sf-check {
+    background-color: #e03872;
+    border-color: transparent;
+  }
+
+  .sf-checkbox-wrapper.sf-success .sf-frame.sf-check,
+  .sf-checkbox-wrapper.sf-success .sf-checkbox:focus+.sf-frame.sf-check {
+    background-color: #689f38;
+    border-color: transparent;
+  }
+
+  .sf-checkbox-wrapper.sf-success:hover .sf-frame.sf-check {
+    background-color: #449d44;
+    border-color: transparent;
+  }
+
+  .sf-checkbox-wrapper.sf-info .sf-frame.sf-check,
+  .sf-checkbox-wrapper.sf-info .sf-checkbox:focus+.sf-frame.sf-check {
+    background-color: #2196f3;
+    border-color: transparent;
+  }
+
+  .sf-checkbox-wrapper.sf-info:hover .sf-frame.sf-check {
+    background-color: #0b7dda;
+    border-color: transparent;
+  }
+
+  .sf-checkbox-wrapper.sf-warning .sf-frame.sf-check,
+  .sf-checkbox-wrapper.sf-warning .sf-checkbox:focus+.sf-frame.sf-check {
+    background-color: #ef6c00;
+    border-color: transparent;
+  }
+
+  .sf-checkbox-wrapper.sf-warning:hover .sf-frame.sf-check {
+    background-color: #cc5c00;
+    border-color: transparent;
+  }
+
+  .sf-checkbox-wrapper.sf-danger .sf-frame.sf-check,
+  .sf-checkbox-wrapper.sf-danger .sf-checkbox:focus+.sf-frame.sf-check {
+    background-color: #d84315;
+    border-color: transparent;
+  }
+
+  .sf-checkbox-wrapper.sf-danger:hover .sf-frame.sf-check {
+    border-color: transparent;
+    background-color: #ba3912;
   }
 }

@@ -2,7 +2,7 @@
 
 ## What's Included in the React Button Package
 
-The React Button package includes the following list of components.
+The React Button package includes the following list of components. 
 
 ### React Button
 
@@ -105,6 +105,7 @@ Explore the demo [here](https://react.syncfusion.com/radio-button).
 - **Label Positioning:** Flexibly position the label relative to the RadioButton with options available for placing it before or after the button, enhancing UI layout consistency.
 
 - **Form Integration:** The value attribute of the RadioButton can be included as part of form data submitted to the server, facilitating efficient data processing.
+
 
 <p align="center">
 Trusted by the world's leading companies

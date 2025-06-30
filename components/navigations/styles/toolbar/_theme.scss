@@ -1,0 +1,164 @@
+@include export-module('toolbar-theme') {
+  .sf-toolbar {
+    -webkit-tap-highlight-color: $tbar-highlight-color;
+    background: $tbar-bg-color;
+    border: $tbar-border-width $tbar-border-style $tbar-border-color;
+    box-shadow: $tbar-box-shadow;
+
+    .sf-toolbar-items {
+      background: $tbar-bg-color;
+    }
+
+    .sf-toolbar-item {
+      &.sf-separator {
+        border: $tbar-separator-border-style $tbar-separator-border-color;
+        border-width: $tbar-separator-horizontal-border-width;
+      }
+    }
+
+    .sf-hor-nav {
+      background: $tbar-bg-color;
+      border: $tbar-nav-border-style $tbar-border-color;
+      border-width: $tbar-popup-border-width;
+      color: $tbar-popup-icon-color;
+
+      .sf-popup-down-icon,
+      .sf-popup-up-icon {
+        fill: currentColor;
+      }
+
+      &.sf-nav-active {
+        &:active,
+        &:focus,
+        &:hover {
+          border-bottom-right-radius: $tbar-popup-nav-active-border-bottom-right-radius;
+        }
+      }
+
+      &:active {
+        border: $tbar-nav-press-border;
+        box-shadow: $tbar-nav-pressed-box-shadow;
+        color: $tbar-popup-nav-active-icons-color;
+        background: $tbar-popup-nav-active-bg;
+      }
+
+      &:hover {
+        background: $tbar-popup-nav-hover-bg;
+        border-left: $tbar-nav-hover-border;
+        color: $tbar-popup-nav-hover-icons-color;
+
+        &:not(.sf-nav-active) {
+          border-color: $tbar-popup-nav-hover-border-color;
+          border-style: $tbar-nav-border-style;
+          border-width: $tbar-popup-nav-hover-border-width;
+        }
+
+        &:active {
+          background: $tbar-popup-nav-hover-active-bg;
+          border-color: $tbar-popup-nav-hover-active-border-color;
+          border-style: $tbar-nav-border-style;
+          border-width: $tbar-popup-nav-hover-active-border-width;
+        }
+      }
+
+      &:focus {
+        background: $tbar-popup-nav-focus-bg;
+        color: $tbar-popup-nav-focus-icons-color;
+        border-color: $tbar-popup-nav-focus-border-color;
+        border-style: $tbar-nav-border-style;
+        border-width: $tbar-popup-nav-focus-border-width;
+      }
+    }
+
+    &.sf-toolpop {
+      .sf-hor-nav.sf-nav-active,
+      .sf-hor-nav.sf-nav-active:not(.sf-extended-nav) {
+        background: $tbar-popup-nav-selected-bg;
+        box-shadow: $tbar-nav-selected-box-shadow;
+        border-color: $tbar-popup-nav-selected-border-color;
+        border-style: $tbar-nav-border-style;
+        border-width: $tbar-popup-nav-selected-border-width;
+
+        &:focus {
+          border-color: $tbar-popup-nav-selected-focus-border-color;
+          border-style: $tbar-nav-border-style;
+          border-width: $tbar-popup-nav-selected-focus-border-width;
+        }
+
+        &:active {
+          color: $tbar-popup-nav-selected-icons-active-color;
+        }
+      }
+    }
+
+    .sf-toolbar-pop {
+      background: $tbar-popup-bg-color;
+      border: $tbar-border-width $tbar-border-style $tbar-border-color;
+      box-shadow: $tbar-popup-box-shadow;
+
+      .sf-toolbar-item {
+        &:not(.sf-separator) {
+          background: $tbar-popup-item-bg-color;
+        }
+      }
+    }
+
+    &.sf-extended-toolbar:not(.sf-vertical) {
+      .sf-toolbar-extended {
+        .sf-toolbar-item {
+          &.sf-separator {
+            border: $tbar-separator-border-style $tbar-separator-border-color;
+            border-width: $tbar-separator-horizontal-border-width;
+          }
+        }
+      }
+
+      .sf-toolbar-pop {
+        background: $tbar-bg-color;
+      }
+    }
+
+    &.sf-vertical {
+      .sf-hor-nav {
+        border: $tbar-nav-border-style $tbar-border-color;
+        border-width: $tbar-popup-vertical-border-width;
+
+        &:hover:not(.sf-nav-active),
+        &:focus,
+        &:hover:active,
+        &:active,
+        &.sf-nav-active,
+        &.sf-nav-active:not(.sf-extended-nav),
+        &.sf-nav-active:focus,
+        &.sf-nav-active:not(.sf-extended-nav):focus {
+          border-width: $tbar-popup-vertical-border-width;
+        }
+      }
+
+      &.sf-rtl .sf-hor-nav {
+        border: $tbar-nav-border-style $tbar-border-color;
+        border-width: $tbar-popup-vertical-rtl-border-width;
+
+        &:not(.sf-nav-active):hover {
+          border-width: $tbar-popup-vertical-rtl-border-width;
+        }
+      }
+
+      .sf-toolbar-items .sf-toolbar-item {
+        &.sf-separator {
+          border-width: $tbar-separator-vertical-border-width;
+        }
+      }
+    }
+
+    &.sf-rtl .sf-hor-nav {
+      border: $tbar-nav-border-style $tbar-border-color;
+      border-width: $tbar-popup-rtl-border-width;
+
+      &:not(.sf-nav-active):hover {
+        border: $tbar-nav-border-style $tbar-border-color;
+        border-width: $tbar-popup-rtl-border-width;
+      }
+    }
+  }
+}

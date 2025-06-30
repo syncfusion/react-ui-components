@@ -144,11 +144,19 @@ export function LicenseValidator(key: string = ''): ILicenseValidator {
             if (validateMsg && typeof document !== 'undefined' && !isNullOrUndefined(document)) {
                 accountURL = (validateURL && validateURL !== '') ? validateURL : 'https://www.syncfusion.com/account/claim-license-key?pl=SmF2YVNjcmlwdA==&vs=Mjc=&utm_source=es_license_validation_banner&utm_medium=listing&utm_campaign=license-information';
                 const errorDiv: HTMLElement = createElement('div', {
-                    innerHTML: `<img src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGcgY2xpcC1wYXRoPSJ1cmwoI2NsaXAwXzE5OV80KSI+CjxwYXRoIGQ9Ik0xMiAyMUMxNi45NzA2IDIxIDIxIDE2Ljk3MDYgMjEgMTJDMjEgNy4wMjk0NCAxNi45NzA2IDMgMTIgM0M3LjAyOTQ0IDMgMyA3LjAyOTQ0IDMgMTJDMyAxNi45NzA2IDcuMDI5NDQgMjEgMTIgMjFaIiBzdHJva2U9IiM3MzczNzMiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CjxwYXRoIGQ9Ik0xMS4yNSAxMS4yNUgxMlYxNi41SDEyLjc1IiBmaWxsPSIjNjE2MDYzIi8+CjxwYXRoIGQ9Ik0xMS4yNSAxMS4yNUgxMlYxNi41SDEyLjc1IiBzdHJva2U9IiM3MzczNzMiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CjxwYXRoIGQ9Ik0xMS44MTI1IDlDMTIuNDMzOCA5IDEyLjkzNzUgOC40OTYzMiAxMi45Mzc1IDcuODc1QzEyLjkzNzUgNy4yNTM2OCAxMi40MzM4IDYuNzUgMTEuODEyNSA2Ljc1QzExLjE5MTIgNi43NSAxMC42ODc1IDcuMjUzNjggMTAuNjg3NSA3Ljg3NUMxMC42ODc1IDguNDk2MzIgMTEuMTkxMiA5IDExLjgxMjUgOVoiIGZpbGw9IiM3MzczNzMiLz4KPC9nPgo8ZGVmcz4KPGNsaXBQYXRoIGlkPSJjbGlwMF8xOTlfNCI+CjxyZWN0IHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgZmlsbD0id2hpdGUiLz4KPC9jbGlwUGF0aD4KPC9kZWZzPgo8L3N2Zz4K' style="top: 6px;
-                    position: absolute;
-                    left: 16px;
-                    width: 24px;
-                    height: 24px;"/>` + validateMsg + ' ' + '<a style="text-decoration: none;color: #0D6EFD;font-weight: 500;" href=' + accountURL + '>Claim your free account</a>'
+                    innerHTML: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="position: absolute; left: 16px; width: 24px; height: 24px;">
+                    <g clip-path="url(#clip0_199_4)">
+                        <path d="M12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21Z" stroke="#737373" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M11.25 11.25H12V16.5H12.75" fill="#616063"/>
+                        <path d="M11.25 11.25H12V16.5H12.75" stroke="#737373" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M11.8125 9C12.4338 9 12.9375 8.49632 12.9375 7.875C12.9375 7.25368 12.4338 6.75 11.8125 6.75C11.1912 6.75 10.6875 7.25368 10.6875 7.875C10.6875 8.49632 11.1912 9 11.8125 9Z" fill="#737373"/>
+                    </g>
+                    <defs>
+                        <clipPath id="clip0_199_4">
+                        <rect width="24" height="24" fill="white"/>
+                        </clipPath>
+                    </defs>
+                    </svg>` + validateMsg + ' ' + '<a style="text-decoration: none;color: #0D6EFD;font-weight: 500;" href=' + accountURL + '>Claim your free account</a>'
                 });
                 errorDiv.setAttribute('style', `position: fixed;
                   top: 10px;

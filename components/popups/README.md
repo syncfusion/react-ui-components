@@ -2,7 +2,7 @@
 
 ## What's Included in the React Popups Package
 
-The React Popups package includes the following component.
+The React Popups package includes the following component. 
 
 ### React Tooltip
 

@@ -1,0 +1,122 @@
+@include export-module('contextmenu-layout') {
+
+  .sf-contextmenu-wrapper {
+    & ul {
+      font-weight: $cmenu-font-weight;
+      list-style-image: none;
+      list-style-position: outside;
+      list-style-type: none;
+      margin: 0;
+      overflow: hidden;
+      user-select: none;
+      font-size: $cmenu-font-size;
+      padding: $cmenu-ul-padding;
+      border: $cmenu-ul-border;
+      border-radius: $cmenu-ul-border-radius;
+      box-shadow: $cmenu-sub-ul-box-shadow;
+      display: none;
+      min-width: $cmenu-min-width;
+      position: absolute;
+      font-family: $font-family;
+
+      &.sf-ul,
+      &.sf-ul * {
+        box-sizing: border-box;
+
+        &:focus {
+          outline: none;
+        }
+      }
+
+      &.sf-contextmenu {
+        box-shadow: $cmenu-parent-ul-box-shadow;
+        padding: 4px 0;
+      }
+
+      .sf-menu-item {
+        cursor: pointer;
+        position: relative;
+        height: $cmenu-li-height;
+        line-height: $cmenu-li-line-height;
+        padding: $cmenu-li-padding;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: flex;
+        align-items: center;
+
+        &.sf-menu-header {
+          border-bottom-style: $cmenu-li-border-style;
+          border-bottom-width: $cmenu-li-border-width;
+        }
+
+        .sf-menu-url {
+          text-decoration: none;
+          display: inline-block;
+          min-width: 120px;
+        }
+
+        .sf-menu-icon {
+          display: inline-flex;
+          font-size: $cmenu-icon-font-size;
+          line-height: $cmenu-li-height;
+          margin-right: $cmenu-icon-margin-right;
+          width: 1em;
+          vertical-align: middle;
+        }
+
+        &.sf-separator {
+          cursor: auto;
+          line-height: normal;
+          pointer-events: none;
+          border-bottom-style: $cmenu-li-border-style;
+          border-bottom-width: $cmenu-li-border-width;
+          height: auto;
+          margin: $cmenu-seperator-padding;
+          padding: 0px 12px;
+        }
+
+        .sf-submenu-icon {
+          line-height: $cmenu-li-height;
+          margin: 0 0 0 auto;
+          padding-left: 16px;
+          float: right;
+          display: flex;
+          font-size: $cmenu-caret-font-size;
+        }
+
+        &.sf-blank-icon {
+          padding-left: $cmenu-caret-blank-icon;
+        }
+
+        &.sf-disabled {
+          cursor: auto;
+          pointer-events: none;
+        }
+      }
+    }
+
+    .sf-menu-parent[sf-animate=true] {
+      pointer-events: none;
+    }
+  }
+}
+
+.sf-rtl.sf-contextmenu-wrapper .sf-menu-item {
+  .sf-menu-icon {
+    margin-right: 0;
+    margin-left: $cmenu-icon-margin-right;
+  }
+
+  .sf-submenu-icon {
+    margin-left: 0;
+    margin-right: auto;
+    float: left;
+    transform: rotate(180deg);
+  }
+
+  &.sf-blank-icon {
+    padding-right: $cmenu-caret-blank-icon;
+    padding-left: $cmenu-li-right-padding;
+  }
+}

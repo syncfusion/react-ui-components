@@ -1,0 +1,17 @@
+@mixin focused-icon-color {
+  & .sf-submenu-icon {
+    color: $cmenu-caret-color;
+
+    path {
+      fill: $cmenu-caret-color;
+    }
+  }
+
+  & .sf-menu-icon {
+    color: $cmenu-icon-color;
+
+    path {
+      fill: $cmenu-icon-color;
+    }
+  }
+}

@@ -1,0 +1,70 @@
+@include export-module('v-scroll-theme') {
+
+  #{&}.sf-vscroll {
+
+    .sf-icons path {
+      fill: $vscroll-icon-color;
+    }
+
+    &.sf-rtl {
+
+      .sf-scroll-nav  {
+        background: $vscroll-bg;
+
+        &:hover {
+          background: $vscroll-bg-hover;
+          border: $vscroll-border-hover;
+          border-color: $vscroll-border-hover-color;
+
+          path {
+            fill: $vscroll-icon-color-hover; 
+          }
+        }
+      }
+    }
+
+    .sf-scroll-nav  {
+
+      &:hover {
+        background: $vscroll-bg-hover;
+        border: $vscroll-border-hover;
+
+        path {
+          fill: $vscroll-icon-color-hover;
+        }
+      }
+
+      &:focus {
+        background: $vscroll-bg-focus;
+        border: $vscroll-border-focus;
+        border-color: $vscroll-border-hover-color;
+
+        path {
+          fill: $vscroll-icon-color-hover;
+        }
+      }
+
+      &:active {
+        background: $vscroll-bg-pressed;
+        border: $vscroll-border-active;
+        box-shadow: $vscroll-active-box-shadow;
+
+        path {
+          fill: $vscroll-icon-color-active;
+        }
+      }
+    }
+
+    .sf-scroll-nav  {
+      background: $vscroll-bg;
+
+      &.sf-scroll-up-nav {
+        border-bottom: $vscroll-border-size $vscroll-border-type $vscroll-border-color;
+      }
+
+      &.sf-scroll-down-nav {
+        border-top: $vscroll-border-size $vscroll-border-type $vscroll-border-color;
+      }
+    }
+  }
+}

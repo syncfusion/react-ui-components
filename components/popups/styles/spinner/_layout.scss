@@ -1,0 +1,133 @@
+﻿@include export-module('spinner-layout') {
+  .sf-spinner-pane {
+    align-items: center;
+    display: inline-flex;
+    height: 100%;
+    justify-content: center;
+    left: 0;
+    position: absolute;
+    text-align: center;
+    top: 0;
+    user-select: none;
+    vertical-align: middle;
+    width: 100%;
+    z-index: 1000;
+    background-color: transparent;
+
+    &.sf-spin-overlay {
+      background-color: $spin-overlay-background;
+      .sf-spinner-inner {
+        .sf-spin-label {
+          color: $spin-overlay-font-color;
+        }
+      }
+    }
+
+    &::after {
+      content: $theme;
+      display: none;
+    }
+
+    &.sf-spin-left {
+      /* stylelint-disable property-no-vendor-prefix */
+      .sf-spinner-inner {
+        -webkit-transform: translateX(0%) translateY(-50%);
+        left: 0;
+        padding-left: $spin-padding;
+        transform: translateX(0%) translateY(-50%);
+      }
+    }
+
+    &.sf-spin-right {
+      .sf-spinner-inner {
+        -webkit-transform: translateX(-100%) translateY(-50%);
+        left: 100%;
+        padding-right: $spin-padding;
+        transform: translateX(-100%) translateY(-50%);
+      }
+    }
+
+    &.sf-spin-center {
+      .sf-spinner-inner {
+        -webkit-transform: translateX(-50%) translateY(-50%);
+        left: 50%;
+        transform: translateX(-50%) translateY(-50%);
+      }
+    }
+
+    &.sf-spin-hide {
+      display: none;
+    }
+
+    &.sf-spin-show {
+      display: inline-flex;
+    }
+
+    .sf-spinner-inner {
+      -webkit-transform: translateX(-50%) translateY(-50%);
+      left: 50%;
+      margin: 0;
+      position: absolute;
+      text-align: center;
+      top: 50%;
+      transform: translateX(-50%) translateY(-50%);
+      z-index: 1000;
+
+      .sf-spin-label {
+        font-family: $spin-label-font-family;
+        font-size: $spin-label-font-size;
+        margin-top: $spin-label-margin-top;
+        text-align: center;
+        color: $spin-label-color;
+      }
+
+      .sf-spin-material3,
+      .sf-spin-tailwind3 {
+        @include mat-spinner-rotate;
+        display: block;
+        margin: 0 auto;
+        stroke: $spin-material-stroke-color;
+
+        .sf-path-circle {
+          fill: none;
+          stroke-linecap: square;
+        }
+      }
+
+      .sf-spin-fluent2 {
+        @include fb-spinner-rotate;
+        display: block;
+        margin: 0 auto;
+        overflow: visible;
+
+        .sf-path-arc,
+        .sf-path-circle {
+          fill: none;
+          stroke-width: $spin-fabric-stroke-width;
+        }
+
+        .sf-path-circle {
+          stroke: $spin-fabric-stroke-color;
+        }
+
+        .sf-path-arc {
+          stroke: $spin-fabric-arc-color;
+        }
+      }
+
+      .sf-spin-bootstrap5v3 {
+        @include boot5-spinner-rotate;
+        border-radius: 50%;
+        display: block;
+        margin: 0 auto;
+        stroke: $spin-boot5-stroke-color;
+
+        .sf-path-circle {
+          fill: none;
+          stroke-linecap: square;
+          stroke-width: $spin-boot5-stroke-width;
+        }
+      }
+    }
+  }
+}

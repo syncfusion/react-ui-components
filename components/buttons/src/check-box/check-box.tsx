@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useImperativeHandle, useRef, forwardRef, Ref, JSX, InputHTMLAttributes, ChangeEvent } from 'react';
 import { preRender, useProviderContext, SvgIcon, useRippleEffect } from '@syncfusion/react-base';
-import {LabelPlacement} from '../button/button';
+import {Color, LabelPlacement, Size} from '../button/button';
 
 const CHECK: string = 'sf-check';
 const DISABLED: string = 'sf-checkbox-disabled';
@@ -31,6 +31,17 @@ export interface CheckBoxProps {
     label?: string;
 
     /**
+     * Specifies the size style of the checkbox. Options include 'Small', 'Medium' and 'Large'.
+     *
+     * @default Size.Medium
+     */
+    size?: Size;
+
+    icon?: React.ReactNode;
+
+    checkedIcon?: React.ReactNode;
+
+    /**
      * Specifies the position of the label relative to the CheckBox. It determines whether the label appears before or after the checkbox element in the UI.
      *
      * @default 'After'
@@ -43,6 +54,13 @@ export interface CheckBoxProps {
      * @default false
      */
     checked?: boolean;
+
+    /**
+     * Specifies the Color style of the button. Options include 'Primary', 'Secondary', 'Warning', 'Success', 'Danger', and 'Info'.
+     *
+     * @default -
+     */
+    color?: Color;
 
     /**
      * Defines `value` attribute for the CheckBox. It is a form data passed to the server when submitting the form.
@@ -89,12 +107,16 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckBoxProps & React.Re
         const {
             onChange,
             checked,
+            color,
+            icon,
+            checkedIcon,
             className = '',
             disabled = false,
             indeterminate = false,
             labelPlacement = 'After',
             name = '',
             value = '',
+            size = Size.Medium,
             ...domProps
         } = props;
 
@@ -124,7 +146,11 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckBoxProps & React.Re
         const publicAPI: Partial<ICheckBox> = {
             checked,
             indeterminate,
-            value
+            value,
+            color,
+            size,
+            icon,
+            checkedIcon
         };
 
         useImperativeHandle(ref, () => ({
@@ -155,6 +181,7 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckBoxProps & React.Re
             (event: React.ChangeEvent<HTMLInputElement>): void => {
                 const newChecked: boolean = event.target.checked;
                 setIsIndeterminate(false);
+                setIsFocused(false);
                 if (!isControlled) {
                     setCheckedState(newChecked);
                 }
@@ -187,21 +214,12 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckBoxProps & React.Re
         const wrapperClass: string = [
             WRAPPER,
             className,
+            color && color.toLowerCase() !== 'secondary' ? `sf-${color.toLowerCase()}` : '',
             disabled ? DISABLED : '',
             isFocused ? 'sf-focus' : '',
-            !disabled && dir === 'rtl' ? 'sf-rtl' : ''
+            !disabled && dir === 'rtl' ? 'sf-rtl' : '',
+            size && size.toLowerCase() !== 'medium' ? `sf-${size.toLowerCase()}` : ''
         ].filter(Boolean).join(' ');
-
-        const renderIcons: () => JSX.Element = () => (
-            <span className={`sf-icons ${FRAME} ${isIndeterminate ? INDETERMINATE : checkedState ? CHECK : ''}`}>
-                {isIndeterminate && (
-                    <SvgIcon width="12" height="12" viewBox="2 0 16 4" d={indeterminateIcon} fill="currentColor"/>
-                )}
-                {checkedState && !isIndeterminate && (
-                    <SvgIcon width="12" height="12" viewBox="0 0 25 20" d={checkIcon} fill="currentColor"/>
-                )}
-            </span>
-        );
 
         const renderRipple: () => JSX.Element = () => (
             <span ref={rippleContainerRef} className={`sf-ripple-container ${checkedState ? 'sf-ripple-check' : ''}`}>
@@ -210,8 +228,39 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckBoxProps & React.Re
         );
 
         const renderLabel: (label: string) => JSX.Element = (label: string) => (
-            <span className={LABEL}>{label}</span>
+            <span className={`${LABEL} ${storedLabelPosition === 'Bottom' ? 'sf-bottom' : ''}`}>{label}</span>
         );
+
+        const renderIcons: () => JSX.Element = () => {
+            const sizeDimensions: any = {
+                Small: { width: '12', height: '12', viewBox: '0 0 26 20' },
+                Medium: { width: '12', height: '12', viewBox: '0 0 25 20' },
+                Large: { width: '16', height: '16', viewBox: '0 0 26 20' }
+            };
+            const dimensions: any = sizeDimensions[size as keyof typeof sizeDimensions] || sizeDimensions.Medium;
+            return (
+                <span className={`sf-icons ${FRAME} ${isIndeterminate ? INDETERMINATE : checkedState ? CHECK : ''}`}>
+                    {isIndeterminate && (
+                        <SvgIcon
+                            width={dimensions.width}
+                            height={dimensions.height}
+                            viewBox="0 0 20 2"
+                            d={indeterminateIcon}
+                            fill="currentColor"
+                        />
+                    )}
+                    {checkedState && !isIndeterminate && (
+                        <SvgIcon
+                            width={dimensions.width}
+                            height={dimensions.height}
+                            viewBox={dimensions.viewBox}
+                            d={checkIcon}
+                            fill="currentColor"
+                        />
+                    )}
+                </span>
+            );
+        };
 
         return (
             <div
@@ -235,10 +284,11 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckBoxProps & React.Re
                         {...domProps}
                     />
                     {storedLabelPosition === 'Before' && renderLabel(storedLabel)}
-                    {storedLabelPosition === 'After' && renderRipple()}
-                    {renderIcons()}
+                    {(storedLabelPosition === 'After' || storedLabelPosition === 'Bottom' || (checkedIcon && icon)) && renderRipple()}
+                    {checkedState ? checkedIcon : icon}
+                    {!checkedIcon && !icon && renderIcons()}
                     {storedLabelPosition === 'Before' && renderRipple()}
-                    {storedLabelPosition === 'After' && renderLabel(storedLabel)}
+                    {(storedLabelPosition === 'After' || storedLabelPosition === 'Bottom') && renderLabel(storedLabel)}
                 </label>
             </div>
         );

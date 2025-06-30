@@ -1,9 +1,9 @@
 import * as React from 'react';
 import { useRef, useCallback, useEffect, useLayoutEffect, useState, useImperativeHandle, forwardRef, RefObject, HTMLAttributes } from 'react';
-import { TapEventArgs, Touch, ITouch, Browser, Animation as PopupAnimation, animationMode, AnimationOptions, TouchEventArgs, MouseEventArgs } from '@syncfusion/react-base';
+import { TapEventArgs, Touch, ITouch, Browser, Animation as AnimationInstance, animationMode, TouchEventArgs, MouseEventArgs } from '@syncfusion/react-base';
 import { isNullOrUndefined, getUniqueID, formatUnit } from '@syncfusion/react-base';
 import { attributes, closest, preRender, SvgIcon } from '@syncfusion/react-base';
-import { IPopup, Popup } from '../popup/popup';
+import { IPopup, Popup, PopupAnimationOptions } from '../popup/popup';
 import { OffsetPosition, calculatePosition } from '../common/position';
 import { isCollide, fit } from '../common/collision';
 import { createPortal } from 'react-dom';
@@ -333,7 +333,9 @@ type TooltipComponentProps = TooltipProps & Omit<HTMLAttributes<HTMLDivElement>,
  * It supports various positions, animations, and customization options.
  *
  * ```typescript
- * <Tooltip content={<>This is a Tooltip</>} position='BottomCenter'>Hover me</Tooltip>
+ * <Tooltip content={<>This is a Tooltip</>}>
+ *   Hover me
+ * </Tooltip>
  * ```
  */
 export const Tooltip: React.ForwardRefExoticComponent<TooltipComponentProps & React.RefAttributes<ITooltip>> =
@@ -370,8 +372,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
 
     const [isHidden, setIsHidden] = useState(true);
     const [isPopupOpen, setIsPopupOpen] = useState(false);
-    const [openAnimation, setOpenAnimation] = useState<AnimationOptions | undefined>(undefined);
-    const [closeAnimation, setCloseAnimation] = useState<AnimationOptions | undefined>(undefined);
+    const [PopupAnimation, setPopupAnimation] = useState<PopupAnimationOptions | undefined>(undefined);
     const [openTarget, setOpenTarget] = useState<HTMLElement | null>(null);
     const [isTooltipOpen, setIsTooltipOpen] = useState(false);
     const [tipClass, setTipClassState] = useState<string | null>(TIP_BOTTOM);
@@ -632,8 +633,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
                 tooltipEle.current.element.style.zoom = (getComputedStyle(parentWithZoomStyle) as CSSStyleDeclaration).zoom;
             }
         }
-        const targetRef: React.RefObject<HTMLElement> = { current: target };
-        const pos: OffsetPosition = calculatePosition(targetRef, tooltipPosition.current.x?.toLowerCase() as string,
+        const pos: OffsetPosition = calculatePosition(target, tooltipPosition.current.x?.toLowerCase() as string,
                                                       tooltipPosition.current.y?.toLowerCase() as string,
                                                       isBodyContainer.current ? undefined :
                                                           containerElement.current?.getBoundingClientRect());
@@ -680,7 +680,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
         clear();
         const currentTooltipEle: RefObject<HTMLElement> = React.createRef<HTMLElement>() as RefObject<HTMLElement>;
         currentTooltipEle.current = tooltipEle.current?.element as HTMLElement;
-        PopupAnimation.stop(currentTooltipEle.current);
+        AnimationInstance.stop(currentTooltipEle.current);
         scrolled.current = false;
         setIsHidden(true);
     };
@@ -986,7 +986,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
                 addDescribedBy(target, TooltipStyle?.id as string);
                 const currentTooltipEle: RefObject<HTMLElement> = React.createRef<HTMLElement>() as RefObject<HTMLElement>;
                 currentTooltipEle.current = tooltipEle.current?.element as HTMLElement;
-                PopupAnimation.stop(currentTooltipEle.current);
+                AnimationInstance.stop(currentTooltipEle.current);
                 reposition(target);
                 tooltipAfterRender(target, e, showAnimation);
             }
@@ -1014,7 +1014,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
             adjustArrow(target, position, tooltipPosition.current.x as string, tooltipPosition.current.y as string);
             const currentTooltipEle: RefObject<HTMLElement> = React.createRef<HTMLElement>() as RefObject<HTMLElement>;
             currentTooltipEle.current = tooltipEle.current?.element as HTMLElement;
-            PopupAnimation.stop(currentTooltipEle.current);
+            AnimationInstance.stop(currentTooltipEle.current);
             reposition(target);
         }
     };
@@ -1043,7 +1043,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
                 }
                 if (tooltipEle.current?.element) {
                     setOpenTarget(target);
-                    setOpenAnimation(openAnimation);
+                    setPopupAnimation((prev: PopupAnimationOptions | undefined) => ({ show: openAnimation, hide: prev?.hide }));
                     setIsPopupOpen(true);
                     if (mouseEventsRef.current.event && followCursor) { onMouseMove(mouseEventsRef.current.event); }
                 }
@@ -1052,7 +1052,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
         } else {
             if (tooltipEle.current) {
                 setOpenTarget(target);
-                setOpenAnimation(openAnimation);
+                setPopupAnimation((prev: PopupAnimationOptions | undefined) => ({ show: openAnimation, hide: prev?.hide }));
                 setIsPopupOpen(true);
             }
         }
@@ -1070,11 +1070,9 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
             vertical: tooltipPosition.current.y as string
         };
         const collideTarget: RefObject<HTMLDivElement> = checkCollideTarget() as RefObject<HTMLDivElement>;
-        const currentTooltipEle: RefObject<HTMLElement> = React.createRef<HTMLElement>() as RefObject<HTMLElement>;
-        currentTooltipEle.current = tooltipEle.current?.element as HTMLElement;
         const affectedPos: string[] = isCollide(
-            currentTooltipEle,
-            collideTarget as RefObject<HTMLDivElement>, sticky &&  position.indexOf('Right') >= 0 ? (stickyElementRef.current as HTMLElement).offsetWidth + x : x , y );
+            tooltipEle.current?.element as HTMLElement,
+            collideTarget ? collideTarget.current : null, sticky &&  position.indexOf('Right') >= 0 ? (stickyElementRef.current as HTMLElement).offsetWidth + x : x , y );
         if (affectedPos.length > 0) {
             elePos.horizontal = affectedPos.indexOf('left') >= 0 ? 'Right' : affectedPos.indexOf('right') >= 0 ? 'Left' :
                 tooltipPosition.current.x as string;
@@ -1116,7 +1114,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
         const elePosVertical: string = elePos.vertical;
         const elePosHorizontal: string = elePos.horizontal;
         if (elePos.position !== newPos) {
-            const pos: OffsetPosition = calculatePosition({ current: target }, elePosHorizontal.toLowerCase(),
+            const pos: OffsetPosition = calculatePosition(target, elePosHorizontal.toLowerCase(),
                                                           elePosVertical.toLowerCase(), isBodyContainer.current ? undefined :
                                                               containerElement.current?.getBoundingClientRect());
             adjustArrow(target, newPos, elePosHorizontal, elePosVertical);
@@ -1135,10 +1133,8 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
         }
         const eleOffset: OffsetPosition = { left: elePos.left, top: elePos.top };
         const collideTarget: RefObject<HTMLDivElement>  = checkCollideTarget() as RefObject<HTMLDivElement>;
-        const currentTooltipEle: RefObject<HTMLElement> = React.createRef<HTMLElement>() as RefObject<HTMLElement>;
-        currentTooltipEle.current = tooltipEle.current?.element as HTMLElement;
         const updatedPosition: OffsetPosition = isBodyContainer.current ?
-            fit(currentTooltipEle, collideTarget ? collideTarget : null,
+            fit(tooltipEle.current?.element as HTMLElement, collideTarget ? collideTarget.current : null,
                 { X: true, Y: windowCollision }, eleOffset) as OffsetPosition : eleOffset;
         if (arrow && arrowElementRef.current != null && (newPos.indexOf('Bottom') === 0 || newPos.indexOf('Top') === 0)) {
             let arrowLeft: number = parseInt(arrowElementRef.current.style.left, 10) - (updatedPosition.left - elePos.left);
@@ -1192,7 +1188,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
             if (tooltipEle.current && tooltipEle.current.element?.getAttribute('sf-animate')) {
                 const currentTooltipEle: RefObject<HTMLElement> = React.createRef<HTMLElement>() as RefObject<HTMLElement>;
                 currentTooltipEle.current = tooltipEle.current?.element as HTMLElement;
-                PopupAnimation.stop(currentTooltipEle.current, {
+                AnimationInstance.stop(currentTooltipEle.current, {
                     end: () => {
                         handlePopupHide(hideAnimation, target, e);
                     }
@@ -1228,7 +1224,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
             timingFunction: 'ease-in'
         };
         if (tooltipEle.current) {
-            setCloseAnimation(closeAnimation);
+            setPopupAnimation((prev: PopupAnimationOptions | undefined) => ({ hide: closeAnimation, show: prev?.show }));
             setIsPopupOpen(false);
         }
     };
@@ -1309,7 +1305,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
         }
         const currentTooltipEle: RefObject<HTMLElement> = React.createRef<HTMLElement>() as RefObject<HTMLElement>;
         currentTooltipEle.current = tooltipEle.current?.element as HTMLElement;
-        PopupAnimation.stop(currentTooltipEle.current);
+        AnimationInstance.stop(currentTooltipEle.current);
         adjustArrow(event.target as HTMLElement, position,
                     tooltipPosition.current.x as string, tooltipPosition.current.y as string);
         const scalingFactors: { [key: string]: number } = getScalingFactor(event.target as HTMLElement);
@@ -1524,8 +1520,6 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
 
     const arrowIcon: string = React.useMemo(() => {
         switch (tipClass) {
-        case TIP_BOTTOM:
-            return TIP_BOTTOM_ICON;
         case TIP_TOP:
             return TIP_TOP_ICON;
         case TIP_RIGHT:
@@ -1543,8 +1537,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
             isOpen={isPopupOpen}
             role='tooltip'
             aria-hidden={false}
-            showAnimation={openAnimation}
-            hideAnimation={closeAnimation}
+            animation={PopupAnimation}
             relativeElement={openTarget}
             targetRef={targetRef as RefObject<HTMLElement>}
             position={{ X: elePos.left, Y: elePos.top }}

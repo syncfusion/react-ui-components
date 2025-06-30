@@ -1,5 +1,3 @@
-// position.ts
-import * as React from 'react';
 /**
  * Provides information about a OffsetPosition.
  */
@@ -16,28 +14,18 @@ export interface PositionProps {
     Y: string;
 }
 
-/**
- * Calculates the absolute position of an element based on its reference, desired position,
- * and optionally the target values.
- *
- * @param {React.RefObject<HTMLElement>} elementRef - Reference to the HTML element.
- * @param {string} positionX - Desired X position ('left', 'center', 'right').
- * @param {string} positionY - Desired Y position ('top', 'center', 'bottom').
- * @param {DOMRect} [targetValues] - Optional DOMRect values to adjust the position.
- * @returns {OffsetPosition} - Returns the calculated offset position.
- */
-export function calculatePosition(
-    elementRef: React.RefObject<HTMLElement>,
+export const calculatePosition: (elementRef: HTMLElement | null,
+    positionX: string, positionY: string, targetValues?: DOMRect) => OffsetPosition = (
+    elementRef: HTMLElement | null,
     positionX: string,
     positionY: string,
     targetValues?: DOMRect
-): OffsetPosition {
-    if (!elementRef.current) {
-        console.warn('calculatePosition: elementRef does not have a current value.');
+): OffsetPosition => {
+    if (!elementRef || elementRef === null) {
         return { left: 0, top: 0 };
     }
 
-    const currentElement: HTMLElement = elementRef.current;
+    const currentElement: HTMLElement = elementRef;
     const parentDocument: Document = currentElement.ownerDocument;
     const elementRect: ClientRect = currentElement.getBoundingClientRect() || targetValues;
     const fixedElement: boolean = getComputedStyle(currentElement).position === 'fixed';
@@ -57,30 +45,21 @@ export function calculatePosition(
     };
 
     return positionMap[`${positionY.toLowerCase()}${positionX.toLowerCase()}`] || positionMap['topleft'];
-}
+};
 
-/**
- * Calculates the position of an element relative to an anchor element.
- *
- * @param {React.RefObject<HTMLElement>} anchor - Reference to the anchor HTML element.
- * @param {React.RefObject<HTMLElement>} element - Reference to the HTML element to position.
- * @returns {OffsetPosition} - Returns the relative offset position.
- */
-export function calculateRelativeBasedPosition(
-    anchor: React.RefObject<HTMLElement>,
-    element: React.RefObject<HTMLElement>
-): OffsetPosition {
-    if (!anchor.current || !element.current) {
-        console.warn('calculateRelativeBasedPosition: Missing anchor or element ref.');
+export const calculateRelativeBasedPosition: (anchor: HTMLElement | null,
+    element: HTMLElement | null) => OffsetPosition = (
+    anchor: HTMLElement | null,
+    element: HTMLElement | null
+): OffsetPosition => {
+    if (anchor === null || element === null) {
         return { left: 0, top: 0 };
     }
-
-    const anchorRect: DOMRect = anchor.current.getBoundingClientRect();
-    const elementRect: DOMRect = element.current.getBoundingClientRect();
-    const fixedElement: boolean = getComputedStyle(element.current).position === 'fixed';
-
+    const anchorRect: DOMRect = anchor.getBoundingClientRect();
+    const elementRect: DOMRect = element.getBoundingClientRect();
+    const fixedElement: boolean = getComputedStyle(element).position === 'fixed';
     return {
         left: anchorRect.left - elementRect.left + (fixedElement ? 0 : window.pageXOffset || document.documentElement.scrollLeft),
         top: anchorRect.top - elementRect.top + (fixedElement ? 0 : window.pageYOffset || document.documentElement.scrollTop)
     };
-}
+};

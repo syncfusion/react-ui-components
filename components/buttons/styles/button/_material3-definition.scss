@@ -38,7 +38,7 @@ $btn-text-line-height: 1 !default;
 $btn-small-text-line-height: 1.092 !default;
 $btn-padding: 8px 16px !default;
 $btn-small-padding: 5px 12px !default;
-$btn-icon-padding: 7px 7px !default;
+$btn-icon-padding: 7.5px 16px !default;
 $btn-small-icon-padding: 4px 4px !default;
 $btn-bigger-small-font-size: $text-sm !default;
 $btn-bigger-small-text-line-height: 1.476 !default;
@@ -50,20 +50,20 @@ $btn-bigger-small-round-icon-line-height: 0 !default;
 $btn-bigger-small-round-font-size: $text-lg !default;
 $btn-bigger-icon-margin: -.2em !default;
 $btn-bigger-icon-width: 2em !default;
-$btn-bigger-text-line-height: 1.286 !default;
+$btn-bigger-text-line-height: 1 !default;
 $btn-bigger-padding: 10px 24px !default;
 $btn-bigger-font-size: $text-sm !default;
-$btn-bigger-icon-font-size: 22px !default;
+$btn-bigger-icon-font-size: 18px !default;
 $btn-bigger-icon-top-bottom-padding: 8px !default;
-$btn-bigger-icon-padding: 11px 11px !default;
+$btn-bigger-icon-padding: 10px 10px !default;
 $btn-bigger-round-icon-line-height: 1.5em !default;
 $btn-bigger-round-font-size: $text-lg !default;
 $btn-bigger-small-icon-padding: 6px 13px !default;
 
-//normal    
+//normal
 $btn-color: rgba($secondary-text-color) !default;
 $btn-bgcolor: $secondary-bg-color !default;
-$btn-border-color: $btn-secondary-border-color;
+$btn-border-color: $btn-secondary-border-color !default;
 $btn-hover-bgcolor: $secondary-bg-color-hover !default;
 $btn-hover-border-color: $secondary-border-color-hover !default;
 $btn-hover-color: rgba($secondary-text-color-hover) !default;

@@ -3,7 +3,7 @@ import { useRef, useEffect, useState, forwardRef, useImperativeHandle } from 're
 import { calculatePosition, OffsetPosition, calculateRelativeBasedPosition } from '../common/position';
 import { AnimationOptions, IAnimation, preRender, useProviderContext } from '@syncfusion/react-base';
 import { Animation } from '@syncfusion/react-base';
-import { flip, fit, isCollide } from '../common/collision';
+import { flip, fit, isCollide, CollisionCoordinates } from '../common/collision';
 
 /**
  * PositionAxis type.
@@ -87,28 +87,16 @@ export enum ActionOnScrollType {
     None = 'None'
 }
 
-/**
- * Defines the possible reference types for positioning a popup element.
- */
-export enum TargetType {
+export interface PopupAnimationOptions {
     /**
-     * Uses the immediate container element as the reference for positioning.
-     * The popup will be positioned relative to its parent container element.
+     * Specifies the animation that should happen when toast opens.
      */
-    Container = 'Container',
+    show?: AnimationOptions;
 
     /**
-     * Uses a custom specified element as the reference for positioning.
-     * The popup will be positioned relative to this specified element.
+     * Specifies the animation that should happen when toast closes.
      */
-    Relative = 'Relative',
-
-    /**
-     * Uses the document body as the reference for positioning.
-     * The popup will be positioned relative to the document body, allowing it to be
-     * placed anywhere on the page regardless of parent container boundaries.
-     */
-    Body = 'Body'
+    hide?: AnimationOptions;
 }
 
 export interface PopupProps {
@@ -123,13 +111,6 @@ export interface PopupProps {
      * @default false
      */
     isOpen?: boolean;
-
-    /**
-     * Specifies the relative element type of the component.
-     *
-     * @default TargetType.Container
-     */
-    targetType?: TargetType;
 
     /** Reference to the target element to which the popup is anchored. */
     targetRef?: React.RefObject<HTMLElement>;
@@ -159,18 +140,12 @@ export interface PopupProps {
     collision?: CollisionAxis;
 
     /**
-     * specifies the animation that should happen when popup open.
+     * Specifies the animations that should happen when toast opens and closes.
      *
-     * @default 'null'
+     * @default { show: { name: 'FadeIn', duration: 0, timingFunction: 'ease-out' },
+     *            hide: { name: 'FadeOut', duration: 0, timingFunction: 'ease-out' } }
      */
-    showAnimation?: AnimationOptions;
-
-    /**
-     * specifies the animation that should happen when popup closes.
-     *
-     * @default 'null'
-     */
-    hideAnimation?: AnimationOptions;
+    animation?: PopupAnimationOptions;
 
     /**
      * Specifies the relative container element of the popup element.Based on the relative element, popup element will be positioned.
@@ -183,7 +158,7 @@ export interface PopupProps {
      *
      * @default null
      */
-    viewPortElementRef?: React.RefObject<HTMLElement>;
+    viewPortElementRef?: React.RefObject<HTMLElement | null>;
 
     /** Defines the popup relate's element when opening the popup.
      *
@@ -237,6 +212,11 @@ export interface PopupProps {
     onTargetExitViewport?: () => void;
 }
 
+interface EleOffsetPosition {
+    left: string | number
+    top: string | number
+}
+
 export interface IPopup extends IPopupProps {
     /**
      * Identifies all scrollable parent elements of a given element.
@@ -283,207 +263,193 @@ type IPopupProps = PopupProps & Omit<React.InputHTMLAttributes<HTMLDivElement>, 
  * ```
  */
 export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttributes<IPopup>> =
-forwardRef < IPopup, IPopupProps > ((props: IPopupProps, ref: React.Ref < IPopup > ) => {
-    const {
-        children,
-        isOpen = false,
-        targetRef,
-        relativeElement = null,
-        position = { X: 'left', Y: 'top' },
-        offsetX = 0,
-        offsetY = 0,
-        collision = { X: CollisionType.None, Y: CollisionType.None },
-        showAnimation = {
-            name: 'FadeIn',
-            duration: 0,
-            timingFunction: 'ease-out'},
-        hideAnimation = {
-            name: 'FadeOut',
-            duration: 0,
-            timingFunction: 'ease-out'},
-        relateTo = 'body',
-        viewPortElementRef,
-        zIndex = 1000,
-        width = 'auto',
-        height = 'auto',
-        className = '',
-        actionOnScroll = ActionOnScrollType.Reposition,
-        onOpen,
-        onClose,
-        targetType = TargetType.Container,
-        onTargetExitViewport,
-        style,
-        ...rest
-    } = props;
-    let targetTypes: string = targetType.toString();
-    const popupRef: React.RefObject<HTMLDivElement | null> = useRef < HTMLDivElement > (null);
-    const initialOpenState: React.RefObject<boolean> = useRef(isOpen);
-    const [leftPosition, setLeftPosition] = useState < number > (0);
-    const [topPosition, setTopPosition] = useState < number > (0);
-    const [popupClass, setPopupClass] = useState < string > (CLASSNAME_CLOSE);
-    const [fixedParent, setFixedParent] = useState < boolean > (false);
-    const [popupZIndex, setPopupZIndex] = useState < number > (1000);
-    const { dir } = useProviderContext();
-    const [currentShowAnimation, setCurrentShowAnimation] = useState<AnimationOptions>(showAnimation);
-    const [currentHideAnimation, setCurrentHideAnimation] = useState<AnimationOptions>(hideAnimation);
-    const [currentRelatedElement, setRelativeElement] = useState<HTMLElement | null>(relativeElement);
-
-    useImperativeHandle(
-        ref,
-        () => ({
-            getScrollableParent: (element: HTMLElement): Element[] => {
-                return getScrollableParent(element);
+    forwardRef<IPopup, IPopupProps>((props: IPopupProps, ref: React.Ref<IPopup>) => {
+        const {
+            children,
+            isOpen = false,
+            targetRef,
+            relativeElement = null,
+            position = { X: 'left', Y: 'top' },
+            offsetX = 0,
+            offsetY = 0,
+            collision = { X: CollisionType.None, Y: CollisionType.None },
+            animation = {
+                show: {
+                    name: 'FadeIn',
+                    duration: 0,
+                    timingFunction: 'ease-out'
+                },
+                hide: {
+                    name: 'FadeOut',
+                    duration: 0,
+                    timingFunction: 'ease-out'
+                }
             },
-            refreshPosition: (target?: HTMLElement, collision?: boolean): void => {
-                refreshPosition(target, collision);
-            },
-            element: popupRef.current
-        }),
-        []
-    );
+            relateTo = 'body',
+            viewPortElementRef,
+            zIndex = 1000,
+            width = 'auto',
+            height = 'auto',
+            className = '',
+            actionOnScroll = ActionOnScrollType.Reposition,
+            onOpen,
+            onClose,
+            onTargetExitViewport,
+            style,
+            ...rest
+        } = props;
+        const popupRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
+        const initialOpenState: React.RefObject<boolean> = useRef(isOpen);
+        const [leftPosition, setLeftPosition] = useState<number>(0);
+        const [topPosition, setTopPosition] = useState<number>(0);
+        const [popupClass, setPopupClass] = useState<string>(CLASSNAME_CLOSE);
+        const [fixedParent, setFixedParent] = useState<boolean>(false);
+        const [popupZIndex, setPopupZIndex] = useState<number>(1000);
+        const { dir } = useProviderContext();
+        const [currentShowAnimation, setCurrentShowAnimation] = useState<AnimationOptions>(animation.show as AnimationOptions);
+        const [currentHideAnimation, setCurrentHideAnimation] = useState<AnimationOptions>(animation.hide as AnimationOptions);
+        const [currentRelatedElement, setRelativeElement] = useState<HTMLElement | null>(relativeElement);
 
-    useEffect(() => {
-        preRender('popup');
-    }, []);
+        useImperativeHandle(
+            ref,
+            () => ({
+                getScrollableParent: (element: HTMLElement): Element[] => {
+                    return getScrollableParent(element);
+                },
+                refreshPosition: (target?: HTMLElement, collision?: boolean): void => {
+                    refreshPosition(target, collision);
+                },
+                element: popupRef.current
+            }),
+            []
+        );
 
-    useEffect(() => {
-        updatePosition();
-    }, [targetRef, position, offsetX, offsetY, viewPortElementRef]);
+        useEffect(() => {
+            preRender('popup');
+        }, []);
 
-    useEffect(() => {
-        checkCollision();
-    }, [collision]);
+        useEffect(() => {
+            updatePosition();
+        }, [targetRef, position, offsetX, offsetY, viewPortElementRef]);
 
-    useEffect(() => {
-        if (!isEqual(currentShowAnimation, showAnimation)) {
-            setCurrentShowAnimation(showAnimation);
-        }
-    }, [showAnimation]);
-
-    useEffect(() => {
-        if (!isEqual(currentHideAnimation, hideAnimation)) {
-            setCurrentHideAnimation(hideAnimation);
-        }
-    }, [hideAnimation]);
-
-    useEffect(() => {
-        if (!isOpen && initialOpenState.current === isOpen) {
-            return;
-        }
-        initialOpenState.current = isOpen;
-        if (isOpen) {
-            show(showAnimation, currentRelatedElement);
-        } else {
-            hide(hideAnimation);
-        }
-    }, [isOpen]);
-
-    useEffect(() => {
-        setPopupZIndex(zIndex);
-    }, [zIndex]);
-
-    useEffect(() => {
-        setRelativeElement(relativeElement);
-    }, [relativeElement]);
-
-    /**
-     * Compares two objects for equality by converting them to JSON strings.
-     *
-     * @param {any} obj1 - The first object to compare
-     * @param {any} obj2 - The second object to compare
-     * @returns {boolean} True if the objects are equal, false otherwise
-     */
-    function isEqual(obj1: any, obj2: any): boolean {
-        return JSON.stringify(obj1) === JSON.stringify(obj2);
-    }
-
-    /**
-     * Based on the `relative` element and `offset` values, `Popup` element position will refreshed.
-     *
-     * @param {HTMLElement} target - The target element.
-     * @param {boolean} collision - Specifies whether to check for collision.
-     * @returns {void}
-     */
-    function refreshPosition(target?: HTMLElement, collision?: boolean): void {
-        if (target) {
-            checkFixedParent(target as HTMLElement);
-        }
-        updatePosition();
-        if (!collision) {
+        useEffect(() => {
             checkCollision();
-        }
-    }
+        }, [collision]);
 
-    /**
-     * Update the position of the popup based on the target reference and specified position and offset.
-     *
-     * @returns {void}
-     */
-    function updatePosition(): void {
-        if (!popupRef.current) {
-            return;
-        }
-        const relateToElement: HTMLElement = getRelateToElement();
-        let pos: OffsetPosition = { left: 0, top: 0 };
-        if (typeof position.X === 'number' && typeof position.Y === 'number') {
-            pos = {
-                left: position.X,
-                top: position.Y
-            };
-        } else if (
-            ((typeof position.X === 'string' && typeof position.Y === 'number') ||
-            (typeof position.X === 'number' && typeof position.Y === 'string')) && targetRef?.current
-        ) {
-            const anchorPosition: OffsetPosition = getAnchorPosition(
-                targetRef.current,
-                popupRef.current,
-                position,
-                offsetX,
-                offsetY
-            );
-            if (typeof position.X === 'string') {
-                pos = { left: anchorPosition.left, top: position.Y as number };
+        useEffect(() => {
+            if (!isEqual(currentShowAnimation, animation.show as AnimationOptions)) {
+                setCurrentShowAnimation(animation.show as AnimationOptions);
+            }
+        }, [animation.show]);
+
+        useEffect(() => {
+            if (!isEqual(currentHideAnimation, animation.hide as AnimationOptions)) {
+                setCurrentHideAnimation(animation.hide as AnimationOptions);
+            }
+        }, [currentHideAnimation, animation.hide]);
+
+        useEffect(() => {
+            if (!isOpen && initialOpenState.current === isOpen) {
+                return;
+            }
+            initialOpenState.current = isOpen;
+            if (isOpen) {
+                show(animation.show, currentRelatedElement);
             } else {
-                pos = { left: position.X as number, top: anchorPosition.top };
+                hide(animation.hide);
             }
-        } else if (typeof position.X === 'string' && typeof position.Y === 'string' &&  targetRef?.current) {
-            pos = calculatePosition(targetRef, position.X.toLowerCase(), position.Y.toLowerCase());
-            pos.left += offsetX;
-            pos.top += offsetY;
-        } else if (relateToElement) {
-            pos = getAnchorPosition(relateToElement, popupRef.current, position, offsetX, offsetY);
-        }
-        if (pos) {
-            setLeftPosition(pos.left);
-            setTopPosition(pos.top);
-        }
-    }
+        }, [isOpen]);
 
-    /**
-     * Shows the popup element from screen.
-     *
-     * @returns {void}
-     * @param {AnimationOptions } animationOptions - specifies the model
-     * @param { HTMLElement } relativeElement - To calculate the zIndex value dynamically.
-     */
-    function show(animationOptions?: AnimationOptions, relativeElement?: HTMLElement | null): void {
-        if (popupRef?.current) {
-            addScrollListeners();
-            if (relativeElement || zIndex === 1000) {
-                const zIndexElement: HTMLElement = !relativeElement ? popupRef?.current as HTMLElement : relativeElement as HTMLElement;
-                setPopupZIndex(getZindexPartial(zIndexElement as HTMLElement));
+        useEffect(() => {
+            setPopupZIndex(zIndex);
+        }, [zIndex]);
+
+        useEffect(() => {
+            setRelativeElement(relativeElement);
+        }, [relativeElement]);
+
+        const isEqual: (previousAnimation: AnimationOptions, currentAnimation: AnimationOptions)
+        => boolean = (previousAnimation: AnimationOptions, currentAnimation: AnimationOptions): boolean => {
+            return JSON.stringify(previousAnimation) === JSON.stringify(currentAnimation);
+        };
+
+        const refreshPosition: (target?: HTMLElement, collision?: boolean) => void = (target?: HTMLElement, collision?: boolean): void => {
+            if (target) {
+                checkFixedParent(target as HTMLElement);
             }
-            if (collision.X !== CollisionType.None || collision.Y !== CollisionType.None) {
-                setPopupClass(CLASSNAME_OPEN);
+            updatePosition();
+            if (!collision) {
                 checkCollision();
-                setPopupClass(CLASSNAME_CLOSE);
             }
+        };
+
+        const updatePosition: () => void = (): void => {
+            const element: HTMLDivElement | null = popupRef.current;
+            const relateToElement: HTMLElement = getRelateToElement();
+            let pos: EleOffsetPosition = { left: 0, top: 0 };
+
+            if (!element) {return; }
+
+            if (typeof position.X === 'number' && typeof position.Y === 'number') {
+                pos = { left: position.X, top: position.Y };
+            } else if ((typeof position.X === 'string' && typeof position.Y === 'number') ||
+                (typeof position.X === 'number' && typeof position.Y === 'string')) {
+                const anchorPos: OffsetPosition = getAnchorPosition(relateToElement, element, position, offsetX, offsetY);
+                pos = typeof position.X === 'string' ? { left: anchorPos.left, top: position.Y } : { left: position.X, top: anchorPos.top };
+            } else if (relateToElement) {
+                const display: string = element.style.display;
+                element.style.display = 'block';
+                pos = getAnchorPosition(relateToElement, element, position, offsetX, offsetY);
+                element.style.display = display;
+            }
+
+            if ((pos !== null)) {
+                setLeftPosition(pos.left as number);
+                setTopPosition(pos.top as number);
+            }
+        };
+
+        const show: (animationOptions?: AnimationOptions, relativeElement?: HTMLElement | null)
+        => void = (animationOptions?: AnimationOptions, relativeElement?: HTMLElement | null): void => {
+            if (popupRef?.current) {
+                addScrollListeners();
+                if (relativeElement || zIndex === 1000) {
+                    const zIndexElement: HTMLElement = !relativeElement ? popupRef?.current as HTMLElement : relativeElement as HTMLElement;
+                    setPopupZIndex(getZindexPartial(zIndexElement as HTMLElement));
+                }
+                if (collision.X !== CollisionType.None || collision.Y !== CollisionType.None) {
+                    setPopupClass(CLASSNAME_OPEN);
+                    checkCollision();
+                    setPopupClass(CLASSNAME_CLOSE);
+                }
+                if (animationOptions) {
+                    animationOptions.begin = () => {
+                        setPopupClass(CLASSNAME_OPEN);
+                    };
+                    animationOptions.end = () => {
+                        onOpen?.();
+                    };
+                    if (Animation) {
+                        const animationInstance: IAnimation = Animation(animationOptions);
+                        if (animationInstance.animate) {
+                            animationInstance.animate(popupRef.current as HTMLElement);
+                        }
+                    }
+                }
+            }
+        };
+
+        const hide: (animationOptions?: AnimationOptions) => void = (animationOptions?: AnimationOptions): void => {
             if (animationOptions) {
                 animationOptions.begin = () => {
-                    setPopupClass(CLASSNAME_OPEN);
+                    let duration: number = animationOptions.duration ? animationOptions.duration - 30 : 0;
+                    duration = duration > 0 ? duration : 0;
+                    setTimeout(() => {
+                        setPopupClass(CLASSNAME_CLOSE);
+                    }, duration);
                 };
                 animationOptions.end = () => {
-                    onOpen?.();
+                    onClose?.();
                 };
                 if (Animation) {
                     const animationInstance: IAnimation = Animation(animationOptions);
@@ -492,280 +458,252 @@ forwardRef < IPopup, IPopupProps > ((props: IPopupProps, ref: React.Ref < IPopup
                     }
                 }
             }
-        }
-    }
+            removeScrollListeners();
+        };
 
-    /**
-     * Hides the popup element from screen.
-     *
-     * @param {AnimationOptions} animationOptions - To give the animation options.
-     * @returns {void}
-     */
-    function hide(animationOptions?: AnimationOptions): void {
-        if (animationOptions) {
-            animationOptions.begin = () => {
-                let duration: number = animationOptions.duration ? animationOptions.duration - 30 : 0;
-                duration = duration > 0 ? duration : 0;
-                setTimeout(() => {
-                    setPopupClass(CLASSNAME_CLOSE);
-                }, duration);
-            };
-            animationOptions.end = () => {
-                onClose?.();
-            };
-            if (Animation) {
-                const animationInstance: IAnimation = Animation(animationOptions);
-                if (animationInstance.animate) {
-                    animationInstance.animate(popupRef.current as HTMLElement);
+        const callFit: (param: CollisionCoordinates) => void = (param: CollisionCoordinates) => {
+            const element: HTMLDivElement | null = popupRef.current;
+            const viewPortElement: HTMLElement | undefined | null = viewPortElementRef?.current;
+
+            if (!element || !viewPortElement) {
+                return;
+            }
+
+            if (isCollide(element, viewPortElement).length !== 0) {
+                let data: OffsetPosition = { left: 0, top: 0 };
+                if (!viewPortElement) {
+                    data = fit(element, viewPortElement, param) as OffsetPosition;
+                } else {
+                    const elementRect: DOMRect = element.getBoundingClientRect();
+                    const viewPortRect: DOMRect = viewPortElement.getBoundingClientRect();
+
+                    if (!elementRect || !viewPortRect) {
+                        return;
+                    }
+
+                    if (param.Y) {
+                        if (viewPortRect.top > elementRect.top) {
+                            element.style.top = '0px';
+                        } else if (viewPortRect.bottom < elementRect.bottom) {
+                            element.style.top = `${parseInt(element.style.top, 10) - (elementRect.bottom - viewPortRect.bottom)}px`;
+                        }
+                    }
+                    if (param.X) {
+                        if (viewPortRect.right < elementRect.right) {
+                            element.style.left = `${parseInt(element.style.left, 10) - (elementRect.right - viewPortRect.right)}px`;
+                        } else if (viewPortRect.left > elementRect.left) {
+                            element.style.left = `${parseInt(element.style.left, 10) + (viewPortRect.left - elementRect.left)}px`;
+                        }
+                    }
+                }
+                if (param.X) {
+                    element.style.left = `${data.left}px`;
+                }
+                if (param.Y) {
+                    element.style.top = `${data.top}px`;
                 }
             }
-        }
-        removeScrollListeners();
-    }
+        };
 
-    /**
-     * Update the position of the popup based on the target reference and specified position and offset.
-     *
-     * @returns {void}
-     */
-    function checkCollision(): void {
-        if (!popupRef.current || !targetRef?.current) {
-            return;
-        }
-        const pos: OffsetPosition = { left: 0, top: 0 };
-        let isPositionUpdated: boolean = false;
-        if (collision.X !== CollisionType.None || collision.Y !== CollisionType.None) {
-            const flippedPos: OffsetPosition | null = flip(
-                popupRef as React.RefObject<HTMLElement>,
-                targetRef,
+        const callFlip: (param: CollisionCoordinates) => void = (param: CollisionCoordinates) => {
+            const element: HTMLDivElement | null = popupRef.current;
+            const relateToElement: string | HTMLElement = getRelateToElement();
+            const viewPortElement: HTMLElement | undefined | null = viewPortElementRef?.current;
+
+            if (!element || !relateToElement) {
+                return;
+            }
+
+            const flippedPos: OffsetPosition | null =  flip(
+                element,
+                relateToElement as HTMLElement,
                 offsetX,
                 offsetY,
                 typeof position.X === 'string' ? position.X : 'left',
                 typeof position.Y === 'string' ? position.Y : 'top',
-                viewPortElementRef,
-                { X: collision.X === CollisionType.Flip, Y: collision.Y === CollisionType.Flip }
+                viewPortElement,
+                param
             );
 
             if (flippedPos) {
-                pos.left = flippedPos.left;
-                pos.top = flippedPos.top;
-                isPositionUpdated = true;
+                setLeftPosition(flippedPos.left);
+                setTopPosition(flippedPos.top);
             }
+        };
 
-            if (collision.X === CollisionType.Fit || collision.Y === CollisionType.Fit) {
-                const fittedPos: OffsetPosition | null = fit(
-                    popupRef as React.RefObject<HTMLElement>,
-                    viewPortElementRef,
-                    {
-                        X: collision.X === CollisionType.Fit,
-                        Y: collision.Y === CollisionType.Fit
-                    },
-                    pos
-                );
-
-                if (fittedPos) {
-                    pos.left = fittedPos.left;
-                    pos.top = fittedPos.top;
-                    isPositionUpdated = true;
+        const checkCollision: () => void = (): void => {
+            const horz: CollisionType | undefined = collision.X;
+            const vert: CollisionType | undefined = collision.Y;
+            if (horz === CollisionType.None && vert === CollisionType.None) {
+                return;
+            }
+            if (horz === CollisionType.Flip && vert === CollisionType.Flip) {
+                callFlip({X: true, Y: true});
+            } else if (horz === CollisionType.Fit  && vert === CollisionType.Fit) {
+                callFit({X: true, Y: true});
+            } else {
+                if (horz === CollisionType.Flip) {
+                    callFlip({X: true, Y: false});
+                } else if (vert === CollisionType.Flip) {
+                    callFlip({Y: true, X: false});
+                }
+                if (horz === CollisionType.Fit) {
+                    callFit({X: true, Y: false});
+                } else if (vert === CollisionType.Fit) {
+                    callFit({X: false, Y: true});
                 }
             }
-        }
+        };
 
-        if (isPositionUpdated) {
-            setLeftPosition(pos.left);
-            setTopPosition(pos.top);
-        }
-    }
+        const getAnchorPosition: (anchorEle: HTMLElement, element: HTMLElement,
+            position: PositionAxis, offsetX: number, offsetY: number) => OffsetPosition = (
+            anchorEle: HTMLElement,
+            element: HTMLElement,
+            position: PositionAxis,
+            offsetX: number,
+            offsetY: number
+        ): OffsetPosition => {
+            const anchorRect: DOMRect = anchorEle.getBoundingClientRect();
+            const eleRect: DOMRect = element.getBoundingClientRect();
+            const anchorPos: OffsetPosition = { left: 0, top: 0 };
+            const targetTypes: string = anchorEle.tagName.toUpperCase() === 'BODY' ? 'body' : 'container';
 
-    /**
-     * Calculates and returns the anchor position for a popup element.
-     * This function takes into account the current position, any offsets provided,
-     * and the dimensions of the target and popup elements to calculate the appropriate
-     * position for the popup.
-     *
-     * @param {HTMLElement} anchorEle - The reference to the target element. This is the element to which the popup is anchored.
-     * @param {HTMLElement} element - The reference to the popup element. This is the element that needs to be positioned.
-     * @param {PositionAxis} position - An object defining the initial x and y positions.
-     * @param {number} offsetX - Optional x-axis offset for fine-tuning the popup's position.
-     * @param {number} offsetY - Optional y-axis offset for fine-tuning the popup's position.
-     * @returns {OffsetPosition} An object containing the calculated x and y positions for the popup.
-     */
-    function getAnchorPosition(
-        anchorEle: HTMLElement,
-        element: HTMLElement,
-        position: PositionAxis,
-        offsetX: number,
-        offsetY: number
-    ): OffsetPosition {
-        const anchorRect: DOMRect = anchorEle.getBoundingClientRect();
-        const eleRect: DOMRect = element.getBoundingClientRect();
-        const anchorPos: OffsetPosition = { left: 0, top: 0 };
-        targetTypes = anchorEle.tagName.toUpperCase() === 'BODY' ? 'body' : 'container';
-        switch (position.X) {
-        case 'center':
-            anchorPos.left = targetTypes === 'body' ? window.innerWidth / 2 - eleRect.width / 2
-                : anchorRect.left + (anchorRect.width / 2 - eleRect.width / 2);
-            break;
-        case 'right':
-            anchorPos.left = targetTypes === 'body' ? window.innerWidth - eleRect.width
-                : anchorRect.left + (anchorRect.width - eleRect.width);
-            break;
-        default:
-            anchorPos.left = anchorRect.left;
-        }
-
-        switch (position.Y) {
-        case 'center':
-            anchorPos.top = targetTypes === 'body' ? window.innerHeight / 2 - eleRect.height / 2
-                : anchorRect.top + (anchorRect.height / 2 - eleRect.height / 2);
-            break;
-        case 'bottom':
-            anchorPos.top = targetTypes === 'body' ? window.innerHeight - eleRect.height
-                : anchorRect.top + (anchorRect.height - eleRect.height);
-            break;
-        default:
-            anchorPos.top = anchorRect.top;
-        }
-
-        anchorPos.left += offsetX;
-        anchorPos.top += offsetY;
-
-        return anchorPos;
-    }
-
-    /**
-     * Adds scroll listeners to handle popup positioning when the target container is scrolled.
-     *
-     * @returns {void}
-     */
-    function addScrollListeners(): void {
-        if (actionOnScroll !== ActionOnScrollType.None && getRelateToElement()) {
-            const scrollParents: Element[] = getScrollableParent(getRelateToElement());
-            scrollParents.forEach((parent: Element) => {
-                parent.addEventListener('scroll', handleScroll);
-            });
-        }
-    }
-
-    /**
-     * Removes scroll listeners.
-     *
-     * @returns {void}
-     */
-    function removeScrollListeners(): void {
-        if (actionOnScroll !== ActionOnScrollType.None && getRelateToElement()) {
-            const scrollParents: Element[] = getScrollableParent(getRelateToElement());
-            scrollParents.forEach((parent: Element) => {
-                parent.removeEventListener('scroll', handleScroll);
-            });
-        }
-    }
-
-    /**
-     * Determines the element to which the popup is related.
-     *
-     * @returns {HTMLElement} The HTMLElement that the popup is related to.
-     */
-    function getRelateToElement(): HTMLElement {
-        const relateToElement: HTMLElement | string = relateTo === '' || relateTo == null ? document.body : relateTo;
-        return typeof relateToElement === 'string' ? (document.querySelector(relateToElement) as HTMLElement) : relateToElement;
-    }
-
-    /**
-     * Handle scroll event to optionally reposition or hide the popup.
-     *
-     * @returns {void}
-     */
-    function handleScroll(): void {
-        if (actionOnScroll === ActionOnScrollType.Reposition) {
-            refreshPosition();
-        } else if (actionOnScroll === ActionOnScrollType.Hide) {
-            hide();
-            onClose?.();
-        }
-        if (targetRef?.current && !isElementOnViewport(targetRef?.current)) {
-            onTargetExitViewport?.();
-        }
-    }
-
-    /**
-     * Identifies scrollable parents of a given element, used to attach scroll event listeners.
-     *
-     * @param {HTMLElement} element - The element to find scrollable parents for.
-     * @returns {Element[]} An array of scrollable parent elements.
-     */
-    function getScrollableParent(element: HTMLElement): Element[] {
-        checkFixedParent(element);
-        return getFixedScrollableParent(element, fixedParent);
-    }
-
-    /**
-     * Checks for fixed or sticky positioned ancestors and updates popup positioning.
-     *
-     * @param {HTMLElement} element - The starting element to check for fixed or sticky parents.
-     * @returns {void} This function does not return a value.
-     */
-    function checkFixedParent(element: HTMLElement): void {
-        let parent: HTMLElement | null = element.parentElement;
-        while (parent && parent.tagName !== 'HTML') {
-            const { position } = getComputedStyle(parent);
-            if (popupRef?.current) {
-                const popupElement: HTMLElement = popupRef.current;
-                const popupElementStyle: CSSStyleDeclaration = getComputedStyle(popupElement);
-                if (!popupElement?.offsetParent && position === 'fixed' && popupElementStyle && popupElementStyle.position === 'fixed') {
-                    setFixedParent(true);
+            switch (position.X) {
+            default:
+            case 'left':
+                break;
+            case 'center':
+                anchorPos.left = targetTypes === 'body'
+                    ? window.innerWidth / 2 - eleRect.width / 2
+                    : anchorRect.left + (anchorRect.width / 2 - eleRect.width / 2);
+                break;
+            case 'right':
+                if (targetTypes === 'container') {
+                    const scaleX: number = 1;
+                    anchorPos.left += ((anchorRect.width - eleRect.width) / scaleX);
+                } else {
+                    anchorPos.left += (anchorRect.width);
                 }
-                parent = parent.parentElement;
+                break;
             }
-        }
-    }
 
-    /**
-     * Checks if a given element is fully visible in the current viewport.
-     *
-     * @param {Element} element - The element to check.
-     * @returns {boolean} True if the element is within the viewport, otherwise false.
-     */
-    function isElementOnViewport(element: Element): boolean {
-        const rect: DOMRect = element.getBoundingClientRect();
+            switch (position.Y) {
+            case 'top':
+                break;
+            case 'center':
+                anchorPos.top = targetTypes === 'body'
+                    ? window.innerHeight / 2 - eleRect.height / 2
+                    : anchorRect.top + (anchorRect.height / 2 - eleRect.height / 2);
+                break;
+            case 'bottom':
+                anchorPos.top = targetTypes === 'body'
+                    ? window.innerHeight - eleRect.height
+                    : anchorRect.top + (anchorRect.height - eleRect.height);
+                break;
+            }
+            anchorPos.left += offsetX;
+            anchorPos.top += offsetY;
+
+            return anchorPos;
+        };
+
+        const addScrollListeners: () => void = (): void => {
+            if (actionOnScroll !== ActionOnScrollType.None && getRelateToElement()) {
+                const scrollParents: Element[] = getScrollableParent(getRelateToElement());
+                scrollParents.forEach((parent: Element) => {
+                    parent.addEventListener('scroll', handleScroll);
+                });
+            }
+        };
+
+        const removeScrollListeners: () => void = (): void => {
+            if (actionOnScroll !== ActionOnScrollType.None && getRelateToElement()) {
+                const scrollParents: Element[] = getScrollableParent(getRelateToElement());
+                scrollParents.forEach((parent: Element) => {
+                    parent.removeEventListener('scroll', handleScroll);
+                });
+            }
+        };
+
+        const getRelateToElement: () => HTMLElement = (): HTMLElement => {
+            const relateToElement: HTMLElement | string = relateTo === '' || relateTo === null || relateTo === 'body' ? document.body : relateTo;
+            return relateToElement as HTMLElement;
+        };
+
+        const handleScroll: () => void = (): void => {
+            if (actionOnScroll === ActionOnScrollType.Reposition) {
+                refreshPosition();
+            } else if (actionOnScroll === ActionOnScrollType.Hide) {
+                hide();
+                onClose?.();
+            }
+            if (targetRef?.current && !isElementOnViewport(targetRef?.current)) {
+                onTargetExitViewport?.();
+            }
+        };
+
+        const getScrollableParent: (element: HTMLElement) => Element[] = (element: HTMLElement): Element[] => {
+            checkFixedParent(element);
+            return getFixedScrollableParent(element, fixedParent);
+        };
+
+        const checkFixedParent: (element: HTMLElement) => void = (element: HTMLElement): void => {
+            let parent: HTMLElement | null = element.parentElement;
+            while (parent && parent.tagName !== 'HTML') {
+                const { position } = getComputedStyle(parent);
+
+                if (popupRef?.current) {
+                    const popupElement: HTMLElement = popupRef.current;
+                    const popupElementStyle: CSSStyleDeclaration = getComputedStyle(popupElement);
+
+                    if (!popupElement?.offsetParent && position === 'fixed' && popupElementStyle && popupElementStyle.position === 'fixed') {
+                        setFixedParent(true);
+                    }
+                    parent = parent.parentElement;
+                }
+            }
+        };
+
+        const isElementOnViewport: (element: Element) => boolean = (element: Element): boolean => {
+            const rect: DOMRect = element.getBoundingClientRect();
+            return (
+                rect.top >= 0 &&
+                rect.left >= 0 &&
+                rect.bottom <= window.innerHeight &&
+                rect.right <= window.innerWidth
+            );
+        };
+
+        const popupStyle: React.CSSProperties = {
+            position: 'absolute',
+            left: `${leftPosition}px`,
+            top: `${topPosition}px`,
+            zIndex: popupZIndex,
+            width: width,
+            height: height,
+            ...style
+        };
+
+        const popupClasses: string = [
+            'sf-popup sf-control sf-lib',
+            (dir === 'rtl') ? 'sf-rtl' : '',
+            popupClass,
+            className
+        ]
+            .filter(Boolean)
+            .join(' ');
+
         return (
-            rect.top >= 0 &&
-            rect.left >= 0 &&
-            rect.bottom <= window.innerHeight &&
-            rect.right <= window.innerWidth
+            <div
+                ref={popupRef}
+                className={popupClasses}
+                style={popupStyle}
+                {...rest}
+            >
+                {children}
+            </div>
         );
-    }
-
-    const popupStyle: React.CSSProperties = {
-        position: 'absolute',
-        left: `${leftPosition}px`,
-        top: `${topPosition}px`,
-        zIndex: popupZIndex,
-        width: width,
-        height: height,
-        ...style
-    };
-
-    const popupClasses: string = [
-        'sf-popup sf-control sf-lib',
-        (dir === 'rtl') ? 'sf-rtl' : '',
-        popupClass,
-        className
-    ]
-        .filter(Boolean)
-        .join(' ');
-
-    return (
-        <div
-            ref={popupRef}
-            className={popupClasses}
-            style={popupStyle}
-            {...rest}
-        >
-            {children}
-        </div>
-    );
-});
+    });
 
 export default React.memo(Popup);
 
@@ -779,16 +717,10 @@ export {
     getFixedScrollableParent
 };
 
-/**
- * Gets the maximum z-index of the given element.
- *
- * @returns {void}
- * @param { HTMLElement } element - Specify the element to get the maximum z-index of it.
- * @private
- */
-function getZindexPartial(element: HTMLElement): number {
+const getZindexPartial: (element: HTMLElement) => number = (element: HTMLElement): number => {
     let parent: HTMLElement | null = element.parentElement;
     const parentZindex: string[] = [];
+
     while (parent) {
         if (parent.tagName !== 'BODY') {
             const computedStyle: CSSStyleDeclaration = window.getComputedStyle(parent);
@@ -802,6 +734,7 @@ function getZindexPartial(element: HTMLElement): number {
             break;
         }
     }
+
     const childrenZindex: string[] = [];
     for (let i: number = 0; i < document.body.children.length; i++) {
         const child: Element = document.body.children[i as number] as Element;
@@ -815,11 +748,10 @@ function getZindexPartial(element: HTMLElement): number {
         }
     }
     childrenZindex.push('999');
+
     const siblingsZindex: string[] = [];
     if (element.parentElement && element.parentElement.tagName !== 'BODY') {
-        const childNodes: HTMLElement[] = Array.from(
-            element.parentElement.children
-        ) as HTMLElement[];
+        const childNodes: HTMLElement[] = Array.from(element.parentElement.children) as HTMLElement[];
         for (let i: number = 0; i < childNodes.length; i++) {
             const child: Element = childNodes[i as number] as Element;
             if (!element.isEqualNode(child) && child instanceof HTMLElement) {
@@ -832,23 +764,18 @@ function getZindexPartial(element: HTMLElement): number {
             }
         }
     }
-    const finalValue: string[] = parentZindex.concat(childrenZindex, siblingsZindex
-    );
+
+    const finalValue: string[] = parentZindex.concat(childrenZindex, siblingsZindex);
     const currentZindexValue: number = Math.max(...finalValue.map(Number)) + 1;
     return currentZindexValue > 2147483647 ? 2147483647 : currentZindexValue;
-}
+};
 
-/**
- * Gets scrollable parent elements for the given element.
- *
- * @param {HTMLElement} element - The element to get the scrollable parents of.
- * @param {boolean} [fixedParent] - Whether to include fixed-positioned parents.
- * @returns {HTMLElement[]} An array of scrollable parent elements.
- */
-function getFixedScrollableParent(element: HTMLElement, fixedParent: boolean = false): HTMLElement[] {
+const getFixedScrollableParent: (element: HTMLElement, fixedParent?: boolean)
+=> HTMLElement[] = (element: HTMLElement, fixedParent: boolean = false): HTMLElement[] => {
     const scrollParents: HTMLElement[] = [];
     const overflowRegex: RegExp = /(auto|scroll)/;
     let parent: HTMLElement | null = element.parentElement;
+
     while (parent && parent.tagName !== 'HTML') {
         const { position, overflow, overflowY, overflowX } = getComputedStyle(parent);
         if (!(getComputedStyle(element).position === 'absolute' && position === 'static')
@@ -857,8 +784,9 @@ function getFixedScrollableParent(element: HTMLElement, fixedParent: boolean = f
         }
         parent = parent.parentElement;
     }
+
     if (!fixedParent) {
         scrollParents.push(document.documentElement);
     }
     return scrollParents;
-}
+};

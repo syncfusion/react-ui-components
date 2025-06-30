@@ -611,18 +611,12 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             title
         });
 
-        if (toastRef.current) {
-            return toastRef.current?.show(content);
-        } else {
-            return '';
-        }
+        return toastRef.current ? toastRef.current.show(content) : '';
     };
 
     const hide: (toastId?: string) => void = (toastId?: string) => {
         if (toastRef.current) {
             toastRef.current.hide(toastId);
-        } else {
-            console.warn('Toast reference is not available');
         }
     };
 
@@ -660,11 +654,7 @@ export const ToastUtility: {
     },
 
     show: (content: React.ReactNode) => {
-        if (globalToastRef) {
-            return globalToastRef.show(content);
-        } else {
-            return '';
-        }
+        return globalToastRef ? globalToastRef.show(content) : '';
     },
 
     hide: (toastId?: string) => {

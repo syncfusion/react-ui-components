@@ -1,0 +1,4 @@
+import { createIcon } from '../icon';
+import { IconComponent } from '../icon';
+const path: React.ReactNode = <path d='M13.5858 9L18.5858 4H14V2H22V10H20V5.41421L15 10.4142L13.5858 9ZM5.41421 20.0001L10.4142 15.0001L9 13.5858L4 18.5858V14.0001H2V22.0001H10V20.0001H5.41421ZM18.5858 20.0001L13.5858 15.0001L15 13.5858L20 18.5858V14.0001H22V22.0001H14V20.0001H18.5858ZM5.41421 4L10.4142 9L9 10.4142L4 5.41421V10H2V2H10V4H5.41421Z' fillRule='evenodd' clipRule='evenodd' fill='currentcolor'/>;
+export const ZoomToFit: IconComponent  = createIcon(path);

@@ -20,7 +20,7 @@
     /* stylelint-disable property-no-vendor-prefix */
     position: relative;
     align-items: center;
-    display: flex;
+    display: inline-block;
     -webkit-font-smoothing: antialiased;
     border: $btn-border;
     border-radius: $btn-border-radius;
@@ -57,6 +57,10 @@
         padding: 0;
       }
 
+      & .sf-content {
+        vertical-align: text-bottom;
+      }
+
       & .sf-btn-icon {
         display: inline-block;
         font-size: $btn-icon-font-size;
@@ -68,7 +72,6 @@
         &.sf-icon-left {
           padding-right: 8px;
           margin-left: $btn-icon-margin;
-          width: $btn-icon-width;
         }
 
         &.sf-icon-right {
@@ -89,6 +92,12 @@
         path {
           fill-rule: evenodd;
           clip-rule: evenodd;
+          fill: currentColor;
+        }
+
+        svg {
+          height: 14px;
+          width: 14px;
         }
       }
 
@@ -141,6 +150,7 @@
         }
 
         & .sf-icon-left {
+          padding-left: 8px;
           margin-left: 0;
           margin-right: $btn-icon-margin;
         }
@@ -274,6 +284,11 @@
         padding-top: $btn-small-icon-top-bottom-padding;
         width: auto;
       }
+
+      svg {
+        height: 12px;
+        width: 12px;
+      }
     }
 
     &.sf-icon-btn {
@@ -372,6 +387,7 @@
         padding-top: $btn-small-icon-top-bottom-padding;
         width: auto;
       }
+
     }
 
     &.sf-icon-btn {
@@ -447,6 +463,11 @@
       &.sf-icon-bottom {
         padding-top: $btn-bigger-icon-top-bottom-padding;
         width: auto;
+      }
+
+      svg {
+        height: 18px;
+        width: 18px;
       }
     }
 

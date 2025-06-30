@@ -15,23 +15,23 @@ const ProviderContext: React.Context<ProviderContextProps> = createContext<Provi
  */
 export interface ProviderProps {
     /**
-     * Child components that will be wrapped by the Provider.
+     * Components that will have access to the provided context value.
      */
     children: ReactNode;
     /**
-     * Overrides the global culture and localization settings for the component.
+     * Specifies the locale for the component.
      *
      * @default 'en-US'
      */
     locale?: string;
     /**
-     * Specifies the component’s rendering direction, with ltr for left-to-right and rtl for right-to-left direction.
+     * Specifies the text direction of the component. Use 'ltr' for left-to-right or 'rtl' for right-to-left.
      *
      * @default 'ltr'
      */
     dir?: string;
     /**
-     * Enable or disable the ripple effect for supported components.
+     * Enables or disables the ripple effect for the component.
      *
      * @default false
      */
