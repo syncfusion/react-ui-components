@@ -20,10 +20,6 @@
     "skipLibCheck": true, // Skip checking of declaration files.
     "sourceMap": true, // Generate source maps.
     "target": "ES2020", // Set ECMAScript version to ES2020.
-    "typeRoots": [
-      "./node_modules/@types",
-      "./node_modules/@testing-library"
-    ], // Specify root directory for type declarations.
     "types": [
       "node",
       "react",
@@ -35,11 +31,6 @@
       "DOM.Iterable"
     ] // Include libraries for ES2020 and DOM.
   },
-  "include": [
-    "src",
-    "spec",
-    "samples"
-  ], // Include only the provided directory for compilation.
   "exclude": [
     "node_modules",
     "dist",
