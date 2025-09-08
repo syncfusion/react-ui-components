@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## 31.1.17 (2025-09-05)
+
+### Context Menu
+
+#### Breaking Changes
+
+- The `onSelect` event callback now uses `ContextMenuSelectEvent` type instead of the `MenuEvent` type for better type safety and component-specific event handling.
+- The `MenuAnimationProp` interface has been renamed to `MenuAnimationProps`.
+- The `offset` property type has been changed from `{ left: number; top: number }` to `OffsetPosition`.
+
 ## 30.1.37 (2025-06-25)
 
 ### Context Menu

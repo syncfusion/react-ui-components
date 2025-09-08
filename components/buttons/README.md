@@ -2,7 +2,7 @@
 
 ## What's Included in the React Button Package
 
-The React Button package includes the following list of components. 
+The React Button package includes the following list of components.
 
 ### React Button
 
@@ -105,6 +105,22 @@ Explore the demo [here](https://react.syncfusion.com/radio-button).
 - **Label Positioning:** Flexibly position the label relative to the RadioButton with options available for placing it before or after the button, enhancing UI layout consistency.
 
 - **Form Integration:** The value attribute of the RadioButton can be included as part of form data submitted to the server, facilitating efficient data processing.
+
+### React Switch
+
+The Switch component is a toggle interface offering a binary decision between on and off states, visually represented with an optional label for clarity. Its intuitive design makes it ideal for user interactions requiring a straightforward choice.
+
+Explore the demo [here](https://react.syncfusion.com/switch).
+
+**Key features**
+
+- **State Control:** Easily configure the switch to be in a checked (on) or unchecked (off) state, providing an immediate visual cue of its current position to users.
+
+- **Label Customization:** Customize the on and off labels to provide additional context for users, clarifying what each state signifies within the application's workflow.
+
+- **Size Options:** Adapt the size of the switch to fit various UI designs with available size options such as 'small', 'medium' and 'bigger', ensuring seamless integration with different interfaces.
+
+- **Form Integration:** Utilize the switch within forms by setting name and value attributes, ensuring that user selections are included in form submissions for backend processing.
 
 
 <p align="center">

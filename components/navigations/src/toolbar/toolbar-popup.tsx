@@ -2,7 +2,7 @@ import {
     useRef, HTMLAttributes, useMemo, RefObject, useCallback, useEffect, useLayoutEffect, useState, Children, isValidElement, ReactNode,
     cloneElement, ReactElement, CSSProperties, ForwardRefExoticComponent, RefAttributes, memo, forwardRef, Ref, useImperativeHandle
 } from 'react';
-import { ChevronUp, ChevronDown } from '@syncfusion/react-icons';
+import { ChevronUpIcon, ChevronDownIcon } from '@syncfusion/react-icons';
 import { isVisible, closest, useProviderContext } from '@syncfusion/react-base';
 import { Popup, IPopup, CollisionType } from '@syncfusion/react-popups';
 import { OverflowMode, Orientation } from './toolbar';
@@ -14,19 +14,21 @@ const CLS_ITEMS: string = 'sf-toolbar-items';
 const CLS_POPUPICON: string = 'sf-popup-up-icon';
 const CLS_POPUPDOWN: string = 'sf-popup-down-icon';
 const CLS_POPUPOPEN: string = 'sf-popup-open';
-const CLS_POPUPNAV: string = 'sf-hor-nav';
+const CLS_POPUPNAV: string = 'sf-toolbar-hor-nav';
 const CLS_TBARNAVACT: string = 'sf-nav-active';
-const CLS_POPUPCLASS: string = 'sf-toolbar-pop';
+const CLS_POPUPCLASS: string = 'sf-toolbar-popup-items';
 const CLS_HIDDEN_POPUP: string = 'sf-hidden-popup';
-const CLS_EXTENDABLE_CLASS: string = 'sf-toolbar-extended';
+const CLS_EXTENDABLE_CLASS: string = 'sf-toolbar-extended-items';
 const CLS_EXTENDPOPUP: string = 'sf-extended-nav';
-const CLS_OVERFLOW: string = 'sf-popup-overflow';
-const CLS_SEPARATOR: string = 'sf-separator';
-const CLS_SPACER: string = 'sf-spacer';
+const CLS_OVERFLOW: string = 'sf-toolbar-popup-overflow';
+const CLS_SEPARATOR: string = 'sf-toolbar-separator';
+const CLS_SPACER: string = 'sf-toolbar-spacer';
 const CLS_ITEM: string = 'sf-toolbar-item';
+const CLS_ICON: string = 'sf-toolbar-popup-icon sf-icon';
 
 /**
  * Specifies the props for the ToolbarPopup component.
+ * @private
  */
 export interface ToolbarPopupProps {
     /**
@@ -97,6 +99,7 @@ export interface ToolbarPopupProps {
 
 /**
  * Specifies the reference interface for the ToolbarPopup component.
+ * @private
  */
 export interface ToolbarPopupRef {
     /**
@@ -580,8 +583,8 @@ ToolbarPopupRef, IToolbarPopupProps
                     aria-expanded={isPopupOpen ? 'true' : 'false'}
                     onClick={onPopupNavClick}
                 >
-                    <div className={`${isPopupOpen ? CLS_POPUPICON : CLS_POPUPDOWN} sf-icons`}>
-                        {isPopupOpen ? <ChevronUp /> : <ChevronDown />}
+                    <div className={`${isPopupOpen ? CLS_POPUPICON : CLS_POPUPDOWN} ${CLS_ICON}`}>
+                        {isPopupOpen ? <ChevronUpIcon/> : <ChevronDownIcon/>}
                     </div>
                 </div>
             }
@@ -592,7 +595,7 @@ ToolbarPopupRef, IToolbarPopupProps
                     className={popupClasses}
                     relateTo={toolbarRef.current as HTMLElement}
                     offsetY={orientation === Orientation.Vertical ? 0 : getElementOffsetY()}
-                    isOpen={isPopupOpen}
+                    open={isPopupOpen}
                     onOpen={onPopupOpen}
                     onClose={onPopupClose}
                     collision={{ Y: collision ? CollisionType.None : CollisionType.None, X: CollisionType.None }}

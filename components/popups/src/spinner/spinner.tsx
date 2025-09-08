@@ -135,6 +135,8 @@ const spinnerInstances: React.RefObject<ISpinner>[] = [];
  * and can be customized with various properties for size, color, and behavior.
  *
  * ```typescript
+ * import { Spinner } from "@syncfusion/react-popups";
+ *
  * <Spinner
  *   type={SpinnerType.Material3}
  *   visible={true}

@@ -3,6 +3,8 @@ import { SvgIcon } from './svg-icon';
 
 /**
  * Type for the icon component
+ *
+ * @private
  */
 export type IconComponent = React.FC<HTMLAttributes<SVGElement | HTMLElement> & SVGProps<SVGSVGElement>>;
 
@@ -24,18 +26,12 @@ type IconGenerator = (svgElements: React.ReactNode
  */
 export const createIcon: IconGenerator = (svgElements: React.ReactNode) => {
     const IconComponent: React.FC<HTMLAttributes<SVGElement | HTMLElement> & SVGProps<SVGSVGElement>> = ({
-        width = 24,
-        height = 24,
         viewBox = '0 0 24 24',
-        className = '',
         ...otherProps
     }: HTMLAttributes<SVGElement | HTMLElement> & SVGProps<SVGSVGElement>) => {
         return (
             <SvgIcon
-                width={typeof width === 'number' ? `${width}px` : width}
-                height={typeof height === 'number' ? `${height}px` : height}
                 viewBox={viewBox}
-                className={`sf-icons ${className}`.trim()}
                 {...otherProps}
             >
                 {svgElements}

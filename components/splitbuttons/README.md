@@ -2,7 +2,7 @@
 
 ## What's Included in the React Split Button Package
 
-The React Split Button package includes the following list of components. 
+The React Split Button package includes the following list of components.
 
 ### React Split Button
 

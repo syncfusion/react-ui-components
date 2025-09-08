@@ -1,0 +1,69 @@
+@include export-module('timepicker-theme') {
+  .sf-time-wrapper {
+     .sf-input-group-icon.sf-icons.sf-active {
+      color: $timepicker-list-active-icon-color;
+    }
+
+    .sf-input-group:not(.sf-disabled) .sf-input-group-icon.sf-active:active {
+      color: $timepicker-list-popup-icon-active-color;
+      border: $timepicker-icon-active-border;
+      border-radius: $timepicker-icon-active-border-radius;
+      background: $timepicker-icon-active-bg-color;
+    }
+  }
+
+  #{&}.sf-timepicker.sf-popup {
+    background-color: $timepicker-list-bg-color;
+    background: $timepicker-list-bg-color;
+    border: $timepicker-list-border-color;
+    border-radius: $timepicker-popup-border-radius;
+    box-shadow: $timepicker-popup-shadow;
+
+     .sf-list-parent.sf-ul {
+      background: $timepicker-list-bg-color;
+       li.sf-list-item {
+        border: $timepicker-list-default-border-style;
+        color: $timepicker-list-default-font-color;
+      }
+
+       .sf-list-item.sf-disabled {
+        color: $timepicker-disable-text;
+        opacity: $timepicker-disable-opacity;
+        pointer-events: none;
+        touch-action: none;
+      }
+
+      .sf-list-item.sf-hover,
+      .sf-list-item.sf-navigation,
+      .sf-list-item:focus {
+        background: $timepicker-list-hover-bg-color;
+        border: $timepicker-list-hover-border-color;
+        color: $timepicker-list-hover-font-color;
+      }
+
+       .sf-list-item.sf-active {
+        background: $timepicker-list-active-bg-color;
+        color: $timepicker-list-active-font-color;
+      }
+
+       .sf-list-item.sf-active.sf-hover {
+        background: $timepicker-list-active-hover-bg-color;
+        color: $timepicker-list-active-hover-font-color;
+      }
+    }
+  }
+
+  .sf-timepicker-mob-popup-wrap .sf-timepicker.sf-popup-expand,
+  .sf-datetimepicker.sf-popup-expand {
+
+     .sf-model-header {
+      background-color: $modal-header-bg-color;
+      color: $modal-header-text-color;
+
+       .sf-popup-close {
+        color: $modal-header-text-color;
+        font-weight: 500;
+      }
+    }
+  }
+}

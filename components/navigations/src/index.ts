@@ -1,3 +1,3 @@
 export * from './common';
 export * from './toolbar';
-export * from './contextMenu';
+export * from './context-menu';

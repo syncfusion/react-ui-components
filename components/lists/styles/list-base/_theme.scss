@@ -1,0 +1,64 @@
+﻿@mixin list-color($bg-color, $color, $border) {
+  background-color: $bg-color;
+  color: $color;
+  border-color: $border;
+}
+
+@include export-module('listitem-theme') {
+  .sf-list-item:hover {
+
+    &:hover .sf-list-item-header,
+    &:hover .sf-list-content {
+      color: $list-item-text-hover-color;
+    }
+
+    &.sf-active .sf-list-item-header,
+    &.sf-active .sf-list-content {
+      color: $list-item-text-active-color;
+    }
+  }
+
+  .sf-list-item {
+    border-bottom: $list-item-border-bottom solid $list-item-border-bottom-color;
+    border-left: $list-item-border-left solid $list-item-border-left-color;
+    border-right: $list-item-border-right solid $list-item-border-right-color;
+    border-top: $list-item-border-top solid $list-item-border-top-color;
+    @include list-color($list-item-background, $list-item-text-color, null);
+
+    &:hover,
+    &:hover.sf-active.sf-checklist {
+      @include list-color($list-item-hover-bg, $list-item-text-hover-color, $list-item-hover-border-color);
+    }
+
+    &.sf-active {
+      @include list-color($list-item-active-bg, $list-item-text-active-color, null);
+
+      &.sf-checklist {
+        @include list-color($list-item-background, $list-item-text-color, null);
+
+        & .sf-checkbox-wrapper .sf-frame.sf-check {
+          color: $active-checkmark-color;
+        }
+      }
+    }
+
+    &.sf-focused,
+    &.sf-focused.sf-active.sf-checklist {
+      @include list-color($list-item-active-bg, $list-item-text-active-color, null);
+    }
+
+    &.sf-focused .sf-checkbox-wrapper .sf-frame.sf-check,
+    &.sf-focused .sf-css.sf-checkbox-wrapper .sf-frame.sf-check {
+      @include list-color($checkmark-bgcolor, $checkmark-color, $checkmark-border-color);
+    }
+
+    &.sf-hide {
+      display: none;
+    }
+  }
+
+  .sf-list-group-item {
+    @include list-color($list-item-groupheader-bg, $list-item-groupheader-text-color, $listview-header-border);
+    font-size: $listview-groupheader-font-size;
+  }
+}

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, forwardRef } from 'react';
-import { getUniqueID, formatUnit, preRender } from '@syncfusion/react-base';
+import { getUniqueID, formatUnit, preRender, useProviderContext } from '@syncfusion/react-base';
 
 /**
  * Defines the available variant types for skeleton loading placeholders.
@@ -125,7 +125,9 @@ type ISkeletonProps = SkeletonProps & Omit<React.InputHTMLAttributes<HTMLDivElem
  * variants, animations, and customization options to match your application's design.
  *
  * ```typescript
- * <Skeleton type={SkeletonType.Circle} width={50} height={50} animation={AnimationType.Wave} />
+ * import { Skeleton, Variants } from "@syncfusion/react-notifications";
+ *
+ * <Skeleton variant={Variants.Circle} width={50} height={50} animation={AnimationType.Wave} />
  * ```
  */
 export const Skeleton: React.ForwardRefExoticComponent<ISkeletonProps & React.RefAttributes<ISkeleton>> =
@@ -139,7 +141,7 @@ export const Skeleton: React.ForwardRefExoticComponent<ISkeletonProps & React.Re
          className = ''
      } = props;
      const [id] = useState(() => getUniqueID('sf-skeleton'));
-
+     const { dir } = useProviderContext();
      const getShapeClass: (variant: Variants) => string = (variant: Variants): string => {
          switch (variant) {
          case Variants.Circle: return 'sf-skeleton-circle';
@@ -151,9 +153,9 @@ export const Skeleton: React.ForwardRefExoticComponent<ISkeletonProps & React.Re
 
      const getEffectClass: (animation: AnimationType) => string = (animation: AnimationType): string => {
          switch (animation) {
-         case AnimationType.Wave: return 'sf-shimmer-wave';
-         case AnimationType.Fade: return 'sf-shimmer-fade';
-         case AnimationType.Pulse: return 'sf-shimmer-pulse';
+         case AnimationType.Wave: return 'sf-skeleton-wave';
+         case AnimationType.Fade: return 'sf-skeleton-fade';
+         case AnimationType.Pulse: return 'sf-skeleton-pulse';
          default: return '';
          }
      };
@@ -161,6 +163,7 @@ export const Skeleton: React.ForwardRefExoticComponent<ISkeletonProps & React.Re
      const classNames: string = useMemo(() => {
          const classes: string[] = ['sf-skeleton', getShapeClass(variant as Variants), getEffectClass(animation as AnimationType)];
          if (className) {classes.push(...className.split(' ')); }
+         if (dir === 'rtl') { classes.push('sf-rtl'); }
          return classes.join(' ');
      }, [variant, animation, className]);
 

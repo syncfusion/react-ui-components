@@ -1,4 +1,4 @@
 import { createIcon } from '../icon';
 import { IconComponent } from '../icon';
 const path: React.ReactNode = <path d='M17 9C17 9.59519 16.7516 10.6096 16.1971 11.9583C15.6652 13.2521 14.932 14.6644 14.1531 15.9825C13.4 17.257 12.6299 18.4 12 19.2216C11.3701 18.4 10.5999 17.257 9.84685 15.9825C9.06796 14.6644 8.33481 13.2521 7.80291 11.9583C7.24843 10.6096 7 9.59519 7 9C7 6.23858 9.23858 4 12 4C14.7614 4 17 6.23858 17 9ZM19 9C19 13 13 22 12 22C11 22 5 13 5 9C5 5.13401 8.13401 2 12 2C15.866 2 19 5.13401 19 9ZM12 11.5C13.3807 11.5 14.5 10.3807 14.5 9C14.5 7.61929 13.3807 6.5 12 6.5C10.6193 6.5 9.5 7.61929 9.5 9C9.5 10.3807 10.6193 11.5 12 11.5Z' fillRule='evenodd' clipRule='evenodd' fill='currentcolor'/>;
-export const Location: IconComponent  = createIcon(path);
+export const LocationIcon: IconComponent  = createIcon(path);

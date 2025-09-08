@@ -2,10 +2,11 @@ import {
     forwardRef, useImperativeHandle, useRef, HTMLAttributes, useLayoutEffect, useState, useMemo, memo,
     RefObject, RefAttributes, Ref, ForwardRefExoticComponent, useCallback, KeyboardEvent
 } from 'react';
-import { preRender, useProviderContext, closest, isNullOrUndefined } from '@syncfusion/react-base';
+import { preRender, useProviderContext, closest, isNullOrUndefined, Orientation } from '@syncfusion/react-base';
 import { ToolbarMultiRow } from './toolbar-multi-row';
 import { ToolbarScrollable, ToolbarScrollableRef } from './toolbar-scrollable';
 import { ToolbarPopup, ToolbarPopupRef } from './toolbar-popup';
+export { Orientation };
 
 /**
  * Specifies the options of Toolbar display mode. Display option is considered when Toolbar content exceeds the available space.
@@ -32,32 +33,17 @@ export enum OverflowMode {
     Extended = 'Extended'
 }
 
-/**
- * Specifies the layout direction of how the Toolbar items are arranged.
- */
-export enum Orientation {
-    /**
-     * Arranges Toolbar items in a row from left to right.
-     */
-    Horizontal = 'Horizontal',
-
-    /**
-     * Stacks Toolbar items in a column from top to bottom.
-     */
-    Vertical = 'Vertical'
-}
-
 const CLS_TOOLBAR: string = 'sf-toolbar';
-const CLS_VERTICAL: string = 'sf-vertical';
+const CLS_VERTICAL: string = 'sf-toolbar-vertical';
 const CLS_ITEMS: string = 'sf-toolbar-items';
 const CLS_RTL: string = 'sf-rtl';
-const CLS_TBARSCRLNAV: string = 'sf-scroll-nav';
-const CLS_POPUPNAV: string = 'sf-hor-nav';
-const CLS_POPUPCLASS: string = 'sf-toolbar-pop';
-const CLS_EXTENDABLE_TOOLBAR: string = 'sf-extended-toolbar';
-const CLS_MULTIROW_TOOLBAR: string = 'sf-multirow-toolbar';
+const CLS_TBARSCRLNAV: string = 'sf-hscroll-nav';
+const CLS_POPUPNAV: string = 'sf-toolbar-hor-nav';
+const CLS_POPUPCLASS: string = 'sf-toolbar-popup-items';
+const CLS_EXTENDABLE_TOOLBAR: string = 'sf-toolbar-extended';
+const CLS_MULTIROW_TOOLBAR: string = 'sf-toolbar-multirow';
 const CLS_EXTENDEDPOPOPEN: string = 'sf-tbar-extended';
-const CLS_POPUP_TOOLBAR: string = 'sf-toolpop';
+const CLS_POPUP_TOOLBAR: string = 'sf-toolbar-popup';
 
 /**
  * Specifies the props for the Toolbar component.
@@ -149,6 +135,8 @@ type IToolbarProps = ToolbarProps & HTMLAttributes<HTMLDivElement>;
  * It provides multiple overflow handling modes to accommodate different UI requirements and screen sizes.
  *
  * ```typescript
+ * import { Toolbar, ToolbarItem, ToolbarSeparator, ToolbarSpacer, OverflowMode } from "@syncfusion/react-navigations";
+ *
  * <Toolbar overflowMode={OverflowMode.Popup} style={{ width: '300px' }}>
  *   <ToolbarItem><Button>Cut</Button></ToolbarItem>
  *   <ToolbarItem><Button>Copy</Button></ToolbarItem>
@@ -185,6 +173,26 @@ IToolbar, IToolbarProps
     const [isToolbarRefReady, setIsToolbarRefReady] = useState<boolean>(false);
     const [isPopupVisible, setIsPopupVisible] = useState<boolean>(false);
 
+    const isItemDisabled: (item: HTMLElement) => boolean = useCallback((item: HTMLElement): boolean => {
+        return item.hasAttribute('disabled') || item.getAttribute('aria-disabled') === 'true' || item.classList.contains('sf-disabled');
+    }, []);
+
+    const findNextEnabledItem: (items: HTMLElement[], startIndex: number, direction: number) => number =
+    useCallback((items: HTMLElement[], startIndex: number, direction: number): number => {
+        if (!items.length) {return -1; }
+        const itemCount: number = items.length;
+        let index: number = startIndex;
+        let loopCount: number = 0;
+        while (loopCount < itemCount) {
+            index = (index + direction + itemCount) % itemCount;
+            if (!isItemDisabled(items[index as number])) {
+                return index;
+            }
+            loopCount++;
+        }
+        return -1;
+    }, [isItemDisabled]);
+
     const onOverflowChange: () => void = useCallback((): void => {
         if (keyboardNavigation && toolbarRef.current) {
             const queryElements: (containerClass: string) => HTMLElement[] = (containerClass: string): HTMLElement[] => {
@@ -203,6 +211,10 @@ IToolbar, IToolbarProps
             }
 
             const allItems: HTMLElement[] = [...focusItemsRef.current.toolbar, ...focusItemsRef.current.popup];
+            if (focusItemIndex >= 0 && focusItemIndex < allItems.length && isItemDisabled(allItems[focusItemIndex as number])) {
+                focusItemIndex = findNextEnabledItem(allItems, -1, 1);
+            }
+
             allItems.forEach((item: HTMLElement, i: number) => {
                 item.tabIndex = i === focusItemIndex ? 0 : -1;
                 if (i === focusItemIndex) {
@@ -210,7 +222,7 @@ IToolbar, IToolbarProps
                 }
             });
         }
-    }, [keyboardNavigation, overflowMode]);
+    }, [keyboardNavigation, overflowMode, isItemDisabled, findNextEnabledItem]);
 
     const getElementContext: (target: HTMLElement) => ElementContext = useCallback((target: HTMLElement): ElementContext => {
         const isInPopup: boolean = !!closest(target, '.' + CLS_POPUPCLASS);
@@ -252,23 +264,27 @@ IToolbar, IToolbarProps
         target: HTMLElement, direction: NavigationDirection
     ): void => {
         const { isToolbar, items, currentIndex }: ElementContext = getElementContext(target);
+        if (!items.length) {return; }
         let newIndex: number;
         switch (direction) {
         case 'next':
-            newIndex = (currentIndex + 1) % items.length;
+            newIndex = findNextEnabledItem(items, currentIndex, 1);
             break;
         case 'previous':
-            newIndex = (currentIndex - 1 + items.length) % items.length;
+            newIndex = findNextEnabledItem(items, currentIndex, -1);
             break;
         case 'first':
-            newIndex = 0;
+            newIndex = findNextEnabledItem(items, -1, 1);
             break;
         case 'last':
-            newIndex = items.length - 1;
+            newIndex = findNextEnabledItem(items, items.length, -1);
             break;
         }
-        manageFocus(newIndex, isToolbar);
-    }, [getElementContext, manageFocus]);
+
+        if (newIndex !== -1) {
+            manageFocus(newIndex, isToolbar);
+        }
+    }, [getElementContext, manageFocus, findNextEnabledItem]);
 
     const handleHorizontalNavigation: (target: HTMLElement, key: string) => void = useCallback((target: HTMLElement, key: string): void => {
         if (orientation === Orientation.Horizontal) {
@@ -314,13 +330,16 @@ IToolbar, IToolbarProps
         const toolbarElement: HTMLDivElement | null = toolbarRef.current;
 
         if (!isScrollButton && !isNavButton && toolbarElement === target && focusItemsRef.current.toolbar) {
-            if (focusItemRef.current) {
+            if (focusItemRef.current && !isItemDisabled(focusItemRef.current)) {
                 focusItemRef.current.focus();
             } else {
-                manageFocus(0, true);
+                const firstEnabledIndex: number = findNextEnabledItem(focusItemsRef.current.toolbar, -1, 1);
+                if (firstEnabledIndex !== -1) {
+                    manageFocus(firstEnabledIndex, true);
+                }
             }
         }
-    }, [manageFocus]);
+    }, [manageFocus, isItemDisabled, findNextEnabledItem]);
 
     const handleEnterKey: (target: HTMLElement) => void = useCallback((target: HTMLElement): void => {
         const isNavButton: boolean = target.classList.contains(CLS_POPUPNAV);

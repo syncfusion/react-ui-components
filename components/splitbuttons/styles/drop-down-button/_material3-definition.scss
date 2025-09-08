@@ -1,49 +1,48 @@
-$drop-down-btn-arrow-content: '\e70d' !default;
-$drop-down-btn-vertical-btn-padding: 6px 12px !default;
-$drop-down-btn-vertical-bigger-padding: 8px 16px !default;
-$drop-down-btn-icon-font-size: $text-base !default;
-$drop-down-btn-icon-margin-right: 11px !default;
-$drop-down-btn-li-border-width: 1px !default;
-$drop-down-btn-li-height: 32px !default;
-$drop-down-btn-li-padding: 0 12px !default;
-$drop-down-btn-small-li-padding: 0 8px !default;
-$drop-down-btn-small-li-height: 24px !default;
-$drop-down-btn-max-width: 178px !default;
-$drop-down-btn-menu-icon-bigger-font-size: $text-xl !default;
-$drop-down-btn-menu-icon-font-size: $text-base !default;
-$drop-down-btn-min-width: 120px !default;
-$drop-down-btn-seperator-padding: 3px 0 !default;
-$drop-down-btn-sub-ul-box-shadow: none !default;
-$drop-down-btn-ul-border-radius: 4px !default;
-$drop-down-btn-ul-padding: 4px 0 !default;
-$drop-down-btn-ul-bigger-padding: 8px 0 !default;
-$drop-down-btn-ul-small-padding: 4px 0 !default;
-$drop-down-btn-caret-icon-font-size: $text-sm !default;
-$drop-down-btn-icon-font-size-bigger: $text-lg !default;
-$drop-down-btn-caret-icon-font-size-bigger: $text-base !default;
+// Base dropdown button variables
 $drop-down-btn-box-shadow: $shadow-sm !default;
-$drop-down-btn-popup-margin-top: 0 !default;
-$drop-down-btn-ul-border: 0 solid rgba($border-light) !default;
-$drop-down-btn-li-box-shadow: none !default;
+$drop-down-btn-parent-ul-box-shadow: $shadow-md !default;
+$drop-down-btn-no-shadow: none !default;
+$drop-down-btn-separator-padding: 3px 0 !default;
+$drop-down-btn-li-border-width: 1px !default;
 $drop-down-btn-li-border-style: solid !default;
-$drop-down-btn-color: rgba($content-text-color) !default;
-$drop-down-btn-disable-text: $secondary-text-color-disabled !default;
-$drop-down-btn-font-size: $text-sm !default;
-$drop-down-btn-font-weight: $font-weight-normal !default;
+$drop-down-btn-ul-border-radius: 4px !default;
+$drop-down-btn-border-color: rgb($border-light) !default;
+$drop-down-btn-color: rgb($content-text-color) !default;
 $drop-down-btn-li-bgcolor: $flyout-bg-color-hover !default;
 $drop-down-btn-ul-bgcolor: $flyout-bg-color !default;
-$drop-down-btn-li-border-color: rgba($border-light) !default;
-$drop-down-btn-selected-color: rgba($flyout-text-color-selected) !default;
-$drop-down-btn-parent-ul-box-shadow: $shadow-md !default;
+$drop-down-btn-selected-color: rgb($flyout-text-color-selected) !default;
 $drop-down-btn-li-focus-bgcolor: $flyout-bg-color-focus !default;
 $drop-down-btn-li-selection-bgcolor: $flyout-bg-color-selected !default;
-$drop-down-btn-li-selection-font-color: rgba($flyout-text-color-hover) !default;
-$drop-down-btn-menu-icon-color: rgba($icon-color) !default;
-$drop-down-btn-menu-icon-disabled-color: $secondary-text-color-disabled !default;
-$drop-down-btn-li-hover-bgcolor: $flyout-bg-color-hover !default;
-$drop-down-btn-small-icon-font-size-bigger: $text-lg !default;
-$drop-down-btn-bigger-font-size: $text-base !default;
-$drop-down-btn-bigger-min-width: 112px !default;
-$drop-down-btn-bigger-li-height: 40px !default;
-$drop-down-btn-bigger-li-padding: 0 16px !default;
-$drop-down-btn-small-caret-icon-font-size-bigger: $text-lg !default;
+$drop-down-btn-li-selection-font-color: rgb($flyout-text-color-hover) !default;
+$drop-down-btn-menu-icon-color: rgb($icon-color) !default;
+
+// Small size variables
+$drop-down-btn-sm-li-height: 32px !default;
+$drop-down-btn-sm-li-padding: 0 16px !default;
+$drop-down-btn-sm-min-width: 136px !default;
+$drop-down-btn-sm-ul-padding: 8px 0 !default;
+$drop-down-btn-sm-icon-margin-right: 12px !default;
+$drop-down-btn-sm-font-size: 0.875rem;
+
+// Medium size variables (default)
+$drop-down-btn-me-li-height: 40px !default;
+$drop-down-btn-me-li-padding: 0 20px !default;
+$drop-down-btn-me-min-width: 176px !default;
+$drop-down-btn-me-ul-padding: 8px 0 !default;
+$drop-down-btn-me-icon-margin-right: 12px !default;
+$drop-down-btn-me-font-size: 1rem !default;
+
+// Large size variables
+$drop-down-btn-la-li-height: 48px !default;
+$drop-down-btn-la-li-padding: 0 24px !default;
+$drop-down-btn-la-min-width: 184px !default;
+$drop-down-btn-la-ul-padding: 12px 0 !default;
+$drop-down-btn-la-icon-margin-right: 16px !default;
+$drop-down-btn-la-font-size: 1.125rem !default;
+
+// Default fallback values
+$drop-down-btn-li-height: $drop-down-btn-me-li-height !default;
+$drop-down-btn-li-padding: $drop-down-btn-me-li-padding !default;
+$drop-down-btn-min-width: $drop-down-btn-me-min-width !default;
+$drop-down-btn-ul-padding: $drop-down-btn-me-ul-padding !default;
+$drop-down-btn-icon-margin-right: $drop-down-btn-me-icon-margin-right !default;

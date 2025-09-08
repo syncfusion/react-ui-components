@@ -1,0 +1,32 @@
+@include export-module('base-theme') {
+  // Define state colors
+  $states: (
+    error: $error-font-color,
+    warning: $warning-font-color,
+    success: $success-font-color,
+    information: $information-font-color
+  );
+  
+  // State classes
+  @each $state, $color in $states {
+    .sf-#{$state} {
+      color: rgba($color);
+    }
+  }
+  .sf-overlay {
+    background-color: $overlay-bg-color;
+  }
+  .sf-ripple-element {
+    background: linear-gradient(90deg,
+      rgba(28, 27, 31, .08) 0%,
+      rgba(28, 27, 31, .1) 5%,
+      rgba(28, 27, 31, .1) 50%,
+      rgba(28, 27, 31, .1) 50%,
+      rgba(28, 27, 31, .1) 95%,
+      rgba(28, 27, 31, .08) 100%);
+  }
+  .sf-license {
+    color: #ff0;
+    text-decoration: none;
+  }
+}

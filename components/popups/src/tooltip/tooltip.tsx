@@ -14,18 +14,18 @@ const SHOW_POINTER_TIP_GAP: number = 0;
 const HIDE_POINTER_TIP_GAP: number = 8;
 const MOUSE_TRAIL_GAP: number = 2;
 const POINTER_ADJUST: number = 2;
-const ROOT: string = 'sf-control sf-tooltip sf-lib';
+const ROOT: string = 'sf-control sf-tooltip';
 const DEVICE: string = 'sf-bigger';
 const CLOSE: string = 'sf-tooltip-close';
 const TOOLTIP_WRAP: string = 'sf-tooltip-wrap';
-const CONTENT: string = 'sf-tip-content';
-const ARROW_TIP: string = 'sf-arrow-tip';
-const ARROW_TIP_OUTER: string = 'sf-arrow-tip-outer';
-const ARROW_TIP_INNER: string = 'sf-arrow-tip-inner';
-const TIP_BOTTOM: string = 'sf-tip-bottom';
-const TIP_TOP: string = 'sf-tip-top';
-const TIP_LEFT: string = 'sf-tip-left';
-const TIP_RIGHT: string = 'sf-tip-right';
+const CONTENT: string = 'sf-tooltip-content sf-content';
+const ARROW_TIP: string = 'sf-tooltip-arrow';
+const ARROW_TIP_OUTER: string = 'sf-tooltip-arrow-outer';
+const ARROW_TIP_INNER: string = 'sf-tooltip-arrow-inner';
+const TIP_BOTTOM: string = 'bottom';
+const TIP_TOP: string = 'top';
+const TIP_LEFT: string = 'left';
+const TIP_RIGHT: string = 'right';
 const POPUP_ROOT: string = 'sf-popup';
 const POPUP_LIB: string = 'sf-lib';
 const CLOSE_ICON: string = 'M10.5858 12.0001L2.58575 4.00003L3.99997 2.58582L12 10.5858L20 2.58582L21.4142 4.00003L13.4142 12.0001L21.4142 20L20 21.4142L12 13.4143L4.00003 21.4142L2.58581 20L10.5858 12.0001Z';
@@ -45,7 +45,7 @@ const TIP_LEFT_ICON: string = 'M17 3.20718L17 20.793C17 21.2384 16.4614 21.4615 
  * BottomRight :- The Tooltip is positioned at the bottom-right corner of the trigger element.
  * LeftTop :- The Tooltip is positioned at the left-top corner of the trigger element.
  * LeftCenter :- The Tooltip is positioned at the left-center of the trigger element.
- * LeftBottom :- The Tooltip is positioned at the left-bottom corner of the trigger element.
+ * LeftBottom :- The Tooltip is positioned at the left-bottom corner of the trigger element.`
  * RightTop :- The Tooltip is positioned at the right-top corner of the trigger element.
  * RightCenter :- The Tooltip is positioned at the right-center of the trigger element.
  * RightBottom :- The Tooltip is positioned at the right-bottom corner of the trigger element.
@@ -89,32 +89,42 @@ export type Effect = 'FadeIn' | 'FadeOut' | 'FadeZoomIn' | 'FadeZoomOut' | 'Flip
 /**
  * Animation options that are common for both open and close actions of the Tooltip.
  */
-export interface TooltipAnimationSettings {
+export interface TooltipAnimationProps {
     /**
      * Specifies the animation effect on the Tooltip, during open and close actions.
+     *
+     * @default 'FadeIn'
      */
     effect?: Effect;
     /**
      * Specifies the duration of the animation that is completed per animation cycle.
+     *
+     * @default 150
      */
     duration?: number;
     /**
      * Specifies the delay value in milliseconds and indicating the waiting time before animation begins.
+     *
+     * @default 0
      */
     delay?: number;
 }
 
-export interface AnimationModel {
+export interface TooltipAnimationOptions {
 
     /**
      * Animation settings to be applied on the Tooltip, while it is being shown over the target.
+     *
+     * @default { effect: 'FadeIn', duration: 150, delay: 0 }
      */
-    open?: TooltipAnimationSettings;
+    open?: TooltipAnimationProps;
 
     /**
      * Animation settings to be applied on the Tooltip, when it is closed.
+     *
+     * @default { effect: 'FadeOut', duration: 150, delay: 0 }
      */
-    close?: TooltipAnimationSettings;
+    close?: TooltipAnimationProps;
 
 }
 
@@ -125,7 +135,7 @@ interface ElementPosition extends OffsetPosition {
 }
 
 /**
- * @ignore
+ * Specifies the properties of the Tooltip component.
  */
 export interface TooltipProps {
     /**
@@ -248,7 +258,7 @@ export interface TooltipProps {
      *
      * @default { open: { effect: 'FadeIn', duration: 150, delay: 0 }, close: { effect: 'FadeOut', duration: 150, delay: 0 } }
      */
-    animation?: AnimationModel;
+    animation?: TooltipAnimationOptions;
 
     /**
      * Opens the Tooltip after the specified delay in milliseconds.
@@ -286,7 +296,7 @@ export interface TooltipProps {
      * @returns {boolean} True to display the Tooltip, false to prevent it from showing.
      * @event onFilterTarget
      */
-    onFilterTarget?: (args: HTMLElement) => boolean;
+    onFilterTarget?: (event: HTMLElement) => boolean;
 }
 
 export interface ITooltip extends TooltipProps {
@@ -302,20 +312,20 @@ export interface ITooltip extends TooltipProps {
      * Shows the Tooltip on the specified target with specific animation settings.
      *
      * @param {HTMLElement} element - Target element where the Tooltip is to be displayed. (Optional)
-     * @param {TooltipAnimationSettings} animation - Sets the specific animation, while showing the Tooltip on the screen. (Optional)
+     * @param {TooltipAnimationSettings} animationSettings - Sets the specific animation, while showing the Tooltip on the screen. (Optional)
      * @public
      * @returns {void}
      */
-    openTooltip(element?: HTMLElement, animationSettings?: TooltipAnimationSettings): void;
+    openTooltip(element?: HTMLElement, animationSettings?: TooltipAnimationProps): void;
 
     /**
      * Hides the Tooltip with specific animation effect.
      *
-     * @param {TooltipAnimationSettings} animation - Sets the specific animation when hiding Tooltip from the screen. (Optional)
+     * @param {TooltipAnimationSettings} animationSettings - Sets the specific animation when hiding Tooltip from the screen. (Optional)
      * @public
      * @returns {void}
      */
-    closeTooltip(animationSettings?: TooltipAnimationSettings): void;
+    closeTooltip(animationSettings?: TooltipAnimationProps): void;
 
     /**
      * Refreshes the Tooltip content and its position.
@@ -333,6 +343,8 @@ type TooltipComponentProps = TooltipProps & Omit<HTMLAttributes<HTMLDivElement>,
  * It supports various positions, animations, and customization options.
  *
  * ```typescript
+ * import { Tooltip } from "@syncfusion/react-popups";
+ *
  * <Tooltip content={<>This is a Tooltip</>}>
  *   Hover me
  * </Tooltip>
@@ -366,6 +378,8 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
         open,
         onClose,
         onOpen,
+        title,
+        style,
         onFilterTarget,
         ...restProps
     } = props;
@@ -379,7 +393,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
     const [elePos, setElePos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
     const [eventProps, setEventProps] = useState<{ [key: string]: object }>({});
     const [arrowInnerTipStyle, setArrowInnerTipStyle] = useState({ top: '', left: '' });
-    const [TooltipStyle, setTooltipStyle] = useState<React.HTMLAttributes<HTMLDivElement>>();
+    const [TooltipStyle, setTooltipStyle] = useState<React.HTMLAttributes<HTMLDivElement>>({style});
 
     const tooltipEle: React.RefObject<IPopup | null> = useRef<IPopup>(null);
     const timers: React.RefObject<{ show: NodeJS.Timeout | null; hide: NodeJS.Timeout | null; autoClose: NodeJS.Timeout | null; }> =
@@ -394,8 +408,8 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
     const rootElemRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
     const arrowElementRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
     const stickyElementRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
-    const originalData: React.RefObject<{ event: Event | null; showAnimation: TooltipAnimationSettings | null;
-        hideAnimation: TooltipAnimationSettings | null; hideEvent: Event | null; hideTarget: HTMLElement | null;
+    const originalData: React.RefObject<{ event: Event | null; showAnimation: TooltipAnimationProps | null;
+        hideAnimation: TooltipAnimationProps | null; hideEvent: Event | null; hideTarget: HTMLElement | null;
         showTarget: HTMLElement | null; }> = useRef({ event: null, showAnimation: null, hideAnimation: null, hideEvent: null,
         hideTarget: null, showTarget: null });
     const containerElement: React.RefObject<HTMLElement | null>  = useRef<HTMLElement | null>(typeof document !== 'undefined' ? document.body : null);
@@ -446,7 +460,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
         if (tooltipEle.current && tooltipEle.current.element && targetRef.current) {
             tooltipBeforeRender(targetRef.current as HTMLElement);
             tooltipAfterRender(targetRef.current as HTMLElement, originalData.current?.event as Event,
-                               originalData.current?.showAnimation as TooltipAnimationSettings);
+                               originalData.current?.showAnimation as TooltipAnimationProps);
         }
     }, [isHidden, targetRef.current]);
 
@@ -484,21 +498,21 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
         if (open) {
             if (!originalData.current?.showTarget) {
                 showTooltip(target?.current ? target?.current :
-                    rootElemRef.current as HTMLElement, animation.open as TooltipAnimationSettings);
+                    rootElemRef.current as HTMLElement, animation.open as TooltipAnimationProps);
             }
             else {
                 beforeRenderCallback(originalData.current?.showTarget as HTMLElement, originalData.current.event as Event,
-                                     originalData.current.showAnimation as TooltipAnimationSettings);
+                                     originalData.current.showAnimation as TooltipAnimationProps);
                 originalData.current = { ...originalData.current, showTarget: null };
             }
         }
         else {
             if (!originalData.current?.hideAnimation) {
-                hideTooltip(animation.close as TooltipAnimationSettings);
+                hideTooltip(animation.close as TooltipAnimationProps);
             }
             else {
                 mouseMoveBeforeRemove();
-                popupHide(originalData.current?.hideAnimation as TooltipAnimationSettings, originalData.current?.hideTarget as HTMLElement,
+                popupHide(originalData.current?.hideAnimation as TooltipAnimationProps, originalData.current?.hideTarget as HTMLElement,
                           originalData.current?.hideEvent as Event);
                 originalData.current = { ...originalData.current, hideEvent: null, hideAnimation: null, hideTarget: null };
             }
@@ -522,18 +536,18 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
 
     useImperativeHandle(ref, () => ({
         ...propsRef as ITooltip,
-        animation: animation as AnimationModel,
-        openTooltip: (element?: HTMLElement, animationSettings?: TooltipAnimationSettings) => {
-            if (isNullOrUndefined(animationSettings)) { animationSettings = animation?.open as TooltipAnimationSettings; }
+        animation: animation as TooltipAnimationOptions,
+        openTooltip: (element?: HTMLElement, animationSettings?: TooltipAnimationProps) => {
+            if (isNullOrUndefined(animationSettings)) { animationSettings = animation?.open as TooltipAnimationProps; }
             if (isNullOrUndefined(element)) { element = rootElemRef.current as HTMLElement; }
             if (element) {
                 if (element.style.display === 'none') { return; }
-                showTooltip(element, animationSettings as TooltipAnimationSettings);
+                showTooltip(element, animationSettings as TooltipAnimationProps);
             }
         },
-        closeTooltip: (animationSettings?: TooltipAnimationSettings) => {
-            if (!animationSettings) { animationSettings = animation?.close as TooltipAnimationSettings; }
-            hideTooltip(animationSettings as TooltipAnimationSettings);
+        closeTooltip: (animationSettings?: TooltipAnimationProps) => {
+            if (!animationSettings) { animationSettings = animation?.close as TooltipAnimationProps; }
+            hideTooltip(animationSettings as TooltipAnimationProps);
         },
         refresh: () => {
             if (tooltipEle.current && tooltipEle.current.element) {
@@ -905,7 +919,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
                 targetHover(e);
             }
         } else if (!sticky) {
-            hideTooltip(animation.close as TooltipAnimationSettings, e, target);
+            hideTooltip(animation.close as TooltipAnimationProps, e, target);
         }
     };
 
@@ -928,12 +942,12 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
             (animation?.close?.duration ? animation.close.duration : 0);
             setTimeout(() => {
                 restoreElement(target as HTMLElement);
-                showTooltip(target as HTMLElement, animation.open as TooltipAnimationSettings, e as Event);
+                showTooltip(target as HTMLElement, animation.open as TooltipAnimationProps, e as Event);
             }, delay);
             return;
         }
         restoreElement(target as HTMLElement);
-        showTooltip(target as HTMLElement, animation.open as TooltipAnimationSettings, e as Event);
+        showTooltip(target as HTMLElement, animation.open as TooltipAnimationProps, e as Event);
     };
 
     const mouseMoveBeforeOpen: (e: MouseEvent & TouchEvent) => void = (e: MouseEvent & TouchEvent) => {
@@ -947,8 +961,8 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
         }
     };
 
-    const showTooltip: (target: HTMLElement, showAnimation: TooltipAnimationSettings, e?: Event) => void =
-    (target: HTMLElement, showAnimation: TooltipAnimationSettings, e?: Event) => {
+    const showTooltip: (target: HTMLElement, showAnimation: TooltipAnimationProps, e?: Event) => void =
+    (target: HTMLElement, showAnimation: TooltipAnimationProps, e?: Event) => {
         clearTimeout(timers.current.show as NodeJS.Timeout);
         clearTimeout(timers.current.hide as NodeJS.Timeout );
         if (openDelay && followCursor) {
@@ -969,8 +983,8 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
         }
     };
 
-    const beforeRenderCallback: (target: HTMLElement, e: Event, showAnimation: TooltipAnimationSettings) => void =
-    (target: HTMLElement, e: Event, showAnimation: TooltipAnimationSettings) => {
+    const beforeRenderCallback: (target: HTMLElement, e: Event, showAnimation: TooltipAnimationProps) => void =
+    (target: HTMLElement, e: Event, showAnimation: TooltipAnimationProps) => {
         targetRef.current = target;
         setIsHidden(false);
         if (isNullOrUndefined(tooltipEle.current)) {
@@ -1019,17 +1033,17 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
         }
     };
 
-    const tooltipAfterRender: (target: HTMLElement, e: Event, showAnimation: TooltipAnimationSettings) => void =
-        (target: HTMLElement, e: Event, showAnimation: TooltipAnimationSettings) => {
+    const tooltipAfterRender: (target: HTMLElement, e: Event, showAnimation: TooltipAnimationProps) => void =
+        (target: HTMLElement, e: Event, showAnimation: TooltipAnimationProps) => {
             if (target) {
                 beforeOpenCallback(target, showAnimation, e);
             }
         };
 
-    const beforeOpenCallback: ( target: HTMLElement, showAnimation: TooltipAnimationSettings, e: Event) =>
-    void = (target: HTMLElement, showAnimation: TooltipAnimationSettings, e: Event) => {
+    const beforeOpenCallback: ( target: HTMLElement, showAnimation: TooltipAnimationProps, e: Event) =>
+    void = (target: HTMLElement, showAnimation: TooltipAnimationProps, e: Event) => {
         const openAnimation: Object = {
-            name: (showAnimation.effect === 'None' && animationMode === 'Enable') ? 'FadeIn' : (animation.open as TooltipAnimationSettings).effect,
+            name: (showAnimation.effect === 'None' && animationMode === 'Enable') ? 'FadeIn' : (animation.open as TooltipAnimationProps).effect,
             duration: showAnimation.duration,
             delay: showAnimation.delay,
             timingFunction: 'ease-out'
@@ -1160,8 +1174,8 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
         return !windowCollision && target?.current ? rootElemRef as RefObject<HTMLDivElement>  : null;
     };
 
-    const hideTooltip: (hideAnimation: TooltipAnimationSettings, e?: Event, targetElement?: HTMLElement) => void =
-    (hideAnimation: TooltipAnimationSettings, e?: Event, targetElement?: HTMLElement) => {
+    const hideTooltip: (hideAnimation: TooltipAnimationProps, e?: Event, targetElement?: HTMLElement) => void =
+    (hideAnimation: TooltipAnimationProps, e?: Event, targetElement?: HTMLElement) => {
         if (closeDelay > 0) {
             clearTimeout(timers.current.hide as NodeJS.Timeout);
             clearTimeout(timers.current.show as NodeJS.Timeout);
@@ -1175,8 +1189,8 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
         }
     };
 
-    const tooltipHide: (hideAnimation: TooltipAnimationSettings, e?: Event, targetElement?: HTMLElement) => void =
-        (hideAnimation: TooltipAnimationSettings, e?: Event, targetElement?: HTMLElement) => {
+    const tooltipHide: (hideAnimation: TooltipAnimationProps, e?: Event, targetElement?: HTMLElement) => void =
+        (hideAnimation: TooltipAnimationProps, e?: Event, targetElement?: HTMLElement) => {
             let target: HTMLElement;
             if (e) {
                 target = props.target?.current || onFilterTarget ? (targetElement || e.target as HTMLElement)
@@ -1199,8 +1213,8 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
             }
         };
 
-    const handlePopupHide: (hideAnimation: TooltipAnimationSettings, target: HTMLElement, e?: Event) => void =
-        (hideAnimation: TooltipAnimationSettings, target: HTMLElement, e?: Event) => {
+    const handlePopupHide: (hideAnimation: TooltipAnimationProps, target: HTMLElement, e?: Event) => void =
+        (hideAnimation: TooltipAnimationProps, target: HTMLElement, e?: Event) => {
             onClose?.(e as Event);
             if (!isNullOrUndefined(open)) {
                 if (open && !onClose) { setIsHidden(false); }
@@ -1214,11 +1228,11 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
             }
         };
 
-    const popupHide: (hideAnimation: TooltipAnimationSettings, target: HTMLElement, e?: Event) => void  =
-    (hideAnimation: TooltipAnimationSettings, target: HTMLElement, e?: Event) => {
+    const popupHide: (hideAnimation: TooltipAnimationProps, target: HTMLElement, e?: Event) => void  =
+    (hideAnimation: TooltipAnimationProps, target: HTMLElement, e?: Event) => {
         if (target && e) { restoreElement(target); }
         const closeAnimation: Object = {
-            name: (hideAnimation.effect === 'None' && animationMode === 'Enable') ? 'FadeOut' : (animation.close as TooltipAnimationSettings).effect,
+            name: (hideAnimation.effect === 'None' && animationMode === 'Enable') ? 'FadeOut' : (animation.close as TooltipAnimationProps).effect,
             duration: hideAnimation.duration,
             delay: hideAnimation.delay,
             timingFunction: 'ease-in'
@@ -1255,7 +1269,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
 
     const tooltipMouseOut: (e: Event) => void = (e: Event) => {
         setIsTooltipOpen(false);
-        hideTooltip(animation.close as TooltipAnimationSettings, e, targetRef.current as HTMLElement);
+        hideTooltip(animation.close as TooltipAnimationProps, e, targetRef.current as HTMLElement);
     };
 
     const onMouseOut: (e: MouseEvent) => void = (e: MouseEvent) => {
@@ -1270,13 +1284,13 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
                 }
                 checkForTooltipElement.addEventListener('mouseleave', tooltipElementMouseOut as EventListener);
             } else {
-                hideTooltip(animation.close as TooltipAnimationSettings, e, targetRef.current as HTMLElement);
-                if (closeDelay === 0 && ((animation.close as TooltipAnimationSettings).effect === 'None')) {
+                hideTooltip(animation.close as TooltipAnimationProps, e, targetRef.current as HTMLElement);
+                if (closeDelay === 0 && ((animation.close as TooltipAnimationProps).effect === 'None')) {
                     clear();
                 }
             }
         } else {
-            hideTooltip(animation.close as TooltipAnimationSettings, e, targetRef.current as HTMLElement);
+            hideTooltip(animation.close as TooltipAnimationProps, e, targetRef.current as HTMLElement);
             clear();
         }
     };
@@ -1284,7 +1298,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
     const tooltipElementMouseOut: (e: MouseEvent) => void = (e: MouseEvent) => {
         tooltipEle.current?.element?.removeEventListener('mouseleave', tooltipElementMouseOut as EventListener);
         if (!e.relatedTarget  ||  closest(e.relatedTarget as HTMLElement, '.sf-tooltip') as Element !== rootElemRef.current) {
-            hideTooltip(animation.close as TooltipAnimationSettings, e, targetRef.current as HTMLElement);
+            hideTooltip(animation.close as TooltipAnimationProps, e, targetRef.current as HTMLElement);
             clear();
         }
     };
@@ -1341,7 +1355,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
     };
 
     const keyDown: (event: KeyboardEvent) => void = (event: KeyboardEvent) => {
-        if (tooltipEle.current && tooltipEle.current.element && event.keyCode === 27) {
+        if (tooltipEle.current && tooltipEle.current.element && event.key === 'Escape') {
             closeTooltip();
         }
     };
@@ -1515,7 +1529,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
     };
 
     const closeTooltip: () => void = () => {
-        hideTooltip(animation.close as TooltipAnimationSettings);
+        hideTooltip(animation.close as TooltipAnimationProps);
     };
 
     const arrowIcon: string = React.useMemo(() => {
@@ -1534,7 +1548,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
     const renderTooltipContent: () => React.ReactNode = () => (
         <Popup
             ref={tooltipEle}
-            isOpen={isPopupOpen}
+            open={isPopupOpen}
             role='tooltip'
             aria-hidden={false}
             animation={PopupAnimation}
@@ -1552,12 +1566,14 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
                 Browser.isDevice ? DEVICE : ''
             ].filter(Boolean).join(' ')}
             {...TooltipStyle}
+            {...restProps}
         >
             <div className={CONTENT}>{renderContent()}</div>
             {arrow && (
-                <div ref={arrowElementRef} className={`${ARROW_TIP} ${tipClass}`} >
-                    <div className={`${ARROW_TIP_OUTER} ${tipClass}`}></div>
-                    <div className={`${ARROW_TIP_INNER} ${tipClass}`} style={arrowInnerTipStyle}>
+                <div ref={arrowElementRef} className={`${ARROW_TIP} ${ARROW_TIP}-${tipClass} sf-pos-absolute sf-overflow-hidden ${
+                    tipClass === TIP_LEFT || tipClass === TIP_RIGHT ? 'sf-tooltip-arrow-x' : 'sf-tooltip-arrow-y' }`}>
+                    <div className={`${ARROW_TIP_OUTER}-${tipClass} sf-pos-absolute`}></div>
+                    <div className={`${ARROW_TIP_INNER}-${tipClass} sf-pos-absolute`} style={arrowInnerTipStyle}>
                         <SvgIcon d={arrowIcon}></SvgIcon>
                     </div>
                 </div>
@@ -1570,7 +1586,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
                     aria-label="Close Tooltip"
                     onClick={() => { closeTooltip(); }}
                 >
-                    <SvgIcon width='12px' height='12px' d={CLOSE_ICON}></SvgIcon>
+                    <SvgIcon d={CLOSE_ICON}></SvgIcon>
                 </div>
             )}
         </Popup>
@@ -1581,7 +1597,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
             <div ref={rootElemRef} className={[
                 ROOT,
                 className
-            ].filter(Boolean).join(' ')} {...eventProps} {...restProps} >{children}</div>
+            ].filter(Boolean).join(' ')} title={title} {...eventProps} >{children}</div>
             {!isHidden && containerElement.current && createPortal(renderTooltipContent(), containerElement.current)}
         </>
     );

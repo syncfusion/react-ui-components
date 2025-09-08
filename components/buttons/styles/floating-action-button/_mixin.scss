@@ -1,0 +1,6 @@
+@mixin fab-button-styles($border-radius, $min-height, $min-width, $padding) {
+  border-radius: $border-radius;
+  min-height: $min-height;
+  min-width: $min-width;
+  padding: $padding;
+}

@@ -2,8 +2,11 @@ import { FC, memo, HTMLAttributes, useEffect, useRef, RefObject, Children  } fro
 import { isNullOrUndefined } from '@syncfusion/react-base';
 
 const CLS_ITEMS: string = 'sf-toolbar-items';
-const CLS_MULTIROW: string = 'sf-toolbar-multirow';
+const CLS_MULTIROW: string = 'sf-toolbar-multirow-items';
 
+/**
+ * @private
+ */
 export interface ToolbarMultiRowProps {
     /**
      * Callback function that is triggered to handle keyboard interactions with the toolbar.

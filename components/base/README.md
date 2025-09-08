@@ -1,29 +1,37 @@
 # React Base Library
 
-A common package of Essential® studio react components which contains base libraries, providers and functions.
+The `@syncfusion/react-base` package is a foundational library for Syncfusion's Essential® Studio React components. It provides core utilities, providers, and functions to support the development of feature-rich React applications.
 
 **Key Features**
 
-* Animation
-* Ripple
-* Internationalization
-* Localization
-* Right to Left
+- `Animation`: Smooth and customizable animations for UI components.
+- `Ripple Effect`: The ripple effects for interactive elements.
+- `Internationalization`: Support for multiple languages and locales.
+- `Localization`: Adaptable content for region-specific requirements.
+- `Right-to-Left (RTL)`: Built-in support for RTL languages like Arabic and Hebrew.
 
-<p align="center">
-Trusted by the world's leading companies
-  <a href="https://www.syncfusion.com/">
-    <img src="https://raw.githubusercontent.com/SyncfusionExamples/nuget-img/master/syncfusion/syncfusion-trusted-companies.webp" alt="Syncfusion logo">
-  </a>
-</p>
+## Installation
 
-## Setup
-
-To install `base` and its dependent packages, use the following command,
+To install `@syncfusion/react-base` and its dependencies, run the following command:
 
 ```sh
 npm install @syncfusion/react-base
 ```
+
+## Usage
+
+This package serves as a dependency for other Syncfusion® React components. Import the necessary utilities or providers as needed in your React application. For example:
+
+```tsx
+import { Provider } from '@syncfusion/react-base';
+import { Button } from '@syncfusion/react-buttons';
+
+<Provider locale={'en-US'} dir={'ltr'} ripple={false}>
+  <Button>Submit</Button>
+</Provider>
+```
+
+Refer to the [Syncfusion® Documentation](https://react.syncfusion.com/overview/introduction) for detailed usage instructions and examples.
 
 ## Support
 
@@ -43,4 +51,4 @@ Check the changelog [here](https://github.com/syncfusion/react-ui-components/blo
 
 See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campaign=notification) for more info.
 
-&copy; Copyright 2025 Syncfusion, Inc. All Rights Reserved. The Syncfusion Essential Studio license and copyright applies to this distribution. 
+&copy; Copyright 2025 Syncfusion, Inc. All Rights Reserved. The Syncfusion® Essential® Studio license and copyright applies to this distribution.

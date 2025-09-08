@@ -1,8 +1,28 @@
-# React Inputs Components
+# React Input Components
 
 ## What's Included in the React Inputs Package
 
 The React Inputs package includes the following list of components.
+
+### React Form
+
+The Form component provides comprehensive form validation and state management functionality with built-in validation rules and field interaction tracking. It offers a powerful way to handle complex forms with real-time validation, error handling, and submission management.
+
+Explore the demo <a href="https://react.syncfusion.com/form" target="_blank" rel="noopener noreferrer">here</a>
+
+**Key features**
+
+- **Built-in Validation Rules:** Comprehensive set of 15+ validation rules including required, email, URL, date, number, length constraints, ranges, and custom pattern matching.
+
+- **Real-time Validation:** Support for immediate validation on field changes or validation on blur/submit.
+
+- **State Management:** Complete form state tracking including field values, errors, touched/visited states, and modification tracking.
+
+- **Custom Validation:** Support for custom validation functions with full access to field values for complex business logic validation.
+
+- **Cross-field Validation:** EqualTo validation for comparing field values such as password confirmation fields.
+
+- **Initial Values:** Support for pre-populated form fields with validation on initial load.
 
 ### React Numeric TextBox
 

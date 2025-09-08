@@ -1,0 +1,34 @@
+@include export-module('toast-theme') {
+  .sf-toast-container {
+    .sf-toast {
+      box-shadow: $toast-box-shadow;
+      color: $toast-font-color;
+      background-color: $toast-bg-color;
+    }
+
+    .sf-toast-success {
+      background-color: $toast-success-bg-color;
+    }
+
+    .sf-toast-info {
+      background-color: $toast-info-bg-color;
+    }
+
+    .sf-toast-warning {
+      background-color: $toast-warning-bg-color;
+    }
+
+    .sf-toast-danger {
+      background-color: $toast-danger-bg-color;
+    }
+
+    .sf-toast-progress-bar {
+      background-color: $toast-progress-color;
+    }
+  }
+
+  .sf-toast-close-icon.sf-icon:hover,
+  .sf-toast-close-icon.sf-icon:focus {
+    background: $toast-close-icon-hover-bg-color;
+  }
+}

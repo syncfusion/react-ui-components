@@ -2,7 +2,25 @@
 
 ## What's Included in the React Popups Package
 
-The React Popups package includes the following component. 
+The React Popups package includes the following component.
+
+### React Dialog
+
+The Dialog component is a modal pop-up used to display important information, gather user input, or present detailed content without navigating away from the current page. It offers flexible positioning, interaction, and customization options to suit various application needs.
+
+Explore the demo [here](https://react.syncfusion.com/dialog).
+
+**Key features**
+
+- **Positioning:** Control where the dialog appears on the screen using the position property, allowing alignment relative to the viewport.
+
+- **Full-Screen Mode:** Enable the fullscreen property to make the dialog occupy the entire screen—ideal for mobile layouts or content-heavy dialogs.
+
+- **Draggable Dialog:** Make the dialog movable by enabling the draggable property, allowing users to reposition it by dragging the header.
+
+- **Resizable Dialog:** Allow users to resize the dialog by enabling the resizable property, which is useful for content that may vary in size.
+
+- **Custom Animations:** Use the animation property to apply custom open and close animations, enhancing the visual experience and user feedback.
 
 ### React Tooltip
 

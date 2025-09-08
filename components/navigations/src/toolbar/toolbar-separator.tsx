@@ -4,7 +4,7 @@ import {
 } from 'react';
 
 const CLS_ITEM: string = 'sf-toolbar-item';
-const CLS_SEPARATOR: string = 'sf-separator';
+const CLS_SEPARATOR: string = 'sf-toolbar-separator';
 
 export interface IToolbarSeparator {
     /**

@@ -1,23 +1,37 @@
-import { useState, useEffect, useCallback, useImperativeHandle, useRef, forwardRef, Ref, JSX, InputHTMLAttributes, ChangeEvent } from 'react';
-import { preRender, useProviderContext, SvgIcon, useRippleEffect } from '@syncfusion/react-base';
-import {Color, LabelPlacement, Size} from '../button/button';
-
-const CHECK: string = 'sf-check';
-const DISABLED: string = 'sf-checkbox-disabled';
-const FRAME: string = 'sf-frame';
-const INDETERMINATE: string = 'sf-stop';
-const LABEL: string = 'sf-label';
-const WRAPPER: string = 'sf-checkbox-wrapper';
-const CheckBoxClass: string = 'sf-control sf-checkbox sf-lib';
+import { useState, useEffect, useCallback, useImperativeHandle, useRef, forwardRef, Ref, JSX, InputHTMLAttributes } from 'react';
+import { preRender, useProviderContext, SvgIcon, useRippleEffect, getUniqueID, Color, Size, Position } from '@syncfusion/react-base';
 
 /**
- * Properties interface for the CheckBox component
- *
+ * Interface for Checkbox change event arguments
  */
-export interface CheckBoxProps {
+export interface CheckboxChangeEvent {
+    /**
+     * The initial event object received from the input element.
+     */
+    event: React.ChangeEvent<HTMLInputElement>;
 
     /**
-     * Specifies if the CheckBox is in an `indeterminate` state, which visually presents it as neither checked nor unchecked; setting this to `true` will make the CheckBox appear in an indeterminate state.
+     * The current checked state of the Checkbox.
+     */
+    value: boolean;
+}
+
+const CHECK: string = 'sf-checkbox-checked';
+const DISABLED: string = 'sf-disabled sf-no-pointer';
+const FRAME: string = 'sf-checkbox-frame';
+const INDETERMINATE: string = 'sf-checkbox-indeterminate';
+const LABEL: string = 'sf-label';
+const WRAPPER: string = 'sf-control sf-checkbox-wrapper';
+const CHECKBOX_CLASS: string = 'sf-checkbox';
+
+/**
+ * Properties interface for the Checkbox component
+ *
+ */
+export interface CheckboxProps {
+
+    /**
+     * Specifies if the Checkbox is in an `indeterminate` state, which visually presents it as neither checked nor unchecked; setting this to `true` will make the Checkbox appear in an indeterminate state.
      *
      * @default false
      */
@@ -31,39 +45,56 @@ export interface CheckBoxProps {
     label?: string;
 
     /**
-     * Specifies the size style of the checkbox. Options include 'Small', 'Medium' and 'Large'.
+     * Specifies the size style of the Checkbox. Options include 'Small', 'Medium' and 'Large'.
      *
      * @default Size.Medium
      */
     size?: Size;
 
+    /**
+     * Specifies a custom icon to be displayed in unchecked state. This replaces the default Checkbox appearance.
+     *
+     * @default -
+     */
     icon?: React.ReactNode;
 
+    /**
+     * Specifies a custom icon to be displayed in checked state. This replaces the default Checkbox check mark.
+     *
+     * @default -
+     */
     checkedIcon?: React.ReactNode;
 
     /**
-     * Specifies the position of the label relative to the CheckBox. It determines whether the label appears before or after the checkbox element in the UI.
+     * Specifies the position of the label relative to the Checkbox. It determines whether the label appears before or after the Checkbox element in the UI.
      *
-     * @default 'After'
+     * @default Position.Right
      */
-    labelPlacement?: LabelPlacement;
+    labelPlacement?: Position;
 
     /**
-     * Specifies a value that indicates whether the CheckBox is `checked` or not. When set to `true`, the CheckBox will be in `checked` state.
+     * Specifies a value that indicates whether the Checkbox is `checked` or not. When set to `true`, the Checkbox will be in `checked` state.
      *
      * @default false
      */
     checked?: boolean;
 
     /**
-     * Specifies the Color style of the button. Options include 'Primary', 'Secondary', 'Warning', 'Success', 'Danger', and 'Info'.
+     * Specifies the initial checked state of the Checkbox. Use for uncontrolled components.
+     *
+     * @default false
+     */
+    defaultChecked?: boolean;
+
+    /**
+     * Specifies the Color style of the button. Options include 'Primary', 'Secondary', 'Warning', 'Success', 'Error', and 'Info'.
      *
      * @default -
      */
     color?: Color;
 
     /**
-     * Defines `value` attribute for the CheckBox. It is a form data passed to the server when submitting the form.
+     * Defines `value` attribute for the Checkbox. It is a form data passed to the server when submitting the form.
      *
      *
      * @default -
@@ -71,20 +102,20 @@ export interface CheckBoxProps {
     value?: string;
 
     /**
-     * Triggers when the CheckBox state has been changed by user interaction, allowing custom logic to be executed in response to the state change.
+     * Triggers when the Checkbox state has been changed by user interaction, allowing custom logic to be executed in response to the state change.
      *
-     * @event change
+     * @event onChange
      */
-    onChange?: (args: ChangeEvent) => void;
+    onChange?: (event: CheckboxChangeEvent) => void;
 }
 
 /**
- * Interface to define the structure of the CheckBox component reference instance
+ * Interface to define the structure of the Checkbox component reference instance
  *
  */
-export interface ICheckBox extends CheckBoxProps {
+export interface ICheckbox extends CheckboxProps {
     /**
-     * This is checkbox component element.
+     * This is Checkbox component element.
      *
      * @private
      * @default null
@@ -92,31 +123,35 @@ export interface ICheckBox extends CheckBoxProps {
     element?: HTMLElement | null;
 }
 
-type ICheckBoxProps = ICheckBox & InputHTMLAttributes<HTMLInputElement>;
+type ICheckboxProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange'> & ICheckbox;
 
 /**
- * The CheckBox component allows users to select one or multiple options from a list, providing a visual representation of a binary choice with states like checked, unchecked, or indeterminate.
+ * The Checkbox component allows users to select one or multiple options from a list, providing a visual representation of a binary choice with states like checked, unchecked, or indeterminate.
  *
  * ```typescript
- * <CheckBox checked={true} label="Accept Terms and Conditions" />
+ * import { Checkbox } from "@syncfusion/react-buttons";
+ *
+ * <Checkbox checked={true} label="Accept Terms and Conditions" />
  * ```
  */
 
-export const Checkbox: React.ForwardRefExoticComponent<ICheckBoxProps & React.RefAttributes<ICheckBox>> =
-    forwardRef<ICheckBox, ICheckBoxProps>((props: ICheckBoxProps, ref: Ref<ICheckBox>) => {
+export const Checkbox: React.ForwardRefExoticComponent<ICheckboxProps & React.RefAttributes<ICheckbox>> =
+    forwardRef<ICheckbox, ICheckboxProps>((props: ICheckboxProps, ref: Ref<ICheckbox>) => {
         const {
             onChange,
             checked,
+            defaultChecked = false,
             color,
             icon,
             checkedIcon,
             className = '',
             disabled = false,
             indeterminate = false,
-            labelPlacement = 'After',
+            labelPlacement = Position.Right,
             name = '',
             value = '',
             size = Size.Medium,
+            id= getUniqueID('checkbox'),
             ...domProps
         } = props;
 
@@ -125,14 +160,14 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckBoxProps & React.Re
             if (isControlled) {
                 return checked!;
             }
-            return domProps.defaultChecked || false;
+            return defaultChecked;
         });
 
         const [isIndeterminate, setIsIndeterminate] = useState(indeterminate);
         const [isFocused, setIsFocused] = useState(false);
         const [storedLabel, setStoredLabel] = useState<string>(props.label ?? '');
-        const [storedLabelPosition, setStoredLabelPosition] = useState<LabelPlacement>(
-            labelPlacement ?? 'After'
+        const [storedLabelPosition, setStoredLabelPosition] = useState<Position>(
+            labelPlacement ?? Position.Right
         );
 
         const inputRef: React.RefObject<HTMLInputElement | null> = useRef<HTMLInputElement | null>(null);
@@ -143,7 +178,7 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckBoxProps & React.Re
         const checkIcon: string = 'M23.8284 3.75L8.5 19.0784L0.17157 10.75L3 7.92157L8.5 13.4216L21 0.92157L23.8284 3.75Z';
         const indeterminateIcon: string = 'M0.5 0.5H17.5V3.5H0.5V0.5Z';
 
-        const publicAPI: Partial<ICheckBox> = {
+        const publicAPI: Partial<ICheckbox> = {
             checked,
             indeterminate,
             value,
@@ -154,7 +189,7 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckBoxProps & React.Re
         };
 
         useImperativeHandle(ref, () => ({
-            ...publicAPI as ICheckBox,
+            ...publicAPI as ICheckbox,
             element: inputRef.current
         }), [publicAPI]);
 
@@ -185,7 +220,9 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckBoxProps & React.Re
                 if (!isControlled) {
                     setCheckedState(newChecked);
                 }
-                onChange?.(event);
+                if (onChange) {
+                    onChange({ event, value: newChecked });
+                }
             },
             [onChange, isControlled]
         );
@@ -217,19 +254,18 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckBoxProps & React.Re
             color && color.toLowerCase() !== 'secondary' ? `sf-${color.toLowerCase()}` : '',
             disabled ? DISABLED : '',
             isFocused ? 'sf-focus' : '',
-            !disabled && dir === 'rtl' ? 'sf-rtl' : '',
+            dir === 'rtl' ? 'sf-rtl' : '',
             size && size.toLowerCase() !== 'medium' ? `sf-${size.toLowerCase()}` : ''
         ].filter(Boolean).join(' ');
 
         const renderRipple: () => JSX.Element = () => (
-            <span ref={rippleContainerRef} className={`sf-ripple-container ${checkedState ? 'sf-ripple-check' : ''}`}>
+            <span ref={rippleContainerRef} className={`sf-checkbox-ripple sf-checkbox-ripple-${size.toLowerCase().substring(0, 2)}  ${(storedLabelPosition === 'Top' || storedLabelPosition === 'Bottom') ? 'sf-checkbox-vertical' : 'sf-checkbox-horizontal'}`}>
                 {ripple && <Ripple />}
             </span>
         );
 
-        const renderLabel: (label: string) => JSX.Element = (label: string) => (
-            <span className={`${LABEL} ${storedLabelPosition === 'Bottom' ? 'sf-bottom' : ''}`}>{label}</span>
-        );
+        const labelFontSizeClass: string = size && size.toLowerCase() === 'small'
+            ? 'sf-font-size-12' : size && size.toLowerCase() === 'large' ? 'sf-font-size-16' : 'sf-font-size-14';
 
         const renderIcons: () => JSX.Element = () => {
             const sizeDimensions: any = {
@@ -239,7 +275,7 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckBoxProps & React.Re
             };
             const dimensions: any = sizeDimensions[size as keyof typeof sizeDimensions] || sizeDimensions.Medium;
             return (
-                <span className={`sf-icons ${FRAME} ${isIndeterminate ? INDETERMINATE : checkedState ? CHECK : ''}`}>
+                <span className={`sf-checkbox-icons ${FRAME}-${size.toLowerCase().substring(0, 2)} ${isIndeterminate ? INDETERMINATE : checkedState ? CHECK : ''}`}>
                     {isIndeterminate && (
                         <SvgIcon
                             width={dimensions.width}
@@ -269,10 +305,11 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckBoxProps & React.Re
                 aria-disabled={disabled ? 'true' : 'false'}
                 onMouseDown={handleMouseDown}
             >
-                <label>
+                <label className={`sf-checkbox-label sf-${storedLabelPosition.toLowerCase()}`}>
                     <input
                         ref={inputRef}
-                        className={`${CheckBoxClass} ${className}`}
+                        id={id}
+                        className={`${CHECKBOX_CLASS} ${className}`}
                         type="checkbox"
                         name={name}
                         value={value}
@@ -283,28 +320,26 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckBoxProps & React.Re
                         onChange={handleStateChange}
                         {...domProps}
                     />
-                    {storedLabelPosition === 'Before' && renderLabel(storedLabel)}
-                    {(storedLabelPosition === 'After' || storedLabelPosition === 'Bottom' || (checkedIcon && icon)) && renderRipple()}
+                    <span className={`${LABEL} ${labelFontSizeClass}`}>{storedLabel}</span>
+                    { renderRipple()}
                     {checkedState ? checkedIcon : icon}
                     {!checkedIcon && !icon && renderIcons()}
-                    {storedLabelPosition === 'Before' && renderRipple()}
-                    {(storedLabelPosition === 'After' || storedLabelPosition === 'Bottom') && renderLabel(storedLabel)}
                 </label>
             </div>
         );
     });
 
-Checkbox.displayName = 'CheckBox';
+Checkbox.displayName = 'Checkbox';
 export default Checkbox;
 
 // Define the type for the component's props
-interface CSSCheckBoxProps {
+interface CSSCheckboxProps {
     className?: string;
     checked?: boolean;
     label?: string;
 }
 
-const createCSSCheckBox: (props: CSSCheckBoxProps) => JSX.Element = (props: CSSCheckBoxProps): JSX.Element => {
+const createCSSCheckbox: (props: CSSCheckboxProps) => JSX.Element = (props: CSSCheckboxProps): JSX.Element => {
     const {
         className = '',
         checked = false,
@@ -328,7 +363,7 @@ const createCSSCheckBox: (props: CSSCheckBoxProps) => JSX.Element = (props: CSSC
         }
     }, [ripple, rippleMouseDown]);
     return (
-        <div className={`sf-checkbox-wrapper sf-css ${className} ${(dir === 'rtl') ? 'sf-rtl' : ''}`} onMouseDown={handleMouseDown} {...domProps}>
+        <div className={`sf-checkbox-wrapper ${className} ${(dir === 'rtl') ? 'sf-rtl' : ''}`} onMouseDown={handleMouseDown} {...domProps}>
             {<span ref={rippleContainerRef} className={`sf-ripple-container ${checked ? 'sf-ripple-check' : ''}`}>
                 {ripple && <Ripple />}
             </span>}
@@ -344,7 +379,7 @@ const createCSSCheckBox: (props: CSSCheckBoxProps) => JSX.Element = (props: CSSC
     );
 };
 
-// Component definition for CheckBox using create function
-export const CSSCheckbox: React.FC<CSSCheckBoxProps> = (props: CSSCheckBoxProps): JSX.Element => {
-    return createCSSCheckBox(props);
+// Component definition for Checkbox using create function
+export const CSSCheckbox: React.FC<CSSCheckboxProps> = (props: CSSCheckboxProps): JSX.Element => {
+    return createCSSCheckbox(props);
 };

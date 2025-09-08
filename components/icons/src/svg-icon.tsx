@@ -8,14 +8,14 @@ export interface IIcons {
     /**
      * Specifies the width of the icon.
      *
-     * @default 24px
+     * @default -
      */
     width?: number | string;
 
     /**
      * Specifies the height of the icon.
      *
-     * @default 24px
+     * @default -
      */
     height?: number | string;
 
@@ -52,10 +52,11 @@ type SvgProps = HTMLAttributes<SVGElement | HTMLElement> & SVGProps<SVGSVGElemen
  */
 export const SvgIcon: React.FC<SvgProps> = ((props: SvgProps) => {
     const {
-        height = 24,
         viewBox = '0 0 24 24',
-        width = 24,
         children,
+        className = '',
+        width = null,
+        height = null,
         focusable = 'false',
         'aria-hidden': ariaHidden = true,
         ...restProps
@@ -64,6 +65,7 @@ export const SvgIcon: React.FC<SvgProps> = ((props: SvgProps) => {
     return (
         <svg
             {...restProps}
+            className={`sf-icon ${(!width || !height) ? 'sf-icon-size' : ''} ${className}`.trim()}
             width={typeof width === 'number' ? `${width}px` : width}
             height={typeof height === 'number' ? `${height}px` : height}
             viewBox={viewBox}

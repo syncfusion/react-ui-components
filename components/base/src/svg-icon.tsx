@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { HTMLAttributes } from 'react';
+import { HTMLAttributes, SVGProps } from 'react';
 
 export interface IconProps {
     /**
@@ -12,14 +12,14 @@ export interface IconProps {
     /**
      * Specifies the path fill color of the SVG icon.
      *
-     * @default ''
+     * @default 'currentColor'
      */
     fill?: string;
 
     /**
      * Specifies the height of the SVG icon.
      *
-     * @default '16'
+     * @default -
      */
     height?: string;
 
@@ -33,12 +33,12 @@ export interface IconProps {
     /**
      * Specifies the width of the SVG icon.
      *
-     * @default '16'
+     * @default -
      */
     width?: string;
 }
 
-type SvgProps = IconProps & HTMLAttributes<HTMLOrSVGElement>;
+type SvgProps = IconProps & HTMLAttributes<HTMLOrSVGElement> & SVGProps<SVGSVGElement>;
 
 /**
  * The SVG component displays SVG icons with a given height, width, and viewBox.
@@ -49,18 +49,25 @@ type SvgProps = IconProps & HTMLAttributes<HTMLOrSVGElement>;
  */
 export const SvgIcon: React.FC<SvgProps> = ((props: SvgProps) => {
     const {
-        height = '16',
         viewBox = '0 0 24 24',
-        width = '16',
-        fill,
+        fill = 'currentColor',
+        className = '',
+        width = null,
+        height = null,
+        focusable = 'false',
+        'aria-hidden': ariaHidden = true,
         d = '',
         ...restProps
     } = props;
 
-    return (
-        <svg {...restProps} height={height} viewBox={viewBox} width={width}>
-            <path d={d} fill={fill}></path>
-        </svg>
+    return (<svg {...restProps}
+        className={`sf-icon ${(!width || !height) ? 'sf-icon-size' : ''} ${className}`.trim()}
+        focusable={focusable}
+        aria-hidden={ariaHidden}
+        height={height} width={width}
+        viewBox={viewBox}>
+        <path d={d} fill={fill}></path>
+    </svg>
     );
 });
 

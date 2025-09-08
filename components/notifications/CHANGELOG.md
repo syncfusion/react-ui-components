@@ -2,17 +2,37 @@
 
 ## [Unreleased]
 
+## 31.1.17 (2025-09-05)
+
+### Toast
+
+#### Breaking Changes
+
+- The `PositionAxis` interface property names have been changed: `X` has been renamed to `xAxis` and `Y` has been renamed to `yAxis`.
+- The `buttons` property has been renamed to `actions` for rendering template content at the bottom of the Toast.
+- The animation configuration have been updated: `AnimationOptions` types for show and hide animations have been changed to `ToastAnimationProps`.
+
+### Message
+
+#### Breaking Changes
+
+- The `Variant` enum value has been changed from `Text` to `Standard`. The available variants are now: Standard (previously Text), Outlined, Filled.
+
+#### Features
+
+- CSS for the Message component has been optimized.
+
 ## 29.2.4 (2025-05-14)
 
 ### Message
 
-The Message component has an option to display the messages with severity by differentiating icons and colors to denote the importance and context of the message to the end user. The following key features are available in the Message component.
+The Message component has an option to display the messages with severity by differentiating icons and colours to denote the importance and context of the message to the end user. The following key features are available in the Message component.
 
 Explore the demo <a href="https://react.syncfusion.com/message" target="_blank" rel="noopener noreferrer">here</a>
 
 **Key features**
 
-- **Severity:** Provides an option to display the message with distinctive icons and colors based on the severity type. The available severity types such as Normal, Success, Info, Warning, and Error.
+- **Severity:** Provides an option to display the message with distinctive icons and colours based on the severity type. The available severity types such as Normal, Success, Info, Warning, and Error.
 
 - **Variants:** Provides an option to display the message with predefined appearance variants. The available variants such as Text, Outlined, and Filled.
 
@@ -44,7 +64,7 @@ Explore the demo <a href="https://react.syncfusion.com/toast" target="_blank" re
 
 - **Multiple Positions:** Position toasts at different locations on the screen (top-left, top-right, bottom-left, bottom-right, etc.) to suit your application's design.
 
-- **Severity:** Display toasts with different severity levels (Success, Info, Warning, Error) with appropriate icons and colors to convey message importance.
+- **Severity:** Display toasts with different severity levels (Success, Info, Warning, Error) with appropriate icons and colours to convey message importance.
 
 - **Customizable Timeout:** Configure how long toasts remain visible before automatically dismissing.
 

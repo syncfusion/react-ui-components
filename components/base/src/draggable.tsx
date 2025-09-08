@@ -1,6 +1,6 @@
-import { RefObject, useLayoutEffect } from 'react';
-import { extend, isUndefined, isNullOrUndefined, compareElementParent } from './util';
-import { closest, setStyleAttribute, createElement, addClass, isVisible, select } from './dom';
+import { cloneElement, HTMLAttributes, ReactElement, RefObject, useEffect, useLayoutEffect, useRef } from 'react';
+import { extend, isUndefined, isNullOrUndefined, compareElementParent, getActualElement } from './util';
+import { closest, setStyleAttribute, createElement, addClass, isVisible, select, removeClass } from './dom';
 import { Browser } from './browser';
 import { EventHandler } from './event-handler';
 import { setDragArea, PositionCoordinates, elementInViewport, getDocumentWidthHeight, Coordinates, getCoordinates, calculateParentPosition, getPathElements, getScrollParent } from './drag-util';
@@ -43,13 +43,13 @@ export interface IPosition {
 }
 
 /**
- * Hook to manage Position.
+ * Hook to manage draggable Position.
  *
  * @private
  * @param {Partial<IPosition>} props - Initial values for the position properties.
- * @returns {IPosition} - The initialized position properties.
+ * @returns {IPosition} - The initialized draggable position properties.
  */
-export function Position(props?: IPosition): IPosition {
+export function DraggablePosition(props?: IPosition): IPosition {
     const propsRef: IPosition = {
         left: 0,
         top: 0,
@@ -129,7 +129,7 @@ export interface DropOption {
 /**
  * Drag Event arguments
  */
-export interface DragEventArgs {
+export interface DragEvent {
     /**
      * Specifies the actual event.
      */
@@ -149,17 +149,31 @@ export interface DragEventArgs {
 }
 
 /**
+ * Helper Event arguments
+ */
+export interface HelperEvent {
+    /**
+     * Specifies the actual event.
+     */
+    sender?: MouseEvent & TouchEvent;
+    /**
+     * Specifies the current target element.
+     */
+    element?: HTMLElement;
+}
+
+/**
  * Draggable interface for public and protected properties and methods.
  */
 export interface IDraggable {
     /**
-     * Defines the distance between the cursor and the draggable element.
+     * Defines the distance between the cursor and the draggable element when dragging.
      */
     cursorAt?: IPosition;
     /**
-     * If `clone` set to true, drag operations are performed in duplicate element of the draggable element.
+     * Determines if drag operations are performed on a duplicate element of the draggable element.
      *
-     * @default true
+     * @default false
      */
     clone?: boolean;
     /**
@@ -187,19 +201,19 @@ export interface IDraggable {
      *
      * @event drag
      */
-    drag?: Function;
+    drag?: (args: DragEvent) => void;
     /**
      * Specifies the callback function for dragStart event.
      *
      * @event dragStart
      */
-    dragStart?: Function;
+    dragStart?: (args: DragEvent) => void;
     /**
      * Specifies the callback function for dragStop event.
      *
      * @event dragStop
      */
-    dragStop?: Function;
+    dragStop?: (args: DragEvent) => void;
     /**
      * Defines the minimum distance draggable element to be moved to trigger the drag operation.
      *
@@ -216,8 +230,10 @@ export interface IDraggable {
     abort?: string | string[];
     /**
      * Defines the callback function for customizing the cloned element.
+     *
+     * @event helper
      */
-    helper?: Function;
+    helper?: (args: HelperEvent) => HTMLElement | null;
     /**
      * Defines the scope value to group sets of draggable and droppable items.
      * A draggable with the same scope value will be accepted by the droppable.
@@ -269,6 +285,8 @@ export interface IDraggable {
     enableAutoScroll?: boolean;
     /**
      * Gets the element of the draggable.
+     *
+     * @private
      */
     element?: RefObject<HTMLElement>;
     /**
@@ -314,8 +332,8 @@ export interface IDraggable {
 export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable): IDraggable {
     const droppableContext: DragDropContextProps = useDragDropContext();
     const propsRef: IDraggable = {
-        cursorAt: Position({}),
-        clone: true,
+        cursorAt: DraggablePosition({}),
+        clone: false,
         dragArea: null,
         isDragScroll: false,
         isReplaceDragEle: false,
@@ -338,6 +356,7 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
         element: element,
         ...props
     };
+    const propsStateRef: React.RefObject<IDraggable> = useRef<IDraggable>(propsRef);
 
     /* Global Variables */
     let target: HTMLElement;
@@ -378,10 +397,11 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
      */
     function toggleEvents(isUnWire?: boolean): void {
         let ele: Element;
-        if (!isNullOrUndefined(propsRef.handle) && propsRef.handle !== '') {
-            ele = select(propsRef.handle, element.current);
+        if (!isNullOrUndefined(propsStateRef.current.handle) && propsStateRef.current.handle !== '') {
+            ele = select(propsStateRef.current.handle, element.current);
         }
-        const handler: Function = (propsRef.enableTapHold && Browser.isDevice && Browser.isTouch) ? mobileInitialize : initialize;
+        const handler: Function = (propsStateRef.current.enableTapHold &&
+            Browser.isDevice && Browser.isTouch) ? mobileInitialize : initialize;
         if (isUnWire) {
             EventHandler.remove(ele || element.current, Browser.isSafari() ? 'touchstart' : Browser.touchStartEvent, handler);
         } else {
@@ -403,7 +423,7 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
                 removeTapholdTimer();
                 initialize(evt, target);
             },
-            propsRef.tapHoldThreshold
+            propsStateRef.current.tapHoldThreshold
         );
         EventHandler.add(document, Browser.isSafari() ? 'touchmove' : Browser.touchMoveEvent, removeTapholdTimer, this);
         EventHandler.add(document, Browser.isSafari() ? 'touchend' : Browser.touchEndEvent, removeTapholdTimer, this);
@@ -501,8 +521,8 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
         }
         target = evt.currentTarget as HTMLElement || curTarget as HTMLElement;
         dragProcessStarted = false;
-        if (propsRef.abort) {
-            let abortSelectors: string | string[] = propsRef.abort;
+        if (propsStateRef.current.abort) {
+            let abortSelectors: string | string[] = propsStateRef.current.abort;
             if (typeof abortSelectors === 'string') {
                 abortSelectors = [abortSelectors];
             }
@@ -515,13 +535,13 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
                 }
             }
         }
-        if (propsRef.preventDefault && !isUndefined(evt.changedTouches) && evt.type !== 'touchstart') {
+        if (propsStateRef.current.preventDefault && !isUndefined(evt.changedTouches) && evt.type !== 'touchstart') {
             evt.preventDefault();
         }
         element.current.setAttribute('aria-grabbed', 'true');
         const intCoord: Coordinates = getCoordinates(evt);
         initialPosition = { x: intCoord.pageX, y: intCoord.pageY };
-        if (!propsRef.clone) {
+        if (!propsStateRef.current.clone) {
             const pos: IPosition = element.current.getBoundingClientRect();
             getScrollableValues();
             relativeXPosition = intCoord.pageX - (pos.left + parentScrollX);
@@ -535,7 +555,7 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
             EventHandler.add(document, Browser.isSafari() ? 'touchend' : Browser.touchEndEvent, propsRef.intDestroy, this);
         }
         toggleEvents(true);
-        if (evt.type !== 'touchstart' && propsRef.isPreventSelect) {
+        if (evt.type !== 'touchstart' && propsStateRef.current.isPreventSelect) {
             document.body.classList.add('sf-prevent-select');
         }
         externalInitialize = false;
@@ -568,21 +588,21 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
             bottom: parseInt(styleProp.marginBottom, 10)
         };
         let dragElement: HTMLElement = element.current;
-        if (propsRef.clone && propsRef.dragTarget) {
-            const intClosest: HTMLElement = closest(evt.target as Element, propsRef.dragTarget) as HTMLElement;
+        if (propsStateRef.current.clone && propsStateRef.current.dragTarget) {
+            const intClosest: HTMLElement = closest(evt.target as Element, propsStateRef.current.dragTarget) as HTMLElement;
             if (!isNullOrUndefined(intClosest)) {
                 dragElement = intClosest;
             }
         }
-        if (propsRef.isReplaceDragEle) {
+        if (propsStateRef.current.isReplaceDragEle) {
             dragElement = currentStateCheck(evt.target as HTMLElement, dragElement);
         }
         offset = calculateParentPosition(dragElement);
-        position = getMousePosition(evt, propsRef.isDragScroll);
+        position = getMousePosition(evt, propsStateRef.current.isDragScroll);
         const x: number = initialPosition.x - intCordinate.pageX;
         const y: number = initialPosition.y - intCordinate.pageY;
         const distance: number = Math.sqrt((x * x) + (y * y));
-        if ((distance >= propsRef.distance || externalInitialize)) {
+        if ((distance >= propsStateRef.current.distance || externalInitialize)) {
             const ele: HTMLElement = getHelperElement(evt);
             if (!ele) {
                 return;
@@ -592,7 +612,7 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
             }
             const dragTargetElement: HTMLElement = helperElement = ele;
             parentClientRect = calculateParentPosition(dragTargetElement.offsetParent);
-            if (propsRef.dragStart) {
+            if (propsStateRef.current && propsStateRef.current.dragStart) {
                 const curTarget: HTMLElement = getProperTargetElement(evt);
                 const args: object = {
                     event: evt,
@@ -601,19 +621,20 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
                     bindEvents: null,
                     dragElement: dragTargetElement
                 };
-                propsRef.dragStart(args as DragEventArgs);
-                if ((args as DragEventArgs).cancel) {
+                propsStateRef.current.dragStart(args as DragEvent);
+                if ((args as DragEvent).cancel) {
+                    propsRef.intDestroy();
                     return undefined;
                 }
             }
-            if (propsRef.dragArea) {
-                setDragArea(propsRef.dragArea, helperElement, borderWidth, padding, dragLimit);
+            if (propsStateRef.current.dragArea) {
+                setDragArea(propsStateRef.current.dragArea, helperElement, borderWidth, padding, dragLimit);
             } else {
                 dragLimit = { left: 0, right: 0, bottom: 0, top: 0 };
                 borderWidth = { top: 0, left: 0 };
             }
             pos = { left: position.left - parentClientRect.left, top: position.top - parentClientRect.top };
-            if (propsRef.clone && !propsRef.enableTailMode) {
+            if (propsStateRef.current.clone && !propsStateRef.current.enableTailMode) {
                 diffX = position.left - offset.left;
                 diffY = position.top - offset.top;
             }
@@ -621,10 +642,10 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
             getScrollableValues();
             const styles: CSSStyleDeclaration = getComputedStyle(dragElement);
             const marginTop: number = parseFloat(styles.marginTop);
-            if (propsRef.clone && marginTop !== 0) {
+            if (propsStateRef.current.clone && marginTop !== 0) {
                 pos.top += marginTop;
             }
-            if (propsRef.enableScrollHandler && !propsRef.clone) {
+            if (propsStateRef.current.enableScrollHandler && !propsStateRef.current.clone) {
                 pos.top -= parentScrollY;
                 pos.left -= parentScrollX;
             }
@@ -632,8 +653,8 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
                 top: `${pos.top - diffY}px`,
                 left: `${pos.left - diffX}px`
             });
-            if (propsRef.dragArea && typeof propsRef.dragArea !== 'string' && propsRef.dragArea.classList.contains('sf-kanban-content') && propsRef.dragArea.style.position === 'relative') {
-                pos.top += propsRef.dragArea.scrollTop;
+            if (propsStateRef.current.dragArea && typeof propsStateRef.current.dragArea !== 'string' && propsStateRef.current.dragArea.classList.contains('sf-kanban-content') && propsStateRef.current.dragArea.style.position === 'relative') {
+                pos.top += propsStateRef.current.dragArea.scrollTop;
             }
             dragElePosition = { top: pos.top, left: pos.left };
             setStyleAttribute(dragTargetElement, getDragPosition({ position: 'absolute', left: posValue.left, top: posValue.top }));
@@ -653,12 +674,12 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
         if (!isUndefined(evt.changedTouches) && (evt.changedTouches.length !== 1)) {
             return;
         }
-        if (propsRef.clone && evt.changedTouches && Browser.isDevice && Browser.isTouch) {
+        if (propsStateRef.current.clone && evt.changedTouches && Browser.isDevice && Browser.isTouch) {
             evt.preventDefault();
         }
         let left: number;
         let top: number;
-        position = getMousePosition(evt, propsRef.isDragScroll);
+        position = getMousePosition(evt, propsStateRef.current.isDragScroll);
         const docHeight: number = getDocumentWidthHeight('Height');
         if (docHeight < position.top) {
             position.top = docHeight;
@@ -667,9 +688,9 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
         if (docWidth < position.left) {
             position.left = docWidth;
         }
-        if (propsRef.drag) {
+        if (propsStateRef.current && propsStateRef.current.drag) {
             const curTarget: HTMLElement = getProperTargetElement(evt);
-            propsRef.drag({ event: evt, element: element.current, target: curTarget } as DragEventArgs);
+            propsStateRef.current.drag({ event: evt, element: element.current, target: curTarget } as DragEvent);
         }
         const eleObj: DropObject = checkTargetElement(evt);
         if (eleObj.target && eleObj.instance) {
@@ -682,14 +703,14 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
                 }
             }
             if (flag) {
-                eleObj.instance.dragData[propsRef.scope] = droppables[propsRef.scope];
+                eleObj.instance.dragData[propsStateRef.current.scope] = droppables[propsStateRef.current.scope];
                 eleObj.instance.intOver(evt, eleObj.target);
                 hoverObject = eleObj;
             }
         } else if (hoverObject) {
             triggerOutFunction(evt, eleObj);
         }
-        const helperElement: HTMLElement = droppables[propsRef.scope].helper;
+        const helperElement: HTMLElement = droppables[propsStateRef.current.scope].helper;
         parentClientRect = calculateParentPosition(helperElement.offsetParent);
         const tLeft: number = parentClientRect.left;
         const tTop: number = parentClientRect.top;
@@ -699,11 +720,11 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
         const dLeft: number = position.left - diffX;
         const dTop: number = position.top - diffY;
         const styles: CSSStyleDeclaration = getComputedStyle(helperElement);
-        if (propsRef.dragArea) {
-            if (propsRef.enableAutoScroll) {
-                setDragArea(propsRef.dragArea, helperElement, borderWidth, padding, dragLimit);
+        if (propsStateRef.current.dragArea) {
+            if (propsStateRef.current.enableAutoScroll) {
+                setDragArea(propsStateRef.current.dragArea, helperElement, borderWidth, padding, dragLimit);
             }
-            if (pageX !== pagex || propsRef.skipDistanceCheck) {
+            if (pageX !== pagex || propsStateRef.current.skipDistanceCheck) {
                 const helperWidth: number = helperElement.offsetWidth + (parseFloat(styles.marginLeft) + parseFloat(styles.marginRight));
                 if (dragLimit.left > dLeft && dLeft > 0) {
                     left = dragLimit.left;
@@ -713,7 +734,7 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
                     left = dLeft < 0 ? dragLimit.left : dLeft;
                 }
             }
-            if (pageY !== pagey || propsRef.skipDistanceCheck) {
+            if (pageY !== pagey || propsStateRef.current.skipDistanceCheck) {
                 const helperHeight: number = helperElement.offsetHeight + (parseFloat(styles.marginTop) + parseFloat(styles.marginBottom));
                 if (dragLimit.top > dTop && dTop > 0) {
                     top = dragLimit.top;
@@ -740,8 +761,8 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
         let draEleTop: number;
         let draEleLeft: number;
         if (helperElement.classList.contains('sf-treeview')) {
-            if (propsRef.dragArea) {
-                dragLimit.top = propsRef.clone ? dragLimit.top : 0;
+            if (propsStateRef.current.dragArea) {
+                dragLimit.top = propsStateRef.current.clone ? dragLimit.top : 0;
                 draEleTop = (top - iTop) < 0 ? dragLimit.top : (top - borderWidth.top);
                 draEleLeft = (left - iLeft) < 0 ? dragLimit.left : (left - borderWidth.left);
             } else {
@@ -749,9 +770,9 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
                 draEleLeft = left - borderWidth.left;
             }
         } else {
-            if (propsRef.dragArea) {
+            if (propsStateRef.current.dragArea) {
                 const isDialogEle: boolean = helperElement.classList.contains('sf-dialog');
-                dragLimit.top = propsRef.clone ? dragLimit.top : 0;
+                dragLimit.top = propsStateRef.current.clone ? dragLimit.top : 0;
                 draEleTop = (top - iTop) < 0 ? dragLimit.top : (top - iTop);
                 draEleLeft = (left - iLeft) < 0 ? isDialogEle ? (left - (iLeft - borderWidth.left)) : dragElePosition.left : (left - iLeft);
             } else {
@@ -761,7 +782,7 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
         }
         const marginTop: number = parseFloat(getComputedStyle(element.current).marginTop);
         if (marginTop > 0) {
-            if (propsRef.clone) {
+            if (propsStateRef.current.clone) {
                 draEleTop += marginTop;
                 if (dTop < 0) {
                     if ((marginTop + dTop) >= 0) {
@@ -770,7 +791,7 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
                         draEleTop -= marginTop;
                     }
                 }
-                if (propsRef.dragArea) {
+                if (propsStateRef.current.dragArea) {
                     draEleTop = (dragLimit.bottom < draEleTop) ? dragLimit.bottom : draEleTop;
                 }
             }
@@ -788,26 +809,26 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
             }
         }
 
-        if (propsRef.dragArea && helperElement.classList.contains('sf-treeview')) {
+        if (propsStateRef.current.dragArea && helperElement.classList.contains('sf-treeview')) {
             const helperHeight: number = helperElement.offsetHeight + (parseFloat(styles.marginTop) + parseFloat(styles.marginBottom));
             draEleTop = (draEleTop + helperHeight) > dragLimit.bottom ? (dragLimit.bottom - helperHeight) : draEleTop;
         }
 
-        if (propsRef.enableScrollHandler && !propsRef.clone) {
+        if (propsStateRef.current.enableScrollHandler && !propsStateRef.current.clone) {
             draEleTop -= parentScrollY;
             draEleLeft -= parentScrollX;
         }
-        if (propsRef.dragArea && typeof propsRef.dragArea !== 'string' && propsRef.dragArea.classList.contains('sf-kanban-content') && propsRef.dragArea.style.position === 'relative') {
-            draEleTop += propsRef.dragArea.scrollTop;
+        if (propsStateRef.current.dragArea && typeof propsStateRef.current.dragArea !== 'string' && propsStateRef.current.dragArea.classList.contains('sf-kanban-content') && propsStateRef.current.dragArea.style.position === 'relative') {
+            draEleTop += propsStateRef.current.dragArea.scrollTop;
         }
         const dragValue: DragPosition = getProcessedPositionValue({ top: draEleTop + 'px', left: draEleLeft + 'px' });
         setStyleAttribute(helperElement, getDragPosition(dragValue));
-        if (!elementInViewport(helperElement) && propsRef.enableAutoScroll && !helperElement.classList.contains('sf-treeview')) {
+        if (!elementInViewport(helperElement) && propsStateRef.current.enableAutoScroll && !helperElement.classList.contains('sf-treeview')) {
             helperElement.scrollIntoView();
         }
 
         let elements: NodeList | Element[] = document.querySelectorAll(':hover');
-        if (propsRef.enableAutoScroll && helperElement.classList.contains('sf-treeview')) {
+        if (propsStateRef.current.enableAutoScroll && helperElement.classList.contains('sf-treeview')) {
             if (elements.length === 0) {
                 elements = getPathElements(evt);
             }
@@ -848,9 +869,10 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
         }
         const type: string[] = ['touchend', 'pointerup', 'mouseup'];
         if (type.indexOf(evt.type) !== -1) {
-            if (propsRef.dragStop) {
+            if (propsStateRef.current && propsStateRef.current.dragStop) {
                 const curTarget: HTMLElement = getProperTargetElement(evt);
-                propsRef.dragStop({ event: evt, element: element.current, target: curTarget, helper: helperElement } as DragEventArgs);
+                propsStateRef.current.dragStop(
+                    { event: evt, element: element.current, target: curTarget, helper: helperElement } as DragEvent);
             }
             propsRef.intDestroy();
         } else {
@@ -859,7 +881,7 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
         const eleObj: DropObject = checkTargetElement(evt);
         if (eleObj.target && eleObj.instance) {
             eleObj.instance.dragStopCalled = true;
-            eleObj.instance.dragData[propsRef.scope] = droppables[propsRef.scope];
+            eleObj.instance.dragData[propsStateRef.current.scope] = droppables[propsStateRef.current.scope];
             eleObj.instance.intDrop(evt, eleObj.target);
         }
         setGlobalDroppables(true);
@@ -876,7 +898,7 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
         if (Browser.isIE) {
             addClass([propsRef.element.current], 'sf-block-touch');
         }
-        droppables[propsRef.scope] = {};
+        droppables[propsStateRef.current.scope] = {};
     }
     /**
      * Destroys the draggable instance by removing event listeners and cleaning up resources.
@@ -916,7 +938,7 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
      */
     function triggerOutFunction(evt: MouseEvent & TouchEvent, eleObj: DropObject): void {
         hoverObject.instance.intOut(evt, eleObj.target);
-        hoverObject.instance.dragData[propsRef.scope] = null;
+        hoverObject.instance.dragData[propsStateRef.current.scope] = null;
         hoverObject = null;
     }
 
@@ -955,11 +977,11 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
         let pageY: number;
         const isOffsetParent: boolean = isNullOrUndefined((dragEle as HTMLElement).offsetParent);
         if (isdragscroll) {
-            pageX = propsRef.clone ? intCoord.pageX
+            pageX = propsStateRef.current.clone ? intCoord.pageX
                 : (intCoord.pageX + (isOffsetParent ? 0 : (dragEle as HTMLElement).offsetParent.scrollLeft)) - relativeXPosition;
-            pageY = propsRef.clone ? intCoord.pageY
+            pageY = propsStateRef.current.clone ? intCoord.pageY
                 : (intCoord.pageY + (isOffsetParent ? 0 : (dragEle as HTMLElement).offsetParent.scrollTop)) - relativeYPosition;
-            if (!propsRef.clone) {
+            if (!propsStateRef.current.clone) {
                 const offsetParent: HTMLElement = (dragEle as HTMLElement).offsetParent as HTMLElement;
                 if (!isOffsetParent && offsetParent) {
                     const currentScrollLeft: number = offsetParent.scrollLeft;
@@ -971,9 +993,9 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
                 }
             }
         } else {
-            pageX = propsRef.clone ? intCoord.pageX : (intCoord.pageX + window.pageXOffset) - relativeXPosition;
-            pageY = propsRef.clone ? intCoord.pageY : (intCoord.pageY + window.pageYOffset) - relativeYPosition;
-            if (document.scrollingElement && (!propsRef.clone)) {
+            pageX = propsStateRef.current.clone ? intCoord.pageX : (intCoord.pageX + window.pageXOffset) - relativeXPosition;
+            pageY = propsStateRef.current.clone ? intCoord.pageY : (intCoord.pageY + window.pageYOffset) - relativeYPosition;
+            if (document.scrollingElement && (!propsStateRef.current.clone)) {
                 const ele: Element = document.scrollingElement;
                 const currentScrollX: number = ele.scrollLeft;
                 const currentScrollY: number = ele.scrollTop;
@@ -984,8 +1006,8 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
             }
         }
         return {
-            left: pageX - (margin.left + propsRef.cursorAt.left),
-            top: pageY - (margin.top + propsRef.cursorAt.top)
+            left: pageX - (margin.left + propsStateRef.current.cursorAt.left),
+            top: pageY - (margin.top + propsStateRef.current.cursorAt.top)
         };
     }
 
@@ -998,9 +1020,9 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
      */
     function getHelperElement(evt: MouseEvent & TouchEvent): HTMLElement {
         let element: HTMLElement;
-        if (propsRef.clone) {
-            if (propsRef.helper) {
-                element = propsRef.helper({ sender: evt, element: target });
+        if (propsStateRef.current.clone) {
+            if (propsStateRef.current && propsStateRef.current.helper) {
+                element = propsStateRef.current.helper({ sender: evt, element: target } as HelperEvent);
             } else {
                 element = createElement('div', { className: 'sf-drag-helper sf-block-touch', innerHTML: 'Draggable' });
                 document.body.appendChild(element);
@@ -1021,7 +1043,7 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
      * @returns {void}
      */
     function setGlobalDroppables(reset: boolean, drag?: HTMLElement, helper?: HTMLElement): void {
-        droppables[propsRef.scope] = reset ? null : {
+        droppables[propsStateRef.current.scope] = reset ? null : {
             draggable: drag,
             helper: helper,
             draggedElement: propsRef.element.current
@@ -1098,8 +1120,8 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
      * @returns {DragPosition} - The processed or original position values.
      */
     function getProcessedPositionValue(value: DragPosition): DragPosition {
-        if (propsRef.queryPositionInfo) {
-            return propsRef.queryPositionInfo(value);
+        if (propsStateRef.current && propsStateRef.current.queryPositionInfo) {
+            return propsStateRef.current.queryPositionInfo(value);
         }
         return value;
     }
@@ -1112,10 +1134,10 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
      */
     function getDragPosition(dragValue: DragPosition & { position?: string }): Record<string, string | number> {
         const temp: Record<string, string | number> = { ...dragValue };
-        if (propsRef.axis) {
-            if (propsRef.axis === 'x') {
+        if (propsStateRef.current.axis) {
+            if (propsStateRef.current.axis === 'x') {
                 delete temp.top;
-            } else if (propsRef.axis === 'y') {
+            } else if (propsStateRef.current.axis === 'y') {
                 delete temp.left;
             }
         }
@@ -1167,34 +1189,18 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
         return elem;
     }
 
-    /**
-     * Retrieves the underlying HTML element from a possibly forwarded ref or custom element.
-     *
-     * @param {RefObject<HTMLElement>} elementRef - The ref object containing the element.
-     * @returns {HTMLElement} The actual HTML element
-     */
-    function getActualElement(
-        elementRef: React.RefObject<HTMLElement | { element?: HTMLElement }>
-    ): HTMLElement | { element?: HTMLElement | undefined; } {
-        if (elementRef.current) {
-            if (!(elementRef.current instanceof HTMLElement) &&
-                elementRef.current.element &&
-                elementRef.current.element instanceof HTMLElement) {
-                return elementRef.current.element;
-            }
-        }
-        return elementRef.current;
-    }
-
-
     useLayoutEffect(() => {
+        propsRef.element.current = getActualElement(propsRef.element) as HTMLElement;
         if (!propsRef.element.current) {
             return undefined;
         }
-        propsRef.element.current = getActualElement(propsRef.element) as HTMLElement;
+        propsStateRef.current = { ...propsRef, ...props };
         addClass([propsRef.element.current], ['sf-lib', 'sf-draggable']);
         bind();
         return () => {
+            if (propsRef.element.current) {
+                removeClass([propsRef.element.current], ['sf-lib', 'sf-draggable']);
+            }
             propsRef.destroy();
         };
     });
@@ -1209,4 +1215,86 @@ export function useDraggable(element: RefObject<HTMLElement>, props?: IDraggable
  */
 useDraggable.getDefaultPosition = (): PositionCoordinates => {
     return extend({}, defaultPosition);
+};
+
+/**
+ * DraggableComponent wraps elements to enable draggable functionality.
+ */
+export interface IDraggableProps extends IDraggable {
+    /**
+     * Specifies the children element that will be made draggable.
+     */
+    children: ReactElement;
+    /**
+     * Specifies additional CSS class names to apply to the draggable element.
+     */
+    className?: string;
+    /**
+     * Provides a reference to access the underlying draggable child element.
+     */
+    dragRef?: RefObject<HTMLElement>;
+}
+
+/**
+ * DraggableComponent wraps elements to enable draggable functionality.
+ * It leverages the Draggable hook internally to manage drag behavior.
+ *
+ * @example
+ * ```tsx
+ * import { Draggable } from '@syncfusion/react-base';
+ *
+ * <Draggable>
+ *   <div>Drag me</div>
+ * </Draggable>
+ * ```
+ *
+ * @param {IDraggableProps} props - The props for the DraggableComponent.
+ * @returns {Element} The rendered draggable component.
+ */
+export const Draggable: React.FC<IDraggableProps> = ({
+    children,
+    className,
+    dragRef,
+    ...restProps
+}: {
+    children: ReactElement<HTMLAttributes<HTMLElement>>;
+    dragRef?: RefObject<HTMLElement>;
+    className?: string;
+    [key: string]: unknown | ReactElement<unknown, string | React.JSXElementConstructor<unknown>>;
+}) => {
+    const internalRef: RefObject<HTMLElement> = useRef<HTMLElement>(null);
+    const draggableInstance: RefObject<IDraggable> = useRef<IDraggable | null>(null);
+
+    useDraggable(internalRef as RefObject<HTMLElement>, {
+        clone: false,
+        ...restProps
+    });
+
+    useEffect(() => {
+        if (draggableInstance.current) {
+            Object.assign(draggableInstance.current, {
+                ...restProps
+            });
+        }
+    }, [restProps]);
+
+    const combinedRef: (node: HTMLElement | null) => void = (node: HTMLElement) => {
+        if (node) {
+            internalRef.current = node;
+            if (dragRef && 'current' in dragRef) {
+                dragRef.current = node;
+            }
+        }
+    };
+
+    return cloneElement(
+        children,
+        {
+            ref: combinedRef,
+            className: [
+                children.props.className,
+                className
+            ].filter(Boolean).join(' ') || undefined
+        } as React.HTMLAttributes<HTMLElement> & { ref: (node: HTMLElement | null) => void }
+    );
 };

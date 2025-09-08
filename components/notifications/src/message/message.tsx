@@ -1,50 +1,7 @@
 import * as React from 'react';
 import { useEffect, useRef, useState, forwardRef, HTMLAttributes, useImperativeHandle, useMemo, useCallback, Ref } from 'react';
-import { IL10n, L10n, preRender, useProviderContext, SvgIcon } from '@syncfusion/react-base';
-
-/**
- * Specifies the type of severity to display the message with distinctive icons and colors.
- */
-export enum Severity {
-    /**
-     * The message is displayed with icons and colors that indicate it is a normal message.
-     */
-    Normal = 'Normal',
-    /**
-     * The message is displayed with icons and colors that indicate it is a success message.
-     */
-    Success = 'Success',
-    /**
-     * The message is displayed with icons and colors that indicate it contains information.
-     */
-    Info = 'Info',
-    /**
-     * The message is displayed with icons and colors that indicate it is a warning message.
-     */
-    Warning = 'Warning',
-    /**
-     * The message is displayed with icons and colors that indicate it is an error message.
-     */
-    Error = 'Error'
-}
-
-/**
- * Specifies the predefined appearance variants for the component to display.
- */
-export enum Variant {
-    /**
-     * Denotes that severity is differentiated using text color and light background color.
-     */
-    Text = 'Text',
-    /**
-     * Denotes that severity is differentiated using text color and border without background.
-     */
-    Outlined = 'Outlined',
-    /**
-     * Denotes that severity is differentiated using text color and dark background color.
-     */
-    Filled = 'Filled'
-}
+import { IL10n, L10n, preRender, useProviderContext, SvgIcon, Severity, Variant } from '@syncfusion/react-base';
+export { Severity, Variant };
 
 export interface MessageProps {
     /**
@@ -56,7 +13,7 @@ export interface MessageProps {
      *
      * @default true
      */
-    icon?: boolean | React.ReactNode;
+    icon?: React.ReactNode;
 
     /**
      * Shows or hides the close icon in the Message component. An end user can click the close icon to hide the message, and the onClose event will be triggered.
@@ -67,7 +24,7 @@ export interface MessageProps {
      *
      * @default false
      */
-    closeIcon?: boolean | React.ReactNode;
+    closeIcon?: React.ReactNode;
 
     /**
      * Specifies the severity of the message, which is used to define the appearance (icons and colors) of the message. The available severity messages are Normal, Success, Info, Warning, and Error.
@@ -77,9 +34,9 @@ export interface MessageProps {
     severity?: Severity;
 
     /**
-     * Specifies the variant from predefined appearance variants to display the content of the Message component. The available variants are Text, Outlined, and Filled.
+     * Specifies the variant from predefined appearance variants to display the content of the Message component. The available variants are Standard, Outlined, and Filled.
      *
-     * @default Variant.Text
+     * @default Variant.Standard
      */
     variant?: Variant;
 
@@ -113,6 +70,8 @@ type MsgProps = IMessage & HTMLAttributes<HTMLDivElement>;
  * The Message component displays messages with severity by differentiating icons and colors to denote the importance and context of the message to the end user.
  *
  * ```typescript
+ * import { Message } from '@syncfusion/react-notifications';
+ *
  * <Message closeIcon={true}>Editing is restricted</Message>
  * ```
  */
@@ -123,7 +82,7 @@ export const Message: React.ForwardRefExoticComponent<MsgProps & React.RefAttrib
             icon = true,
             closeIcon = false,
             severity = Severity.Normal,
-            variant = Variant.Text,
+            variant = Variant.Standard,
             visible,
             onClose,
             className = '',
@@ -145,27 +104,37 @@ export const Message: React.ForwardRefExoticComponent<MsgProps & React.RefAttrib
             return l10n.getConstant('close');
         }, [locale]);
 
-        const classArray: string[] = ['sf-control sf-message sf-lib', className];
+        const classArray: string[] = ['sf-control sf-message sf-lib sf-size-medium', className];
         const hasWrap: boolean = useMemo(() => classArray.join(' ').split(' ').includes('sf-content-center'), [className]);
 
         const classes: string = useMemo(() => {
             if (dir === 'rtl') { classArray.push('sf-rtl'); }
-            if ((visible === undefined && !isVisible) || (visible !== undefined && !visible)) { classArray.push('sf-hidden'); }
+            if ((visible === undefined && !isVisible) || (visible !== undefined && !visible)) {
+                classArray.push('sf-display-none');
+            } else {
+                classArray.push('sf-display-flex');
+            }
+            let sClass: string = '';
+            let vClass: string = '';
 
             switch (severity) {
-            case Severity.Success: classArray.push('sf-success'); setMsgIcon(successIcon); break;
-            case Severity.Warning: classArray.push('sf-warning'); setMsgIcon(warningIcon); break;
-            case Severity.Error: classArray.push('sf-error'); setMsgIcon(errorIcon); break;
-            case Severity.Info: classArray.push('sf-info'); setMsgIcon(infoIcon); break;
+            case Severity.Success: sClass = 'success'; setMsgIcon(successIcon); break;
+            case Severity.Warning: sClass = 'warning'; setMsgIcon(warningIcon); break;
+            case Severity.Error: sClass = 'error'; setMsgIcon(errorIcon); break;
+            case Severity.Info: sClass = 'info'; setMsgIcon(infoIcon); break;
             default: setMsgIcon(infoIcon); break;
             }
 
             switch (variant) {
-            case Variant.Outlined: classArray.push('sf-outlined'); break;
-            case Variant.Filled: classArray.push('sf-filled'); break;
+            case Variant.Outlined: classArray.push('sf-msg-outlined'); vClass = 'outlined'; break;
+            case Variant.Filled: classArray.push('sf-msg-filled'); vClass = 'filled'; break;
             default: break;
             }
 
+            if (sClass || vClass) {
+                const combinedClass: string = `sf-msg${sClass ? '-' + sClass : ''}${vClass ? '-' + vClass : ''}`;
+                classArray.push(combinedClass);
+            }
             return classArray.join(' ');
         }, [className, dir, isVisible, visible, severity, variant]);
 
@@ -207,9 +176,9 @@ export const Message: React.ForwardRefExoticComponent<MsgProps & React.RefAttrib
         const getContent: () => React.JSX.Element = useCallback((): React.JSX.Element => (
             <>
                 {icon && (
-                    <span className="sf-msg-icon">
+                    <span className="sf-msg-icon sf-display-flex">
                         {typeof icon === 'boolean' ? (
-                            <SvgIcon width="16" height="16" d={msgIcon} />
+                            <SvgIcon className="sf-font-size-18" d={msgIcon} />
                         ) : (
                             icon
                         )}
@@ -239,13 +208,13 @@ export const Message: React.ForwardRefExoticComponent<MsgProps & React.RefAttrib
         return (
             <div ref={eleRef} role="alert" className={classes} {...eleAttr}>
                 {hasWrap ? (
-                    <div className="sf-msg-content-wrap">{getContent()}</div>
+                    <div className="sf-msg-content-wrap sf-display-flex">{getContent()}</div>
                 ) : (getContent())}
 
                 {closeIcon && (
-                    <button type="button" className="sf-msg-close-icon" onClick={closeMessage} onKeyDown={handleKeyDown} title={closeIconTitle} aria-label={closeIconTitle}>
+                    <button type="button" className="sf-msg-close-icon sf-display-flex sf-cursor-pointer" onClick={closeMessage} onKeyDown={handleKeyDown} title={closeIconTitle} aria-label={closeIconTitle}>
                         {typeof closeIcon === 'boolean' ? (
-                            <SvgIcon width="14" height="14" d={msgCloseIcon} />
+                            <SvgIcon d={msgCloseIcon} />
                         ) : (
                             closeIcon
                         )}

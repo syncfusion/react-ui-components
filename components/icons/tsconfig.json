@@ -9,21 +9,17 @@
     "moduleResolution": "Node", // Resolve modules using Node-style resolution.
     "noEmitOnError": true, // Prevent emitting JS files if there are errors.
     "noFallthroughCasesInSwitch": true, // Prevent fallthrough in switch cases.
-    "noImplicitAny": false, // Disallow implicit any types.
+    "noImplicitAny": true, // Disallow implicit any types.
     "noImplicitReturns": true, // Ensure functions return a value.
     "noUnusedLocals": true, // Warn on unused local variables.
     "noUnusedParameters": true, // Warn on unused function parameters.
-    "strict": false, // Enable all strict checks.
-    "strictBindCallApply": false, // Enable strict checking of bind, call, and apply methods.
-    "strictFunctionTypes": false, // Enable strict checking of function types.
-    "strictNullChecks": false, // Enable strict null checks.
+    "strict": true, // Enable all strict checks.
+    "strictBindCallApply": true, // Enable strict checking of bind, call, and apply methods.
+    "strictFunctionTypes": true, // Enable strict checking of function types.
+    "strictNullChecks": true, // Enable strict null checks.
     "skipLibCheck": true, // Skip checking of declaration files.
     "sourceMap": true, // Generate source maps.
     "target": "ES2020", // Set ECMAScript version to ES2020.
-    "typeRoots": [
-      "./node_modules/@types",
-      "./node_modules/@testing-library"
-    ], // Specify root directory for type declarations.
     "types": [
       "node",
       "react",
@@ -35,11 +31,6 @@
       "DOM.Iterable"
     ] // Include libraries for ES2020 and DOM.
   },
-  "include": [
-    "src",
-    "spec",
-    "samples"
-  ], // Include only the provided directory for compilation.
   "exclude": [
     "node_modules",
     "dist",

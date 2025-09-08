@@ -5,18 +5,18 @@ import * as React from 'react';
 /**
  * Represents the variant types for the Chip component.
  */
-export type ChipVariant = 'filled' | 'outlined';
+export type ChipVariant = 'Filled' | 'Outlined';
 
 /**
  * Represents the color types for the Chip component.
  */
-export type ChipColor = 'primary' | 'info' | 'danger' | 'success' | 'warning';
+export type ChipColor = 'Primary' | 'Info' | 'Error' | 'Success' | 'Warning';
 
 /**
  * Represents the model for the Chip component.
  *
  */
-export interface ChipModel {
+export interface ChipBaseProps {
     /**
      * Specifies the text content for the Chip.
      *
@@ -36,21 +36,21 @@ export interface ChipModel {
      *
      * @default -
      */
-    avatar?: string | React.ReactNode;
+    avatar?: React.ReactNode;
 
     /**
      * Specifies the leading icon CSS class or React node for the Chip.
      *
      * @default -
      */
-    leadingIcon?: string | React.ReactNode;
+    leadingIcon?: React.ReactNode;
 
     /**
      * Specifies the trailing icon CSS or React node for the Chip.
      *
      * @default -
      */
-    trailingIcon?: string | React.ReactNode;
+    trailingIcon?: React.ReactNode;
 
     /**
      * Specifies whether the Chip component is disabled or not.
@@ -83,12 +83,12 @@ export interface ChipModel {
     /**
      * Specifies the variant of the Chip, either 'filled' or 'outlined'.
      *
-     * @default -
+     * @default 'filled'
      */
     variant?: ChipVariant;
 
     /**
-     * Specifies the color of the Chip, one of 'primary', 'info', 'danger', 'success', or 'warning'.
+     * Specifies the color of the Chip, one of 'Primary', 'Info', 'Error', 'Success', or 'Warning'.
      *
      * @default -
      */
@@ -100,23 +100,24 @@ export interface ChipModel {
  *
  * @ignore
  */
-export interface ChipProps extends ChipModel {
+export interface ChipProps extends ChipBaseProps {
 
     /**
      * Event handler for the delete action.
+     *
      * @event onDelete
      */
-    onDelete?: (event: DeleteEvent) => void;
+    onDelete?: (event: ChipDeleteEvent) => void;
 }
 
 /**
  * Represents the arguments for the delete event of a Chip.
  */
-export interface DeleteEvent {
+export interface ChipDeleteEvent {
     /**
      * Specifies the data associated with the deleted Chip.
      */
-    data: ChipModel;
+    data: ChipBaseProps;
 
     /**
      * Specifies the event that triggered the delete action.
@@ -142,7 +143,9 @@ type ChipComponentProps = ChipProps & HTMLAttributes<HTMLDivElement>;
  * The Chip component represents information in a compact form, such as entity attribute, text, or action.
  *
  * ```typescript
- * <Chip color="primary" removable={true}>Anne</Chip>
+ * import { Chip } from "@syncfusion/react-buttons";
+ *
+ * <Chip color="Primary" removable={true}>Anne</Chip>
  * ```
  */
 export const Chip: React.ForwardRefExoticComponent<ChipComponentProps & React.RefAttributes<IChip>> =
@@ -159,7 +162,7 @@ React.memo(forwardRef<IChip, ChipProps>((props: ChipComponentProps, ref: React.R
         trailingIconUrl,
         children,
         removable,
-        variant,
+        variant = 'Filled',
         color,
         onDelete,
         onClick,
@@ -185,6 +188,7 @@ React.memo(forwardRef<IChip, ChipProps>((props: ChipComponentProps, ref: React.R
     const { dir, ripple } = useProviderContext();
     const closeIcon: string = 'M10.5858 12.0001L2.58575 4.00003L3.99997 2.58582L12 10.5858L20 2.58582L21.4142 4.00003L13.4142 12.0001L21.4142 20L20 21.4142L12 13.4143L4.00003 21.4142L2.58581 20L10.5858 12.0001Z';
     const selectIcon: string = 'M21.4142 6L9.00003 18.4142L2.58582 12L4.00003 10.5858L9.00003 15.5858L20 4.58578L21.4142 6Z';
+    const IconClasses: string = 'sf-content-center sf-overflow-hidden';
     const { rippleMouseDown, Ripple} = useRippleEffect(ripple);
 
     useLayoutEffect(() => {
@@ -200,7 +204,7 @@ React.memo(forwardRef<IChip, ChipProps>((props: ChipComponentProps, ref: React.R
     React.useCallback((e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => {
         if (!removable) {return; }
         e.stopPropagation();
-        const eventArgs: DeleteEvent = {
+        const eventArgs: ChipDeleteEvent = {
             event: e,
             data: props
         };
@@ -253,28 +257,30 @@ React.memo(forwardRef<IChip, ChipProps>((props: ChipComponentProps, ref: React.R
             return className;
         }
         return [
-            'sf-chip sf-control sf-lib sf-chip-list',
+            'sf-chip sf-control sf-chip-list',
             className,
-            disabled ? 'sf-disabled' : '',
+            disabled ? `sf-disabled sf-chip-${color ? 'variant' : 'invariant'}-disabled` : '',
             dir === 'rtl' ? 'sf-rtl' : '',
             avatar ? 'sf-chip-avatar-wrap' :
                 leadingIcon ? 'sf-chip-icon-wrap' : '',
             isFocused ? 'sf-focused' : '',
-            variant === 'outlined' ? 'sf-outline' : '',
-            color ? `sf-${color}` : ''
+            variant === 'Outlined' ? 'sf-outline' : '',
+            color ? `sf-${color.toLowerCase()}` : ''
         ].filter(Boolean).join(' ');
     }, [className, disabled, dir, avatar, leadingIcon, isFocused, variant, color]);
 
     const avatarClasses: string = React.useMemo(() => {
         return [
             'sf-chip-avatar',
+            IconClasses,
             typeof avatar === 'string' ? avatar : ''
         ].filter(Boolean).join(' ');
     }, [avatar]);
 
     const trailingIconClasses: string = React.useMemo(() => {
         return [
-            trailingIconUrl && !removable ? 'sf-trailing-icon-url' : 'sf-chip-delete',
+            trailingIconUrl && !removable ? 'sf-chip-trailing-url' : 'sf-chip-delete',
+            IconClasses,
             removable ? 'sf-dlt-btn' : (typeof trailingIcon === 'string' ? trailingIcon : '')
         ].filter(Boolean).join(' ');
     }, [trailingIconUrl, removable, trailingIcon]);
@@ -296,8 +302,8 @@ React.memo(forwardRef<IChip, ChipProps>((props: ChipComponentProps, ref: React.R
             {...otherProps}
         >
             {chipClassName.includes('sf-selectable') && (
-                <span className='sf-selectable-icon'>
-                    <SvgIcon width='12' height='12' d={ selectIcon }></SvgIcon>
+                <span className='sf-chip-selectable-icon sf-content-center'>
+                    <SvgIcon d={ selectIcon }></SvgIcon>
                 </span>
             )}
             {(avatar) && (
@@ -307,26 +313,26 @@ React.memo(forwardRef<IChip, ChipProps>((props: ChipComponentProps, ref: React.R
             )}
             {(leadingIcon && !avatar) && (
                 typeof leadingIcon === 'string' ?
-                    <span className={`sf-chip-icon ${leadingIcon}`}></span> :
-                    <span className="sf-chip-icon">{leadingIcon}</span>
+                    <span className={`sf-chip-icon ${leadingIcon} ${IconClasses}`}></span> :
+                    <span className={`sf-chip-icon ${IconClasses}`}>{leadingIcon}</span>
             )}
             {(leadingIconUrl && !leadingIcon && !avatar) && (
-                <span className="sf-chip-avatar sf-image-url">
-                    {leadingIconUrl && (<img className='sf-leading-image' src={leadingIconUrl} alt="leading image" />)}
+                <span className={`sf-chip-avatar sf-chip-image ${IconClasses}`}>
+                    {leadingIconUrl && (<img className='sf-chip-leading-image' src={leadingIconUrl} alt="leading image" />)}
                 </span>
             )}
-            {children ? (<div className="sf-chip-template">{children}</div>) : text ? (<span className="sf-chip-text">{text}</span>) : null}
+            {children ? (<div className="sf-chip-template sf-display-inline-flex">{children}</div>) : text ? (<span className="sf-chip-text sf-ellipsis">{text}</span>) : null}
             {(trailingIcon || trailingIconUrl || removable) && (
                 <span
                     className={trailingIconClasses}
                     onClick={handleSpanDelete}
                 >
                     {removable && (
-                        <SvgIcon width='12' height='12' d={closeIcon} ></SvgIcon>
+                        <SvgIcon d={closeIcon} ></SvgIcon>
                     )}
                     {!removable && typeof trailingIcon !== 'string' && trailingIcon}
                     {!removable && trailingIconUrl && (
-                        <img className='sf-trailing-image' src={trailingIconUrl} alt="trailing image"/>
+                        <img className='sf-chip-trailing-image' src={trailingIconUrl} alt="trailing image"/>
                     )}
                 </span>
             )}

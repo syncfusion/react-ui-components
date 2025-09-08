@@ -1,4 +1,4 @@
 import { createIcon } from '../icon';
 import { IconComponent } from '../icon';
 const path: React.ReactNode = <path d='M4 1C2.89543 1 2 1.89543 2 3V21C2 22.1046 2.89543 23 4 23H8V21H4V3L20 3V11H22V3C22 1.89543 21.1046 1 20 1H4ZM10.9142 18.5L14.4142 15L13 13.5858L8.08582 18.5L13 23.4142L14.4142 22L10.9142 18.5ZM15.5858 15L19.0858 18.5L15.5858 22L17 23.4142L21.9142 18.5L17 13.5858L15.5858 15ZM11.25 4.75H6.75V6.25H11.25V4.75ZM8.75 7.75H15.25V9.25H8.75V7.75ZM18.25 10.75H10.75V12.25H18.25V10.75Z' fillRule='evenodd' clipRule='evenodd' fill='currentcolor'/>;
-export const PreformatCode: IconComponent  = createIcon(path);
+export const PreformatCodeIcon: IconComponent  = createIcon(path);

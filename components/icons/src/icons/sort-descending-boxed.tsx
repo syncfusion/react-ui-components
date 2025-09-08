@@ -1,0 +1,4 @@
+import { createIcon } from '../icon';
+import { IconComponent } from '../icon';
+const path: React.ReactNode = <path d='M0 2C0 0.895431 0.89543 0 2 0H22C23.1046 0 24 0.89543 24 2V22C24 23.1046 23.1046 24 22 24H2C0.895431 24 0 23.1046 0 22V2ZM22 2L2 2V22H22V2ZM17 6V14.5858L18.5 13.0858L19.9142 14.5L16 18.4142L12.0858 14.5L13.5 13.0858L15 14.5858V6H17ZM7.89043 17.512L10.8501 13.8123C11.112 13.485 10.8789 13 10.4597 13H4.54031C4.12105 13 3.88797 13.485 4.14987 13.8123L7.10956 17.512C7.30972 17.7622 7.69027 17.7622 7.89043 17.512Z' fillRule='evenodd' clipRule='evenodd' fill='currentcolor'/>;
+export const SortDescendingBoxedIcon: IconComponent  = createIcon(path);

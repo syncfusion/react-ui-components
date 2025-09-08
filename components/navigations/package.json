@@ -1,7 +1,7 @@
 {
   "name": "@syncfusion/react-navigations",
-  "version": "30.1.37",
-  "description": "A package of Pure React navigation components such as Toolbar and Context-menu which is used to navigate from one page to another",
+  "version": "31.1.17",
+  "description": "A package of React navigation components such as Toolbar and Context-menu which is used to navigate from one page to another",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
   "keywords": [
@@ -21,11 +21,11 @@
   "module": "./index.js",
   "readme": "README.md",
   "dependencies": {
-    "@syncfusion/react-base": "~30.1.37",
-    "@syncfusion/react-icons": "~30.1.37",
-    "@syncfusion/react-buttons": "~30.1.37",
-    "@syncfusion/react-inputs": "~30.1.37",
-    "@syncfusion/react-popups": "~30.1.37"
+    "@syncfusion/react-base": "~31.1.17",
+    "@syncfusion/react-icons": "~31.1.17",
+    "@syncfusion/react-buttons": "~31.1.17",
+    "@syncfusion/react-inputs": "~31.1.17",
+    "@syncfusion/react-popups": "~31.1.17"
   },
   "devDependencies": {
     "gulp": "4.0.2",

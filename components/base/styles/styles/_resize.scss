@@ -1,0 +1,100 @@
+@include export-module('resize') {
+  .sf-resize {
+    position: absolute;
+  }
+
+  .sf-resize-x {
+    resize: horizontal;
+    overflow: auto;
+  }
+
+  .sf-resize-y {
+    resize: vertical;
+    overflow: auto;
+  }
+
+  .sf-resize-xy {
+    resize: both;
+    overflow: auto;
+  }
+
+  .sf-resize-none {
+    resize: none;
+  }
+
+  // Resize handles for custom resizing
+  .sf-resize-handle {
+    position: absolute;
+  }
+
+  // Cardinal directions
+  .sf-resize-n {
+    cursor: n-resize;
+  }
+
+  .sf-resize-e {
+    cursor: e-resize;
+  }
+
+  .sf-resize-s {
+    cursor: s-resize;
+  }
+
+  .sf-resize-w {
+    cursor: w-resize;
+  }
+
+  // Corner handles
+  .sf-resize-nw {
+    cursor: nw-resize;
+  }
+
+  .sf-resize-ne {
+    cursor: ne-resize;
+  }
+
+  .sf-resize-se {
+    cursor: se-resize;
+  }
+
+  .sf-resize-sw {
+    cursor: sw-resize;
+  }
+
+  // Bidirectional resize cursors
+  .sf-resize-ns {
+    cursor: ns-resize;
+  }
+
+  .sf-resize-ew {
+    cursor: ew-resize;
+  }
+
+  .sf-resize-nesw {
+    cursor: nesw-resize;
+  }
+
+  .sf-resize-nwse {
+    cursor: nwse-resize;
+  }
+
+  // General resize cursor
+  .sf-resize-all {
+    cursor: move;
+  }
+
+  // Column resize
+  .sf-resize-col {
+    cursor: col-resize;
+  }
+
+  // Row resize
+  .sf-resize-row {
+    cursor: row-resize;
+  }
+
+  // Not allowed to resize
+  .sf-resize-not-allowed {
+    cursor: not-allowed;
+  }
+}

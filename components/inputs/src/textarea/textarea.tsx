@@ -1,9 +1,21 @@
 import * as React from 'react';
-import { forwardRef, Ref, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { CLASS_NAMES, FloatLabelType, renderClearButton, renderFloatLabelElement } from '../common/inputbase';
-import { getUniqueID, IL10n, L10n, preRender, useProviderContext } from '@syncfusion/react-base';
+import { forwardRef, ReactNode, Ref, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { CLASS_NAMES, LabelMode, renderClearButton, renderFloatLabelElement } from '../common/inputbase';
+import { getUniqueID, preRender, useProviderContext } from '@syncfusion/react-base';
 import { Variant } from '../textbox/textbox';
+export { LabelMode };
 
+export interface TextAreaChangeEvent {
+    /**
+     * Specifies the initial event object received from the textarea element.
+     */
+    event?: React.ChangeEvent<HTMLTextAreaElement>;
+
+    /**
+     * Specifies the current value of the TextArea.
+     */
+    value?: string;
+}
 
 /**
  * Constant for horizontal resize mode
@@ -36,7 +48,7 @@ const MULTILINE: string = 'sf-multi-line-input';
 const AUTOWIDTH: string = 'sf-auto-width';
 
 /**
- * Defines the available resize modes for components that support resizing.
+ * Specifies the available resize modes for components that support resizing.
  *
  * @enum {string}
  */
@@ -65,74 +77,73 @@ export enum ResizeMode {
 
 export interface TextAreaProps {
     /**
-     * Sets the value of the component. When provided, the component will be controlled.
+     * Specifies the value of the component. When provided, the component will be controlled.
      *
      * @default -
      */
     value?: string;
 
     /**
-     * Sets the default value of the component. Used for uncontrolled mode.
+     * Specifies the default value of the component. Used for uncontrolled mode.
      *
      * @default -
      */
     defaultValue?: string;
 
     /**
-     * Defines the floating label type for the component.
+     * Specifies the floating label type for the component.
      *
      * @default 'Never'
      */
-    labelMode?: FloatLabelType;
+    labelMode?: LabelMode;
 
     /**
-     * Sets the placeholder text for the component.
+     * Specifies the placeholder text for the component.
      *
      * @default -
      */
     placeholder?: string;
 
     /**
-     * Resize mode for the textarea
+     * Specifies the resize mode for the textarea
      *
-     * @default 'Both'
+     * @default ResizeMode.Both
      */
     resizeMode?: ResizeMode;
 
     /**
-     * Number of columns for the textarea
+     * Specifies the number of columns for the textarea
      *
      * @default -
      */
     cols?: number;
 
     /**
-     * Determines whether to show a clear button within the input field.
+     * Specifies whether to show a clear button within the input field.
      * When enabled, a clear button (×) appears when the field has a value,
      * allowing users to quickly clear the input with a single click.
      *
      * @default false
      */
-    clearButton?: boolean;
+    clearButton?: ReactNode;
 
     /**
-     * Number of rows for the textarea
+     * Specifies the number of rows for the textarea
      *
      * @default 2
      */
     rows?: number;
 
     /**
-     * Callback fired when the input value is changed.
+     * Specifies the Callback that fired when the input value is changed.
      *
      * @event onChange
-     * @param {React.ChangeEvent<HTMLTextAreaElement>} event - The change event object containing the new value.
      * @returns {void}
      */
-    onChange?: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
+    onChange?: (event: TextAreaChangeEvent) => void;
 
     /**
-     * The visual style variant of the component.
+     * Specifies the visual style variant of the component.
      *
      * @default Variant.Standard
      */
@@ -141,7 +152,7 @@ export interface TextAreaProps {
 
 export interface ITextArea extends TextAreaProps {
     /**
-     * This is TextArea component element.
+     * Specifies the TextArea component element.
      *
      * @private
      * @default null
@@ -156,6 +167,8 @@ type ITextAreaProps = TextAreaProps & Omit<React.InputHTMLAttributes<HTMLTextAre
  * Supports both controlled and uncontrolled modes based on presence of value or defaultValue prop.
  *
  * ```typescript
+ * import { TextArea } from '@syncfusion/react-inputs';
+ *
  * <TextArea defaultValue="Initial text" placeholder="Enter text" rows={5} cols={40} />
  * ```
  */
@@ -225,15 +238,10 @@ forwardRef<ITextArea, ITextAreaProps>((props: ITextAreaProps, ref: Ref<ITextArea
             isFocused ? CLASS_NAMES.TEXTBOX_FOCUS : '',
             ((displayValue) !== '') ? CLASS_NAMES.VALIDINPUT : '',
             variant && variant.toLowerCase() !== 'standard'  ? variant.toLowerCase() === 'outlined' ? 'sf-outline' : `sf-${variant.toLowerCase()}` : '',
-            AUTOWIDTH
+            AUTOWIDTH,
+            'sf-medium'
         );
     };
-
-    const setPlaceholder: string = useMemo(() => {
-        const l10n: IL10n = L10n('textarea', { placeholder: placeholder }, locale);
-        l10n.setLocale(locale);
-        return l10n.getConstant('placeholder');
-    }, [locale, placeholder]);
 
     const classNames: (...classes: string[]) => string = (...classes: string[]) => {
         return classes.filter(Boolean).join(' ');
@@ -253,7 +261,7 @@ forwardRef<ITextArea, ITextAreaProps>((props: ITextAreaProps, ref: Ref<ITextArea
             setUncontrolledValue(newValue);
         }
         if (onChange) {
-            onChange(event as React.ChangeEvent<HTMLTextAreaElement>);
+            onChange({ event, value: newValue });
         }
     }, [isControlled, onChange, uncontrolledValue, value]);
 
@@ -274,14 +282,15 @@ forwardRef<ITextArea, ITextAreaProps>((props: ITextAreaProps, ref: Ref<ITextArea
     }, [onBlur]);
 
     const clearValue: () => void = useCallback(() => {
+        const newValue: string = '';
         if (!isControlled) {
-            setUncontrolledValue('');
+            setUncontrolledValue(newValue);
         }
 
         if (onChange) {
-            onChange(event as unknown as React.ChangeEvent<HTMLTextAreaElement>);
+            onChange({ value: newValue, event: undefined });
         }
-    }, [onChange, isControlled, uncontrolledValue, value]);
+    }, [onChange, isControlled]);
 
     const getCurrentResizeClass: (resizeMode: string) => string = (resizeMode: string) => {
         return resizeMode === 'None' ? RESIZE_NONE : (resizeMode === 'Both' ? RESIZE_XY : resizeMode === 'Horizontal' ? RESIZE_X : RESIZE_Y );
@@ -298,7 +307,7 @@ forwardRef<ITextArea, ITextAreaProps>((props: ITextAreaProps, ref: Ref<ITextArea
                 onFocus={handleFocus}
                 onBlur={handleBlur}
                 readOnly={readOnly}
-                placeholder={labelMode === 'Never' ? setPlaceholder : undefined}
+                placeholder={labelMode === 'Never' ? placeholder : undefined}
                 disabled={disabled}
                 maxLength={maxLength}
                 cols={cols ?? undefined}
@@ -316,12 +325,12 @@ forwardRef<ITextArea, ITextAreaProps>((props: ITextAreaProps, ref: Ref<ITextArea
                 labelMode,
                 isFocused || (displayValue) !== '',
                 (displayValue as string),
-                setPlaceholder,
+                placeholder,
                 id
             )}
             {clearButton && renderClearButton(
                 (displayValue) ? (displayValue).toString() : '',
-                clearValue
+                clearValue, clearButton, 'textarea', locale
             )}
         </div>
     );

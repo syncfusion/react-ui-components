@@ -3,7 +3,7 @@ import {
     RefObject, MouseEvent, Ref, useCallback, RefAttributes, KeyboardEvent,
     ForwardRefExoticComponent, UIEvent, FC
 } from 'react';
-import { ChevronLeft, ChevronRight } from '@syncfusion/react-icons';
+import { ChevronLeftIcon, ChevronRightIcon } from '@syncfusion/react-icons';
 import {
     Touch, TouchEventArgs, getUniqueID, Browser, ITouch, SwipeEventArgs, ScrollEventArgs, useProviderContext
 } from '@syncfusion/react-base';
@@ -13,10 +13,10 @@ const CLS_RTL: string = 'sf-rtl';
 const CLS_DISABLE: string = 'sf-overlay';
 const CLS_HSCROLLBAR: string = 'sf-hscroll-bar';
 const CLS_HSCROLLCON: string = 'sf-hscroll-content';
-const CLS_NAVARROW: string = 'sf-nav-arrow';
+const CLS_NAVARROW: string = 'sf-hscroll-arrow';
 const CLS_NAVRIGHTARROW: string = 'sf-nav-right-arrow';
 const CLS_NAVLEFTARROW: string = 'sf-nav-left-arrow';
-const CLS_HSCROLLNAV: string = 'sf-scroll-nav';
+const CLS_HSCROLLNAV: string = 'sf-hscroll-nav';
 const CLS_HSCROLLNAVRIGHT: string = 'sf-scroll-right-nav';
 const CLS_HSCROLLNAVLEFT: string = 'sf-scroll-left-nav';
 const CLS_DEVICE: string = 'sf-scroll-device';
@@ -367,7 +367,7 @@ IHScroll, HScrollProps & HTMLAttributes<HTMLDivElement>
             />
             <div
                 ref={scrollEleRef}
-                className={CLS_HSCROLLBAR}
+                className={`${CLS_HSCROLLBAR} sf-display-flex`}
                 style={{ overflowX: 'hidden' }}
                 onScroll={scrollHandler}
             >
@@ -429,7 +429,7 @@ const NavIcon: FC<NavIconProps> = memo(({
             onClick={onClick}
         >
             <div className={arrowClass}>
-                {isRight ? <ChevronRight /> : <ChevronLeft />}
+                {isRight ? <ChevronRightIcon/> : <ChevronLeftIcon/>}
             </div>
         </div>
     );

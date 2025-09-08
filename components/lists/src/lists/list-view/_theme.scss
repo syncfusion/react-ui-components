@@ -1,0 +1,45 @@
+﻿@mixin list-color($bg-color, $color, $border) {
+  background-color: $bg-color;
+  color: $color;
+  border-color: $border;
+}
+
+@include export-module('listview-theme') {
+  .sf-listview {
+    border-color: $listview-line-color;
+    font-family: $listview-font-family;
+    font-size: $listview-font-size;
+
+    @at-root {
+      & .sf-list-header {
+        @include list-color($listview-header-bg, $listview-header-text-color, $listview-header-border);
+        font-size: $listview-header-font-size;
+      }
+
+      & .sf-icons:not(.sf-primary .sf-btn-icon, .sf-check) {
+        color: $listview-icon-color;
+      }
+    }
+
+    &.sf-list-template {
+      .sf-list-wrapper {
+        &.sf-list-multi-line {
+
+          .sf-list-item-header {
+            color: $listview-template-multiline-header-color;
+          }
+
+          .sf-list-content {
+            color: $listview-template-multiline-content-color;
+          }
+        }
+
+        &.sf-list-avatar {
+          .sf-avatar {
+            background-color: $listview-template-avatar-background;
+          }
+        }
+      }
+    }
+  }
+}

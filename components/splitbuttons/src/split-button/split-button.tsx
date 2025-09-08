@@ -1,92 +1,41 @@
 import { useState, useRef, forwardRef, useImperativeHandle, Ref, useEffect, ButtonHTMLAttributes } from 'react';
-import { Button, IconPosition, Color, Size, Variant, IButton } from '@syncfusion/react-buttons';
+import { Button, Position, Color, Size, Variant, IButton } from '@syncfusion/react-buttons';
 import { preRender, useProviderContext } from '@syncfusion/react-base';
-import { DropDownButton, IDropDownButton, SelectMenuEvent } from '../dropdown-button/dropdown-button';
+import { DropDownButton, IDropDownButton, ButtonSelectEvent, ItemModel } from '../dropdown-button/dropdown-button';
 import * as React from 'react';
 
 /**
- * ItemModel interface defines properties for each dropdown item.
- */
-export interface ItemModel {
-    /**
-     * Defines class/multiple classes separated by a space for the item that is used to include an icon.
-     * Action item can include font icon and sprite image.
-     *
-     * @default -
-     */
-    icon?: string | React.ReactNode;
-
-    /**
-     * Specifies the id for item.
-     *
-     * @default -
-     */
-    id?: string;
-
-    /**
-     * Specifies separator between the items. Separator are horizontal lines used to group action items.
-     *
-     * @default false
-     */
-    hasSeparator?: boolean;
-
-    /**
-     * Specifies text for item.
-     *
-     * @default -
-     */
-    text?: string;
-
-    /**
-     * Specifies url for item that creates the anchor link to navigate to the url provided.
-     *
-     * @default -
-     */
-    url?: string;
-
-    /**
-     * Used to enable or disable the item.
-     *
-     * @default false
-     */
-    disabled?: boolean;
-}
-
-/**
- * SplitButtonProps interface defines properties for SplitButton component.
+ * Split Button properties used to customize its behavior and appearance.
  */
 export interface SplitButtonProps {
 
     /**
-     * Defines an icon for the button, which can either be a CSS class name for custom styling or an SVG element for rendering.
+     * Specifies an icon for the button, which can be defined using a CSS class name for custom styling or an SVG element for rendering.
      *
      * @default -
      */
-    icon?: string | React.ReactNode;
+    icon?: React.ReactNode;
 
     /**
-     * Specifies the position of the icon relative to the dropdownbutton text. Options include placing the icon at the left, right, top, or bottom of the button content.
+     * Specifies the position of the icon relative to the Dropdown Button text. Options include placing the icon at the left, right, top, or bottom of the button content.
      *
      * @default 'Left'
      */
-    iconPosition?: IconPosition;
+    iconPosition?: Position;
 
     /**
-     * Specifies action items with its properties which will be rendered as SplitButton secondary button popup.
+     * Specifies action items with its properties which will be rendered as Split Button secondary button popup.
      *
      * @default []
      */
     items?: ItemModel[];
 
     /**
-     * This property defines the width of the dropdown popup for the DropDownButton component.
-     *
-     * @property {string | number} popupWidth - A string or number representing the width of the dropdown.
-     * It can be a valid CSS unit such as `px`, `%`, or `rem`, or a number interpreted as pixels.
-     * @default "auto"
-     * @remarks
-     * The `popupWidth` property allows developers to control the width of the dropdown popup, ensuring it fits their design requirements.
+     * This property defines the width of the dropdown popup for the Dropdown Button component.
+     * Set the width as a string or number using valid CSS units like `px`, `%`, or `rem`, or as pixels.
      * The default value of `auto` allows the popup to adjust based on the content length, but a specific width can be provided for more precise control.
+     *
+     * @default auto
      */
     popupWidth?: string | number;
 
@@ -98,7 +47,7 @@ export interface SplitButtonProps {
     lazyOpen?: boolean;
 
     /**
-     * Allows the specification of the target element for the DropDownButton's popup content.
+     * Specifies the target element for the Dropdown Button's popup content.
      *
      * @default -
      */
@@ -107,60 +56,60 @@ export interface SplitButtonProps {
     /**
      * Provides a template for displaying content within the dropdown items.
      *
-     * @default null
+     * @default -
      */
-    itemTemplate?: string | Function;
+    itemTemplate?: (item: ItemModel) => React.ReactNode;
 
     /**
-     * Specifies the color style of the SplitButton. Options include 'Primary', 'Secondary', 'Warning', 'Success', 'Danger' and 'Info'.
+     * Specifies the color style of the Split Button. Options include 'Primary', 'Secondary', 'Warning', 'Success', 'Error' and 'Info'.
      *
      * @default Color.Primary
      */
     color?: Color;
 
     /**
-     * Specifies the variant style of the SplitButton. Options include 'Outlined', 'Filled' and 'Flat'.
+     * Specifies the variant style of the Split Button. Options include 'Outlined', 'Filled' and 'Standard'.
      *
      * @default Variant.Filled
      */
     variant?: Variant;
 
     /**
-     * Specifies the size style of the SplitButton. Options include 'Small', 'Medium' and 'Large'.
+     * Specifies the size style of the Split Button. Options include 'Small', 'Medium' and 'Large'.
      *
      * @default Size.Medium
      */
     size?: Size;
 
     /**
-     * Event triggered while closing the SplitButton popup.
+     * Event triggered while closing the Split Button popup.
      *
-     * @event close
+     * @event onClose
      */
-    onClose?: (event?: React.MouseEvent | MouseEvent) => void;
+    onClose?: (event?: React.MouseEvent) => void;
 
     /**
-     * Event triggered while opening the SplitButton popup.
+     * Event triggered while opening the Split Button popup.
      *
-     * @event open
+     * @event onOpen
      */
-    onOpen?: (event?: React.MouseEvent | MouseEvent) => void;
+    onOpen?: (event?: React.MouseEvent) => void;
 
     /**
-     * Event triggered while selecting an action item in SplitButton popup.
+     * Event triggered while selecting an action item in Split Button popup.
      *
-     * @event select
+     * @event onSelect
      */
-    onSelect?: (args: SelectMenuEvent) => void;
+    onSelect?: (event: ButtonSelectEvent) => void;
 }
 
 
 /**
- * Interface representing the Button component methods.
+ * Represents the methods of the Split Button component.
  */
 export interface ISplitButton extends SplitButtonProps {
     /**
-     * This is Splitbutton component element.
+     * This is Split Button component element.
      *
      * @private
      * @default null
@@ -168,7 +117,7 @@ export interface ISplitButton extends SplitButtonProps {
     element?: HTMLElement | null;
 
     /**
-     * To open/close SplitButton popup based on current state of the SplitButton.
+     * To open/close Split Button popup based on current state of the Split Button.
      *
      * @public
      * @returns {void}
@@ -179,10 +128,13 @@ export interface ISplitButton extends SplitButtonProps {
 type ISplitButtonProps = ISplitButton & ButtonHTMLAttributes<HTMLButtonElement>;
 
 /**
- * The SplitButton component provides a combination of a default button action and a dropdown menu, enabling users to quickly access additional options or actions in a compact interface.
+ * The Split Button component provides a combination of a default button action and a Dropdown Button, enabling users to quickly access additional options or actions in a compact interface.
  *
  * ```typescript
- * <SplitButton items={menuItems} icon={profileIcon} iconPosition={IconPosition.Right}>Default Action</SplitButton>
+ * import { SplitButton } from "@syncfusion/react-splitbuttons";
+ *
+ * const menuItems = [{ text: 'Cut' }, { text: 'Copy' }, { text: 'Paste' }];
+ * <SplitButton items={menuItems}>Default Action</SplitButton>
  * ```
  */
 export const SplitButton: React.ForwardRefExoticComponent<ISplitButtonProps & React.RefAttributes<ISplitButton>> =
@@ -190,7 +142,7 @@ export const SplitButton: React.ForwardRefExoticComponent<ISplitButtonProps & Re
         const {
             className = '',
             icon,
-            iconPosition = IconPosition.Left,
+            iconPosition = Position.Left,
             items = [],
             popupWidth = 'auto',
             disabled = false,
@@ -200,7 +152,7 @@ export const SplitButton: React.ForwardRefExoticComponent<ISplitButtonProps & Re
             itemTemplate,
             color,
             variant,
-            size,
+            size = Size.Medium,
             onOpen,
             onClose,
             onSelect,
@@ -248,6 +200,7 @@ export const SplitButton: React.ForwardRefExoticComponent<ISplitButtonProps & Re
 
         const wrapperClassName: string = [
             'sf-split-btn-wrapper',
+            size && `sf-split-btn-${size.toLowerCase().substring(0, 2)}`,
             variant ? `sf-${variant.toLowerCase()}` : '',
             className,
             dir === 'rtl' ? 'sf-rtl' : ''
@@ -258,7 +211,7 @@ export const SplitButton: React.ForwardRefExoticComponent<ISplitButtonProps & Re
                 <div ref={wrapperRef} className={wrapperClassName}>
                     <Button
                         ref={buttonRef}
-                        className={`${className} ${(dir === 'rtl') ? 'sf-rtl' : ''} sf-control sf-lib sf-btn sf-split-btn sf-keyboard`}
+                        className={`${className} ${(dir === 'rtl') ? 'sf-rtl' : ''} sf-control sf-btn sf-split-btn`}
                         icon={icon}
                         color={color}
                         variant={variant}

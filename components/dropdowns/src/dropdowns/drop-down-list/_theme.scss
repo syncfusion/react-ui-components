@@ -1,0 +1,14 @@
+@include export-module('dropdownlist-theme') {
+  #{&}.sf-popup {
+    border-color: $ddl-default-border-color;
+  }
+
+  .sf-float-input.sf-input-group.sf-ddl.sf-control.sf-icon-anim > .sf-float-text,
+  .sf-float-input.sf-input-focus.sf-input-group.sf-ddl.sf-control.sf-keyboard > .sf-float-text {
+    color: $ddl-active-font-color;
+  }
+
+  .sf-input-group.sf-control-wrapper.sf-ddl.sf-error {
+    border-bottom-color: $ddl-error-border-color;
+  }
+}

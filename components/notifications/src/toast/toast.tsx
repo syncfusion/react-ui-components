@@ -1,23 +1,58 @@
 import { useState, useEffect, useCallback, forwardRef, useImperativeHandle, createContext, useContext, useRef } from 'react';
-import { Button } from '@syncfusion/react-buttons';
 import { getUniqueID, IAnimation, preRender, SvgIcon, useProviderContext } from '@syncfusion/react-base';
-import { AnimationOptions, Animation } from '@syncfusion/react-base';
-import { Severity } from '../message';
+import { AnimationOptions, Animation, Severity } from '@syncfusion/react-base';
 
-export interface ToastAnimationOptions {
-    /**
-     * Specifies the animation that should happen when toast opens.
-     */
-    show?: AnimationOptions;
+/**
+ * Specifies animation effects that are applicable for Toast.
+ */
+export type Effect = 'FadeIn' | 'FadeOut' | 'FadeZoomIn' | 'FadeZoomOut' | 'FlipLeftDownIn' | 'FlipLeftDownOut' | 'FlipLeftUpIn' | 'FlipLeftUpOut' | 'FlipRightDownIn' | 'FlipRightDownOut' | 'FlipRightUpIn' | 'FlipRightUpOut' | 'FlipXDownIn' | 'FlipXDownOut' | 'FlipXUpIn' | 'FlipXUpOut' | 'FlipYLeftIn' | 'FlipYLeftOut' | 'FlipYRightIn' | 'FlipYRightOut' | 'SlideBottomIn' | 'SlideBottomOut' | 'SlideDown' | 'SlideLeft' | 'SlideLeftIn' | 'SlideLeftOut' | 'SlideRight' | 'SlideRightIn' | 'SlideRightOut' | 'SlideTopIn' | 'SlideTopOut' | 'SlideUp' | 'ZoomIn' | 'ZoomOut';
 
+/**
+ * Specifies animation props for both show and hide actions of the Toast.
+ */
+export interface ToastAnimationProps {
     /**
-     * Specifies the animation that should happen when toast closes.
+     * Specifies the animation effect on the Toast, show and hide actions.
+     *
+     * @default 'FadeIn'
      */
-    hide?: AnimationOptions;
+    name?: Effect;
+    /**
+     * Specifies the duration of the animation that is completed per animation cycle.
+     *
+     * @default 400
+     */
+    duration?: number;
+    /**
+     * Specifies the animation timing function.
+     *
+     * @default 'ease'
+     */
+    timingFunction?: string;
+
 }
 
 /**
- * Defines the horizontal positioning options for components like Toasts, Popups, and Dialogs.
+ * Specifies the animation configuration for Toast show and hide animations.
+ */
+export interface ToastAnimationOptions {
+    /**
+     * Specifies the animation that should happen when Toast opens.
+     *
+     * @default { name: 'FadeIn', duration: 400, timingFunction: 'ease-out' }
+     */
+    show?: ToastAnimationProps;
+
+    /**
+     * Specifies the animation that should happen when Toast closes.
+     *
+     * @default { name: 'FadeOut', duration: 400, timingFunction: 'ease-out' }
+     */
+    hide?: ToastAnimationProps;
+}
+
+/**
+ * Specifies the horizontal positioning options for components like Toasts, Popups, and Dialogs.
  */
 export enum PositionX {
     /**
@@ -37,7 +72,7 @@ export enum PositionX {
 }
 
 /**
- * Defines the vertical positioning options for Toasts component.
+ * Specifies the vertical positioning options for Toast component.
  */
 export enum PositionY {
     /**
@@ -52,31 +87,31 @@ export enum PositionY {
 }
 
 /**
- * Represents the positional axis for UI components like Toasts.
+ * Specifies the positional axis for UI components like Toast.
  * This interface defines configurable positioning options along the X and Y axes.
  */
 export interface PositionAxis {
     /**
      * Specifies position on the X-Axis, accepts string or number.
      *
-     * @default 'left'
+     * @default 'Left'
      */
-    X?: PositionX | string;
+    xAxis?: PositionX | string;
 
     /**
      * Specifies position on the Y-Axis, accepts string or number.
      *
-     * @default 'top'
+     * @default 'Top'
      */
-    Y?: PositionY | string;
+    yAxis?: PositionY | string;
 }
 
 /**
- * Interface defining the props for the Toast component.
+ * Specifies the props for the Toast component.
  */
 export interface ToastProps {
     /**
-     * Specifies the width of the toast component.
+     * Specifies the width of the Toast component.
      * Can be set to a pixel value or percentage as a string,
      * or a number representing pixels.
      *
@@ -85,7 +120,7 @@ export interface ToastProps {
     width?: string | number;
 
     /**
-     * Specifies the height of the toast component.
+     * Specifies the height of the Toast component.
      * Can be set to a pixel value or percentage as a string,
      * or a number representing pixels.
      *
@@ -94,16 +129,16 @@ export interface ToastProps {
     height?: string | number;
 
     /**
-     * The title displayed at the top of the toast.
+     * Specifies the title displayed at the top of the Toast.
      * Can be a simple string or any valid React node.
      * Useful for providing a brief header or context to the notification content.
      *
      * @default -
      */
-    title?: string | React.ReactNode;
+    title?: React.ReactNode;
 
     /**
-     * The icon displayed alongside the toast content.
+     * Specifies the icon displayed alongside the Toast content.
      * Can be any valid React node, typically an SVG or image.
      * Helps to visually reinforce the message type (e.g., success, error).
      *
@@ -112,7 +147,7 @@ export interface ToastProps {
     icon?: React.ReactNode;
 
     /**
-     * Determines the stacking order of items in a collection or notification system.
+     * Specifies the stacking order of items in a collection or notification system.
      *
      * When set to true, newer items are displayed at the top of the container,
      * with subsequent items appearing below in descending order of creation time.
@@ -126,7 +161,7 @@ export interface ToastProps {
     newestOnTop?: boolean;
 
     /**
-     * Determines whether to display a progress bar that indicates the remaining time
+     * Specifies whether to display a progress bar that indicates the remaining time
      * before the component (typically a Toast or notification) automatically dismisses.
      *
      * The progress bar provides visual feedback about the time remaining before
@@ -138,7 +173,7 @@ export interface ToastProps {
     progressBar?: boolean;
 
     /**
-     * Determines whether to display a close button that allows users to manually
+     * Specifies whether to display a close button that allows users to manually
      * dismiss the component (typically a Toast, Dialog, or notification).
      *
      * When enabled, this gives users control over when to remove the notification
@@ -150,61 +185,42 @@ export interface ToastProps {
     closeButton?: boolean;
 
     /**
-     * Time in milliseconds before the toast auto-closes
+     * Specifies the time in milliseconds before the Toast auto-closes.
      *
      * @default 5000
      */
     timeout?: number;
 
     /**
-     * Direction of the progress bar
+     * Specifies the direction of the progress bar.
      *
      * @default 'Rtl'
      */
     progressDirection?: 'Rtl' | 'Ltr';
 
     /**
-     * Position of the toast on the screen
+     * Specifies the position of the Toast on the screen.
      *
-     * @default { X: PositionX.Right, Y: PositionY.Bottom }
+     * @default { xAxis: PositionX.Right, yAxis: PositionY.Bottom }
      */
     position?: PositionAxis;
 
     /**
-     * An array of button configurations that will be rendered within the component.
+     * Specifies the action elements rendered at the bottom of the Toast component.
      *
-     * Each button consists of a model object containing button properties (such as text,
-     * icon, disabled state, etc.) and a click handler function that will be executed
-     * when the button is clicked.
-     *
-     * @type {Array<{model: any; click: () => void}>}
-     * @optional
-     *
-     * @example
-     * buttons={[
-     *   {
-     *     model: { content: 'OK', isPrimary: true },
-     *     click: () => handleOkClick()
-     *   },
-     *   {
-     *     model: { content: 'Cancel' },
-     *     click: () => handleCancelClick()
-     *   }
-     * ]}
-     *
-     * @default []
+     * @default -
      */
-    buttons?: Array<{ model: Record<string, unknown>; click: () => void }>;
+    actions?: React.ReactNode;
 
     /**
-     * Target element to render the toast
+     * Specifies the target element to render the Toast.
      *
      * @default 'body'
      */
     target?: string;
 
     /**
-     * Triggered when the toast is opened and becomes visible to the user.
+     * Specifies the callback that triggered when the Toast is opened and becomes visible to the user.
      *
      * @event onOpen
      * @default null
@@ -212,7 +228,7 @@ export interface ToastProps {
     onOpen?: () => void;
 
     /**
-     * Triggered when the toast is closed and removed from view.
+     * Specifies the callback that triggered when the Toast is closed and removed from view.
      *
      * @event onClose
      * @default null
@@ -220,18 +236,18 @@ export interface ToastProps {
     onClose?: () => void;
 
     /**
-     * Triggered when the user clicks anywhere within the toast.
+     * Specifies the callback that triggered when the user clicks anywhere within the Toast.
      *
      * @event onClick
      * @default null
      */
-    onClick?: (args: React.MouseEvent<HTMLDivElement, MouseEvent>) => void;
+    onClick?: (event: React.MouseEvent) => void;
 
     /**
-     * Specifies the animations that should happen when toast opens and closes.
+     * Specifies the animations that should happen when Toast opens and closes.
      *
-     * @default { show: { name: 'FadeIn', duration: 0, timingFunction: 'ease-out' },
-     *            hide: { name: 'FadeOut', duration: 0, timingFunction: 'ease-out' } }
+     * @default { show: { name: 'FadeIn', duration: 400, timingFunction: 'ease-out' },
+     *            hide: { name: 'FadeOut', duration: 400, timingFunction: 'ease-out' } }
      */
     animation?: ToastAnimationOptions;
 
@@ -243,14 +259,14 @@ export interface ToastProps {
     extendedTimeout?: number;
 
     /**
-     * Specifies the severity of the toast content, which is used to define the appearance (icons and colors) of the toast. The available severity messages are Success, Info, Warning, and Error.
+     * Specifies the severity of the Toast content, which is used to define the appearance (icons and colors) of the Toast. The available severity messages are Success, Info, Warning, and Error.
      *
      * @default Severity.Normal
      */
     severity?: Severity;
 
     /**
-     * Controls whether the component is in open/expanded state.
+     * Specifies whether the component is in open/expanded state.
      *
      * When true, the component will be displayed in its open state.
      * When false, the component will be in its closed state.
@@ -262,33 +278,33 @@ export interface ToastProps {
     open?: boolean;
 
     /**
-     * The content to be displayed within the component.
+     * Specifies the content to be displayed within the component.
      * Can be a string of text or any valid React node (elements, components, fragments, etc.).
      * If not provided, the component will render without content.
      *
      * @default -
      */
-    content?: string | React.ReactNode;
+    content?: React.ReactNode;
 }
 
 /**
- * Ref object for the Toast component
+ * Specifies the interface representing the Toast component.
  */
 export interface IToast extends ToastProps{
     /**
-     * Shows a new toast
+     * Shows a new Toast.
      *
-     * @param content - The content to be displayed in the toast
-     * @returns The id of the newly created toast
+     * @param content - The content to be displayed in the Toast.
+     * @returns The id of the newly created Toast.
      */
-    show: (content: React.ReactNode) => string;
+    show(content: React.ReactNode): string;
 
     /**
-     * Hides a specific toast or the oldest one if no id is provided
+     * Hides a specific Toast or the oldest one if no id is provided.
      *
-     * @param toastId - The id of the toast to hide (optional)
+     * @param toastId - The id of the Toast to hide (optional).
      */
-    hide: (toastId?: string) => void;
+    hide(toastId?: string): void;
 }
 let toastCounter: number = 0;
 
@@ -302,7 +318,9 @@ type IToastProps = ToastProps & Omit<React.InputHTMLAttributes<HTMLDivElement>, 
  * a configurable timeout period.
  *
  * ```typescript
- * <Toast content="Operation completed successfully" open={true} position={{ X: 'Right', Y: 'Bottom' }} />
+ * import { Toast } from "@syncfusion/react-notifications";
+ *
+ * <Toast content="Operation completed successfully" open={true} position={{ xAxis: 'Right', yAxis: 'Bottom' }} />
  *```
  */
 export const Toast: React.ForwardRefExoticComponent<IToastProps & React.RefAttributes<IToast>> =
@@ -321,18 +339,18 @@ export const Toast: React.ForwardRefExoticComponent<IToastProps & React.RefAttri
          progressBar = false,
          timeout = 5000,
          progressDirection = 'Rtl',
-         position = { X: PositionX.Left, Y: PositionY.Top },
-         buttons = [],
+         position = { xAxis: PositionX.Left, yAxis: PositionY.Top },
+         actions,
          target = 'body',
          animation = {
              show: {
                  name: 'FadeIn',
-                 duration: 0,
+                 duration: 400,
                  timingFunction: 'ease-out'
              },
              hide: {
                  name: 'FadeOut',
-                 duration: 0,
+                 duration: 400,
                  timingFunction: 'ease-out'
              }
          },
@@ -348,13 +366,14 @@ export const Toast: React.ForwardRefExoticComponent<IToastProps & React.RefAttri
      const initialOpenState: React.RefObject<boolean> = useRef(open);
      const [interactionToasts, setInteractionToasts] = useState<Record<string, boolean>>({});
      const { dir } = useProviderContext();
-     const closeIcon: string = 'M8.58578 10.0001L0.585754 2.00003L1.99997 0.585815L10 8.58584L18 0.585815L19.4142 2.00003L11.4142 10.0001L19.4142 18L18 19.4142L10 11.4143L2.00003 19.4142L0.585812 18L8.58578 10.0001Z';
-     const progressWidth: string = '100%';
+     const closeIcon: string = 'M10.5858 12.0001L2.58575 4.00003L3.99997 2.58582L12 10.5858L20 2.58582L21.4142 4.00003L13.4142 12.0001L21.4142 20L20 21.4142L12 13.4143L4.00003 21.4142L2.58581 20L10.5858 12.0001Z';
+     const progressWidth: string = progressDirection === 'Rtl' ? '100%' : '0%';
      const progressRefs: React.RefObject<Map<string, HTMLDivElement>> = useRef<Map<string, HTMLDivElement>>(new Map());
      const publicAPI: Partial<IToastProps> = {
          open,
          animation,
-         position
+         position,
+         actions
      };
 
      useImperativeHandle(ref, () => ({
@@ -366,7 +385,7 @@ export const Toast: React.ForwardRefExoticComponent<IToastProps & React.RefAttri
          progressRefs.current.forEach((bar: HTMLDivElement) => {
              if (bar) {
                  requestAnimationFrame(() => {
-                     bar.style.width = '0%';
+                     bar.style.width = progressDirection === 'Rtl' ? '0%' : '100%';
                  });
              }
          });
@@ -391,7 +410,8 @@ export const Toast: React.ForwardRefExoticComponent<IToastProps & React.RefAttri
      const show: (content: React.ReactNode) => string = useCallback((content: React.ReactNode) => {
          const toastId: string = `toast-${++toastCounter}`;
          if (animation.show) {
-             animation.show.begin = () => {
+             const showAnimation: AnimationOptions = {...animation.show};
+             showAnimation.begin = () => {
                  setToasts((prevToasts: Array<{ id: string; content: React.ReactNode }>) => {
                      const newToast: {
                          id: string;
@@ -400,11 +420,11 @@ export const Toast: React.ForwardRefExoticComponent<IToastProps & React.RefAttri
                      return newestOnTop ? [newToast, ...prevToasts] : [...prevToasts, newToast];
                  });
              };
-             animation.show.end = () => {
+             showAnimation.end = () => {
                  onOpen?.();
              };
              if (Animation) {
-                 const animationInstance: IAnimation = Animation(animation.show);
+                 const animationInstance: IAnimation = Animation(showAnimation);
                  if (animationInstance.animate) {
                      animationInstance.animate(toastRef.current as HTMLElement);
                  }
@@ -429,7 +449,8 @@ export const Toast: React.ForwardRefExoticComponent<IToastProps & React.RefAttri
          if (!toastElement) {return; }
 
          if (animation.hide) {
-             animation.hide.begin = () => {
+             const hideAnimation: AnimationOptions = { ...animation.hide };
+             hideAnimation.begin = () => {
                  let duration: number = animation.hide?.duration ? animation.hide.duration - 30 : 0;
                  duration = duration > 0 ? duration : 0;
                  setTimeout(() => {
@@ -451,11 +472,11 @@ export const Toast: React.ForwardRefExoticComponent<IToastProps & React.RefAttri
                      }
                  }, duration);
              };
-             animation.hide.end = () => {
+             hideAnimation.end = () => {
                  onClose?.();
              };
              if (Animation) {
-                 const animationInstance: IAnimation = Animation(animation.hide);
+                 const animationInstance: IAnimation = Animation(hideAnimation);
                  if (animationInstance.animate) {
                      animationInstance.animate(toastElement as HTMLElement);
                  }
@@ -476,7 +497,7 @@ export const Toast: React.ForwardRefExoticComponent<IToastProps & React.RefAttri
              hide(toastId);
          }
      }, [onClick, closeButton, hide]);
-     const containerPosition: string = `sf-toast-${position?.Y?.toLowerCase()}-${position?.X?.toLowerCase()}`;
+     const containerPosition: string = `sf-toast-${position?.yAxis?.toLowerCase()}-${position?.xAxis?.toLowerCase()}`;
      return (
          <div
              ref={toastRef}
@@ -497,13 +518,18 @@ export const Toast: React.ForwardRefExoticComponent<IToastProps & React.RefAttri
                      onClick={(e: React.MouseEvent<HTMLDivElement, MouseEvent>
                      ) => handleClick(e, id)}
                  >
-                     {icon && <div className={'sf-toast-icon sf-icons'}>{icon}</div>}
+                     {icon && <div className={'sf-toast-icon sf-icon'}>{icon}</div>}
                      <div className="sf-toast-message">
-                         {title && <div className="sf-toast-title">{title}</div>}
-                         <div className="sf-toast-content">{content}</div>
+                         {title && <div className="sf-toast-title sf-ellipsis">{title}</div>}
+                         <div className="sf-toast-content sf-ellipsis">{content}</div>
+                         {actions && (
+                             <div className="sf-toast-actions">
+                                 {actions}
+                             </div>
+                         )}
                      </div>
                      {closeButton && (
-                         <div className="sf-toast-close-icon"><SvgIcon d={closeIcon}></SvgIcon></div>
+                         <div className="sf-toast-close-icon sf-icon"><SvgIcon d={closeIcon}></SvgIcon></div>
                      )}
                      {progressBar && (
                          <div className="sf-toast-progress">
@@ -516,21 +542,9 @@ export const Toast: React.ForwardRefExoticComponent<IToastProps & React.RefAttri
                              }} className={`sf-toast-progress-bar ${progressDirection === 'Rtl' ? 'sf-toast-progress-rtl' : ''}`}
                              style={{
                                  width: progressWidth,
-                                 transition: `width ${timeout}ms linear`,
-                                 transform: progressDirection === 'Rtl' ? 'scaleX(-1)' : 'none'
+                                 transition: `width ${timeout}ms linear`
                              }}
                              />
-                         </div>
-                     )}
-                     {buttons.length > 0 && (
-                         <div className="sf-toast-actions">
-                             {buttons.map((btn: {
-                                 model: Record<string, unknown>;
-                                 click: () => void;
-                             }, index: number
-                             ) => (
-                                 <Button key={index} {...btn.model} onClick={btn.click} />
-                             ))}
                          </div>
                      )}
                  </div>
@@ -568,7 +582,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             severity = Severity.Info,
             timeout = 5000,
             extendedTimeout = 1000,
-            position = { X: 'Right', Y: 'Top' },
+            position = { xAxis: 'Right', yAxis: 'Top' },
             closeButton = true,
             title
         }: ToastProps = options;

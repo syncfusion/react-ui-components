@@ -1,6 +1,6 @@
-import { ChangeEvent, useCallback, JSX, FocusEvent, KeyboardEvent as ReactKeyboardEvent, forwardRef } from 'react';
-import { SvgIcon } from '@syncfusion/react-base';
-
+import { ChangeEvent, useCallback, JSX, FocusEvent, KeyboardEvent as ReactKeyboardEvent, forwardRef, ReactNode } from 'react';
+import { SvgIcon, LabelMode, IL10n, L10n } from '@syncfusion/react-base';
+export { LabelMode };
 /**
  * Constant object containing CSS class names used throughout the component.
  */
@@ -42,44 +42,47 @@ export interface IInput {
     className: string;
     disabled?: boolean;
     readOnly?: boolean;
-    floatLabelType?: FloatLabelType;
+    floatLabelType?: LabelMode;
     onChange: (event: ChangeEvent<HTMLInputElement>) => void;
 }
 
-/**
- * Represents the behavior options for floating labels in form fields.
- *
- * @enum {string}
- */
-export enum FloatLabel {
+export interface validationProps {
     /**
-     * Label never floats, remains in its default position regardless of field state.
+     * Specifies whether the component is a required field in a form. When set to true,
+     * the component will be marked as required.
+     *
+     * @default -
      */
-    Never = 'Never',
+    required?: boolean;
 
     /**
-     * Label always appears in the floating position, regardless of field state.
+     * Overrides the validity state of the component. If valid is set, the required property will be ignored.
+     *
+     * @default undefined
      */
-    Always = 'Always',
+    valid?: boolean;
 
     /**
-     * Label automatically floats when the field has content or is focused,
-     * and returns to default position when empty and not focused.
+     * Controls the form error message of the component.
+     *
+     * @default -
      */
-    Auto = 'Auto'
+    validationMessage?: string;
+
+    /**
+     * If set to false, no visual representation of the invalid state of the component will be applied.
+     *
+     * @default true
+     */
+    validityStyles?: boolean;
 }
-
-/**
- * Type definition for float label type.
- */
-export type FloatLabelType = FloatLabel | string;
 
 /**
  * Interface for input arguments.
  */
 export interface IInputArgs {
     customTag?: string;
-    floatLabelType?: FloatLabelType;
+    floatLabelType?: LabelMode;
     placeholder?: string;
     width?: number | string;
     value?: string;
@@ -95,7 +98,6 @@ export interface IInputArgs {
 }
 
 export type InputArgs = IInputArgs & Omit<React.InputHTMLAttributes<HTMLInputElement>, keyof IInputArgs>;
-
 export const InputBase: React.ForwardRefExoticComponent<InputArgs & React.RefAttributes<HTMLInputElement>> =
  forwardRef<HTMLInputElement, InputArgs>(({
      type, readOnly = false, disabled = false, floatLabelType = 'Never', onFocus, className = '',
@@ -104,7 +106,6 @@ export const InputBase: React.ForwardRefExoticComponent<InputArgs & React.RefAtt
      const inputClassNames: () => string = () => {
          return classArray.join(' ');
      };
-
      const classArray: string[] = [CLASS_NAMES.INPUT, className];
 
      const handleFocus: (event: FocusEvent) => void = useCallback((event: FocusEvent<Element, Element>) => {
@@ -161,17 +162,17 @@ export const InputBase: React.ForwardRefExoticComponent<InputArgs & React.RefAtt
 /**
  * Renders the float label element.
  *
- * @param {FloatLabelType} floatLabelType - The type of float label.
+ * @param {LabelMode} floatLabelType - The type of float label.
  * @param {boolean} isFocused - Whether the input is focused.
  * @param {string} inputValue - The current input value.
  * @param {string} placeholder - The placeholder text.
  * @param {any} id - The reference to the input element.
  * @returns {React.ReactElement | null} A React element representing the float label, or null if not applicable.
  */
-export const renderFloatLabelElement: (floatLabelType: FloatLabelType,
+export const renderFloatLabelElement: (floatLabelType: LabelMode,
     isFocused: boolean, inputValue: string | number, placeholder: string | undefined,
     id: string) => React.ReactElement | null = (
-    floatLabelType: FloatLabelType,
+    floatLabelType: LabelMode,
     isFocused: boolean,
     inputValue: string | number,
     placeholder: string = '',
@@ -191,14 +192,53 @@ export const renderFloatLabelElement: (floatLabelType: FloatLabelType,
     );
 };
 
-export const renderClearButton: (inputValue: string, clearInput: () => void) => JSX.Element =
-(inputValue: string, clearInput: () => void) => (
-    <span
-        className={`${CLASS_NAMES.CLEARICON} ${inputValue === '' ? CLASS_NAMES.CLEARICONHIDE : ''}`}
-        aria-label="clear"
-        role="button"
-        onClick={clearInput}
-    >
-        <SvgIcon height='14' width='14' d='M8.58578 10.0001L0.585754 2.00003L1.99997 0.585815L10 8.58584L18 0.585815L19.4142 2.00003L11.4142 10.0001L19.4142 18L18 19.4142L10 11.4143L2.00003 19.4142L0.585812 18L8.58578 10.0001Z'></SvgIcon>
-    </span>
-);
+/**
+ * Renders a clear button for an input field that allows the user to clear the input.
+ *
+ * @param {string} inputValue - The current value of the input field.
+ * @param {() => void} clearInput - The function to call when the clear button is clicked.
+ * @param {boolean | ReactNode} clearButton - Determines how the clear button is rendered:
+ *   - If `true` (default): Shows the default clear icon.
+ *   - If `false`: Doesn't render anything.
+ *   - If a ReactNode: Renders the provided ReactNode instead of the default icon.
+ * @returns {JSX.Element | null} The clear button element or null if clearButton is false.
+ */
+
+export const renderClearButton: (
+    inputValue: string,
+    clearInput: () => void,
+    clearIcon?: boolean | ReactNode,
+    componentName?: string,
+    locale?: string
+) => JSX.Element | null = (
+    inputValue: string,
+    clearInput: () => void,
+    clearIcon: boolean | ReactNode = true,
+    componentName?: string,
+    locale?: string
+) => {
+    // If closeIcon is false, don't render anything
+    if (clearIcon === false) {
+        return null;
+    }
+    const l10n: IL10n = L10n(componentName as string, {
+        clear: 'Clear'
+    }, locale);
+    const clear: string = l10n.getConstant('clear');
+    return (
+        <span
+            className={`${CLASS_NAMES.CLEARICON} ${inputValue === '' ? CLASS_NAMES.CLEARICONHIDE : ''}`}
+            aria-label={clear}
+            title={clear}
+            role="button"
+            onClick={clearInput}
+        >
+            {/* If closeIcon is a ReactNode, render it, otherwise render the default SvgIcon */}
+            {clearIcon === true ? (
+                <SvgIcon d='M8.58578 10.0001L0.585754 2.00003L1.99997 0.585815L10 8.58584L18 0.585815L19.4142 2.00003L11.4142 10.0001L19.4142 18L18 19.4142L10 11.4143L2.00003 19.4142L0.585812 18L8.58578 10.0001Z'></SvgIcon>
+            ) : (
+                clearIcon
+            )}
+        </span>
+    );
+};

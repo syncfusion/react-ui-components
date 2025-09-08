@@ -90,11 +90,15 @@ export enum ActionOnScrollType {
 export interface PopupAnimationOptions {
     /**
      * Specifies the animation that should happen when toast opens.
+     *
+     * @default { show: { name: 'FadeIn', duration: 0, timingFunction: 'ease-out' } }
      */
     show?: AnimationOptions;
 
     /**
      * Specifies the animation that should happen when toast closes.
+     *
+     * @default { hide: { name: 'FadeOut', duration: 0, timingFunction: 'ease-out' } }
      */
     hide?: AnimationOptions;
 }
@@ -110,7 +114,7 @@ export interface PopupProps {
      *
      * @default false
      */
-    isOpen?: boolean;
+    open?: boolean;
 
     /** Reference to the target element to which the popup is anchored. */
     targetRef?: React.RefObject<HTMLElement>;
@@ -224,7 +228,7 @@ export interface IPopup extends IPopupProps {
      * @param {HTMLElement} element - The element for which to find scrollable parents
      * @returns {Element[]} An array of scrollable parent elements that will have scroll event listeners attached
      */
-    getScrollableParent?: (element: HTMLElement) => Element[];
+    getScrollableParent(element: HTMLElement): Element[];
 
     /**
      * Refreshes the popup's position based on the relative element and offset values.
@@ -233,7 +237,7 @@ export interface IPopup extends IPopupProps {
      * @param {boolean} [collision] - Optional flag to determine whether collision detection should be performed
      * @returns {void}
      */
-    refreshPosition?: (target?: HTMLElement, collision?: boolean) => void;
+    refreshPosition(target?: HTMLElement, collision?: boolean): void;
 
     /**
      * This is Popup component element.
@@ -254,7 +258,7 @@ type IPopupProps = PopupProps & Omit<React.InputHTMLAttributes<HTMLDivElement>, 
  *
  * ```typescript
  * <Popup
- *   isOpen={true}
+ *   open={true}
  *   relateTo={elementRef}
  *   position={{ X: 'left', Y: 'bottom' }}
  * >
@@ -266,7 +270,7 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
     forwardRef<IPopup, IPopupProps>((props: IPopupProps, ref: React.Ref<IPopup>) => {
         const {
             children,
-            isOpen = false,
+            open = false,
             targetRef,
             relativeElement = null,
             position = { X: 'left', Y: 'top' },
@@ -299,7 +303,7 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
             ...rest
         } = props;
         const popupRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
-        const initialOpenState: React.RefObject<boolean> = useRef(isOpen);
+        const initialOpenState: React.RefObject<boolean> = useRef(open);
         const [leftPosition, setLeftPosition] = useState<number>(0);
         const [topPosition, setTopPosition] = useState<number>(0);
         const [popupClass, setPopupClass] = useState<string>(CLASSNAME_CLOSE);
@@ -309,6 +313,7 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
         const [currentShowAnimation, setCurrentShowAnimation] = useState<AnimationOptions>(animation.show as AnimationOptions);
         const [currentHideAnimation, setCurrentHideAnimation] = useState<AnimationOptions>(animation.hide as AnimationOptions);
         const [currentRelatedElement, setRelativeElement] = useState<HTMLElement | null>(relativeElement);
+        const scrollParents: React.RefObject<Element[]> = useRef<Element[]>([]);
 
         useImperativeHandle(
             ref,
@@ -326,6 +331,10 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
 
         useEffect(() => {
             preRender('popup');
+            return () => {
+                setRelativeElement(null);
+                removeScrollListeners();
+            };
         }, []);
 
         useEffect(() => {
@@ -349,16 +358,16 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
         }, [currentHideAnimation, animation.hide]);
 
         useEffect(() => {
-            if (!isOpen && initialOpenState.current === isOpen) {
+            if (!open && initialOpenState.current === open) {
                 return;
             }
-            initialOpenState.current = isOpen;
-            if (isOpen) {
+            initialOpenState.current = open;
+            if (open) {
                 show(animation.show, currentRelatedElement);
             } else {
                 hide(animation.hide);
             }
-        }, [isOpen]);
+        }, [open]);
 
         useEffect(() => {
             setPopupZIndex(zIndex);
@@ -432,7 +441,8 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
                     if (Animation) {
                         const animationInstance: IAnimation = Animation(animationOptions);
                         if (animationInstance.animate) {
-                            animationInstance.animate(popupRef.current as HTMLElement);
+                            animationInstance.animate(popupRef.current as HTMLElement, animationOptions.duration &&
+                                animationOptions.duration > 0 ? undefined : { duration: 0 });
                         }
                     }
                 }
@@ -454,7 +464,8 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
                 if (Animation) {
                     const animationInstance: IAnimation = Animation(animationOptions);
                     if (animationInstance.animate) {
-                        animationInstance.animate(popupRef.current as HTMLElement);
+                        animationInstance.animate(popupRef.current as HTMLElement, animationOptions.duration &&
+                            animationOptions.duration > 0 ? undefined : { duration: 0 });
                     }
                 }
             }
@@ -526,6 +537,8 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
             );
 
             if (flippedPos) {
+                element.style.left = `${flippedPos.left}px`;
+                element.style.top = `${flippedPos.top}px`;
                 setLeftPosition(flippedPos.left);
                 setTopPosition(flippedPos.top);
             }
@@ -609,8 +622,9 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
 
         const addScrollListeners: () => void = (): void => {
             if (actionOnScroll !== ActionOnScrollType.None && getRelateToElement()) {
-                const scrollParents: Element[] = getScrollableParent(getRelateToElement());
-                scrollParents.forEach((parent: Element) => {
+                const scrollableParents: Element[] = getScrollableParent(getRelateToElement());
+                scrollParents.current = scrollableParents;
+                scrollableParents.forEach((parent: Element) => {
                     parent.addEventListener('scroll', handleScroll);
                 });
             }
@@ -618,10 +632,12 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
 
         const removeScrollListeners: () => void = (): void => {
             if (actionOnScroll !== ActionOnScrollType.None && getRelateToElement()) {
-                const scrollParents: Element[] = getScrollableParent(getRelateToElement());
-                scrollParents.forEach((parent: Element) => {
-                    parent.removeEventListener('scroll', handleScroll);
+                scrollParents.current?.forEach((parent: Element) => {
+                    if (parent) {
+                        parent.removeEventListener('scroll', handleScroll);
+                    }
                 });
+                scrollParents.current = [];
             }
         };
 

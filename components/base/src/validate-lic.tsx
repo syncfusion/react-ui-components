@@ -1,19 +1,22 @@
-import { getValue, containerObject, setValue, isNullOrUndefined } from './util';
+import { getValue, containerObject, isNullOrUndefined } from './util';
 import { createElement } from './dom';
 
 export const componentList: string[] = ['grid', 'pivotview', 'treegrid', 'spreadsheet', 'rangeNavigator', 'DocumentEditor', 'listbox', 'inplaceeditor', 'PdfViewer', 'richtexteditor', 'DashboardLayout', 'chart', 'stockChart', 'circulargauge', 'diagram', 'heatmap', 'lineargauge', 'maps', 'slider', 'smithchart', 'barcode', 'sparkline', 'treemap', 'bulletChart', 'kanban', 'daterangepicker', 'schedule', 'gantt', 'signature', 'query-builder', 'drop-down-tree', 'carousel', 'filemanager', 'uploader', 'accordion', 'tab', 'treeview'];
+
+export const pdfViewerSDKComponents: string[] = ['grid', 'chart', 'maps', 'schedule', 'gantt', 'richtexteditor', 'kanban', 'treegrid', 'filemanager', 'pivotview', 'diagram', 'blockeditor', 'spreadsheet', 'DocumentEditor'];
+export const spreadsheetEditorSDKComponents: string[] = ['maps', 'schedule', 'gantt', 'richtexteditor', 'kanban', 'treegrid', 'filemanager', 'pivotview', 'diagram', 'blockeditor', 'PdfViewer', 'DocumentEditor'];
+export const wordEditorSDKComponents: string[] = ['grid', 'chart', 'maps', 'schedule', 'gantt', 'richtexteditor', 'kanban', 'treegrid', 'filemanager', 'pivotview', 'diagram', 'blockeditor', 'PdfViewer', 'spreadsheet'];
 
 const bypassKey: number[] = [115, 121, 110, 99, 102, 117, 115, 105, 111, 110, 46,
     105, 115, 76, 105, 99, 86, 97, 108, 105, 100, 97, 116, 101, 100];
 let accountURL: string;
 
 export type ILicenseValidator = {
-    isValidated: boolean,
     isLicensed: boolean,
     version: string,
     platform: RegExp,
     errors: IErrorType,
-    validate: () => boolean,
+    validate: (component: string) => boolean,
     getDecryptedData: (key: string) => string,
     getInfoFromKey: () => IValidator[]
 }
@@ -27,10 +30,11 @@ export type ILicenseValidator = {
  * @private
  */
 export function LicenseValidator(key: string = ''): ILicenseValidator {
-    let isValidated: boolean = false;
     let isLicensed: boolean = true;
     const version: string = '{syncfusionReleaseversion}';
     const platform: RegExp = /JavaScript|ASPNET|ASPNETCORE|ASPNETMVC|FileFormats|essentialstudio/i;
+    const prefixRegex: RegExp = /essentialui|pdfviewersdk|spreadsheeteditorsdk|docxeditorsdk/i;
+    const incorrectPlatform: RegExp = /JavaScript|ASPNET|ASPNETCORE|ASPNETMVC|FileFormats/i;
     const errors: IErrorType = {
         noLicense: '<span>This application was built using a trial version of Syncfusion<sup>®</sup> Essential Studio<sup>®</sup>.' +
             ' To remove the license validation message permanently, a valid license key must be included.</span>',
@@ -38,7 +42,16 @@ export function LicenseValidator(key: string = ''): ILicenseValidator {
             ' To remove the license validation message permanently, a valid license key must be included.</span>',
         versionMismatched: '<span>The included Syncfusion<sup>®</sup> license key is invalid.</span>',
         platformMismatched: '<span>The included Syncfusion<sup>®</sup> license key is invalid.</span>',
-        invalidKey: '<span>The included Syncfusion<sup>®</sup> license key is invalid.</span>'
+        invalidKey: '<span>The included Syncfusion<sup>®</sup> license key is invalid.</span>',
+        componentRestricted: '<span>The included Syncfusion<sup>®</sup> license key is invalid.</span>'
+    };
+
+    const validatedPlatforms: string[] = [];
+
+    const allowedComponentsMap: { [key: string]: string[] } = {
+        'pdfviewersdk': pdfViewerSDKComponents,
+        'spreadsheeteditorsdk': spreadsheetEditorSDKComponents,
+        'docxeditorsdk': wordEditorSDKComponents
     };
 
     /**
@@ -91,22 +104,58 @@ export function LicenseValidator(key: string = ''): ILicenseValidator {
     /**
      * To validate the provided license key.
      *
+     * @param {string} component - Specifies the component name.
      * @returns {boolean} ?
      */
-    function validate(): boolean {
+    function validate(component: string): boolean {
         const contentKey: number[] = [115, 121, 110, 99, 102, 117, 115, 105, 111, 110, 46, 108, 105,
             99, 101, 110, 115, 101, 67, 111, 110, 116, 101, 110, 116];
         const URLKey: number[] = [115, 121, 110, 99, 102, 117, 115, 105, 111, 110, 46, 99, 108,
             97, 105, 109, 65, 99, 99, 111, 117, 110, 116, 85, 82, 76];
-        if (!isValidated && (containerObject && !getValue(convertToChar(bypassKey), containerObject))) {
+        if ((containerObject && !getValue(convertToChar(bypassKey), containerObject))) {
             let validateMsg: string | null = null;
             let validateURL: string | null = null;
             if ((manager && manager.getKey()) || (npxManager && npxManager.getKey() !== 'npxKeyReplace')) {
                 const result: IValidator[] = getInfoFromKey();
                 if (result && result.length) {
+                    let componentRestrictedMsg: string | undefined;
                     for (const res of result) {
-                        if (!platform.test(res.platform) || res.invalidPlatform) {
+                        let hasError: boolean = false;
+                        if ((!platform.test(res.platform) && !prefixRegex.test(res.platform)) || res.invalidPlatform) {
                             validateMsg = errors.platformMismatched;
+                        }
+                        else if (incorrectPlatform.test(res.platform) && parseInt(res.version.split('.')[0], 10) > 30) {
+                            validateMsg = errors.platformMismatched;
+                        }
+                        else if (prefixRegex.test(res.platform) && parseInt(res.version.split('.')[0], 10) > 30) {
+                            const restrictionMsg: string | null = restrictComponent(component, res.platform);
+                            if (restrictionMsg) {
+                                componentRestrictedMsg = restrictionMsg;
+                                hasError = true;
+                            }
+                            else {
+                                componentRestrictedMsg = null;
+                            }
+                            if (((res.minVersion >= res.lastValue) && (res.minVersion !== res.lastValue)) ||
+                                (res.lastValue < parseInt(version, 10))) {
+                                validateMsg = errors.versionMismatched;
+                            }
+                            else {
+                                if (res.lastValue == null || isNaN(res.lastValue)) {
+                                    validateMsg = errors.versionMismatched;
+                                }
+                            }
+                            if (res.expiryDate) {
+                                const expDate: Date = new Date(res.expiryDate);
+                                const currDate: Date = new Date();
+                                if (expDate !== currDate && expDate < currDate) {
+                                    validateMsg = errors.trailExpired;
+                                    hasError = true;
+                                }
+                            }
+                            if (!validateMsg && !componentRestrictedMsg) {
+                                break;
+                            }
                         }
                         else {
                             if (((res.minVersion >= res.lastValue) && (res.minVersion !== res.lastValue)) ||
@@ -128,6 +177,12 @@ export function LicenseValidator(key: string = ''): ILicenseValidator {
                                 }
                             }
                         }
+                        if (!hasError && prefixRegex.test(res.platform)) {
+                            validatedPlatforms.push(res.platform);
+                        }
+                    }
+                    if (!validatedPlatforms.length || componentRestrictedMsg) {
+                        validateMsg = validateMsg || componentRestrictedMsg;
                     }
                 } else {
                     validateMsg = errors.invalidKey;
@@ -142,9 +197,12 @@ export function LicenseValidator(key: string = ''): ILicenseValidator {
                 }
             }
             if (validateMsg && typeof document !== 'undefined' && !isNullOrUndefined(document)) {
-                accountURL = (validateURL && validateURL !== '') ? validateURL : 'https://www.syncfusion.com/account/claim-license-key?pl=SmF2YVNjcmlwdA==&vs=Mjc=&utm_source=es_license_validation_banner&utm_medium=listing&utm_campaign=license-information';
-                const errorDiv: HTMLElement = createElement('div', {
-                    innerHTML: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="position: absolute; left: 16px; width: 24px; height: 24px;">
+                const existingErrorDiv: HTMLElement | null = document.querySelector('div.syncfusion-react-license-error');
+                if (!existingErrorDiv) {
+                    accountURL = (validateURL && validateURL !== '') ? validateURL : 'https://www.syncfusion.com/account/claim-license-key?pl=SmF2YVNjcmlwdA==&vs=Mjc=&utm_source=es_license_validation_banner&utm_medium=listing&utm_campaign=license-information';
+                    const errorDiv: HTMLElement = createElement('div', {
+                        className: 'syncfusion-react-license-error',
+                        innerHTML: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="position: absolute; left: 16px; width: 24px; height: 24px;">
                     <g clip-path="url(#clip0_199_4)">
                         <path d="M12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21Z" stroke="#737373" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         <path d="M11.25 11.25H12V16.5H12.75" fill="#616063"/>
@@ -156,9 +214,9 @@ export function LicenseValidator(key: string = ''): ILicenseValidator {
                         <rect width="24" height="24" fill="white"/>
                         </clipPath>
                     </defs>
-                    </svg>` + validateMsg + ' ' + '<a style="text-decoration: none;color: #0D6EFD;font-weight: 500;" href=' + accountURL + '>Claim your free account</a>'
-                });
-                errorDiv.setAttribute('style', `position: fixed;
+                    </svg>` + validateMsg + ' ' + '<a style="text-decoration: none;color: #0000EE;font-weight: 500;" href=' + accountURL + '>Claim your free account</a>'
+                    });
+                    errorDiv.setAttribute('style', `position: fixed;
                   top: 10px;
                   left: 10px;
                   right: 10px;
@@ -171,13 +229,24 @@ export function LicenseValidator(key: string = ''): ILicenseValidator {
                   padding: 10px 11px 10px 50px;
                   border-radius: 8px;
                   font-family: Helvetica Neue, Helvetica, Arial;`);
-                document.body.appendChild(errorDiv);
+                    document.body.appendChild(errorDiv);
+                }
                 isLicensed = false;
             }
-            isValidated = true;
-            setValue(convertToChar(bypassKey), isValidated, containerObject);
         }
         return isLicensed;
+    }
+
+    function restrictComponent(component: string, platform: string): string | null {
+        const ignoreList: string[] = ['DocumentEditor', 'spreadsheet', 'PdfViewer'];
+        if (platform === 'essentialui') {
+            return ignoreList.indexOf(component) === -1 ? null : errors.componentRestricted;
+        }
+        else {
+            // eslint-disable-next-line security/detect-object-injection
+            const allowedList: string[] = allowedComponentsMap[platform] || [];
+            return allowedList.indexOf(component) === -1 ? null : errors.componentRestricted;
+        }
     }
 
     /**
@@ -241,7 +310,7 @@ export function LicenseValidator(key: string = ''): ILicenseValidator {
                         buffr += String.fromCharCode(decryptedKey[parseInt(i.toString(), 10)]);
                     }
                 }
-                if (platform.test(buffr)) {
+                if (platform.test(buffr) || prefixRegex.test(buffr)) {
                     decryptedStr = buffr.split(';');
                     invalidPlatform = false;
                     if (decryptedStr.length > 3) {
@@ -270,7 +339,6 @@ export function LicenseValidator(key: string = ''): ILicenseValidator {
     }
 
     return {
-        isValidated,
         isLicensed,
         version,
         platform,
@@ -312,14 +380,15 @@ export function registerLicense(key: string): void {
  * Validates the license key.
  *
  * @private
+ * @param {string} component - Specifies the component name.
  * @param {string} [key] - Optional license key to validate
  * @returns {boolean} Returns true if license is valid, false otherwise
  */
-export function validateLicense(key?: string): boolean {
+export function validateLicense(component: string, key?: string): boolean {
     if (key) {
         registerLicense(key);
     }
-    return licenseValidator.validate();
+    return licenseValidator.validate(component);
 }
 
 /**
@@ -402,26 +471,26 @@ border-top-right-radius: 20px;
         ">
                 <li><span>Access to a 30-day free trial of any of our products.</span></li>
                 <li><span>Access to 24x5 support by developers via the <a href="https://support.syncfusion.com/create?utm_source=es_license_validation_banner&utm_medium=listing&utm_campaign=license-information" style="text-decoration: none;
-                color: #0D6EFD;
+                color: #0000EE;
                 font-weight: 500;">support tickets</a>, <a href="https://www.syncfusion.com/forums?utm_source=es_license_validation_banner&utm_medium=listing&utm_campaign=license-information" style="text-decoration: none;
-                color: #0D6EFD;
+                color: #0000EE;
                 font-weight: 500;">forum</a>, <a href="https://www.syncfusion.com/feedback?utm_source=es_license_validation_banner&utm_medium=listing&utm_campaign=license-information
                 " style="text-decoration: none;
-                color: #0D6EFD;
+                color: #0000EE;
                 font-weight: 500;">feature &amp; feedback page</a> and chat.</span></li>
                 <li><span>200+ <a href="https://www.syncfusion.com/succinctly-free-ebooks?utm_source=es_license_validation_banner&utm_medium=listing&utm_campaign=license-information" style="text-decoration: none;
-                color: #0D6EFD;
+                color: #0000EE;
                 font-weight: 500;">ebooks </a>on the latest technologies, industry trends, and research topics.</span>
                 </li>
                 <li><span>Largest collection of over 7500 flat and wireframe icons for free with Syncfusion<sup>®</sup> <a href="https://www.syncfusion.com/downloads/metrostudio?utm_source=es_license_validation_banner&utm_medium=listing&utm_campaign=license-information
                 " style="text-decoration: none;
-                color: #0D6EFD;
+                color: #0000EE;
                 font-weight: 500;">Metro Studio.</a></span></li>
                 <li><span>Free and unlimited access to Syncfusion<sup>®</sup> technical <a href="https://www.syncfusion.com/blogs/?utm_source=es_license_validation_banner&utm_medium=listing&utm_campaign=license-information
                 " style="text-decoration: none;
-                color: #0D6EFD;
+                color: #0000EE;
                 font-weight: 500;">blogs</a> and <a href="https://www.syncfusion.com/resources/techportal/whitepapers?utm_source=es_license_validation_banner&utm_medium=listing&utm_campaign=license-information" style="text-decoration: none;
-                color: #0D6EFD;
+                color: #0000EE;
                 font-weight: 500;">whitepapers.</a></span></li>
             </ul>
             <div style="
@@ -442,7 +511,7 @@ border-top-right-radius: 20px;
             <a href=${accountURL} style="
         float: left;
         border-radius: 56px;
-        background: #0D6EFD;
+        background: #0000EE;
         padding-top: 8px;
         width: 280px;
         height: 38px;
@@ -464,7 +533,7 @@ border-top-right-radius: 20px;
     font-weight: 500;
     line-height: 125%;
 ">have a Syncfusion<sup>®</sup> account? <a href="https://www.syncfusion.com/account/login?ReturnUrl=/account/login" style="text-decoration: none;
-color: #0D6EFD;
+color: #0000EE;
 font-weight: 500;">Sign In</a></div>
         </div>
   </div>`;
@@ -477,6 +546,8 @@ font-weight: 500;">Sign In</a></div>
 }
 
 interface IValidator {
+    prefixRegex?: string;
+    incorrectPlatform?: string;
     version?: string;
     expiryDate?: string;
     platform?: string;
@@ -491,4 +562,5 @@ interface IErrorType {
     versionMismatched: string;
     platformMismatched: string;
     invalidKey: string;
+    componentRestricted: string;
 }

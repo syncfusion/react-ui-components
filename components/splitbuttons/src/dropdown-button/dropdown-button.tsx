@@ -1,16 +1,18 @@
-import { useState, useRef, forwardRef, useImperativeHandle, useEffect, Ref, ButtonHTMLAttributes, JSX } from 'react';
+import { useState, useRef, forwardRef, useImperativeHandle, useEffect, Ref, ButtonHTMLAttributes, JSX, useCallback } from 'react';
 import { IPopup, Popup, CollisionType } from '@syncfusion/react-popups';
-import { Button, IconPosition, Color, Size, Variant, IButton } from '@syncfusion/react-buttons';
+import { Button, Position, Color, Size, Variant, IButton } from '@syncfusion/react-buttons';
 import { AnimationOptions, useProviderContext, preRender, IAnimation, Animation, Effect } from '@syncfusion/react-base';
 import * as React from 'react';
+import { createPortal } from 'react-dom';
+export {  Color, Size, Variant, Position };
 
-export interface AnimationProps {
+interface AnimationProps {
     /**
-     * Specifies the animation that should happen when toast opens.
+     * Specifies the animation that should happen when Popup opens.
      */
     show?: AnimationOptions;
     /**
-     * Specifies the animation that should happen when toast closes.
+     * Specifies the animation that should happen when Popup closes.
      */
     hide?: AnimationOptions;
 }
@@ -18,14 +20,14 @@ export interface AnimationProps {
 /**
  * ItemModel interface defines properties for each dropdown item.
  */
-interface ItemModel {
+export interface ItemModel {
     /**
      * Defines class/multiple classes separated by a space for the item that is used to include an icon.
      * Action item can include font icon and sprite image.
      *
      * @default -
      */
-    icon?: string | React.ReactNode;
+    icon?: React.ReactNode;
 
     /**
      * Specifies the id for item.
@@ -56,7 +58,7 @@ interface ItemModel {
     url?: string;
 
     /**
-     * Used to enable or disable the item.
+     * Specifies to enable or disable the item.
      *
      * @default false
      */
@@ -66,7 +68,7 @@ interface ItemModel {
 /**
  * Interface representing the event arguments for item selection in dropdown components.
  */
-export interface SelectMenuEvent {
+export interface ButtonSelectEvent {
     /**
      * The original mouse event that triggered the selection.
      * Contains information about the click event on the list item.
@@ -81,40 +83,37 @@ export interface SelectMenuEvent {
 }
 
 /**
- * DropDownButtonProps interface defines properties for DropDownButton component.
+ * Dropdown Button properties used to customize its behavior and appearance.
  */
 export interface DropDownButtonProps {
 
     /**
-     * Defines class/multiple classes separated by a space for the DropDownButton that is used to include an icon. DropDownButton can also include font icon and sprite image.
+     * Specifies an icon for the Dropdown Button, defined using a CSS class name for custom styling or an SVG element for rendering.
      *
      * @default -
      */
-    icon?: string | React.ReactNode;
+    icon?: React.ReactNode;
 
     /**
-     * Specifies the position of the icon relative to the dropdownbutton text. Options include placing the icon at the left, right, top, or bottom of the button content.
+     * Specifies the position of the icon relative to the Dropdown Button text. Options include placing the icon at the left, right, top, or bottom of the button content.
      *
-     * @default {IconPosition.Left}
+     * @default Position.Left
      */
-    iconPosition?: IconPosition;
+    iconPosition?: Position;
 
     /**
-     * Specifies action items with their properties to render as a popup in the DropDownButton.
+     * Specifies action items with their properties to render as a popup in the Dropdown Button.
      *
      * @default []
      */
     items?: ItemModel[];
 
     /**
-     * This property defines the width of the dropdown popup for the DropDownButton component.
-     *
-     * @property {string | number} popupWidth - A string or number representing the width of the dropdown.
-     * It can be a valid CSS unit such as `px`, `%`, or `rem`, or a number interpreted as pixels.
-     * @default "auto"
-     * @remarks
-     * The `popupWidth` property allows developers to control the width of the dropdown popup, ensuring it fits their design requirements.
+     * This property defines the width of the dropdown popup for the Dropdown Button component.
+     * Set the width as a string or number using valid CSS units like `px`, `%`, or `rem`, or as pixels.
      * The default value of `auto` allows the popup to adjust based on the content length, but a specific width can be provided for more precise control.
+     *
+     * @default auto
      */
     popupWidth?: string | number;
 
@@ -126,7 +125,7 @@ export interface DropDownButtonProps {
     lazyOpen?: boolean;
 
     /**
-     * Allows the specification of the target element for the DropDownButton's popup content.
+     * Specifies the target element for the Dropdown Button's popup content.
      *
      * @default -
      */
@@ -135,9 +134,9 @@ export interface DropDownButtonProps {
     /**
      * Provides a template for displaying content within the dropdown items.
      *
-     * @default null
+     * @default -
      */
-    itemTemplate?: string | Function;
+    itemTemplate?: (item: ItemModel) => React.ReactNode;
 
     /**
      * Specifies the animation settings for opening the dropdown.
@@ -149,42 +148,42 @@ export interface DropDownButtonProps {
     animation?: AnimationProps;
 
     /**
-     * Triggers while closing the DropDownButton popup.
+     * Triggers while closing the Dropdown Button popup.
      *
-     * @event close
+     * @event onClose
      */
-    onClose?: (event?: React.MouseEvent | MouseEvent) => void;
+    onClose?: (event?: React.MouseEvent) => void;
 
     /**
-     * Triggers while opening the DropDownButton popup.
+     * Triggers while opening the Dropdown Button popup.
      *
-     * @event open
+     * @event onOpen
      */
-    onOpen?: (event?: React.MouseEvent | MouseEvent) => void;
+    onOpen?: (event?: React.MouseEvent) => void;
 
     /**
-     * Triggers while selecting action item in DropDownButton popup.
+     * Triggers while selecting action item in Dropdown Button popup.
      *
-     * @event select
+     * @event onSelect
      */
-    onSelect?: (args: SelectMenuEvent) => void;
+    onSelect?: (event: ButtonSelectEvent) => void;
 
     /**
-     * Specifies the color style of the Dropdown button. Options include 'Primary', 'Secondary', 'Warning', 'Success', 'Danger' and 'Info'.
+     * Specifies the color style of the Dropdown Button. Options include 'Primary', 'Secondary', 'Warning', 'Success', 'Error' and 'Info'.
      *
      * @default Color.Primary
      */
     color?: Color;
 
     /**
-     * Specifies the variant style of the Dropdown button. Options include 'Outlined', 'Filled' and 'Flat'.
+     * Specifies the variant style of the Dropdown Button. Options include 'Outlined', 'Filled' and 'Standard'.
      *
      * @default Variant.Filled
      */
     variant?: Variant;
 
     /**
-     * Specifies the size style of the Dropdown button. Options include 'Small', 'Medium' and 'Large'.
+     * Specifies the size style of the Dropdown Button. Options include 'Small', 'Medium' and 'Large'.
      *
      * @default Size.Medium
      */
@@ -200,12 +199,12 @@ export interface DropDownButtonProps {
 }
 
 /**
- * Interface representing the Button component methods.
+ * Represents the methods of the Dropdown Button component.
  */
 export interface IDropDownButton extends DropDownButtonProps {
 
     /**
-     * To open/close DropDownButton popup based on current state of the DropDownButton.
+     * To open/close Dropdown Button popup based on current state of the Dropdown Button.
      *
      * @public
      * @returns {void}
@@ -216,7 +215,7 @@ export interface IDropDownButton extends DropDownButtonProps {
      * This is button component element.
      *
      * @private
-     * @default null
+     * @default -
      */
     element?: HTMLElement | null;
 }
@@ -224,10 +223,13 @@ export interface IDropDownButton extends DropDownButtonProps {
 type IDropDownButtonProps = IDropDownButton & ButtonHTMLAttributes<HTMLButtonElement>;
 
 /**
- * The DropDownButton component is an interactive button that reveals a menu of actions or options when clicked, providing a dropdown interface for intuitive user interaction.
+ * The Dropdown Button component is an interactive button that reveals a menu of actions or options when clicked, providing a dropdown interface for intuitive user interaction.
  *
  * ```typescript
- * <DropDownButton items={menuItems} icon={profileIcon} iconPosition={IconPosition.Right}/>
+ * import { DropDownButton } from "@syncfusion/react-splitbuttons";
+ *
+ * const menuItems = [{ text: 'Cut' }, { text: 'Copy' }, { text: 'Paste' }];
+ * <DropDownButton items={menuItems}>Default</DropDownButton>
  * ```
  */
 export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProps & React.RefAttributes<IDropDownButton>> =
@@ -236,7 +238,7 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
             children,
             className = '',
             icon,
-            iconPosition = IconPosition.Left,
+            iconPosition = Position.Left,
             items = [],
             popupWidth = 'auto',
             animation = { show: {name: 'SlideDown', duration: 100, timingFunction: 'ease'},
@@ -248,7 +250,7 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
             relateTo,
             color,
             variant,
-            size,
+            size = Size.Medium,
             onClose,
             onOpen,
             onSelect,
@@ -262,6 +264,22 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
         const { dir } = useProviderContext();
 
         const isMounted: React.RefObject<boolean> = useRef(true);
+        const itemClickHandler: (
+            item: ItemModel,
+            event: React.MouseEvent<HTMLLIElement, MouseEvent>
+        ) => void = useCallback((item: ItemModel, event: React.MouseEvent<HTMLLIElement, MouseEvent>) => {
+            if (item.disabled) {
+                return;
+            }
+            setIsPopupOpen(false);
+            if (onSelect) {
+                const args: ButtonSelectEvent = { event, item };
+                onSelect(args);
+            }
+            if (buttonRef.current?.element) {
+                buttonRef.current.element.focus();
+            }
+        }, [onSelect]);
 
         const updateMenuItems: (items: ItemModel[], setMenuItems: React.Dispatch<React.SetStateAction<ItemModel[]>>) => void
          = (items: ItemModel[], setMenuItems: React.Dispatch<React.SetStateAction<ItemModel[]>>) => {
@@ -303,7 +321,7 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
                     if (!buttonElement.contains(targetNode) && !popupElement.contains(targetNode)) {
                         setIsPopupOpen(false);
                         if (onClose && isPopupOpen) {
-                            onClose(event);
+                            onClose(event as unknown as React.MouseEvent);
                         }
                     }
                 }
@@ -324,6 +342,36 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
                     event.preventDefault();
                     const isDownKey: boolean = event.key === 'ArrowDown';
                     upDownKeyHandler(ul as HTMLElement, isDownKey);
+                    if (buttonRef.current?.element) {
+                        (buttonRef.current?.element as HTMLElement).blur();
+                    }
+                }
+
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    const focusedItem: HTMLElement = popupElement?.querySelector('.sf-focused') as HTMLElement;
+                    if (focusedItem) {
+                        const items: Element[] = Array.from(ul?.children || []);
+                        const itemIndex: number = items.indexOf(focusedItem);
+                        if (itemIndex !== -1 && itemIndex < menuItems.length) {
+                            const item: ItemModel = menuItems[itemIndex as number];
+                            if (!item.disabled && !item.hasSeparator) {
+                                try {
+                                    focusedItem.click();
+                                } catch (e) {
+                                    const syntheticEvent: React.MouseEvent<HTMLLIElement, MouseEvent> = {
+                                        currentTarget: focusedItem,
+                                        target: focusedItem,
+                                        type: 'click'
+                                    } as unknown as React.MouseEvent<HTMLLIElement, MouseEvent>;
+                                    itemClickHandler(item, syntheticEvent);
+                                }
+                                if (buttonRef.current?.element) {
+                                    buttonRef.current.element.focus();
+                                }
+                            }
+                        }
+                    }
                 }
 
                 if (event.key === 'Escape') {
@@ -337,7 +385,7 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
                 document.removeEventListener('mousedown', handleClickOutside);
                 document.removeEventListener('keydown', handleKeyDown);
             };
-        }, [isPopupOpen, onClose, menuItems]);
+        }, [isPopupOpen, onClose, menuItems, itemClickHandler]);
 
         const publicAPI: Partial<IDropDownButton> = {
             iconPosition,
@@ -402,33 +450,9 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
             toggle: togglePopup,
             element: buttonRef.current?.element
         }), [publicAPI]);
-
-        const itemClickHandler: (
-            item: ItemModel,
-            event: React.MouseEvent<HTMLLIElement, MouseEvent>
-        ) => void = (item: ItemModel, event: React.MouseEvent<HTMLLIElement, MouseEvent>) => {
-            if (item.disabled) {
-                return;
-            }
-            setIsPopupOpen(false);
-            if (onSelect) {
-                const args: {
-                    event: React.MouseEvent<HTMLLIElement, MouseEvent>;
-                    item: ItemModel;
-                } = {
-                    event,
-                    item
-                };
-                onSelect(args);
-            }
-        };
-
         const renderItemContent: (item: ItemModel) => React.ReactNode = React.useCallback((item: ItemModel): React.ReactNode => {
-            if (typeof itemTemplate === 'function') {
+            if (itemTemplate) {
                 return (itemTemplate as Function)(item);
-            }
-            if (typeof itemTemplate === 'string') {
-                return <div>{itemTemplate}</div>;
             }
             return (
                 <>
@@ -507,7 +531,7 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
             <>
                 <Button
                     ref={buttonRef}
-                    className={`${className} sf-dropdown-btn`}
+                    className={`${className} sf-dropdown-btn sf-drp-btn-${size.toLowerCase().substring(0, 2)}`}
                     icon={icon}
                     color={color}
                     dropIcon={true}
@@ -526,9 +550,9 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
                     {children}
                 </Button>
 
-                {(isPopupOpen || !lazyOpen) && (
+                {(isPopupOpen || !lazyOpen) && createPortal(
                     <Popup
-                        isOpen={isPopupOpen}
+                        open={isPopupOpen}
                         ref={popupRef}
                         targetRef={target || buttonRef.current as React.RefObject<HTMLElement> }
                         relateTo={relateTo || (buttonRef.current?.element as HTMLElement)}
@@ -536,11 +560,12 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
                         animation={animation}
                         collision={(dir === 'rtl') ? { X: CollisionType.Fit, Y: CollisionType.Flip } : { X: CollisionType.Flip, Y: CollisionType.Flip }}
                         width={popupWidth}
-                        className={`sf-dropdown-popup ${popupWidth !== 'auto' ? 'sfdropdown-popup-width' : ''}`}
+                        className={`sf-dropdown-popup sf-drp-btn-${size.toLowerCase().substring(0, 2)} ${popupWidth !== 'auto' ? 'sf-dropdown-popup-width' : ''}`}
                         onClose={() => setIsPopupOpen(false)}
                     >
                         {renderItems()}
-                    </Popup>
+                    </Popup>,
+                    document.body
                 )}
             </>
         );

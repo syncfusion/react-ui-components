@@ -1,0 +1,295 @@
+@include export-module('calendar-theme') {
+  #{&}.sf-calendar {
+    background: $calendar-bg-color;
+    border-radius: 8px;
+    border: $calendar-border-style;
+    box-shadow: $calendar-box-shadow;
+
+    .sf-date-icon-prev,
+    .sf-date-icon-next {
+      color: $calendar-header-icon-color;
+    }
+
+    th {
+      border-bottom: 0;
+      color: $calendar-week-header-font-color;
+    }
+
+    @at-root {
+      .sf-header {
+        border-bottom: 0;
+
+        a {
+          span {
+            border: $calendar-default-border-color;
+            color: $calendar-icon-font-color;
+          }
+        }
+
+        .sf-title {
+          color: $calendar-title-font-color;
+        }
+
+        .sf-title:hover {
+          background: $calendar-title-hover-bg-color;
+          cursor: pointer;
+          text-decoration: $calendar-title-decoration-style;
+        }
+
+        .sf-title:focus {
+          box-shadow: $calendar-title-focus-box-shadow;
+          background: $calendar-title-focus-background;
+          text-decoration: $calendar-title-decoration-style;
+        }
+
+        .sf-title:active {
+          box-shadow: $calendar-box-shadow;
+          background: $calendar-title-active-background;
+          text-decoration: $calendar-title-decoration-style;
+        }
+
+        .sf-prev:hover>span,
+        .sf-next:hover>span {
+          border: $calendar-icon-hover-border-color;
+          cursor: pointer;
+        }
+
+        .sf-prev:hover,
+        .sf-next:hover {
+          background: $calendar-icon-hover-bg-color;
+        }
+
+        .sf-prev:focus,
+        .sf-next:focus {
+          box-shadow: $calendar-icon-focus-box-shadow;
+        }
+
+        .sf-btn:focus {
+          background: none;
+        }
+
+        .sf-prev:active,
+        .sf-next:active {
+          background: $calendar-active-state-icon-bg-color;
+          color: $calendar-active-font-color;
+        }
+
+        button.sf-prev:active span,
+        button.sf-next:active span {
+          border: $calendar-selected-border-color;
+          color: $calendar-active-icon-color;
+        }
+
+        .sf-decade .sf-title {
+          color: $calendar-light-font;
+          cursor: default;
+        }
+
+        .sf-next.sf-disabled span,
+        .sf-prev.sf-disabled span {
+          color: $calendar-disable-font-color;
+          font-weight: $calendar-disable-font-weight-style;
+        }
+
+        .sf-next.sf-disabled,
+        .sf-prev.sf-disabled {
+          opacity: $calendar-disable-opacity;
+        }
+      }
+
+      .sf-content {
+
+        &.sf-decade tr:first-child .sf-cell:first-child span.sf-day,
+        &.sf-decade tr:last-child .sf-cell:last-child span.sf-day {
+          color: $calendar-other-decade-cell-color;
+        }
+
+        &.sf-decade tr:first-child .sf-cell:first-child.sf-selected span.sf-day,
+        &.sf-decade tr:last-child .sf-cell:last-child.sf-selected span.sf-day {
+          color: $calendar-active-font-color;
+        }
+
+        &.sf-decade tr:first-child .sf-cell.sf-disabled:first-child span.sf-day,
+        &.sf-decade tr:last-child .sf-cell.sf-disabled:last-child span.sf-day {
+          color: $calendar-disable-font-color;
+        }
+
+        &.sf-year td:hover span.sf-day,
+        &.sf-decade td:hover span.sf-day {
+          background: $calendar-hover-color;
+        }
+
+        &.sf-year td.sf-selected:hover span.sf-day,
+        &.sf-decade td.sf-selected:hover span.sf-day {
+          background: $calendar-yeardecade-selected-hover-bg;
+        }
+
+        &.sf-year td>span.sf-day,
+        &.sf-decade td>span.sf-day {
+          background: $calendar-yeardecade-bg-color;
+        }
+
+        .sf-week-number {
+          color: $calendar-other-month-date;
+        }
+
+        td.sf-focused-date span.sf-day,
+        td.sf-focused-date:hover span.sf-day,
+        td.sf-focused-date:focus span.sf-day {
+          background: $calendar-focused-date-bg-style;
+          border: $calendar-focus-border-color;
+          border-radius: $calendar-border-radius;
+          box-shadow: $calendar-focus-box-shadow;
+        }
+
+        td.sf-focused-date:hover span.sf-day {
+          background: $calendar-hover-color;
+          border: $calendar-hover-border-color;
+          border-radius: $calendar-border-radius;
+          color: $calendar-text-color;
+        }
+
+        td.sf-today span.sf-day,
+        td.sf-focused-date.sf-today span.sf-day {
+          background: $calendar-today-bg-style;
+          border: $calendar-today-border-color;
+          border-radius: $calendar-border-radius;
+          box-shadow: $calendar-today-box-shadow;
+          color: $calendar-today-color;
+        }
+
+        td.sf-focused-date.sf-today span.sf-day {
+          background: $calendar-focused-today-bg-style;
+          border: $calendar-focused-today-border-style;
+          box-shadow: $calendar-focused-today-box-shadow;
+          color: $calendar-today-focused-font-color;
+        }
+
+        td.sf-today:focus span.sf-day,
+        td.sf-focused-date.sf-today:focus span.sf-day {
+          background: $calendar-focus-bg-color;
+          border: $calendar-focus-border-color;
+          border-radius: $calendar-border-radius;
+          color: $calendar-today-focus-color;
+        }
+
+        td.sf-today:hover span.sf-day,
+        td.sf-focused-date.sf-today:hover span.sf-day,
+        td.sf-focused-date.sf-today:focus span.sf-day {
+          background: $calendar-hover-color;
+          border: $calendar-today-border-color;
+          color: $calendar-today-focus-color;
+        }
+
+        td.sf-today.sf-selected span.sf-day {
+          background: $calendar-active-bg-color;
+          border: $calendar-active-bg-border-color;
+          box-shadow: $calendar-selected-box-shadow;
+          color: $calendar-active-today-font-color;
+        }
+
+        td.sf-today.sf-selected:hover span.sf-day,
+        td.sf-selected:hover span.sf-day,
+        td.sf-selected.sf-focused-date span.sf-day {
+          background: $calendar-active-hover-bg-color;
+          color: $calendar-active-today-hover-font-color;
+        }
+
+        .sf-disabled span.sf-day:hover {
+          background: $calendar-none-style;
+          border: 0;
+          color: $calendar-disable-font-color;
+        }
+
+        .sf-other-month:hover span.sf-day {
+          color: $calendar-other-month-date-hover-bg;
+        }
+
+        .sf-other-month span.sf-day,
+        .sf-other-month.sf-today span.sf-day {
+          color: $calendar-other-month-date;
+        }
+
+        .sf-other-month.sf-today:hover span.sf-day {
+          background: $calendar-hover-color;
+          color: $calendar-other-month-date;
+        }
+
+        thead {
+          background: $calendar-week-header-bg-style;
+          border-bottom: 0;
+        }
+
+        td:hover span.sf-day,
+        td:focus span.sf-day {
+          background: $calendar-hover-color;
+          border: $calendar-hover-border-color;
+          border-radius: $calendar-border-radius;
+          color: $calendar-hover-text;
+        }
+
+        td:focus span.sf-day {
+          background: $calendar-focus-bg-color;
+          color: $calendar-text-color-focus;
+          border: $calendar-focus-border-color;
+          border-radius: $calendar-border-radius;
+        }
+
+        td.sf-disabled span.sf-day,
+        td.sf-disabled:hover span.sf-day,
+        td.sf-disabled:focus span.sf-day {
+          background: $calendar-none-style;
+          border: $calendar-none-style;
+          color: $calendar-disable-font-color;
+        }
+
+        td.sf-selected span.sf-day {
+          background: $calendar-active-bg-color;
+          color: $calendar-active-font-color;
+          border: $calendar-selected-border-color;
+          border-radius: $calendar-border-radius;
+        }
+
+        .sf-footer {
+          color: $calendar-active-bg-color;
+        }
+      }
+    }
+
+    .sf-device {
+
+      .sf-prev:hover,
+      .sf-next:hover,
+      .sf-prev:active,
+      .sf-next:active,
+      .sf-prev:focus,
+      .sf-next:focus {
+        background: $calendar-device-icon-hover-bg-color;
+      }
+
+      button.sf-prev:active span,
+      button.sf-next:active span {
+        color: $calendar-header-icon-color;
+      }
+    }
+  }
+
+  .sf-calendar .sf-zoomin {
+    animation: animatezoom .3s;
+  }
+
+  @keyframes animatezoom {
+    from {
+      transform: scale(0);
+    }
+
+    to {
+      transform: scale(1);
+    }
+  }
+
+  .sf-calendar .sf-calendar-content-table .sf-cell.sf-focused-cell span.sf-day {
+    box-shadow: $calendar-focused-cell-box-shadow;
+    border-radius: $calendar-border-radius;
+  }
+}

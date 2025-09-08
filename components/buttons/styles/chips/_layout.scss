@@ -1,16 +1,13 @@
-@mixin align-chip($border-radius, $font-size, $margin, $line-height) {
+@mixin chip-specific-properties($border-radius, $font-size: null, $margin) {
   border-radius: $border-radius;
-  font-size: $font-size;
-  margin: $margin;
-  align-items: center;
-  justify-content: center;
-  line-height: $line-height;
+  margin-inline: $margin;
+
+  @if $font-size !=null {
+    font-size: $font-size;
+  }
 }
 
-@mixin icon-style($height, $width) {
-  background-size: cover;
-  display: flex;
-  overflow: hidden;
+@mixin icon-style-size($height, $width) {
   height: $height;
   width: $width;
 }
@@ -20,172 +17,91 @@
     display: flex;
     padding: $chip-list-padding;
 
-    &.sf-chip,
-    .sf-chip {
-      -webkit-tap-highlight-color: transparent;
-      border: $chip-border-size solid;
-      @include align-chip($chip-border-radius, $chip-font-size, $chip-margin, $chip-line-height);
-      box-shadow: $chip-box-shadow;
-      box-sizing: border-box;
-      cursor: pointer;
-      display: inline-flex;
-      font-weight: $chip-font-weight;
-      height: $chip-height;
-      outline: none;
-      overflow: hidden;
-      padding: $chip-padding;
-      position: relative;
-      transition: box-shadow 300ms cubic-bezier(.4, 0, .2, 1);
-      user-select: none;
-
-      .sf-chip-avatar {
-        @include icon-style($chip-avatar-size, $chip-avatar-size);
-        @include align-chip($chip-avatar-border-radius, $chip-avatar-content-font-size, $chip-avatar-margin, $chip-icon-line-height);
-      }
-
-      .sf-chip-avatar-wrap,
-      &.sf-chip-avatar-wrap {
-        border-radius: $chip-avatar-wrapper-border-radius;
-      }
-
-      .sf-chip-icon {
-        @include icon-style($chip-leading-icon-size, $chip-leading-icon-size);
-        @include align-chip($chip-leading-icon-border-radius, $chip-leading-icon-font-size, $chip-leading-icon-margin, $chip-icon-line-height);
-      }
-
-      .sf-chip-text {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .sf-chip-delete {
-        @include icon-style($chip-delete-icon-size, $chip-delete-icon-width);
-        @include align-chip($chip-delete-icon-border-radius, $chip-delete-icon-font-size, $chip-delete-icon-margin, $chip-icon-line-height);
-      }
-
-      .sf-image-url {
-        @include icon-style($chip-leading-icon-size, $chip-leading-icon-size);
-        @include align-chip($chip-leading-icon-border-radius, $chip-leading-icon-font-size, $chip-leading-icon-margin, $chip-icon-line-height);
-        
-        .sf-leading-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-      }
-
-      .sf-trailing-icon-url {
-        @include icon-style($chip-delete-icon-size, $chip-delete-icon-size);
-        @include align-chip($chip-delete-icon-border-radius, $chip-delete-icon-font-size, $chip-delete-icon-margin, $chip-icon-line-height);
-        
-        .sf-trailing-image {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-      }
-
-      .sf-chip-template {
-        display: inline-flex;
-      }
-    }
-
     &:not(.sf-chip) {
       flex-wrap: wrap;
     }
+  }
 
-    &.sf-multi-selection .sf-chip {
-      & .sf-selectable-icon {
-        align-items: center;
-        justify-content: center;
-        line-height: 1;
-        display: flex;
-        height: $chip-leading-icon-size;
-        width: $chip-leading-icon-size;
-        overflow: hidden;
-        transition: width 300ms cubic-bezier(.4, 0, .2, 1), margin 300ms cubic-bezier(.4, 0, .2, 1);
-      }
+  .sf-chip {
+    border: $chip-border-size solid;
+    border-radius: $chip-border-radius;
+    font-size: $chip-font-size;
+    font-weight: $chip-font-weight;
+    margin: $chip-margin;
+    align-items: center;
+    justify-content: center;
+    box-shadow: none;
+    cursor: pointer;
+    display: inline-flex;
+    height: $chip-height;
+    line-height: $chip-line-height;
+    outline: none;
+    overflow: hidden;
+    padding: $chip-padding;
+    position: relative;
+    user-select: none;
+  }
 
-      &:not(.sf-chip-icon-wrap):not(.sf-chip-avatar-wrap) {
-        & .sf-selectable-icon {
-          width: 0;
-        }
-      }
+  .sf-chip-avatar,
+  .sf-chip-icon,
+  .sf-chip-image {
+    @include icon-style-size($chip-avatar-size, $chip-avatar-size);
+  }
 
-      &.sf-chip-icon-wrap,
-      &.sf-chip-avatar-wrap {
-        & .sf-selectable-icon {
-          display: none;
-        }
-      }
+  .sf-chip-avatar {
+    @include chip-specific-properties($chip-avatar-border-radius, $chip-avatar-content-font-size, $chip-avatar-margin);
+  }
 
-      &.sf-chip-avatar-wrap {
-        & .sf-selectable-icon {
-          height: $chip-avatar-size;
-          width: $chip-avatar-size;
-          margin: $chip-avatar-margin;
-          margin-top: $chip-multi-selection-icon-margin-top;
-        }
-      }
+  .sf-chip-icon {
+    margin-inline: $chip-leading-icon-margin;
+  }
 
-      &.sf-active {
-        & .sf-chip-icon,
-        & .sf-chip-avatar {
-          display: none;
-        }
+  .sf-chip-delete {
+    @include icon-style-size($chip-delete-icon-size, $chip-delete-icon-width);
+    @include chip-specific-properties($chip-delete-icon-border-radius, $chip-delete-icon-font-size, $chip-delete-icon-margin);
+  }
 
-        & .sf-selectable-icon {
-          margin: $chip-multi-selection-icon-margin;
-        }
+  .sf-chip-image {
+    @include chip-specific-properties($chip-leading-icon-border-radius, null, $chip-leading-icon-margin);
+  }
 
-        &.sf-chip-icon-wrap,
-        &.sf-chip-avatar-wrap {
-          & .sf-selectable-icon {
-            display: flex;
-          }
-        }
+  .sf-chip-trailing-url {
+    @include icon-style-size($chip-trailing-url-size, $chip-trailing-url-size);
+    @include chip-specific-properties($chip-delete-icon-border-radius, null, $chip-trailing-url-margin);
+  }
 
-        &:not(.sf-chip-icon-wrap):not(.sf-chip-avatar-wrap) {
-          & .sf-selectable-icon {
-            width: $chip-leading-icon-size;
-          }
-        }
-      }
+  .sf-chip-leading-image,
+  .sf-chip-trailing-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .sf-chip-delete svg,
+  .sf-chip-selectable-icon svg {
+    font-size: $chip-delete-icon-font-size;
+  }
+
+  .sf-chip-multi-selection .sf-active .sf-chip-icon,
+  .sf-chip-multi-selection .sf-active .sf-chip-avatar,
+  .sf-chip-icon-wrap .sf-chip-selectable-icon,
+  .sf-chip-avatar-wrap .sf-chip-selectable-icon {
+    display: none;
+  }
+
+  .sf-chip {
+    & .sf-chip-selectable-icon {
+      height: $chip-leading-icon-size;
+      overflow: hidden;
+      transition: $chip-multi-selection-icon-transition;
+      width: 0;
     }
 
-    &.sf-rtl {
-      &.sf-chip,
-      & .sf-chip {
-        .sf-chip-avatar {
-          margin: $chip-rtl-avatar-margin;
-        }
-
-        .sf-chip-icon {
-          margin: $chip-rtl-leading-icon-margin;
-        }
-
-        .sf-chip-delete {
-          margin: $chip-rtl-delete-icon-margin;
-        }
-
-        .sf-trailing-icon-url {
-          margin: $chip-rtl-delete-icon-margin;
-        }
-      }
-
-      &.sf-multi-selection .sf-chip {
-        & .sf-selectable-icon {
-          margin: $chip-rtl-leading-icon-margin;
-          margin-top: $chip-multi-selection-icon-margin-top;
-        }
-
-        &.sf-chip-avatar-wrap {
-          & .sf-selectable-icon {
-            margin: $chip-rtl-avatar-margin;
-            margin-top: $chip-multi-selection-icon-margin-top;
-          }
-        }
+    &.sf-active {
+      & .sf-chip-selectable-icon {
+        margin-inline: $chip-multi-selection-icon-margin;
+        display: flex;
+        width: $chip-leading-icon-size;
       }
     }
   }

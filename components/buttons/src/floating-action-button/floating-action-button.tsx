@@ -1,6 +1,6 @@
 import { useRef, useImperativeHandle, forwardRef, ButtonHTMLAttributes, useEffect, Ref } from 'react';
-import { Button, IButton, IconPosition, Color, Size } from '../button/button';
-import { preRender, useProviderContext } from '@syncfusion/react-base';
+import { Button, IButton } from '../button/button';
+import { preRender, useProviderContext, Color, Size, Position} from '@syncfusion/react-base';
 import * as React from 'react';
 
 /**
@@ -73,24 +73,24 @@ export interface FabButtonProps {
      *
      * @default false
      */
-    togglable?: boolean;
+    toggleable?: boolean;
 
     /**
      * Defines an icon for the button, which can either be a CSS class name for custom styling or an SVG element for rendering.
      *
      * @default -
      */
-    icon?: string | React.ReactNode;
+    icon?: React.ReactNode;
 
     /**
      * Defines the position of the icon relative to the text on the FAB. Options may include 'Left', 'Right', 'Top', or 'Bottom'.
      *
-     * @default IconPosition.Left
+     * @default Position.Left
      */
-    iconPosition?: IconPosition;
+    iconPosition?: Position;
 
     /**
-     * Specifies the Color style of the FAB button. Options include 'Primary', 'Secondary', 'Warning', 'Success', 'Danger', and 'Info'.
+     * Specifies the Color style of the FAB button. Options include 'Primary', 'Secondary', 'Warning', 'Success', 'Error', and 'Info'.
      *
      * @default Color.Primary
      */
@@ -122,6 +122,8 @@ type IFabProps = FabButtonProps & ButtonHTMLAttributes<HTMLButtonElement>;
  * The Floating Action Button (FAB) component offers a prominent primary action for an application interface, prominently positioned and styled to stand out with custom icon support.
  *
  * ```typescript
+ * import { Fab, Color, FabPosition } from "@syncfusion/react-buttons";
+ *
  * <Fab color={Color.Success} position={FabPosition.BottomLeft}>FAB</Fab>
  * ```
  */
@@ -133,9 +135,9 @@ export const Fab: React.ForwardRefExoticComponent<IFabProps & React.RefAttribute
         const {
             disabled = false,
             position = FabPosition.BottomRight,
-            iconPosition = IconPosition.Left,
+            iconPosition = Position.Left,
             className = '',
-            togglable = false,
+            toggleable = false,
             icon,
             children,
             color = Color.Primary,
@@ -147,7 +149,6 @@ export const Fab: React.ForwardRefExoticComponent<IFabProps & React.RefAttribute
         const classNames: string = [
             'sf-control',
             'sf-fab',
-            'sf-lib',
             'sf-btn',
             className || '',
             visible ? '' : 'sf-fab-hidden',
@@ -159,7 +160,7 @@ export const Fab: React.ForwardRefExoticComponent<IFabProps & React.RefAttribute
         const publicAPI: Partial<IFabButton> = {
             iconPosition,
             icon,
-            togglable,
+            toggleable,
             visible,
             color,
             size
@@ -212,7 +213,7 @@ export const Fab: React.ForwardRefExoticComponent<IFabProps & React.RefAttribute
                 size={size}
                 disabled={disabled}
                 iconPosition={icon ? iconPosition : undefined}
-                togglable={togglable}
+                toggleable={toggleable}
                 {...domProps}
             >
                 {children}

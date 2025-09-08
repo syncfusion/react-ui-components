@@ -29,6 +29,10 @@ export interface DateFormatOptions {
      * Enable server side date formating.
      */
     isServerRendered?: boolean;
+    /**
+     * Determines the locale of the date formatting.
+     */
+    locale?: string
 }
 
 /**
@@ -79,6 +83,10 @@ export interface NumberFormatOptions {
      *  Species which currency symbol to consider.
      */
     altSymbol?: string;
+    /**
+     * Determines the locale of the number formatting.
+     */
+    locale?: string
 }
 
 
@@ -108,122 +116,112 @@ const mapper: string[] = ['numericObject', 'dateObject'];
 /**
  * Gets a date formatter function for specified culture and format options
  *
- * @param {string} culture - The culture code (e.g. 'en-US')
  * @param {DateFormatOptions} props - Date formatting options
  * @returns {Function} Formatter function that accepts Date objects
  */
-export function getDateFormat(culture: string, props?: DateFormatOptions): Function {
-    return DateFormat.dateFormat(culture, props || { type: 'date', skeleton: 'short' }, cldrData);
+export function getDateFormat(props?: DateFormatOptions): Function {
+    return DateFormat.dateFormat(props?.locale || defaultCulture, props || { type: 'date', skeleton: 'short' }, cldrData);
 }
 
 /**
  * Gets a number formatter function for specified culture and format options
  *
- * @param {string} culture - The culture code (e.g. 'en-US')
  * @param {NumberFormatOptions} props - Number formatting options
  * @returns {Function} Formatter function that accepts numeric values
  */
-export function getNumberFormat(culture: string, props?: NumberFormatOptions): Function {
+export function getNumberFormat(props?: NumberFormatOptions): Function {
     if (props && !props.currency) {
         props.currency = defaultCurrencyCode;
     }
-    return NumberFormat.numberFormatter(culture, props || {}, cldrData);
+    return NumberFormat.numberFormatter(props?.locale || defaultCulture, props || {}, cldrData);
 }
 
 /**
  * Returns the parser function for given props.
  *
- * @param {string} culture - The culture code (e.g. 'en-US')
  * @param {DateFormatOptions} props - Specifies the format props in which the parser function will return.
  * @returns {Function} The date parser function.
  */
-export function getDateParser(culture: string, props?: DateFormatOptions): Function {
-    return DateParser.dateParser(culture, props || { skeleton: 'short', type: 'date' }, cldrData);
+export function getDateParser(props?: DateFormatOptions): Function {
+    return DateParser.dateParser(props?.locale || defaultCulture, props || { skeleton: 'short', type: 'date' }, cldrData);
 }
 
 /**
  * Returns the parser function for given props.
  *
- * @param {string} culture - The culture code (e.g. 'en-US')
  * @param {NumberFormatOptions} props - Specifies the format props in which the parser function will return.
  * @returns {Function} The number parser function.
  */
-export function getNumberParser(culture: string, props?: NumberFormatOptions): Function {
-    return NumberParser.numberParser(culture, props || { format: 'N' }, cldrData);
+export function getNumberParser(props?: NumberFormatOptions): Function {
+    return NumberParser.numberParser(props?.locale || defaultCulture, props || { format: 'N' }, cldrData);
 }
 
 /**
  * Returns the formatted string based on format props.
  *
- * @param {string} culture - The culture code (e.g. 'en-US')
  * @param {number} value - Specifies the number to format.
  * @param {NumberFormatOptions} option - Specifies the format props in which the number will be formatted.
  * @returns {string} The formatted number string.
  */
-export function formatNumber(culture: string, value: number, option?: NumberFormatOptions): string {
-    return getNumberFormat(culture, option)(value) || value;
+export function formatNumber(value: number, option?: NumberFormatOptions): string {
+    return getNumberFormat(option)(value) || value;
 }
 
 /**
  * Returns the formatted date string based on format props.
  *
- * @param {string} culture - The culture code (e.g. 'en-US').
  * @param {Date} value - Specifies the number to format.
  * @param {DateFormatOptions} option - Specifies the format props in which the number will be formatted.
  * @returns {string} The formatted date string.
  */
-export function formatDate(culture: string, value: Date, option?: DateFormatOptions): string {
-    return getDateFormat(culture, option)(value);
+export function formatDate(value: Date, option?: DateFormatOptions): string {
+    return getDateFormat(option)(value);
 }
 
 /**
  * Returns the date object for given date string and props.
  *
- * @param {string} culture - The culture code (e.g. 'en-US').
  * @param {string} value - Specifies the string to parse.
  * @param {DateFormatOptions} option - Specifies the parse props in which the date string will be parsed.
  * @returns {Date} The parsed Date object.
  */
-export function parseDate(culture: string, value: string, option?: DateFormatOptions): Date {
-    return getDateParser(culture, option)(value);
+export function parseDate(value: string, option?: DateFormatOptions): Date {
+    return getDateParser(option)(value);
 }
 
 /**
  * Returns the number object from the given string value and props.
  *
- * @param {string} culture - The culture code (e.g. 'en-US').
  * @param {string} value - Specifies the string to parse.
  * @param {NumberFormatOptions} option - Specifies the parse props in which the string number will be parsed.
  * @returns {number} The parsed number.
  */
-export function parseNumber(culture: string, value: string, option?: NumberFormatOptions): number {
-    return getNumberParser(culture, option)(value);
+export function parseNumber(value: string, option?: NumberFormatOptions): number {
+    return getNumberParser(option)(value);
 }
 
 /**
  * Returns Native Date Time Pattern
  *
- * @param {string} culture - The culture code (e.g. 'en-US').
  * @param {DateFormatOptions} option - Specifies the parse props for resultant date time pattern.
  * @param {boolean} isExcelFormat - Specifies format value to be converted to excel pattern.
  * @returns {string} The native date time pattern.
  * @private
  */
-export function getDatePattern(culture: string, option: DateFormatOptions, isExcelFormat?: boolean): string {
-    return IntlBase.getActualDateTimeFormat(culture, option, cldrData, isExcelFormat);
+export function getDatePattern(option: DateFormatOptions, isExcelFormat?: boolean): string {
+    return IntlBase.getActualDateTimeFormat(option?.locale || defaultCulture, option, cldrData, isExcelFormat);
 }
 
 /**
  * Returns Native Number Pattern
  *
- * @param {string} culture - The culture code (e.g. 'en-US').
  * @param {NumberFormatOptions} option - Specifies the parse props for resultant number pattern.
  * @param {boolean} isExcel - Specifies whether to return Excel format.
  * @returns {string} The native number pattern.
  * @private
  */
-export function getNumberPattern(culture: string, option: NumberFormatOptions, isExcel?: boolean): string {
-    return IntlBase.getActualNumberFormat(culture, option, cldrData, isExcel);
+export function getNumberPattern(option: NumberFormatOptions, isExcel?: boolean): string {
+    return IntlBase.getActualNumberFormat(option?.locale || defaultCulture, option, cldrData, isExcel);
 }
 
 /**

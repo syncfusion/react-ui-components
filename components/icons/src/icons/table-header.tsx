@@ -1,4 +1,4 @@
 import { createIcon } from '../icon';
 import { IconComponent } from '../icon';
 const path: React.ReactNode = <path d='M0 4C0 2.89543 0.89543 2 2 2H22C23.1046 2 24 2.89543 24 4V8C24 9.10457 23.1046 10 22 10V20C22 21.1046 21.1046 22 20 22H4C2.89543 22 2 21.1046 2 20V10C0.89543 10 0 9.10457 0 8V4ZM4 10V14H8V10H4ZM10 10V14H14V10H10ZM16 10V14H20V10H16ZM20 16H16V20H20V16ZM14 20V16H10V20H14ZM8 20V16H4V20H8ZM17 8H22V4H17V8ZM15 4H9V8H15V4ZM7 8V4H2V8H7Z' fillRule='evenodd' clipRule='evenodd' fill='currentcolor'/>;
-export const TableHeader: IconComponent  = createIcon(path);
+export const TableHeaderIcon: IconComponent  = createIcon(path);

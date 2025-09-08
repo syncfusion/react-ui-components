@@ -1,38 +1,37 @@
 
-import { useState, useCallback, useEffect, forwardRef, useImperativeHandle, useRef, ReactNode, useMemo} from 'react';
-import { getUniqueID, IL10n, L10n, preRender, useProviderContext } from '@syncfusion/react-base';
-import { CLASS_NAMES, FloatLabelType, InputBase, renderClearButton, renderFloatLabelElement } from '../common/inputbase';
+import { useState, useCallback, useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
+import { getUniqueID, preRender, useProviderContext, Variant } from '@syncfusion/react-base';
+import { CLASS_NAMES, LabelMode, InputBase, renderClearButton, renderFloatLabelElement } from '../common/inputbase';
 import * as React from 'react';
+export { LabelMode, Variant };
+
+export interface TextBoxChangeEvent {
+    /**
+     * Specifies the initial event object received from the input element.
+     */
+    event?: React.ChangeEvent<HTMLInputElement>;
+
+    /**
+     * Specifies the current value of the TextBox.
+     */
+    value?: string;
+}
 
 
 /**
- * Represents the available size options for the textbox component.
+ * Specifies the available size options for the TextBox component.
  *
  * @enum {string}
  */
 export enum Size {
-    /** Small-sized textbox with reduced dimensions */
+    /** Specifies the small-sized TextBox with reduced dimensions */
     Small = 'Small',
-    /** Medium-sized textbox with reduced dimensions */
+    /** Specifies the medium-sized TextBox with reduced dimensions */
     Medium = 'Medium',
 }
 
 /**
- * Represents the available visual variants for the component.
- *
- * @enum {string}
- */
-export enum Variant {
-    /** Outlined appearance with border and transparent background */
-    Outlined = 'Outlined',
-    /** Filled appearance with solid background color */
-    Filled = 'Filled',
-    /** Standard appearance without border and background color */
-    Standard = 'Standard'
-}
-
-/**
- * Represents the available color schemes for the component.
+ * Specifies the available color schemes for the component.
  *
  * @enum {string}
  */
@@ -47,90 +46,89 @@ export enum Color {
 
 export interface TextBoxProps {
     /**
-     * Sets the value of the component. When provided, the component will be controlled.
+     * Specifies the value of the component. When provided, the component will be controlled.
      *
      * @default -
      */
     value?: string;
 
     /**
-     * Sets the default value of the component. Used for uncontrolled mode.
+     * Specifies the default value of the component. Used for uncontrolled mode.
      *
      * @default -
      */
     defaultValue?: string;
 
     /**
-     * Defines the floating label type for the component.
+     * Specifies the floating label type for the component.
      *
      * @default 'Never'
      */
-    labelMode?: FloatLabelType;
+    labelMode?: LabelMode;
 
     /**
-     * Sets the placeholder text for the component.
+     * Specifies the placeholder text for the component.
      *
      * @default -
      */
     placeholder?: string;
 
     /**
-     * Specifies whether to display a clear button within the textbox.
-     * When enabled, a clear icon appears in the textbox that allows users
+     * Specifies whether to display a clear button within the TextBox.
+     * When enabled, a clear icon appears in the TextBox that allows users
      * to clear the input value with a single click.
      *
      * @default false
      */
-    clearButton?: boolean;
+    clearButton?: React.ReactNode;
 
     /**
-     * Callback fired when the input value is changed.
+     * Specifies the Callback that fired when the input value is changed.
      *
      * @event onChange
-     * @param {React.ChangeEvent<HTMLInputElement>} event - The change event object containing the new value.
      * @returns {void}
      */
-    onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    onChange?: (event: TextBoxChangeEvent) => void;
 
     /**
-     * The visual style variant of the component.
+     * Specifies the visual style variant of the component.
      *
      * @default Variant.Standard
      */
     variant?: Variant;
 
     /**
-     * Specifies the size style of the textbox. Options include 'Small' and 'Medium'.
+     * Specifies the size style of the TextBox. Options include 'Small' and 'Medium'.
      *
      * @default Size.Medium
      */
     size?: Size;
 
     /**
-     * Specifies the Color style of the textbox. Options include 'Warning', 'Success' and 'Error'.
+     * Specifies the Color style of the TextBox. Options include 'Warning', 'Success' and 'Error'.
      *
      * @default -
      */
     color?: Color;
 
     /**
-     * Use this to add an icon at the beginning of the input.
+     * Specifies the icon to display at the beginning of the input.
      *
      * @default -
      */
-    prefix?: string | ReactNode;
+    prefix?: React.ReactNode;
 
     /**
-     * Use this to add an icon at the end of the input.
+     * Specifies the icon to display at the end of the input.
      *
      * @default -
      */
-    suffix?: string | ReactNode;
+    suffix?: React.ReactNode;
 }
 
 export interface ITextBox extends TextBoxProps {
     /**
-     * This is Textbox component element.
+     * Specifies the TextBox component element.
      *
      * @private
      * @default null
@@ -145,6 +143,8 @@ type ITextBoxProps = TextBoxProps & Omit<React.InputHTMLAttributes<HTMLInputElem
  * Supports both controlled and uncontrolled modes based on presence of value or defaultValue prop.
  *
  * ```typescript
+ * import { TextBox } from "@syncfusion/react-inputs";
+ *
  * <TextBox defaultValue="Initial text" placeholder="Enter text" />
  * ```
  */
@@ -165,7 +165,7 @@ forwardRef<ITextBox, ITextBoxProps>((props: ITextBoxProps, ref: React.ForwardedR
         width,
         placeholder = '',
         variant,
-        size,
+        size = Size.Medium,
         color,
         prefix,
         suffix,
@@ -207,7 +207,7 @@ forwardRef<ITextBox, ITextBoxProps>((props: ITextBoxProps, ref: React.ForwardedR
             isFocused ? CLASS_NAMES.TEXTBOX_FOCUS : '',
             ((inputValue) !== '') ? CLASS_NAMES.VALIDINPUT : '',
             variant && variant.toLowerCase() !== 'standard'  ? variant.toLowerCase() === 'outlined' ? 'sf-outline' : `sf-${variant.toLowerCase()}` : '',
-            size && size.toLowerCase() !== 'medium' ? `sf-${size.toLowerCase()}` : '',
+            size && size.toLowerCase() !== 'small' ? `sf-${size.toLowerCase()}` : '',
             color ? `sf-${color.toLowerCase()}` : ''
         );
     };
@@ -217,12 +217,6 @@ forwardRef<ITextBox, ITextBoxProps>((props: ITextBoxProps, ref: React.ForwardedR
     };
 
     const containerClassNames: string = getContainerClassNames();
-
-    const setPlaceholder: string = useMemo(() => {
-        const l10n: IL10n = L10n('textbox', { placeholder: placeholder }, locale);
-        l10n.setLocale(locale);
-        return l10n.getConstant('placeholder');
-    }, [locale, placeholder]);
 
     useEffect(() => {
         preRender('textbox');
@@ -246,7 +240,7 @@ forwardRef<ITextBox, ITextBoxProps>((props: ITextBoxProps, ref: React.ForwardedR
              setPreviousValue(newValue);
          }
          if (onChange) {
-             onChange(event as React.ChangeEvent<HTMLInputElement>);
+             onChange({ event: event, value: newValue });
          }
      }, [previousValue, onChange, isControlled]);
 
@@ -268,13 +262,14 @@ forwardRef<ITextBox, ITextBoxProps>((props: ITextBoxProps, ref: React.ForwardedR
     }, [onFocus]);
 
     const clearInput: () => void = useCallback(() => {
+        const newValue: string = '';
         if (!isControlled) {
-            setValue('');
+            setValue(newValue);
         }
         if (onChange) {
-            onChange(event as unknown as React.ChangeEvent<HTMLInputElement>);
+            onChange({ value: newValue, event: undefined });
         }
-    }, [isControlled, onChange, inputValue]);
+    }, [isControlled, onChange]);
 
     const handleBlur: (event: React.FocusEvent<HTMLInputElement>) => void =
     useCallback((event: React.FocusEvent<HTMLInputElement>) => {
@@ -302,7 +297,7 @@ forwardRef<ITextBox, ITextBoxProps>((props: ITextBoxProps, ref: React.ForwardedR
                 value={isControlled ? (displayValue) : undefined}
                 defaultValue={!isControlled ? (defaultInputValue) : undefined}
                 disabled={disabled}
-                placeholder={labelMode === 'Never' ? setPlaceholder : undefined}
+                placeholder={labelMode === 'Never' ? placeholder : undefined}
                 className={'sf-control sf-textbox sf-lib sf-input'}
                 onChange={changeHandler}
                 aria-label={labelMode === 'Never' ? 'textbox' : undefined}
@@ -313,10 +308,10 @@ forwardRef<ITextBox, ITextBoxProps>((props: ITextBoxProps, ref: React.ForwardedR
                 labelMode || 'Never',
                 isFocused || (displayValue) !== '',
                 (displayValue as string),
-                setPlaceholder,
+                placeholder,
                 stableId
             )}
-            {clearButton && renderClearButton((displayValue as string), clearInput)}
+            {clearButton && renderClearButton((displayValue as string), clearInput, clearButton, 'textbox', locale)}
             {suffix}
         </div>
     );

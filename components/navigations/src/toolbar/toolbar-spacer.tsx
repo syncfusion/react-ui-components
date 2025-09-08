@@ -4,7 +4,7 @@ import {
 } from 'react';
 
 const CLS_ITEM: string = 'sf-toolbar-item';
-const CLS_SPACER: string = 'sf-spacer';
+const CLS_SPACER: string = 'sf-toolbar-spacer';
 
 export interface IToolbarSpacer {
     /**

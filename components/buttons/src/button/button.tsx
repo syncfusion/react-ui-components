@@ -1,110 +1,7 @@
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef, ButtonHTMLAttributes, Ref } from 'react';
-import { preRender, SvgIcon, useProviderContext, useRippleEffect } from '@syncfusion/react-base';
+import { preRender, SvgIcon, useProviderContext, useRippleEffect, Color, Size, Variant, Position } from '@syncfusion/react-base';
 import * as React from 'react';
-
-/**
- * Defines the label position of the component.
- * ```props
- * After :- When the label is positioned After, it appears to the right of the component.
- * Before :- When the label is positioned Before, it appears to the left of the component.
- * ```
- */
-export type LabelPlacement = 'After' | 'Before' | 'Bottom';
-
-/**
- * Specifies the position of an icon relative to text content in a button component.
- */
-export enum IconPosition {
-    /**
-     * Positions the icon to the left of text content in a button.
-     */
-    Left = 'Left',
-
-    /**
-     * Positions the icon to the right of text content in a button.
-     */
-    Right = 'Right',
-
-    /**
-     * Positions the icon above text content in a button.
-     */
-    Top = 'Top',
-
-    /**
-     * Positions the icon below text content in a button.
-     */
-    Bottom = 'Bottom',
-}
-
-/**
- * Specifies the type of Color to display the Button with distinctive colors.
- */
-export enum Color {
-    /**
-     * The button is displayed with colors that indicate success.
-     */
-    Success = 'Success',
-    /**
-     * The button is displayed with colors that indicate information.
-     */
-    Info = 'Info',
-    /**
-     * The button is displayed with colors that indicate a warning.
-     */
-    Warning = 'Warning',
-    /**
-     * The button is displayed with colors that indicate danger.
-     */
-    Danger = 'Danger',
-    /**
-     * The button is displayed with colors that indicate it is a primary button.
-     */
-    Primary = 'Primary',
-    /**
-     * The button is displayed with colors that indicate it is a secondary button.
-     */
-    Secondary = 'Secondary'
-}
-
-/**
- * Defines the visual style variants for a button component, controlling background, border, and text appearance.
- */
-export enum Variant {
-    /**
-     * Displays a solid background color with contrasting text.
-     */
-    Filled = 'Filled',
-
-    /**
-     * Displays a border with a transparent background and colored text.
-     */
-    Outlined = 'Outlined',
-
-    /**
-     * Displays only colored text without background and border.
-     */
-    Flat = 'Flat'
-}
-
-/**
- * Specifies the size of the Button for layout purposes.
- */
-export enum Size {
-    /**
-     * The button is displayed in a smaller size.
-     */
-    Small = 'Small',
-
-    /**
-     * The button is displayed in a medium size.
-     */
-    Medium = 'Medium',
-
-    /**
-     * The button is displayed in a larger size.
-     */
-    Large = 'Large'
-}
+export {  Color, Size, Variant, Position };
 
 /**
  * Button component properties interface.
@@ -114,23 +11,23 @@ export interface ButtonProps {
     /**
      * Specifies the position of the icon relative to the button text. Options include placing the icon at the left, right, top, or bottom of the button content.
      *
-     * @default IconPosition.Left
+     * @default Position.Left
      */
-    iconPosition?: IconPosition;
+    iconPosition?: Position;
 
     /**
      * Defines an icon for the button, which can either be a CSS class name for custom styling or an SVG element for rendering.
      *
      * @default -
      */
-    icon?: string | React.ReactNode;
+    icon?: React.ReactNode;
 
     /**
      * Indicates whether the button functions as a toggle button. If true, the button can switch between active and inactive states each time it is clicked.
      *
      * @default false
      */
-    togglable?: boolean;
+    toggleable?: boolean;
 
     /**
      * Sets the initial selected state for a toggle button. When true, the button is initially rendered in a 'selected' or 'active' state, otherwise it's inactive.
@@ -140,14 +37,14 @@ export interface ButtonProps {
     selected?: boolean;
 
     /**
-     * Specifies the Color style of the button. Options include 'Primary', 'Secondary', 'Warning', 'Success', 'Danger', and 'Info'.
+     * Specifies the Color style of the button. Options include 'Primary', 'Secondary', 'Warning', 'Success', 'Error', and 'Info'.
      *
      * @default Color.Primary
      */
     color?: Color;
 
     /**
-     * Specifies the variant style of the button. Options include 'Outlined', 'Filled', and 'Flat'.
+     * Specifies the variant style of the button. Options include 'Outlined', 'Filled', and 'Standard'.
      *
      * @default Variant.Filled
      */
@@ -197,6 +94,8 @@ type IButtonProps = IButton & ButtonHTMLAttributes<HTMLButtonElement>;
  * The Button component is a versatile element for creating styled buttons with functionalities like toggling, icon positioning, and HTML attribute support, enhancing interaction based on its configuration and state.
  *
  * ```typescript
+ * import { Button, Color } from '@syncfusion/react-buttons';
+ *
  * <Button color={Color.Success}>Submit</Button>
  * ```
  */
@@ -205,15 +104,15 @@ export const Button: React.ForwardRefExoticComponent<IButtonProps & React.RefAtt
         const buttonRef: React.RefObject<HTMLButtonElement | null> = useRef<HTMLButtonElement>(null);
         const {
             disabled = false,
-            iconPosition = IconPosition.Left,
+            iconPosition = Position.Left,
             icon,
             className = '',
             dropIcon = false,
-            togglable = false,
+            toggleable = false,
             selected,
             color = Color.Primary,
             variant = Variant.Filled,
-            size,
+            size = Size.Medium,
             isLink = false,
             onClick,
             children,
@@ -227,7 +126,7 @@ export const Button: React.ForwardRefExoticComponent<IButtonProps & React.RefAtt
         const publicAPI: Partial<IButton> = {
             iconPosition,
             icon,
-            togglable,
+            toggleable,
             selected,
             color,
             variant,
@@ -236,7 +135,7 @@ export const Button: React.ForwardRefExoticComponent<IButtonProps & React.RefAtt
         };
 
         const handleButtonClick: React.MouseEventHandler<HTMLButtonElement> = (event: React.MouseEvent<HTMLButtonElement>) => {
-            if (togglable && selected === undefined) {
+            if (toggleable && selected === undefined) {
                 setIsActive((prevState: boolean) => !prevState);
             }
             onClick?.(event);
@@ -257,17 +156,26 @@ export const Button: React.ForwardRefExoticComponent<IButtonProps & React.RefAtt
             element: buttonRef.current
         }), [publicAPI]);
 
+        const ButtonFontSizeClass: string = size && size.toLowerCase() === 'small'
+            ? 'sf-font-size-12' : size && size.toLowerCase() === 'large' ? 'sf-font-size-16' : 'sf-font-size-14';
+
         const classNames: string = [
-            'sf-btn',
+            'sf-btn sf-control sf-align-center',
+            ButtonFontSizeClass,
+            iconPosition && (iconPosition === Position.Top || iconPosition === Position.Bottom) ? 'sf-btn-vertical' : 'sf-btn-horizontal',
             className,
             dir === 'rtl' ? 'sf-rtl' : '',
             isActive ? 'sf-active' : '',
-            isLink ? 'sf-link' : '',
-            icon && !children ? 'sf-icon-btn' : '',
-            iconPosition && `sf-${iconPosition.toLowerCase()}`,
+            isLink ? 'sf-link' + (!props.color ? ' sf-info' : '') : '',
+            !icon && children && `sf-btn sf-btn-${size.toLowerCase().substring(0, 2)}`,
+            icon && !dropIcon && !children && `sf-icon-btn sf-icon-btn-${size.toLowerCase().substring(0, 2)}`,
+            icon && children ? `sf-icon sf-icon-${size.toLowerCase().substring(0, 2)}` : '',
+            iconPosition && `sf-btn-${iconPosition.toLowerCase()}`,
+            color && color.toLowerCase() !== 'primary' && 'sf-color',
             color && color.toLowerCase() !== 'secondary' ? `sf-${color.toLowerCase()}` : '',
             variant ? `sf-${variant.toLowerCase() }` : '',
-            size && size.toLowerCase() !== 'medium' ? `sf-${size.toLowerCase()}` : ''
+            size && `sf-btn-${size.toLowerCase().substring(0, 2)}`,
+            disabled && 'sf-cursor-default'
         ].filter(Boolean).join(' ');
 
         return (
@@ -292,7 +200,7 @@ export const Button: React.ForwardRefExoticComponent<IButtonProps & React.RefAtt
                 )}
                 <>
                     {icon && children ? (
-                        <span className='sf-content'>{children}</span>
+                        <span className='sf-btn-content'>{children}</span>
                     ) : (
                         children
                     )}

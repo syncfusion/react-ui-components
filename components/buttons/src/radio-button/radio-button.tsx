@@ -1,18 +1,40 @@
 import * as React from 'react';
-import { useRef, useImperativeHandle, useState, useEffect, forwardRef, Ref, ChangeEvent, InputHTMLAttributes } from 'react';
-import { preRender, useProviderContext, useRippleEffect } from '@syncfusion/react-base';
-import {Color, LabelPlacement, Size} from '../button/button';
+import { useRef, useImperativeHandle, useState, useEffect, forwardRef, Ref, InputHTMLAttributes, useCallback } from 'react';
+import { preRender, useProviderContext, useRippleEffect, Color, Size, LabelPlacement } from '@syncfusion/react-base';
+export { LabelPlacement };
+
+/**
+ * Interface for RadioButton change event arguments
+ */
+export interface RadioButtonChangeEvent {
+    /**
+     * The initial event object received from the input element.
+     */
+    event: React.ChangeEvent<HTMLInputElement>;
+
+    /**
+     * The selected value of the RadioButton.
+     */
+    value: string;
+}
 
 /**
  * Defines the properties for the RadioButton component.
  */
 export interface RadioButtonProps {
     /**
-     * Specifies a value that indicates whether the RadioButton is `checked` or not. When set to `true`, the RadioButton will be in `checked` state.
+     * Specifies whether the RadioButton is `checked` (`true`) or unchecked (`false`). Use for controlled components.
      *
      * @default false
      */
     checked?: boolean;
+
+    /**
+     * Specifies the initial checked state of the RadioButton. Use for uncontrolled components.
+     *
+     * @default false
+     */
+    defaultChecked?: boolean;
 
     /**
      * Defines the caption for the RadioButton, that describes the purpose of the RadioButton.
@@ -29,7 +51,7 @@ export interface RadioButtonProps {
     size?: Size;
 
     /**
-     * Specifies the Color style of the radio-button. Options include 'Primary', 'Secondary', 'Warning', 'Success', 'Danger', and 'Info'.
+     * Specifies the Color style of the radio-button. Options include 'Primary', 'Secondary', 'Warning', 'Success', 'Error', and 'Info'.
      *
      * @default -
      */
@@ -52,9 +74,9 @@ export interface RadioButtonProps {
     /**
      * Event trigger when the RadioButton state has been changed by user interaction.
      *
-     * @event change
+     * @event onChange
      */
-    onChange?: (event: ChangeEvent<HTMLInputElement>) => void;
+    onChange?: (event: RadioButtonChangeEvent) => void;
 }
 
 export interface IRadioButton extends RadioButtonProps {
@@ -67,12 +89,14 @@ export interface IRadioButton extends RadioButtonProps {
     element?: HTMLInputElement | null;
 }
 
-type IRadioButtonProps = IRadioButton & InputHTMLAttributes<HTMLInputElement>;
+type IRadioButtonProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange'> & IRadioButton;
 
 /**
  * The RadioButton component allows users to select a single option from a group, utilizing a circular input field that provides a clear user selection interface.
  *
  * ```typescript
+ * import { RadioButton } from "@syncfusion/react-buttons";
+ *
  * <RadioButton checked={true} label="Choose this option" name="choices" />
  * ```
  */
@@ -80,6 +104,7 @@ export const RadioButton: React.ForwardRefExoticComponent<IRadioButtonProps & Re
     forwardRef<IRadioButton, IRadioButtonProps>((props: IRadioButtonProps, ref: Ref<IRadioButton>) => {
         const {
             checked,
+            defaultChecked = false,
             className = '',
             disabled = false,
             label = '',
@@ -92,8 +117,10 @@ export const RadioButton: React.ForwardRefExoticComponent<IRadioButtonProps & Re
             ...domProps
         } = props;
         const isControlled: boolean = checked !== undefined;
-        const [isChecked, setIsChecked] = useState<boolean>(() => isControlled ? !!checked : !!domProps.defaultChecked);
+        const [isChecked, setIsChecked] = useState<boolean>(() => isControlled ? !!checked : defaultChecked);
         const radioInputRef: React.RefObject<HTMLInputElement | null> = useRef<HTMLInputElement>(null);
+        const [isFocused, setIsFocused] = useState(false);
+        const rippleContainerRef: React.RefObject<HTMLSpanElement | null> = useRef<HTMLSpanElement>(null);
         const { dir, ripple } = useProviderContext();
         const { rippleMouseDown, Ripple} = useRippleEffect(ripple, { duration: 400, isCenterRipple: true });
 
@@ -121,13 +148,30 @@ export const RadioButton: React.ForwardRefExoticComponent<IRadioButtonProps & Re
             element: radioInputRef.current
         }), [publicAPI]);
 
-        const onRadioChange: React.ChangeEventHandler<HTMLInputElement> = (event: ChangeEvent<HTMLInputElement>): void => {
+        const onRadioChange: React.ChangeEventHandler<HTMLInputElement> = (event: React.ChangeEvent<HTMLInputElement>): void => {
             if (!isControlled) {
                 setIsChecked(event.target.checked);
             }
             if (onChange) {
-                onChange(event);
+                onChange({ event, value: value });
             }
+        };
+        const handleMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+            if (ripple && rippleContainerRef.current && rippleMouseDown) {
+                const syntheticEvent: React.MouseEvent<HTMLSpanElement, MouseEvent> = {
+                    ...e,
+                    currentTarget: rippleContainerRef.current,
+                    target: rippleContainerRef.current
+                } as unknown as React.MouseEvent<HTMLSpanElement>;
+                rippleMouseDown(syntheticEvent);
+            }
+        }, [ripple, rippleMouseDown]);
+
+        const handleFocus: () => void = () => {
+            setIsFocused(true);
+        };
+        const handleBlur: () => void = () => {
+            setIsFocused(false);
         };
 
         const classNames: string = [
@@ -135,7 +179,8 @@ export const RadioButton: React.ForwardRefExoticComponent<IRadioButtonProps & Re
             'sf-wrapper',
             className,
             size && size.toLowerCase() !== 'medium' ? `sf-${size.toLowerCase()}` : '',
-            color && color.toLowerCase() !== 'secondary' ? `sf-${color.toLowerCase()}` : ''
+            color && color.toLowerCase() !== 'secondary' ? `sf-${color.toLowerCase()}` : '',
+            'sf-pos-relative sf-display-inline-block'
         ].filter(Boolean).join(' ');
 
         const rtlClass: string = (dir === 'rtl') ? 'sf-rtl' : '';
@@ -143,7 +188,7 @@ export const RadioButton: React.ForwardRefExoticComponent<IRadioButtonProps & Re
         const labelBottom: boolean = labelPlacement === 'Bottom';
 
         return (
-            <div className={classNames}>
+            <div className={classNames} onMouseDown={handleMouseDown}>
                 <input
                     ref={radioInputRef}
                     type="radio"
@@ -152,16 +197,17 @@ export const RadioButton: React.ForwardRefExoticComponent<IRadioButtonProps & Re
                     value={value}
                     disabled={disabled}
                     onChange={onRadioChange}
-                    className={`sf-control sf-radio sf-lib ${className}`}
+                    onFocus={handleFocus}
+                    onBlur={handleBlur}
+                    className={`sf-control sf-radio ${className} sf-pos-absolute`}
                     checked={isControlled ? !!checked : undefined}
                     defaultChecked={!isControlled ? isChecked : undefined}
                     {...domProps}
                 />
-                <label className={`${labelBefore ? 'sf-right' : ''} ${labelBottom ? 'sf-bottom' : ''} ${rtlClass}`} htmlFor={domProps.id ? domProps.id : `sf-${value}`}>
-                    <span className="sf-ripple-container" onMouseDown={rippleMouseDown}>
-                        {ripple && <Ripple />}
-                    </span>
-                    <span className="sf-label">{label}</span>
+                <label className={`sf-cursor-pointer sf-pos-relative sf-prevent-select sf-display-inline-block ${labelBefore ? 'sf-right' : ''} ${labelBottom ? 'sf-bottom' : ''} ${isFocused ? 'sf-focus' : ''} ${rtlClass}`} htmlFor={domProps.id ? domProps.id : `sf-${value}`}>                    <span  ref={rippleContainerRef} className="sf-ripple-container" >
+                    {ripple && <Ripple />}
+                </span>
+                <span className="sf-label">{label}</span>
                 </label>
             </div>
         );

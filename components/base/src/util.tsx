@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { ReactElement, RefObject, version } from 'react';
 /**
  * Common utility methods
  *
@@ -415,4 +416,41 @@ function combineArray(num: Int16Array): string {
         ret += (i ? ',' : '') + num[parseInt(i.toString(), 10)];
     }
     return ret;
+}
+
+/**
+ * Retrieves the underlying HTML element from a possibly forwarded ref or custom element.
+ *
+ * @param {RefObject<HTMLElement>} elementRef - The ref object containing the element.
+ * @returns {HTMLElement} The actual HTML element
+ */
+export function getActualElement(
+    elementRef: RefObject<HTMLElement | { element?: HTMLElement | null }>
+): HTMLElement | null {
+    const current: HTMLElement | { element?: HTMLElement | null; } = elementRef.current;
+    if (!current) {
+        return null;
+    }
+    if (!(current instanceof HTMLElement)) {
+        if (current.element instanceof HTMLElement) {
+            return current.element;
+        } else {
+            return null;
+        }
+    }
+    return current;
+}
+
+/**
+ * Gets the correct ref from a React element based on React version.
+ *
+ * @param {ReactElement} element - The React element from which to extract the ref
+ * @returns {RefObject<HTMLElement> | null} - The extracted ref or null if not found
+ */
+export function getElementRef(element: ReactElement): React.RefObject<HTMLElement> | React.RefCallback<HTMLElement> | null {
+    if (parseInt(version, 10) >= 19) {
+        return (element as React.ReactElement<{ ref?: React.RefCallback<HTMLElement> | React.RefObject<HTMLElement> }>).props?.ref || null;
+    } else {
+        return (element as any).ref || null;
+    }
 }

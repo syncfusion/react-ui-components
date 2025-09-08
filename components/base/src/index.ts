@@ -2,6 +2,7 @@
  * Base modules
  */
 export * from './animation';
+export * from './animate';
 export * from './base';
 export * from './browser';
 export * from './component';
@@ -10,6 +11,7 @@ export * from './drag-util';
 export * from './dragdrop';
 export * from './draggable';
 export * from './droppable';
+export * from './enums';
 export * from './event-handler';
 export * from './fetch';
 export * from './hijri-parser';

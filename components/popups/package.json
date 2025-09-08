@@ -1,7 +1,7 @@
 {
   "name": "@syncfusion/react-popups",
-  "version": "30.1.37",
-  "description": "A package of Pure React popup components such as Tooltip that is used to display information or messages in separate pop-ups.",
+  "version": "31.1.17",
+  "description": "A package of React popup components such as Tooltip that is used to display information or messages in separate pop-ups.",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
   "keywords": [
@@ -32,8 +32,9 @@
   "module": "./index.js",
   "readme": "README.md",
   "dependencies": {
-    "@syncfusion/react-base": "~30.1.37",
-    "@syncfusion/react-buttons": "~30.1.37"
+    "@syncfusion/react-base": "~31.1.17",
+    "@syncfusion/react-buttons": "~31.1.17",
+    "@syncfusion/react-icons": "~31.1.17"
   },
   "devDependencies": {
     "gulp": "4.0.2",

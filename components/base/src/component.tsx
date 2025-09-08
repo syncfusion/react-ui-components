@@ -80,7 +80,7 @@ export function preRender(moduleName: string): void  {
         isBannerAdded = true;
     }
     // Based on the considered control list we have count the instance
-    if (window && document && !validateLicense()) {
+    if (window && document && !validateLicense(moduleName)) {
         if (componentList.indexOf(moduleName) !== -1) {
             instancecount = instancecount + 1;
             if (instancecount > 5) {

@@ -1,7 +1,7 @@
-import { RefObject, useId, useLayoutEffect } from 'react';
+import { cloneElement, HTMLAttributes, ReactElement, RefObject, useEffect, useLayoutEffect, useRef } from 'react';
 import { Browser } from './browser';
-import { addClass, isVisible, matches } from './dom';
-import { compareElementParent } from './util';
+import { addClass, isVisible, matches, removeClass } from './dom';
+import { getActualElement, compareElementParent, getUniqueID } from './util';
 import { EventHandler } from './event-handler';
 import { DropInfo } from './draggable';
 import { Coordinates } from './drag-util';
@@ -30,7 +30,7 @@ export interface DropEvents {
 /**
  * Interface for drop event args
  */
-export interface DropEventArgs {
+export interface DropEvent {
     /**
      * Specifies the original mouse or touch event arguments.
      */
@@ -50,9 +50,41 @@ export interface DropEventArgs {
 }
 
 /**
+ * Interface for over event args
+ */
+export interface OverEvent {
+    /**
+     * Specifies the original mouse or touch event arguments.
+     */
+    event?: MouseEvent & TouchEvent;
+    /**
+     * Specifies the target element.
+     */
+    target?: HTMLElement;
+    /**
+     * Specifies the dragData.
+     */
+    dragData?: DropInfo;
+}
+
+/**
+ * Interface for over event args
+ */
+export interface OutEvent {
+    /**
+     * Specifies the original mouse or touch event arguments.
+     */
+    event?: MouseEvent & TouchEvent;
+    /**
+     * Specifies the target element.
+     */
+    target?: HTMLElement;
+}
+
+/**
  * Main interface for public properties in Droppable.
  */
-export interface IDroppableProps {
+export interface DroppableProps {
     /**
      * Defines the selector for draggable element to be accepted by the droppable.
      */
@@ -67,25 +99,25 @@ export interface IDroppableProps {
      *
      * @event drop
      */
-    drop?: (args: DropEventArgs) => void;
+    drop?: (args: DropEvent) => void;
     /**
      * Specifies the callback function, which will be triggered while drag element is moved over droppable element.
      *
      * @event over
      */
-    over?: Function;
+    over?: (args: OverEvent) => void;
     /**
      * Specifies the callback function, which will be triggered while drag element is moved out of droppable element.
      *
      * @event out
      */
-    out?: Function;
+    out?: (args: OutEvent) => void;
 }
 
 /**
  * Main interface for protected methods in Droppable.
  */
-export interface IDroppable extends IDroppableProps {
+export interface IDroppable extends DroppableProps {
     /**
      * Data associated with the current drag operation.
      *
@@ -125,7 +157,7 @@ export interface IDroppable extends IDroppableProps {
  * @returns {IDroppable} The configured droppable instance.
  */
 export function useDroppable(element?: RefObject<HTMLElement>, props?: IDroppable): IDroppable {
-    const droppableId: string = useId();
+    const droppableId: string = getUniqueID('sf-droppable');
     const droppableContext: DragDropContextProps = useDragDropContext();
     const { registerDroppable, unregisterDroppable } = droppableContext || {};
     const propsRef: IDroppable = {
@@ -137,6 +169,7 @@ export function useDroppable(element?: RefObject<HTMLElement>, props?: IDroppabl
         out: null,
         ...props
     };
+    const propsStateRef: React.RefObject<IDroppable> = useRef<IDroppable>(propsRef);
     /** Represents whether the mouse is over the droppable area */
     let mouseOverRef: boolean = false;
     /** Indicates if drag stop has been called */
@@ -160,9 +193,9 @@ export function useDroppable(element?: RefObject<HTMLElement>, props?: IDroppabl
      */
     propsRef.intOver = (event: MouseEvent & TouchEvent, element?: Element): void => {
         if (!mouseOverRef) {
-            const drag: DropInfo = propsRef.dragData[propsRef.scope];
-            if (propsRef.over) {
-                propsRef.over({ event, target: element, dragData: drag });
+            const drag: DropInfo = propsRef.dragData[propsStateRef.current.scope];
+            if (propsStateRef.current && propsStateRef.current.over) {
+                propsStateRef.current.over({ event, target: element, dragData: drag } as OverEvent);
             }
             mouseOverRef = true;
         }
@@ -177,8 +210,8 @@ export function useDroppable(element?: RefObject<HTMLElement>, props?: IDroppabl
      */
     propsRef.intOut = (event: MouseEvent & TouchEvent, element?: Element): void => {
         if (mouseOverRef) {
-            if (propsRef.out) {
-                propsRef.out({ event, target: element });
+            if (propsStateRef.current && propsStateRef.current.out) {
+                propsStateRef.current.out({ event, target: element } as OutEvent);
             }
             mouseOverRef = false;
         }
@@ -198,17 +231,17 @@ export function useDroppable(element?: RefObject<HTMLElement>, props?: IDroppabl
             dragStopCalledRef = false;
         }
         let accept: boolean = true;
-        const drag: DropInfo = propsRef.dragData[propsRef.scope];
+        const drag: DropInfo = propsRef.dragData[propsStateRef.current.scope];
         const isDrag: boolean = drag ? (drag.helper && isVisible(drag.helper)) : false;
         let area: DropData;
         if (isDrag) {
             area = isDropArea(evt, drag.helper, element);
-            if (propsRef.accept) {
-                accept = matches(drag.helper, propsRef.accept);
+            if (propsStateRef.current.accept) {
+                accept = matches(drag.helper, propsStateRef.current.accept);
             }
         }
-        if (isDrag && propsRef.drop && area.canDrop && accept) {
-            propsRef.drop({ event: evt, target: area.target, droppedElement: drag.helper, dragData: drag });
+        if (isDrag && propsStateRef.current && propsStateRef.current.drop && area.canDrop && accept) {
+            propsStateRef.current.drop({ event: evt, target: area.target, droppedElement: drag.helper, dragData: drag });
         }
         mouseOverRef = false;
     };
@@ -248,6 +281,11 @@ export function useDroppable(element?: RefObject<HTMLElement>, props?: IDroppabl
     }
 
     useLayoutEffect(() => {
+        element.current = getActualElement(element) as HTMLElement;
+        if (!element.current) {
+            return undefined;
+        }
+        propsStateRef.current = {...propsRef, ...props};
         addClass([element.current], ['sf-lib', 'sf-droppable']);
         addEvent();
         if (registerDroppable) {
@@ -260,9 +298,93 @@ export function useDroppable(element?: RefObject<HTMLElement>, props?: IDroppabl
             if (unregisterDroppable) {
                 unregisterDroppable(droppableId);
             }
+            if (element.current) {
+                removeClass([element.current], ['sf-lib', 'sf-droppable']);
+            }
             removeEvent();
         };
     }, []);
 
     return propsRef;
 }
+
+/**
+ * DroppableComponent wraps elements to enable droppable functionality.
+ */
+export interface IDroppableProps extends IDroppable {
+    /**
+     * Specifies the children element that will be made droppable.
+     */
+    children: ReactElement;
+    /**
+     * Specifies additional CSS class names to apply to the droppable element.
+     */
+    className?: string;
+    /**
+     * Provides a reference to access the underlying droppable child element.
+     */
+    dropRef?: RefObject<HTMLElement | null>;
+}
+
+/**
+ * DroppableComponent wraps elements to enable droppable functionality.
+ * It leverages the Droppable hook internally to manage drop behavior.
+ *
+ * @example
+ * ```tsx
+ * import { Droppable } from '@syncfusion/react-base';
+ *
+ * <Droppable>
+ *   <div>Drop here</div>
+ * </Droppable>
+ * ```
+ *
+ * @param {DroppableProps} props - The props for the DroppableComponent.
+ * @returns {Element} The rendered droppable component.
+ */
+export const Droppable: React.FC<IDroppableProps> = ({
+    children,
+    className,
+    dropRef,
+    ...restProps
+}: {
+    children: ReactElement<HTMLAttributes<HTMLElement>>;
+    dropRef?: RefObject<HTMLElement | null>;
+    className?: string;
+    [key: string]: unknown | ReactElement<unknown, string | React.JSXElementConstructor<unknown>>;
+}) => {
+    const internalRef: RefObject<HTMLElement> = useRef<HTMLElement>(null);
+    const droppableInstance: RefObject<IDroppable> = useRef<IDroppable | null>(null);
+
+    useDroppable(internalRef as RefObject<HTMLElement>, {
+        ...restProps
+    });
+
+    useEffect(() => {
+        if (droppableInstance.current) {
+            Object.assign(droppableInstance.current, {
+                ...restProps
+            });
+        }
+    }, [restProps]);
+
+    const combinedRef: (node: HTMLElement | null) => void = (node: HTMLElement) => {
+        if (node) {
+            internalRef.current = node;
+            if (dropRef && 'current' in dropRef) {
+                dropRef.current = node;
+            }
+        }
+    };
+
+    return cloneElement(
+        children,
+        {
+            ref: combinedRef,
+            className: [
+                children.props.className,
+                className
+            ].filter(Boolean).join(' ') || undefined
+        } as React.HTMLAttributes<HTMLElement> & { ref: (node: HTMLElement | null) => void }
+    );
+};

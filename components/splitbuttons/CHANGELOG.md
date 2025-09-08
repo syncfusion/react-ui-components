@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+## 31.1.17 (2025-09-05)
+
+### Dropdown Button
+
+#### Breaking Changes
+
+- The `IconPosition` `enum` in the Dropdown Button component has been renamed to `Position` `enum`.
+- The `Danger` theme `color` in the Dropdown Button component has been renamed to `Error`.
+- The `Flat` variant style in the Dropdown Button component has been renamed to `Standard`.
+
+### Split Button
+
+#### Breaking Changes
+
+- The `IconPosition` `enum` in the Split Button component has been renamed to `Position` `enum`.
+- The `Danger` theme `color` in the Split Button component has been renamed to `Error`.
+- The `Flat` variant style in the Split Button component has been renamed to `Standard`.
+
 ## 29.2.4 (2025-05-14)
 
 ### Dropdown Button

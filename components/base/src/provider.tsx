@@ -5,10 +5,11 @@ interface ProviderContextProps {
     locale: string;
     dir: string;
     ripple: boolean;
+    animate: boolean;
 }
 
 // Create context with default empty fallback
-const ProviderContext: React.Context<ProviderContextProps> = createContext<ProviderContextProps>({locale: 'en-US', dir: 'ltr', ripple: false});
+const ProviderContext: React.Context<ProviderContextProps> = createContext<ProviderContextProps>({locale: 'en-US', dir: 'ltr', ripple: false, animate: true});
 
 /**
  * Props for the Provider context.
@@ -36,13 +37,19 @@ export interface ProviderProps {
      * @default false
      */
     ripple?: boolean;
+    /**
+     * Enables or disables the animation effect for the component.
+     *
+     * @default true
+     */
+    animate?: boolean;
 }
 
 // The Locale provider component
 export const Provider: React.FC<ProviderProps> = (props: ProviderProps) => {
-    const { children, locale = 'en-US', dir = 'ltr', ripple = false } = props;
+    const { children, locale = 'en-US', dir = 'ltr', ripple = false, animate = true} = props;
     return (
-        <ProviderContext.Provider value={{ locale, dir, ripple }}>
+        <ProviderContext.Provider value={{ locale, dir, ripple, animate }}>
             {children}
         </ProviderContext.Provider>
     );

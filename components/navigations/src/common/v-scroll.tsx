@@ -3,7 +3,7 @@ import {
     RefObject, MouseEvent, TouchEvent, KeyboardEvent, FC, ForwardRefExoticComponent, RefAttributes, UIEvent, useCallback, Ref,
     WheelEvent
 } from 'react';
-import { ChevronUp, ChevronDown } from '@syncfusion/react-icons';
+import { ChevronUpIcon, ChevronDownIcon } from '@syncfusion/react-icons';
 import {
     Touch, ScrollEventArgs, TouchEventArgs, getUniqueID, useProviderContext,
     SwipeEventArgs, ITouch, Browser
@@ -14,10 +14,10 @@ const CLS_RTL: string = 'sf-rtl';
 const CLS_DISABLE: string = 'sf-overlay';
 const CLS_VSCROLLBAR: string = 'sf-vscroll-bar';
 const CLS_VSCROLLCON: string = 'sf-vscroll-content';
-const CLS_NAVARROW: string = 'sf-nav-arrow';
+const CLS_NAVARROW: string = 'sf-vscroll-arrow';
 const CLS_NAVUPARROW: string = 'sf-nav-up-arrow';
 const CLS_NAVDOWNARROW: string = 'sf-nav-down-arrow';
-const CLS_VSCROLLNAV: string = 'sf-scroll-nav';
+const CLS_VSCROLLNAV: string = 'sf-vscroll-nav';
 const CLS_VSCROLLNAVUP: string = 'sf-scroll-up-nav';
 const CLS_VSCROLLNAVDOWN: string = 'sf-scroll-down-nav';
 const CLS_DEVICE: string = 'sf-scroll-device';
@@ -411,7 +411,7 @@ const NavIcon: FC<NavIconProps> = memo(({
             onClick={onClick}
         >
             <div className={arrowClass}>
-                {isDown ? <ChevronDown /> : <ChevronUp />}
+                {isDown ? <ChevronDownIcon/> : <ChevronUpIcon/>}
             </div>
         </div>
     );

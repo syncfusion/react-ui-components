@@ -1,0 +1,179 @@
+@include export-module('base-layout') {
+
+  // Positioning utilities
+  .sf-pos-absolute { position: absolute; }
+  .sf-pos-relative { position: relative; }
+  
+  // Display utilities
+  .sf-display-none { display: none; }
+  .sf-display-block { display: block; }
+  .sf-display-flex { display: flex; }
+  .sf-display-inline-block { display: inline-block; }
+  .sf-display-inline { display: inline; }
+  .sf-display-inline-flex { display: inline-flex; }
+  .sf-display-table { display: table; }
+
+  // Content utilities
+  .sf-content-start, .sf-content-left {
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+  }
+  .sf-content-center { 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .sf-content-end, .sf-content-right { 
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-end;
+  }
+  .sf-content-between { 
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .sf-title {
+    font-size: $font-size-24;
+    line-height: $leading-small;
+  }
+  .sf-content {
+    outline: 0;
+    font-size: $font-size-14;
+    line-height: $leading-medium;
+    height: 100%;
+    white-space: normal;
+    width: 100%;
+    overflow-wrap: break-word;
+  }
+
+  // Icon utility classes
+  .sf-icon {
+    display: inline-flex;
+    vertical-align: middle;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sf-icon-size {
+    width: 1em;
+    height: 1em;
+    font-size: $font-size-16;
+  }
+
+  // FONT SIZE VARIANTS
+  .sf-font-size-11 { font-size: $font-size-11; }
+  .sf-font-size-12 { font-size: $font-size-12; }
+  .sf-font-size-13 { font-size: $font-size-13; }
+  .sf-font-size-14 { font-size: $font-size-14; }
+  .sf-font-size-15 { font-size: $font-size-15; }
+  .sf-font-size-16 { font-size: $font-size-16; }
+  .sf-font-size-18 { font-size: $font-size-18; }
+  .sf-font-size-20 { font-size: $font-size-20; }
+  .sf-font-size-24 { font-size: $font-size-24; }
+  .sf-font-size-26 { font-size: $font-size-26; }
+  .sf-font-size-28 { font-size: $font-size-28; }
+  .sf-font-size-30 { font-size: $font-size-30; }
+  .sf-font-size-32 { font-size: $font-size-32; }
+  
+  // RTL support
+  .sf-rtl {
+    direction: rtl;
+    text-align: right;
+  }
+
+  // Overlay styling
+  .sf-overlay {
+    height: 100%;
+    opacity: .5;
+    pointer-events: none;
+    touch-action: none;
+    width: 100%;
+  }
+
+  // Layout interaction utilities
+  .sf-prevent-select { user-select: none; }
+  .sf-block-touch { touch-action: pinch-zoom; }
+  .sf-touch-none { touch-action: none; }
+  .sf-no-pointer { pointer-events: none; }
+  
+  // Disabled state
+  .sf-disabled {
+    background-image: none;
+    cursor: default;
+    opacity: .35;
+    pointer-events: none;
+  }
+  
+  // Read-only state
+  .sf-readonly {
+    cursor: default;
+    pointer-events: none;
+  }
+  
+  // Link styling
+  .sf-link {
+    text-decoration: none;
+    cursor: pointer;
+    color: inherit;
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+  
+  // Image styling
+  .sf-image { display: inline-block; }
+
+  // List utilities
+  .sf-list-none { list-style-type: none; }
+
+  /* sf-overflow: Overflow handling utilities */
+  .sf-overflow-hidden {
+    overflow: hidden;
+  }
+
+  .sf-overflow-auto {
+    overflow: auto;
+  }
+
+  .sf-overflow-visible {
+    overflow: visible;
+  }
+
+  /* sf-cursor: Cursor style utilities */
+  .sf-cursor-pointer {
+    cursor: pointer;
+  }
+
+  .sf-cursor-default {
+    cursor: default;
+  }
+
+  .sf-cursor-auto {
+    cursor: auto;
+  }
+
+  .sf-cursor-not-allowed {
+    cursor: not-allowed;
+  }
+
+  // Border radius utility classes module
+  @each $key, $value in $border-radius {
+    .sf-rounded-#{$key} {
+      border-radius: $value;
+    }
+  }
+
+  // other common utility classes
+  .sf-align-center { 
+    display: flex;
+    align-items: center;
+    line-height: normal;
+  }
+  .sf-ellipsis {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

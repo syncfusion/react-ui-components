@@ -1,7 +1,7 @@
 {
   "name": "@syncfusion/react-buttons",
-  "version": "30.1.37",
-  "description": "A package of feature-rich Pure React components such as Button, CheckBox and RadioButton.",
+  "version": "31.1.17",
+  "description": "A package of feature-rich React components such as Button, CheckBox and RadioButton.",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
   "keywords": [
@@ -38,7 +38,7 @@
   "module": "./index.js",
   "readme": "README.md",
   "dependencies": {
-    "@syncfusion/react-base": "~30.1.37"
+    "@syncfusion/react-base": "~31.1.17"
   },
   "devDependencies": {
     "gulp": "4.0.2",
