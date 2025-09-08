@@ -68,7 +68,7 @@ Built-in Material 3 stylesheets provide a modern, accessible design out of the b
            <a href="https://www.npmjs.com/package/@syncfusion/react-grid"><img src="https://ej2.syncfusion.com/github/images/npm-logo.png" alt="npm package @syncfusion/react-grid" title="@syncfusion/react-grid" style="height:20px;" />
        </td>
        <td>
-           <a href="components/grids/src/grid">Source</a>
+           <a href="components/grid/src/grid">Source</a>
        </td>
        <td>
            <a href="https://react.syncfusion.com/data-grid/overview">Live demo</a>
