@@ -1,0 +1,4 @@
+import { createIcon } from '../icon';
+import { IconComponent } from '../icon';
+const path: React.ReactNode = <path d='M16.8047 17.1562V12H17.5312V17.1562H22.7109V17.9062H17.5312V23.0625H16.8047V17.9062H11.625V17.1562H16.8047ZM7.19531 9.04688V0.9375H13.8516V4.61719H19.7578V16.4297H19.0078V5.34375H13.8516V16.4297H13.1016V1.66406H7.94531V20.8594H13.1016V18.6562H13.8516V20.8594H16.0547V21.6094H1.28906V9.04688H7.19531Z' fillRule='evenodd' clipRule='evenodd' fill='currentcolor'/>;
+export const AddChartElementIcon: IconComponent  = createIcon(path);

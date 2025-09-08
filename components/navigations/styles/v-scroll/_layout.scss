@@ -1,0 +1,50 @@
+@include export-module('v-scroll') {
+  #{&}.sf-vscroll {
+    display: block;
+    padding: $vscroll-padding;
+    position: relative;
+    width: inherit;
+
+    >* {
+      height: inherit;
+    }
+  }
+
+  .sf-vscroll-content {
+    display: inline-block;
+    height: auto;
+    position: relative;
+    width: 100%;
+  }
+
+  .sf-vscroll-nav {
+    align-items: center;
+    cursor: pointer;
+    display: flex;
+    height: $vscroll-nav-height;
+    overflow: hidden;
+    position: absolute;
+    width: 100%;
+
+    &.sf-scroll-up-nav {
+      top: 0;
+    }
+
+    &.sf-scroll-down-nav {
+      bottom: 0;
+    }
+  }
+
+  .sf-vscroll-arrow {
+    position: relative;
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    vertical-align: middle;
+    width: 100%;
+
+    svg {
+      font-size: $vscroll-arrow-font-size;
+    }
+  }
+}

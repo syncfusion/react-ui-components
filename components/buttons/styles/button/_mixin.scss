@@ -1,0 +1,235 @@
+@use 'sass:color';
+
+@mixin primary-focus {
+  background: $btn-primary-focus-bg-color;
+  border-color: $btn-primary-focus-border-color;
+  color: $btn-primary-focus-color;
+}
+
+@mixin primary-active {
+  background: $btn-primary-active-bg-color;
+  box-shadow: $btn-active-box-shadow;
+}
+
+@mixin primary-disabled {
+  background: $btn-primary-disabled-bg-color;
+  border-color: $btn-primary-disabled-border-color;
+  color: $btn-primary-disabled-color;
+  box-shadow: none;
+}
+
+@mixin outline-focus {
+  background: $btn-outline-active-bg-color;
+  border: 1px solid $btn-outline-border-color;
+}
+
+@mixin outline-active {
+  background: $btn-outline-active-bg-color;
+}
+
+@mixin outline-primary-focus {
+  background: $btn-outline-primary-active-bg-color;
+}
+
+@mixin outline-primary-active {
+  border-color: $btn-outline-primary-active-border-color;
+  box-shadow: $btn-outline-active-box-shadow;
+  background: $btn-outline-primary-active-bg-color;
+  color: rgba($btn-outline-primary-color);
+  border: 1px solid $btn-outline-border-color;
+}
+
+@mixin outline-success-focus {
+  background: $btn-outline-success-active-bg-color;
+}
+
+@mixin outline-success-active {
+  background: $btn-outline-success-active-bg-color;
+  border: 1px solid $btn-outline-border-color;
+  color: rgba($btn-outline-success-color);
+}
+
+@mixin outline-info-focus {
+  background: $btn-outline-info-active-bg-color;
+}
+
+@mixin outline-info-active {
+  background: $btn-outline-info-active-bg-color;
+  border: 1px solid $btn-outline-border-color;
+  color: rgba($btn-outline-info-color);
+}
+
+@mixin outline-warning-focus {
+  background: $btn-outline-warning-active-bg-color;
+}
+
+@mixin outline-warning-active {
+  background: $btn-outline-warning-active-bg-color;
+  border: 1px solid $btn-outline-border-color;
+  color: rgba($btn-outline-warning-color);
+}
+
+@mixin outline-danger-focus {
+  background: $btn-outline-danger-active-bg-color;
+}
+
+@mixin outline-danger-active {
+  background: $btn-outline-danger-active-bg-color;
+  border: 1px solid $btn-outline-border-color;
+  color: rgba($btn-outline-danger-color);
+}
+
+@mixin outline-disabled {
+  background: $btn-link-bg-color;
+  border-color: $btn-outline-primary-disabled-border-color;
+  color: $btn-outline-primary-disabled-color;
+}
+
+@mixin outline-primary-disabled {
+  background: $btn-link-bg-color;
+  border-color: $btn-outline-primary-disabled-border-color;
+  color: $btn-outline-primary-disabled-color;
+}
+
+@mixin outline-success-disabled {
+  background: $btn-link-bg-color;
+  border-color: $btn-outline-primary-disabled-border-color;
+  color: $btn-outline-success-disabled-color;
+}
+
+@mixin outline-info-disabled {
+  background: $btn-link-bg-color;
+  border-color: $btn-outline-primary-disabled-border-color;
+  color: $btn-outline-info-disabled-color;
+}
+
+@mixin outline-warning-disabled {
+  background: $btn-link-bg-color;
+  border-color: $btn-outline-primary-disabled-border-color;
+  color: $btn-outline-warning-disabled-color;
+}
+
+@mixin outline-danger-disabled {
+  background: $btn-link-bg-color;
+  border-color: $btn-outline-primary-disabled-border-color;
+  color: $btn-outline-danger-disabled-color;
+}
+
+@mixin success-focus {
+  background: $btn-success-focus-bg-color;
+  box-shadow: $btn-flat-box-shadow;
+}
+
+@mixin success-active {
+  background: $btn-success-active-bg-color;
+  box-shadow: $btn-active-box-shadow;
+}
+
+@mixin info-focus {
+  background: $btn-info-focus-bg-color;
+  box-shadow: $btn-flat-box-shadow;
+}
+
+@mixin info-active {
+  background: $btn-info-active-bg-color;
+  box-shadow: $btn-active-box-shadow;
+}
+
+@mixin warning-focus {
+  background: $btn-warning-focus-bg-color;
+  box-shadow: $btn-flat-box-shadow;
+}
+
+@mixin warning-active {
+  background: $btn-warning-active-bg-color;
+  box-shadow: $btn-active-box-shadow;
+}
+
+@mixin danger-focus {
+  background: $btn-danger-focus-bg-color;
+  box-shadow: $btn-flat-box-shadow;
+}
+
+@mixin danger-active {
+  background: $btn-danger-active-bg-color;
+  box-shadow: $btn-active-box-shadow;
+}
+
+@mixin link-focus {
+  border-radius: 4px;
+  text-decoration: underline;
+}
+
+@mixin success-disabled {
+  background: $btn-success-disabled-bg-color;
+  border-color: $btn-disabled-border-color;
+  box-shadow: $btn-flat-box-shadow;
+  color: $btn-success-disabled-color;
+}
+
+@mixin info-disabled {
+  background: $btn-info-disabled-bg-color;
+  border-color: $btn-disabled-border-color;
+  box-shadow: $btn-flat-box-shadow;
+  color: $btn-info-disabled-color;
+}
+
+@mixin warning-disabled {
+  background: $btn-warning-disabled-bg-color;
+  border-color: $btn-disabled-border-color;
+  box-shadow: $btn-flat-box-shadow;
+  color: $btn-warning-disabled-color;
+}
+
+@mixin danger-disabled {
+  background: $btn-danger-disabled-bg-color;
+  border-color: $btn-disabled-border-color;
+  box-shadow: $btn-flat-box-shadow;
+  color: $btn-danger-disabled-color;
+}
+
+@mixin link-disabled {
+  color: $btn-disabled-color;
+  background: $btn-link-bg-color;
+  box-shadow: $btn-flat-box-shadow;
+  text-decoration: none;
+}
+
+@mixin icon-top-bottom {
+  display: block;
+  margin: 4px 0;
+  width: auto;
+}
+
+@mixin top-bottom-icon-btn {
+  line-height: 1;
+}
+
+@mixin mat3-border-radius {
+  border-radius: 4px;
+  padding: 6px;
+}
+
+@mixin focus-visible-styles {
+  box-shadow: $btn-keyboard-focus-box-shadow;
+}
+
+@mixin round-button-base {
+  border-radius: $btn-round-border-radius;
+  line-height: 1;
+  padding: 0;
+}
+
+@mixin button-icon-base {
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 1px;
+  margin: $btn-icon-btn-margin;
+}
+
+@mixin top-bottom-icon-btn {
+  flex-direction: column;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

@@ -1,0 +1,190 @@
+@use "sass:map";
+
+@mixin chip-color($bg-color, $color) {
+  background: $bg-color;
+  color: $color;
+}
+
+@mixin apply-chip-states($states) {
+  @include chip-color(map.get(map.get($states, 'default'), 'bg'), map.get(map.get($states, 'default'), 'color'));
+
+  &:hover {
+    @include chip-color(map.get(map.get($states, 'hover'), 'bg'), map.get(map.get($states, 'hover'), 'color'));
+  }
+
+  &.sf-focused {
+    @include chip-color(map.get(map.get($states, 'focused'), 'bg'), map.get(map.get($states, 'focused'), 'color'));
+
+    &.sf-active {
+      @include chip-color(map.get(map.get($states, 'focused.active'), 'bg'), map.get(map.get($states, 'focused.active'), 'color'));
+    }
+  }
+
+  &.sf-active {
+    @include chip-color(map.get(map.get($states, 'active'), 'bg'), map.get(map.get($states, 'active'), 'color'));
+  }
+
+  &:active {
+    @include chip-color(map.get(map.get($states, 'pressed'), 'bg'), map.get(map.get($states, 'pressed'), 'color'));
+  }
+}
+
+@mixin apply-chip-variant-states($states) {
+  background: map.get(map.get($states, 'default'), 'bg');
+
+  &:hover {
+    background: map.get(map.get($states, 'hover'), 'bg');
+  }
+
+  &.sf-focused {
+    background: map.get(map.get($states, 'focused'), 'bg');
+  }
+
+  &.sf-focused.sf-active,
+  &.sf-active,
+  &:active {
+    background: map.get(map.get($states, 'active'), 'bg');
+  }
+}
+
+@include export-module('chip-theme') {
+  $chip-variants: (
+    'default': ('default': ('bg': map.get(map.get($chip-colors, 'default'), 'default', 'bg'), 'color': map.get(map.get($chip-colors, 'default'), 'default', 'font')),
+      'hover': ('bg': map.get(map.get($chip-colors, 'default'), 'hover', 'bg'), 'color': map.get(map.get($chip-colors, 'default'), 'hover', 'font')),
+      'focused': ('bg': map.get(map.get($chip-colors, 'default'), 'focus', 'bg'), 'color': map.get(map.get($chip-colors, 'default'), 'focus', 'font')),
+      'active': ('bg': map.get(map.get($chip-colors, 'default'), 'active', 'bg'), 'color': map.get(map.get($chip-colors, 'default'), 'active', 'font')),
+      'pressed': ('bg': map.get(map.get($chip-colors, 'default'), 'pressed', 'bg'), 'color': map.get(map.get($chip-colors, 'default'), 'pressed', 'font')),
+      'focused.active': ('bg': map.get(map.get($chip-colors, 'default'), 'focus-active', 'bg'), 'color': map.get(map.get($chip-colors, 'default'), 'focus-active', 'font'))),
+    'primary': ('default': ('bg': map.get(map.get($chip-colors, 'primary'), 'default', 'bg'), 'color': map.get(map.get($chip-colors, 'primary'), 'default', 'font')),
+      'hover': ('bg': map.get(map.get($chip-colors, 'primary'), 'hover', 'bg')),
+      'focused': ('bg': map.get(map.get($chip-colors, 'primary'), 'focus', 'bg')),
+      'active': ('bg': map.get(map.get($chip-colors, 'primary'), 'active', 'bg'))),
+    'success': ('default': ('bg': map.get(map.get($chip-colors, 'success'), 'default', 'bg'), 'color': map.get(map.get($chip-colors, 'success'), 'default', 'font')),
+      'hover': ('bg': map.get(map.get($chip-colors, 'success'), 'hover', 'bg')),
+      'focused': ('bg': map.get(map.get($chip-colors, 'success'), 'focus', 'bg')),
+      'active': ('bg': map.get(map.get($chip-colors, 'success'), 'active', 'bg'))),
+    'info': ('default': ('bg': map.get(map.get($chip-colors, 'info'), 'default', 'bg'), 'color': map.get(map.get($chip-colors, 'info'), 'default', 'font')),
+      'hover': ('bg': map.get(map.get($chip-colors, 'info'), 'hover', 'bg')),
+      'focused': ('bg': map.get(map.get($chip-colors, 'info'), 'focus', 'bg')),
+      'active': ('bg': map.get(map.get($chip-colors, 'info'), 'active', 'bg'))),
+    'warning': ('default': ('bg': map.get(map.get($chip-colors, 'warning'), 'default', 'bg'), 'color': map.get(map.get($chip-colors, 'warning'), 'default', 'font')),
+      'hover': ('bg': map.get(map.get($chip-colors, 'warning'), 'hover', 'bg')),
+      'focused': ('bg': map.get(map.get($chip-colors, 'warning'), 'focus', 'bg')),
+      'active': ('bg': map.get(map.get($chip-colors, 'warning'), 'active', 'bg'))),
+    'error': ('default': ('bg': map.get(map.get($chip-colors, 'error'), 'default', 'bg'), 'color': map.get(map.get($chip-colors, 'error'), 'default', 'font')),
+      'hover': ('bg': map.get(map.get($chip-colors, 'error'), 'hover', 'bg')),
+      'focused': ('bg': map.get(map.get($chip-colors, 'error'), 'focus', 'bg')),
+      'active': ('bg': map.get(map.get($chip-colors, 'error'), 'active', 'bg')))
+  );
+
+$chip-outline-variants: (
+  'default': ('default': ('bg': map.get(map.get($chip-outline-colors, 'default'), 'default', 'bg'), 'color': map.get(map.get($chip-outline-colors, 'default'), 'default', 'font')),
+    'hover': ('bg': map.get(map.get($chip-outline-colors, 'default'), 'hover', 'bg'), 'color': map.get(map.get($chip-outline-colors, 'default'), 'hover', 'font')),
+    'focused': ('bg': map.get(map.get($chip-outline-colors, 'default'), 'focus', 'bg'), 'color': map.get(map.get($chip-outline-colors, 'default'), 'focus', 'font')),
+    'active': ('bg': map.get(map.get($chip-outline-colors, 'default'), 'active', 'bg'), 'color': map.get(map.get($chip-outline-colors, 'default'), 'active', 'font')),
+    'pressed': ('bg': map.get(map.get($chip-outline-colors, 'default'), 'pressed', 'bg'), 'color': map.get(map.get($chip-outline-colors, 'default'), 'pressed', 'font')),
+    'focused.active': ('bg': map.get(map.get($chip-outline-colors, 'default'), 'focus-active', 'bg'), 'color': map.get(map.get($chip-outline-colors, 'default'), 'focus-active', 'font'))),
+  'primary': ('default': ('bg': map.get(map.get($chip-outline-colors, 'primary'), 'default', 'bg'), 'color': map.get(map.get($chip-outline-colors, 'primary'), 'default', 'font')),
+    'hover': ('bg': map.get(map.get($chip-outline-colors, 'primary'), 'hover', 'bg')),
+    'focused': ('bg': map.get(map.get($chip-outline-colors, 'primary'), 'focus', 'bg')),
+    'active': ('bg': map.get(map.get($chip-outline-colors, 'primary'), 'active', 'bg'))),
+  'success': ('default': ('bg': map.get(map.get($chip-outline-colors, 'success'), 'default', 'bg'), 'color': map.get(map.get($chip-outline-colors, 'success'), 'default', 'font')),
+    'hover': ('bg': map.get(map.get($chip-outline-colors, 'success'), 'hover', 'bg')),
+    'focused': ('bg': map.get(map.get($chip-outline-colors, 'success'), 'focus', 'bg')),
+    'active': ('bg': map.get(map.get($chip-outline-colors, 'success'), 'active', 'bg'))),
+  'info': ('default': ('bg': map.get(map.get($chip-outline-colors, 'info'), 'default', 'bg'), 'color': map.get(map.get($chip-outline-colors, 'info'), 'default', 'font')),
+    'hover': ('bg': map.get(map.get($chip-outline-colors, 'info'), 'hover', 'bg')),
+    'focused': ('bg': map.get(map.get($chip-outline-colors, 'info'), 'focus', 'bg')),
+    'active': ('bg': map.get(map.get($chip-outline-colors, 'info'), 'active', 'bg'))),
+  'warning': ('default': ('bg': map.get(map.get($chip-outline-colors, 'warning'), 'default', 'bg'), 'color': map.get(map.get($chip-outline-colors, 'warning'), 'default', 'font')),
+    'hover': ('bg': map.get(map.get($chip-outline-colors, 'warning'), 'hover', 'bg')),
+    'focused': ('bg': map.get(map.get($chip-outline-colors, 'warning'), 'focus', 'bg')),
+    'active': ('bg': map.get(map.get($chip-outline-colors, 'warning'), 'active', 'bg'))),
+  'error': ('default': ('bg': map.get(map.get($chip-outline-colors, 'error'), 'default', 'bg'), 'color': map.get(map.get($chip-outline-colors, 'error'), 'default', 'font')),
+    'hover': ('bg': map.get(map.get($chip-outline-colors, 'error'), 'hover', 'bg')),
+    'focused': ('bg': map.get(map.get($chip-outline-colors, 'error'), 'focus', 'bg')),
+    'active': ('bg': map.get(map.get($chip-outline-colors, 'error'), 'active', 'bg')))
+);
+
+.sf-chip-avatar {
+  background-color: $chip-avatar-bg-color;
+}
+
+.sf-chip {
+  &.sf-disabled {
+    opacity: 1;
+  }
+
+  &.sf-outline {
+    border-width: 1px;
+  }
+}
+
+.sf-chip-selection .sf-chip {
+
+  &.sf-active,
+  &.sf-active.sf-focused {
+    background-color: $chip-selection-bg-color;
+  }
+}
+
+.sf-chip {
+  @include apply-chip-states(map.get($chip-variants, 'default'));
+
+  @each $variant in ('primary', 'success', 'info', 'warning', 'error') {
+    &.sf-#{$variant} {
+      color: map.get(map.get($chip-colors, $variant), 'default', 'font');
+
+      .sf-chip-avatar {
+        background-color: map.get(map.get($chip-colors, $variant), 'default', 'avatar-bg');
+      }
+
+      @include apply-chip-variant-states(map.get($chip-variants, $variant));
+    }
+  }
+
+  &.sf-outline {
+    @include apply-chip-states(map.get($chip-outline-variants, 'default'));
+
+    @each $variant in ('primary', 'success', 'info', 'warning', 'error') {
+      &.sf-#{$variant} {
+        color: map.get(map.get($chip-outline-colors, $variant), 'default', 'font');
+
+        .sf-chip-avatar {
+          color: map.get(map.get($chip-outline-colors, $variant), 'default', 'avatar-font');
+        }
+
+        @include apply-chip-variant-states(map.get($chip-outline-variants, $variant));
+      }
+    }
+  }
+
+  &.sf-disabled {
+    color: $chip-disabled-text-color;
+
+    .sf-chip-avatar {
+      color: $chip-disabled-text-color;
+    }
+  }
+
+  &.sf-outline {
+    &.sf-disabled {
+      color: $chip-disabled-text-color;
+      background: $chip-disabled-outline-bg;
+
+      .sf-chip-avatar {
+        background-color: $chip-disabled-filled-bg;
+        color: $chip-disabled-text-color;
+      }
+    }
+  }
+
+  &.sf-chip-variant-disabled {
+    background: $chip-disabled-filled-bg;
+  }
+
+  &.sf-chip-variant-disabled .sf-chip-avatar {
+    background-color: $chip-disabled-filled-bg;
+  }
+}
+}

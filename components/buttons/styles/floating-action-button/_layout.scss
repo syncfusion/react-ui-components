@@ -1,0 +1,88 @@
+@import 'mixin.scss';
+
+@include export-module('floating-action-button-layout') {
+  // Base button styling
+  .sf-fab.sf-btn {
+    align-items: center;
+    border-radius: $fab-border-radius;
+    display: inline-flex;
+    min-height: $fab-dimension;
+    min-width: $fab-dimension;
+    padding: $fab-padding;
+    position: absolute;
+    z-index: $fab-z-index;
+
+    .sf-btn-icon,
+    .sf-btn-content {
+      margin: $fab-default-btn-padding;
+    }
+
+    // Positioning
+    &.sf-fab-fixed { position: fixed; }
+    &.sf-fab-top { top: $fab-offset; }
+    &.sf-fab-bottom { bottom: $fab-offset; }
+    &.sf-fab-left { left: $fab-offset; }
+    &.sf-fab-right { right: $fab-offset; }
+    
+    // Center positioning
+    &.sf-fab-left.sf-fab-center {
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    
+    // Middle positioning (vertical center)
+    &.sf-fab-top.sf-fab-middle {
+      top: 50%;
+      transform: translateY(-50%);
+      
+      // Combined center positioning
+      &.sf-fab-left.sf-fab-center {
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+      }
+    }
+  }
+
+  // RTL support
+  .sf-rtl {
+    &.sf-fab.sf-btn {
+      &.sf-fab-right.sf-fab-center {
+        right: 50%;
+        transform: translateX(50%);
+      }
+      
+      &.sf-fab-top.sf-fab-middle {
+        &.sf-fab-right.sf-fab-center {
+          right: 50%;
+          top: 50%;
+          transform: translate(50%, -50%);
+        }
+      }
+    }
+  }
+
+  // Visibility
+  .sf-fab-hidden { visibility: hidden; }
+
+  // Size variants
+  .sf-small.sf-fab.sf-btn {
+    @include fab-button-styles($fab-small-border-radius, $fab-small-min-dimension, 
+      $fab-small-min-dimension, $fab-btn-padding);
+
+    &.sf-btn-icon,
+    .sf-btn-content {
+      margin: $fab-small-btn-padding;
+    }
+  }
+
+  .sf-large.sf-fab.sf-btn {
+    @include fab-button-styles($fab-large-border-radius, $fab-large-min-dimension, 
+      $fab-large-min-dimension, $fab-large-padding);
+
+    &.sf-btn-icon,
+    .sf-btn-content {
+      margin: $fab-btn-padding;
+    }
+  }
+}

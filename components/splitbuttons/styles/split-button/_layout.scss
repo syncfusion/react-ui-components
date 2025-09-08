@@ -1,0 +1,86 @@
+@include export-module('split-button-layout-and-theme') {
+  .sf-split-btn-wrapper {
+    display: inline-flex;
+    white-space: nowrap;
+    width: min-content;
+    border-radius: $split-btn-border-radius;
+    box-shadow: none;
+
+    .sf-split-btn,
+    .sf-dropdown-btn {
+      box-shadow: none;
+
+      &:focus {
+        outline-offset: $split-btn-focus-outline-offset;
+        box-shadow: none;
+      }
+
+      &:disabled {
+        border-image: none;
+
+        &:focus,
+        &:hover,
+        &:active {
+          z-index: 0;
+        }
+      }
+    }
+
+    .sf-split-btn {
+      border-radius: $split-btn-border-radius 0 0 $split-btn-border-radius;
+      text-transform: none;
+      z-index: 1;
+      border-width: 0 1px 0 0;
+      border-image: $split-btn-seperator-border-color;
+      &:focus,
+      &:active {
+        box-shadow: $split-btn-active-box-shadow;
+        z-index: $split-btn-zindex;
+        border-right-color: $split-btn-active-border-color;
+      }
+
+      &.sf-outlined {
+        border-right: none !important;
+      }
+
+      &.sf-standard {
+        border-image: none;
+        border-color: transparent;
+      }
+    }
+
+    .sf-dropdown-btn {
+      border-radius: 0 $split-btn-border-radius $split-btn-border-radius 0;
+      padding: $split-btn-dropdown-padding-default;
+    }
+
+    &.sf-rtl {
+      .sf-split-btn {
+        border-radius: 0 $split-btn-border-radius $split-btn-border-radius 0;
+        border-width: 0 0 0 1px;
+        border-left-color: $split-btn-seperator-border-color;
+
+        &:focus,
+        &:active {
+          border-left-color: $split-btn-active-border-color;
+        }
+
+        &.sf-filled {
+          border-image: $split-btn-seperator-border-color;
+        }
+      }
+
+      .sf-dropdown-btn {
+        border-radius: $split-btn-border-radius 0 0 $split-btn-border-radius;
+      }
+    }
+
+    &.sf-standard {
+      box-shadow: none;
+    }
+
+    &.sf-split-btn-sm .sf-dropdown-btn { padding: $split-btn-dropdown-padding-sm; }
+    &.sf-split-btn-me .sf-dropdown-btn { padding: $split-btn-dropdown-padding-me; }
+    &.sf-split-btn-la .sf-dropdown-btn { padding: $split-btn-dropdown-padding-la; }
+  }
+}

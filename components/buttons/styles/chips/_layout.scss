@@ -1,0 +1,108 @@
+@mixin chip-specific-properties($border-radius, $font-size: null, $margin) {
+  border-radius: $border-radius;
+  margin-inline: $margin;
+
+  @if $font-size !=null {
+    font-size: $font-size;
+  }
+}
+
+@mixin icon-style-size($height, $width) {
+  height: $height;
+  width: $width;
+}
+
+@include export-module('chip-layout') {
+  .sf-chip-list {
+    display: flex;
+    padding: $chip-list-padding;
+
+    &:not(.sf-chip) {
+      flex-wrap: wrap;
+    }
+  }
+
+  .sf-chip {
+    border: $chip-border-size solid;
+    border-radius: $chip-border-radius;
+    font-size: $chip-font-size;
+    font-weight: $chip-font-weight;
+    margin: $chip-margin;
+    align-items: center;
+    justify-content: center;
+    box-shadow: none;
+    cursor: pointer;
+    display: inline-flex;
+    height: $chip-height;
+    line-height: $chip-line-height;
+    outline: none;
+    overflow: hidden;
+    padding: $chip-padding;
+    position: relative;
+    user-select: none;
+  }
+
+  .sf-chip-avatar,
+  .sf-chip-icon,
+  .sf-chip-image {
+    @include icon-style-size($chip-avatar-size, $chip-avatar-size);
+  }
+
+  .sf-chip-avatar {
+    @include chip-specific-properties($chip-avatar-border-radius, $chip-avatar-content-font-size, $chip-avatar-margin);
+  }
+
+  .sf-chip-icon {
+    margin-inline: $chip-leading-icon-margin;
+  }
+
+  .sf-chip-delete {
+    @include icon-style-size($chip-delete-icon-size, $chip-delete-icon-width);
+    @include chip-specific-properties($chip-delete-icon-border-radius, $chip-delete-icon-font-size, $chip-delete-icon-margin);
+  }
+
+  .sf-chip-image {
+    @include chip-specific-properties($chip-leading-icon-border-radius, null, $chip-leading-icon-margin);
+  }
+
+  .sf-chip-trailing-url {
+    @include icon-style-size($chip-trailing-url-size, $chip-trailing-url-size);
+    @include chip-specific-properties($chip-delete-icon-border-radius, null, $chip-trailing-url-margin);
+  }
+
+  .sf-chip-leading-image,
+  .sf-chip-trailing-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .sf-chip-delete svg,
+  .sf-chip-selectable-icon svg {
+    font-size: $chip-delete-icon-font-size;
+  }
+
+  .sf-chip-multi-selection .sf-active .sf-chip-icon,
+  .sf-chip-multi-selection .sf-active .sf-chip-avatar,
+  .sf-chip-icon-wrap .sf-chip-selectable-icon,
+  .sf-chip-avatar-wrap .sf-chip-selectable-icon {
+    display: none;
+  }
+
+  .sf-chip {
+    & .sf-chip-selectable-icon {
+      height: $chip-leading-icon-size;
+      overflow: hidden;
+      transition: $chip-multi-selection-icon-transition;
+      width: 0;
+    }
+
+    &.sf-active {
+      & .sf-chip-selectable-icon {
+        margin-inline: $chip-multi-selection-icon-margin;
+        display: flex;
+        width: $chip-leading-icon-size;
+      }
+    }
+  }
+}

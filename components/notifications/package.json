@@ -1,0 +1,46 @@
+{
+  "name": "@syncfusion/react-notifications",
+  "version": "31.1.17",
+  "description": "A package of React notification components such as Toast and Message which used to notify important information to end-users.",
+  "author": "Syncfusion Inc.",
+  "license": "SEE LICENSE IN license",
+  "keywords": [
+    "syncfusion",
+    "web-components",
+    "react",
+    "syncfusion-react",
+    "react-notifications",
+    "react-toast",
+    "toast",
+    "toaster",
+    "notification"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/syncfusion/react-ui-components.git"
+  },
+  "homepage": "https://www.syncfusion.com/react-ui-components",
+  "module": "./index.js",
+  "readme": "README.md",
+  "dependencies": {
+    "@syncfusion/react-base": "~31.1.17",
+    "@syncfusion/react-buttons": "~31.1.17"
+  },
+  "devDependencies": {
+    "gulp": "4.0.2",
+    "gulp-typescript": "5.0.1",
+    "typescript": "5.7.2",
+    "gulp-sass": "5.1.0",
+    "sass": "1.83.1",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "@types/react": "19.0.1",
+    "@types/react-dom": "19.0.1",
+    "@types/node": "^22.15.17"
+  },
+  "scripts": {
+    "build": "gulp build"
+  },
+  "typings": "index.d.ts",
+  "sideEffects": false
+}

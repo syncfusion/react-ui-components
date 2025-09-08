@@ -1,0 +1,119 @@
+@import 'mixin.scss';
+
+@include export-module('button-layout') {
+
+  .sf-btn {
+    border: $btn-border;
+    border-radius: $btn-border-radius;
+    letter-spacing: .15px;
+    cursor: pointer;
+    position: relative;
+    justify-content: center;
+    display: inline-flex;
+    text-align: center;
+    user-select: none;
+    white-space: nowrap;
+    font-weight: 500;
+
+    &.sf-btn-me {
+      svg {
+        height: $btn-svg-size;
+        width: $btn-svg-size;
+      }
+    }
+
+    &.sf-btn-la {
+      svg {
+        height: $btn-large-svg-size;
+        width: $btn-large-svg-size;
+      }
+    }
+
+    &.sf-btn-sm {
+      svg {
+        height: $btn-small-svg-size;
+        width: $btn-small-svg-size;
+      }
+    }
+  }
+
+  /* Top Bottom positioning */
+  .sf-btn-vertical {
+    flex-direction: column;
+    padding: 8px 16px;
+  }
+
+  .sf-btn-la:not(.sf-icon-btn) {
+    gap: 12px;
+  }
+
+  .sf-btn-sm:not(.sf-icon-btn) {
+    gap: 8px;
+  }
+
+  .sf-btn-me:not(.sf-icon-btn) {
+    gap: 10px;
+  }
+
+  .sf-btn-la:not(.sf-icon-btn):not(.sf-btn-vertical) {
+    padding: 0 32px;
+  }
+
+  .sf-btn-sm:not(.sf-icon-btn):not(.sf-btn-vertical) {
+    padding: 0 16px;
+  }
+
+  .sf-btn-me:not(.sf-icon-btn):not(.sf-btn-vertical) {
+    padding: 0 24px;
+  }
+
+  .sf-round {
+    border-radius: $btn-round-border-radius;
+  }
+  
+  /* Button SVG */
+  .sf-btn svg {
+    display: block;
+    vertical-align: middle;
+  }
+  
+  /* Button hover/focus */
+  .sf-btn:hover, .sf-btn:focus {
+    text-decoration: none;
+  }
+  
+  /* Icon-only button sizes */
+  .sf-icon-btn.sf-icon-btn-sm {
+    width: 32px;
+  }
+  
+  .sf-icon-btn.sf-icon-btn-me {
+    width: 40px;
+  }
+  
+  .sf-icon-btn.sf-icon-btn-la {
+    width: 48px;
+  }
+  
+  /* Button sizes */
+  .sf-btn-sm:not(.sf-btn-vertical) {
+    height: 32px;
+  }
+  
+  .sf-btn-me:not(.sf-btn-vertical) {
+    height: 40px;
+  }
+
+  .sf-btn-la:not(.sf-btn-vertical) {
+    height: 48px;
+  }
+  
+  /* RTL Support - Top/Bottom */
+  .sf-rtl.sf-btn-top {
+    flex-direction: column-reverse;
+  }
+  
+  .sf-rtl.sf-btn-bottom {
+    flex-direction: column;
+  }
+}

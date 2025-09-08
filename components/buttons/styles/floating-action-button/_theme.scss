@@ -1,0 +1,9 @@
+@include export-module('floating-action-button-theme') {
+  .sf-fab.sf-btn {
+    box-shadow: $fab-box-shadow;
+
+    &:hover:not(:focus), &:active, &.sf-active, &:disabled, &:focus {
+      box-shadow: $fab-box-shadow;
+    }
+  }
+}

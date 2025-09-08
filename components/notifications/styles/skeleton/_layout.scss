@@ -1,0 +1,68 @@
+@mixin shimmer-animation($animation-name) {
+  animation: $animation-name $skeleton-shimmer-effect-duration $skeleton-shimmer-effect-timing-function infinite;
+}
+
+@include export-module('skeleton-layout-and-themes') {
+  .sf-skeleton {
+    display: inline-block;
+    position: relative;
+    overflow: hidden;
+    border: $skeleton-border;
+    border-radius: $skeleton-border-radius;
+    background: $skeleton-background-color;
+
+    &.sf-skeleton-circle {
+      border-radius: 50%;
+    }
+  }
+
+  .sf-skeleton-wave::after {
+    @include shimmer-animation(sf-shimmer-wave);
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    width: calc(200% + 200px);
+    $wave-start: calc(#{$skeleton-shimmer-wave-pos} - #{$skeleton-shimmer-wave-length});
+    $wave-end: calc(#{$skeleton-shimmer-wave-pos} + #{$skeleton-shimmer-wave-length});
+    background-image: linear-gradient($skeleton-shimmer-wave-angle,
+        $skeleton-shimmer-background-color $wave-start,
+        $skeleton-shimmer-wave-color $skeleton-shimmer-wave-pos,
+        $skeleton-shimmer-background-color $wave-end );
+  }
+
+  .sf-skeleton-fade {
+    @include shimmer-animation(sf-shimmer-fade);
+  }
+
+  .sf-skeleton-pulse {
+    @include shimmer-animation(sf-shimmer-pulse);
+  }
+
+  .sf-rtl.sf-skeleton-wave::after {
+    @include shimmer-animation(sf-shimmer-wave-rtl);
+  }
+
+  @keyframes sf-shimmer-wave {
+    to {
+      transform: $skeleton-shimmer-transform;
+    }
+  }
+
+  @keyframes sf-shimmer-wave-rtl {
+    from {
+      transform: $skeleton-shimmer-transform;
+    }
+  }
+
+  @keyframes sf-shimmer-fade {
+    0%, 100% { opacity: 1; }
+    50% {  opacity: .4;  }
+  }
+
+  @keyframes sf-shimmer-pulse {
+    0%, 40%, 100% { transform: scale(1); }
+    50% { transform: scale(.975); }
+  }
+}

@@ -1,0 +1,26 @@
+@include export-module('v-scroll-theme') {
+  .sf-vscroll-nav {
+    background: $vscroll-bg;
+    color: $vscroll-arrow-icon-color;
+
+    &.sf-scroll-up-nav {
+      border-bottom: $vscroll-border-size $vscroll-border-type $vscroll-border-color;
+    }
+
+    &.sf-scroll-down-nav {
+      border-top: $vscroll-border-size $vscroll-border-type $vscroll-border-color;
+    }
+
+    &:hover {
+      background: $vscroll-bg-hover;
+    }
+
+    &:focus {
+      background: $vscroll-bg-focus;
+    }
+
+    &:active {
+      background: $vscroll-bg-pressed;
+    }
+  }
+}

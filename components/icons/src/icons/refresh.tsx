@@ -1,0 +1,4 @@
+import { createIcon } from '../icon';
+import { IconComponent } from '../icon';
+const path: React.ReactNode = <path d='M1 12C1 6.47715 5.47715 2 11 2C13.7624 2 16.2648 3.12139 18.0735 4.93138C18.7132 5.57146 19.3981 6.36248 20 7.09444V3H22V11H14V9H18.9692C18.277 8.13128 17.4165 7.10335 16.6588 6.34511C15.2098 4.89514 13.2104 4 11 4C6.58172 4 3 7.58172 3 12C3 16.4183 6.58172 20 11 20C14.6457 20 17.7243 17.5605 18.6874 14.2227L18.9647 13.262L20.8863 13.8165L20.609 14.7773C19.4055 18.9481 15.5605 22 11 22C5.47715 22 1 17.5228 1 12Z' fillRule='evenodd' clipRule='evenodd' fill='currentcolor'/>;
+export const RefreshIcon: IconComponent  = createIcon(path);

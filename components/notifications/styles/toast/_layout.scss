@@ -1,0 +1,129 @@
+@include export-module('toast-layout') {
+  .sf-toast-container {
+    display: inline-flex;
+    flex-direction: column;
+    position: relative;
+
+    .sf-toast {
+      border-radius: $toast-border-radius;
+      display: inline-flex;
+      font-size: $toast-font-size;
+      margin: 0 0 $toast-bottom-gap;
+      overflow: hidden;
+      padding: $toast-padding;
+      position: relative;
+      border: $toast-border;
+    }
+  }
+
+  .sf-toast-message {
+    display: inline-flex;
+    align-self: center;
+    flex-direction: column;
+    overflow: hidden;
+    width: inherit;
+  }
+
+  .sf-toast-title,
+  .sf-toast-content {
+
+    >* {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  .sf-toast-title {
+    font-size: $toast-title-font-size;
+    font-weight: $toast-title-font-weight;
+    letter-spacing: .5px;
+  }
+
+  .sf-toast-content {
+    word-break: break-word;
+    word-wrap: break-word;
+  }
+
+  .sf-toast-actions {
+    margin-inline-start: auto;
+    padding-top: $toast-action-btn-padding;
+
+    >* {
+      margin-inline-start: $toast-action-btn-inline-margin;
+    }
+  }
+
+  .sf-toast-close-icon {
+    cursor: pointer;
+    font-size: $toast-close-icon-font-size;
+    height: $toast-close-icon-size;
+    border-radius: $toast-icon-hover-border-radius;
+    margin-inline-start: $toast-close-icon-inline-margin;
+    min-width: $toast-close-icon-size;
+
+    .sf-icon {
+      font-size: $toast-close-icon-font-size;
+    }
+  }
+
+  .sf-toast-icon {
+    font-size: $toast-icon-font-size;
+    height: $toast-icon-size;
+    margin-inline-end: $toast-icon-inline-margin;
+    min-width: $toast-icon-size;
+
+    svg {
+      font-size: $toast-close-icon-font-size;
+    }
+  }
+
+  .sf-toast-top-left {
+    left: $toast-position-distance;
+    top: $toast-position-distance;
+  }
+
+  .sf-toast-bottom-left {
+    bottom: $toast-position-distance;
+    left: $toast-position-distance;
+  }
+
+  .sf-toast-top-right {
+    right: $toast-position-distance;
+    top: $toast-position-distance;
+  }
+
+  .sf-toast-bottom-right {
+    bottom: $toast-position-distance;
+    right: $toast-position-distance;
+  }
+
+  .sf-toast-bottom-center {
+    bottom: $toast-position-distance;
+    right: 0;
+    width: 100%;
+  }
+
+  .sf-toast-top-center {
+    right: 0;
+    top: $toast-position-distance;
+    width: 100%;
+  }
+
+  .sf-toast-bottom-center .sf-toast,
+  .sf-toast-top-center .sf-toast {
+    margin: 0 auto $toast-bottom-gap;
+  }
+
+  .sf-toast-progress {
+    width: 100%;
+    height: $toast-progressbar-height;
+    position: absolute;
+    bottom: 0;
+    inset-inline-start: 0;
+  }
+
+  .sf-toast-progress-bar {
+    width: 100%;
+    height: 100%;
+  }
+}
