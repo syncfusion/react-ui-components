@@ -1,5 +1,7 @@
 var gulp = require('gulp');
 const sass = require('gulp-sass')(require('sass'));
+const glob = require('glob');
+const fs = (global.fs = global.fs || require("fs"));
 
 /**
  * Compile ts files
@@ -45,8 +47,22 @@ gulp.task('styles', function (done) {
       });
 });
 
+/** 
+* Remove css variables for CSS files
+*/
+gulp.task('react-remove-css', function (done) {
+    var getCss = glob.sync('./styles/**/*.css');
+    for (var i = 0; i < getCss.length; i++) {
+        var cssContent = fs.readFileSync(getCss[i], 'utf8');
+        cssContent = cssContent.replace(/(:root\s*{[^}]*})|(\:root, .sf-light-mode\s*{[^}]*})|(\.sf-dark-mode\s*{[^}]*})/g, '');
+        cssContent = cssContent.replace(/^\s*[\r\n]/gm, '');
+        fs.writeFileSync(getCss[i], cssContent, 'utf8');
+    }
+    done();
+});
+
 /**
  * Build ts and scss files
  */
-gulp.task('build', gulp.series('scripts', 'styles'));
+gulp.task('build', gulp.series('scripts', 'styles', 'react-remove-css'));
 
