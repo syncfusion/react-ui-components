@@ -1,0 +1,62 @@
+@include export-module('tooltip-theme') {
+
+  .sf-tooltip-wrap {
+    background-color: $tooltip-content-bg-color;
+    border: $tooltip-wrapper-border;
+    border-radius: $tooltip-wrapper-border-radius;
+    box-shadow: $tooltip-wrapper-drop-shadow;
+  }
+
+
+  .sf-tooltip-arrow-outer-bottom {
+    border-left: $tooltip-arrow-transparent-border;
+    border-right: $tooltip-arrow-transparent-border;
+    border-top: $tooltip-arrow-colored-border;
+  }
+
+  .sf-tooltip-arrow-outer-top {
+    border-bottom: $tooltip-arrow-colored-border;
+    border-left: $tooltip-arrow-transparent-border;
+    border-right: $tooltip-arrow-transparent-border;
+  }
+
+  .sf-tooltip-arrow-outer-left {
+    border-bottom: $tooltip-arrow-transparent-border;
+    border-right: $tooltip-arrow-colored-border;
+    border-top: $tooltip-arrow-transparent-border;
+  }
+
+  .sf-tooltip-arrow-outer-right {
+    border-bottom: $tooltip-arrow-transparent-border;
+    border-left: $tooltip-arrow-colored-border;
+    border-top: $tooltip-arrow-transparent-border;
+  }
+
+  .sf-tooltip-arrow-inner-bottom,
+  .sf-tooltip-arrow-inner-top {
+    right: $tooltip-arrow-icon-positions;
+  }
+
+  .sf-tooltip-arrow-inner-right,
+  .sf-tooltip-arrow-inner-left {
+    bottom: $tooltip-arrow-icon-positions;
+  }
+
+  .sf-tooltip-close {
+    background-color: $tooltip-icon-bg-color;
+    border-radius: $tooltip-close-icon-border-radius;
+    border: $tooltip-close-icon-border;
+    color: $tooltip-icon-color;
+
+    &:hover {
+      background-color: $tooltip-icon-bg-hover;
+      color: $tooltip-icon-hover-color;
+    }
+  }
+
+  .sf-tooltip-content {
+    border-radius: inherit;
+    color: $tooltip-content-font-color;
+    font-size: $tooltip-content-font-size;
+  }
+}

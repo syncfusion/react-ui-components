@@ -1,0 +1,77 @@
+///
+/// @example scss - Basic component structure
+///   <div class="sf-control sf-component">Component content</div>
+///
+/// @example scss - State handling with status classes
+///   <div class="sf-control sf-warning">Warning message goes here</div>
+///
+@include export-module('base-core') {
+  
+  // Base control styles
+  .sf-control {
+    font-family: $font-family;
+    font-size: $font-size;
+    font-weight: $font-weight;
+    line-height: $leading-normal;
+    &:focus,
+    *:focus {
+      outline: none;
+    }
+  }
+  
+  .sf-size-small {
+    font-size: $font-size-12;
+    line-height: $leading-small;
+  }
+  
+  .sf-size-medium {
+    font-size: $font-size-14;
+    line-height: $leading-medium;
+  }
+  
+  .sf-size-large {
+    font-size: $font-size-16;
+    line-height: $leading-normal
+  }
+  
+  .sf-size-extra-large {
+    font-size: $font-size-24;
+    line-height: $leading-small;
+  }
+  
+  // Box-sizing reset
+  .sf-control,
+  .sf-control [class^='sf-'],
+  .sf-control [class*=' sf-'] {
+    box-sizing: border-box;
+  }
+
+  // Ripple effect utilities
+  .sf-ripple-wrapper {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    overflow: hidden;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+  
+  .sf-ripple-element {
+    border-radius: 0;
+    overflow: hidden;
+    pointer-events: none;
+    position: absolute;
+    transform: scale(0);
+    transition: opacity .3s transform 50ms cubic-bezier(.2, 0, 0, 1);
+  }
+  
+  // License-related styles
+  .sf-license-banner {
+    position: absolute;
+    right: 10px;
+    top: 27%;
+    cursor: pointer;
+  }
+}

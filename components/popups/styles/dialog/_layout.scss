@@ -1,0 +1,197 @@
+@include export-module('dialog-layout') {
+  .sf-dialog {
+    border: $dialog-border;
+    border-radius: $dialog-border-radius;
+    flex-direction: column;
+    width: 100%;
+    max-height: 98%;
+    max-width: 100%;
+    min-width: 20%;
+
+    &.sf-popup-open {
+      display: inline-flex;
+    }
+
+    .sf-btn.sf-dlg-closeicon-btn {
+      border-radius: $dialog-close-icon-border-radius;
+      top: $dialog-close-icon-top-position;
+      inset-inline-end: $dialog-close-button-right-position;
+      position: absolute;
+      padding: $dialog-close-button-padding;
+
+      & .sf-btn-icon svg {
+        height: 20px;
+        width: 20px;
+      }
+    }
+  }
+
+  .sf-dlg-resize-handle {
+    height: $dialog-resize-handler-height;
+    position: absolute;
+    width: $dialog-resize-handler-width;
+
+    svg {
+      font-size: $dialog-resize-handler-font-size;
+    }
+  }
+
+  .sf-dlg-south-east,
+  .sf-dlg-south-west {
+    bottom: $dialog-resize-handler-position;
+  }
+
+  .sf-dlg-north-east,
+  .sf-dlg-north-west {
+    top: $dialog-resize-handler-position;
+  }
+
+  .sf-dlg-south-east {
+    right: $dialog-resize-handler-position;
+  }
+
+  .sf-dlg-south-west {
+    left: $dialog-resize-handler-position;
+
+    svg {
+      transform: rotate(90deg);
+    }
+  }
+
+  .sf-dlg-north-east {
+    right: $dialog-resize-handler-position;
+    transform: rotate(-90deg);
+  }
+
+  .sf-dlg-north-west {
+    left: $dialog-resize-handler-position;
+    transform: rotate(180deg);
+  }
+
+  .sf-dlg-south,
+  .sf-dlg-north,
+  .sf-dlg-east,
+  .sf-dlg-west {
+    background-color: transparent;
+    overflow: visible;
+  }
+
+  .sf-dlg-footer-content {
+    gap: $dialog-footer-gap;
+    border-radius: $dialog-footer-content-border-radius;
+    border-top: $dialog-footer-content-border-top;
+    width: 100%;
+    padding: $dialog-footer-content-padding;
+  }
+
+  .sf-dlg-resizable:not(:has(.sf-dlg-footer-content)) {
+    padding-bottom: $dialog-enable-resize-padding-bottom;
+    touch-action: none;
+  }
+
+  .sf-draggable>.sf-dlg-header-content {
+    cursor: move;
+    touch-action: none;
+  }
+
+  .sf-dlg-fullscreen {
+    border-radius: 0;
+    border: none;
+  }
+
+  .sf-dlg-header-content {
+    border-radius: $dialog-header-content-border-radius;
+    line-height: $dialog-header-line-height;
+    border-bottom: $dialog-header-border;
+    padding: $dialog-header-content-padding;
+  }
+
+  .sf-dlg-header {
+    user-select: none;
+    width: 80%;
+    font-size: $dialog-header-font-size;
+  }
+
+  .sf-dlg-header-content+.sf-dlg-content {
+    padding-top: $dialog-content-padding-top;
+  }
+
+  .sf-dlg-content {
+    flex: 1 1 auto;
+    font-size: $dialog-content-font-size;
+    line-height: $dialog-content-line-height;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: $dialog-content-padding;
+    border-radius: $dialog-border-radius;
+  }
+
+  .sf-dlg-container {
+    display: flex;
+    height: 100%;
+    left: 0;
+    position: fixed;
+    top: 0;
+    width: 100%;
+
+    &:not(:has(.sf-dlg-overlay)) {
+      pointer-events: none;
+
+      .sf-dialog {
+        pointer-events: auto;
+      }
+    }
+  }
+
+  .sf-dlg-center,
+  .sf-dlg-left-center,
+  .sf-dlg-right-center {
+    align-items: center;
+  }
+
+  .sf-dlg-left-top,
+  .sf-dlg-right-top {
+    align-items: flex-start;
+  }
+
+  .sf-dlg-left-bottom,
+  .sf-dlg-right-bottom {
+    align-items: flex-end;
+  }
+
+  .sf-dlg-center {
+    justify-content: center;
+  }
+
+  .sf-dlg-left-center,
+  .sf-dlg-left-top,
+  .sf-dlg-left-bottom {
+    justify-content: flex-start;
+  }
+
+  .sf-dlg-right-center,
+  .sf-dlg-right-top,
+  .sf-dlg-right-bottom {
+    justify-content: flex-end;
+  }
+
+  .sf-dlg-center-top,
+  .sf-dlg-center-bottom {
+    align-items: center;
+    flex-direction: column;
+  }
+
+  .sf-dlg-center-bottom {
+    justify-content: flex-end;
+  }
+
+  .sf-dlg-overlay {
+    height: 100%;
+    left: 0;
+    position: absolute;
+    top: 0;
+    transition: opacity .15s linear;
+    width: 100%;
+  }
+
+}

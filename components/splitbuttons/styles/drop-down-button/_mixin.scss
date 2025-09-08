@@ -1,0 +1,7 @@
+@mixin dropdown-separator() {
+  border-bottom-style: $drop-down-btn-li-border-style;
+  border-bottom-width: $drop-down-btn-li-border-width;
+  height: auto;
+  margin: $drop-down-btn-separator-padding;
+  border-bottom-color: $drop-down-btn-border-color;
+}

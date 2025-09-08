@@ -36,7 +36,46 @@ From architecture to execution, every detail has been considered to boost perfor
 ### Material 3 Theming
 Built-in Material 3 stylesheets provide a modern, accessible design out of the box. Enjoy sharp visuals, consistent theming, and minimal setup.
 
-## Control List
+## Component List
+
+### Data Visualization
+
+<table>
+   <tr>
+       <td>
+           <b>Chart</b>
+       </td>
+        <td rowspan="1">
+           <a href="https://www.npmjs.com/package/@syncfusion/react-charts"><img src="https://ej2.syncfusion.com/github/images/npm-logo.png" alt="npm package @syncfusion/react-charts" title="@syncfusion/react-charts" style="height:20px;" />
+       </td>
+       <td>
+           <a href="components/charts/src/chart">Source</a>
+       </td>
+       <td>
+           <a href="https://react.syncfusion.com/chart/overview">Live demo</a>
+       </td>
+   </tr>
+</table>
+
+### Grid
+
+<table>
+   <tr>
+       <td>
+           <b>Data Grid</b>
+       </td>
+        <td rowspan="1">
+           <a href="https://www.npmjs.com/package/@syncfusion/react-grid"><img src="https://ej2.syncfusion.com/github/images/npm-logo.png" alt="npm package @syncfusion/react-grid" title="@syncfusion/react-grid" style="height:20px;" />
+       </td>
+       <td>
+           <a href="components/grids/src/grid">Source</a>
+       </td>
+       <td>
+           <a href="https://react.syncfusion.com/data-grid/overview">Live demo</a>
+       </td>
+   </tr>
+</table>
+
 
 ### Buttons
 
@@ -163,7 +202,7 @@ Built-in Material 3 stylesheets provide a modern, accessible design out of the b
        <td>
            <b>Numeric TextBox</b>
        </td>
-        <td rowspan="3">
+        <td rowspan="4">
            <a href="https://www.npmjs.com/package/@syncfusion/react-inputs"><img src="https://ej2.syncfusion.com/github/images/npm-logo.png" alt="npm package @syncfusion/react-inputs" title="@syncfusion/react-inputs" style="height:20px;" />
        </td>
        <td>
@@ -197,6 +236,18 @@ Built-in Material 3 stylesheets provide a modern, accessible design out of the b
    </tr>
    <tr>
        <td>
+           <b>Form</b>
+       </td>
+       <td>
+           <a href="components/inputs/src/form-validator">Source</a>
+       </td>
+       <td>
+           <a href="https://react.syncfusion.com/form">Live demo</a>
+       </td>
+   </tr>
+   
+   <tr>
+       <td>
           <b>Checkbox</b>
        </td>
         <td rowspan="3">
@@ -220,6 +271,7 @@ Built-in Material 3 stylesheets provide a modern, accessible design out of the b
            <a href="https://react.syncfusion.com/radio-button">Live demo</a>
        </td>
    </tr>
+
 </table>
 
 ### Layout
@@ -229,7 +281,7 @@ Built-in Material 3 stylesheets provide a modern, accessible design out of the b
        <td>
            <b>Tooltip</b>
        </td>
-        <td>
+        <td rowspan="2">
            <a href="https://www.npmjs.com/package/@syncfusion/react-popups"><img src="https://ej2.syncfusion.com/github/images/npm-logo.png" alt="npm package @syncfusion/react-popups" title="@syncfusion/react-popups" style="height:20px;" />
        </td>
        <td>
@@ -237,6 +289,17 @@ Built-in Material 3 stylesheets provide a modern, accessible design out of the b
        </td>
        <td>
            <a href="https://react.syncfusion.com/tooltip">Live demo</a>
+       </td>
+   </tr>
+   <tr>
+       <td>
+           <b>Dialog</b>
+       </td>
+       <td>
+           <a href="components/popups/src/dialog">Source</a>
+       </td>
+       <td>
+           <a href="https://react.syncfusion.com/dialog">Live demo</a>
        </td>
    </tr>
 </table>
@@ -280,6 +343,6 @@ Built-in Material 3 stylesheets provide a modern, accessible design out of the b
 Check the license detail [here](https://github.com/syncfusion/react-ui-components/blob/master/license).
 
 ## Changelog
-Check the changelog [here](https://react-api.syncfusion.com/release-notes/30.1.37). 
+Check the changelog [here](https://react-api.syncfusion.com/release-notes/31.1.17). 
 
 &copy; Copyright 2025 Syncfusion, Inc. All Rights Reserved. The Syncfusion Essential Studio license and copyright applies to this distribution.

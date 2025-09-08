@@ -1,0 +1,64 @@
+/// Border radius mixin
+/// @param {Length} $radius - Border radius value
+/// @param {Boolean} $important - Whether to use !important
+///
+/// @example scss - Apply default border radius to a card
+///   .sf-card {
+///     @include sf-border-radius();
+///   }
+///
+/// @example scss - Apply custom border radius to a button with !important
+///   .sf-button {
+///     @include sf-border-radius(8px);
+///   }
+@mixin sf-border-radius($radius: $border-radius-xs) {
+  border-radius: $radius;
+}
+
+/// Top border radius mixin
+/// @param {Length} $radius - Border radius value
+///
+/// @example scss - Rounded top corners for a modal
+///   .sf-modal {
+///     @include sf-border-top-radius(16px);
+///   }
+@mixin sf-border-top-radius($radius: $border-radius-xs) {
+  border-top-left-radius: $radius;
+  border-top-right-radius: $radius;
+}
+
+/// Bottom border radius mixin
+/// @param {Length} $radius - Border radius value
+///
+/// @example scss - Rounded bottom corners for a drawer
+///   .sf-drawer {
+///     @include sf-border-bottom-radius(10px);
+///   }
+@mixin sf-border-bottom-radius($radius: $border-radius-xs) {
+  border-bottom-left-radius: $radius;
+  border-bottom-right-radius: $radius;
+}
+
+/// Left border radius mixin
+/// @param {Length} $radius - Border radius value
+///
+/// @example scss - Rounded left corners for a chip
+///   .sf-chip {
+///     @include sf-border-left-radius(6px);
+///   }
+@mixin sf-border-left-radius($radius: $border-radius-xs) {
+  border-top-left-radius: $radius;
+  border-bottom-left-radius: $radius;
+}
+
+/// Right border radius mixin
+/// @param {Length} $radius - Border radius value
+///
+/// @example scss - Rounded right corners for a chip
+///   .sf-chip {
+///     @include sf-border-right-radius(6px);
+///   }
+@mixin sf-border-right-radius($radius: $border-radius-xs) {
+  border-top-right-radius: $radius;
+  border-bottom-right-radius: $radius;
+}

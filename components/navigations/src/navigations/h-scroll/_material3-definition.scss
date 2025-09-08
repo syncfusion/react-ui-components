@@ -1,0 +1,13 @@
+$hscroll-nav-width: 46px !default;
+$hscroll-padding: 0 $hscroll-nav-width !default;
+$hscroll-arrow-font-size: $font-size-24 !default;
+$hscroll-arrow-icon-color: rgba($icon-color) !default;
+
+$hscroll-bg: $transparent !default;
+$hscroll-bg-hover: $content-bg-color-hover !default;
+$hscroll-bg-focus: $content-bg-color-focus !default;
+$hscroll-bg-pressed: $content-bg-color-pressed !default;
+
+$hscroll-border-width: 1px !default;
+$hscroll-border-style: solid !default;
+$hscroll-border-color: rgba($border-light) !default;

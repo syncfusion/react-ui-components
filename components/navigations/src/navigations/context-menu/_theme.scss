@@ -1,0 +1,47 @@
+@include export-module('contextmenu-theme') {
+  .sf-contextmenu {
+    .sf-menu-parent {
+      background: $context-menu-ul-bg-color;
+      color: $context-menu-color;
+    }
+
+    .sf-menu-item {
+      &.sf-focused,
+      &.sf-has-submenu {
+        background-color: $context-menu-li-bg-color;
+      }
+
+      &:active {
+        background-color: $context-menu-li-selection-bg-color;
+      }
+    }
+
+    .sf-submenu-icon,
+    .sf-menu-icon {
+      color: $context-menu-icon-color;
+    }
+
+    .sf-menu-url {
+      color: $context-menu-color;
+    }
+
+    .sf-disabled {
+      color: $context-menu-disable-text;
+      opacity: 1;
+
+      .sf-menu-icon,
+      .sf-submenu-icon {
+        color: $context-menu-icon-disabled-color;
+      }
+
+      .sf-menu-url {
+        color: $context-menu-disable-text;
+      }
+    }
+
+    .sf-menu-header,
+    .sf-separator {
+      border-bottom-color: $context-menu-li-border-color;
+    }
+  }
+}

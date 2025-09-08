@@ -1,0 +1,43 @@
+@use "sass:math";
+
+/// Calculate a rem value from pixel value
+/// @param {Number} $pixels - The pixel value
+/// @param {Number} $base - The base font size in pixels (default: 16px)
+/// @return {Number} - The rem value
+/// 
+/// @example scss - Set consistent component spacing
+///   .sf-card {
+///     padding: sf-rem(16px);
+///     margin-bottom: sf-rem(24px);
+///   }
+///
+/// @example scss - Create responsive typography
+///   .sf-title {
+///     font-size: sf-rem(20px);
+///     line-height: sf-rem(28px);
+///   }
+///
+@function sf-rem($pixels, $base: 16px) {
+  @return math.div($pixels, $base) * 1rem;
+}
+
+/// Calculate a em value from pixel value
+/// @param {Number} $pixels - The pixel value
+/// @param {Number} $base - The base font size in pixels (default: 16px)
+/// @return {Number} - The em value
+/// 
+/// @example scss - Create icon sizing relative to text
+///   .sf-icon {
+///     width: sf-em(20px);
+///     height: sf-em(20px);
+///   }
+///
+/// @example scss - Set component padding relative to font size
+///   .sf-button {
+///     padding: sf-em(8px) sf-em(16px);
+///     border-radius: sf-em(4px);
+///   }
+///
+@function sf-em($pixels, $base: 16px) {
+  @return math.div($pixels, $base) * 1em;
+}

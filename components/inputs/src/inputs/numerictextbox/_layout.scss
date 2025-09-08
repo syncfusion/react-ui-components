@@ -1,0 +1,38 @@
+.sf-numeric-container {
+  width: 100%;
+}
+
+.sf-content-placeholder.sf-numeric.sf-placeholder-numeric {
+  background-size: $numeric-placeholder-background-size;
+  min-height: $numeric-placeholder-min-height;
+}
+
+.sf-numeric {
+
+  .sf-numeric-hidden,
+  &.sf-input-focus .sf-numeric-hidden {
+    border: 0;
+    height: 0;
+    margin: 0;
+    padding: 0;
+    text-indent: 0;
+    visibility: hidden;
+    width: 0;
+  }
+
+  &.sf-control-wrapper {
+    .sf-input-group:not(.sf-disabled):active:not(.sf-success):not(.sf-warning):not(.sf-error):not(.sf-input-focus) {
+      border-color: $input-group-full-border-color;
+      box-shadow: none;
+    }
+
+    .sf-input-group .sf-input-group-icon {
+      font-size: $numeric-input-icon-size;
+    }
+  }
+
+  .sf-input-group-icon.sf-spin-down path,
+  .sf-input-group-icon.sf-spin-up path {
+    fill: rgb($icon-color);
+  }
+}

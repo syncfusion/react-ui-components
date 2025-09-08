@@ -1,0 +1,44 @@
+/// A flexible mixin to apply various fill styles such as text color, background, and border styles
+/// 
+/// @param {Color} $color - Sets the text color. (optional)
+/// @param {Color} $bg - Sets the background color (optional)
+/// @param {Color} $bg-color - Sets the background color property specifically (optional)
+/// @param {Color} $border-color - Sets the border color (optional)
+/// @param {Color} $border-image - Sets the border image (optional)
+///
+/// @example scss - Simple button with primary styling
+///   .sf-button--primary {
+///     @include sf-fill($on-primary, $primary, $primary);
+///   }
+///
+/// @example scss - Card with background and gradient
+///   .sf-card {
+///     @include sf-fill(
+///       $on-primary-container,
+///       linear-gradient(0deg,rgba(var(--color-sf-primary),.05),rgba(var(--color-sf-primary),.05)),rgba(var(--color-sf-surface)),
+///       null,
+///       null,
+///       linear-gradient(0deg,rgba(var(--color-sf-primary),.05),rgba(var(--color-sf-primary),.05))
+///     );
+///   }
+@mixin sf-fill($color: null, $bg: null, $bg-color: null, $border-color: null, $border-image: null) {
+  @if $color {
+    color: $color;
+  }
+  
+  @if $bg {
+    background: $bg;
+  }
+  
+  @if $bg-color {
+    background-color: $bg-color;
+  }
+  
+  @if $border-color {
+    border-color: $border-color;
+  }
+  
+  @if $border-image {
+    border-image: $border-image;
+  }
+}
