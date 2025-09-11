@@ -1,7 +1,5 @@
 # Changelog
 
-## [Unreleased]
-
 ## 31.1.17 (2025-09-05)
 
 ### Chart
