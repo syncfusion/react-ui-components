@@ -1,7 +1,5 @@
 # React Data Grid Components
 
-## What's Included in the React Grid Package
-
 The React Grid package includes the Data Grid component.
 
 ### React Data Grid

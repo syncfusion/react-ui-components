@@ -1,8 +1,6 @@
 # React Chart Components
 
-## What's Included in the React Chart Package
-
-The React Chart package includes the following list of components.
+The React Chart package provides a powerful and versatile Chart component.
 
 ### React Chart
 
