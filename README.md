@@ -1,40 +1,39 @@
-# Syncfusion Pure React UI Components Library
+# Syncfusion React UI Components Library
 
-Syncfusion Pure React UI Components library has been built from the ground up to be lightweight, responsive, modular and touch friendly. It offers 15+ UI components that every applications will ever need.
+Syncfusion React UI Components library has been built from the ground up to be lightweight, responsive, modular and touch friendly. It offers 20+ UI components that every applications will ever need.
 
-> This is a commercial product and requires a paid license for possession or use. Syncfusion’s licensed software, including this component, is subject to the terms and conditions of Syncfusion's [EULA](https://www.syncfusion.com/eula/es/). To acquire a license for [React UI components](https://www.syncfusion.com/react-components), you can [purchase](https://www.syncfusion.com/sales/products) or [start a free 30-day trial](https://www.syncfusion.com/account/manage-trials/start-trials).
+> This is a commercial product requiring a paid license for possession or use. Syncfusion’s licensed software, including this library, is governed by the terms and conditions of Syncfusion's [EULA](https://www.syncfusion.com/eula/es/). To acquire a license for [React UI Components](https://www.syncfusion.com/react-components), you can [purchase one](https://www.syncfusion.com/sales/products) or [start a free 30-day trial](https://www.syncfusion.com/account/manage-trials/start-trials).
 
-> A [free community license](https://www.syncfusion.com/products/communitylicense) is also available for companies and individuals whose organizations have less than $1 million USD in annual gross revenue and five or fewer developers.
+> A [free community license](https://www.syncfusion.com/products/communitylicense) is available for companies and individuals with less than $1 million USD in annual gross revenue and five or fewer developers.
 
-See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campaign=notification) for more info.
-
+For additional licensing details, refer to the [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campaign=notification).
 
 ## Resources
 * [Getting Started](https://react.syncfusion.com/overview/introduction)
 * [View Online Demos](https://react.syncfusion.com/button)
 
-## Pure React Components highlights
+## React Components Highlights
 
 ### Built for Modern React
-These components are built entirely using React’s modern architecture, leveraging functional components and hooks rather than relying on class-based components, wrappers. This ensures seamless integration with any modern React application and gives developers full control using idiomatic React patterns.
- 
+The components leverage React’s modern architecture, utilizing functional components and hooks instead of class-based components or wrappers. This ensures seamless integration with contemporary React applications and empowers developers with idiomatic React patterns.
+
 ### Fully Reactive by Design
-Components automatically respond to state and prop changes without manual refreshes, ensuring predictable UI updates.
- 
+Components are designed to automatically respond to changes in state and props, eliminating the need for manual refreshes and ensuring consistent, predictable UI updates.
+
 ### Smarter Rendering for Better UX
-Optimized rendering logic refreshes only what’s necessary, improving performance and user experience.
- 
+Optimized rendering logic updates only the necessary parts of the UI, enhancing performance and delivering a smoother user experience.
+
 ### Active State Preservation
-Interactions like focused inputs or selected items remain intact even when the surrounding state changes. This preserves the user's context and ensures a consistent, uninterrupted experience.
- 
+User interactions, such as focused inputs or selected items, remain intact during state changes, preserving context and providing a seamless, uninterrupted experience.
+
 ### Native Template Rendering
-Templates are rendered using pure JSX, in line with React’s rendering lifecycle.
- 
+Templates are rendered using pure JSX, aligning with React’s rendering lifecycle for efficient and native integration.
+
 ### Performance-Driven Architecture
-From architecture to execution, every detail has been considered to boost performance. With fewer renders, leaner updates, and smarter state handling, apps feel faster and more responsive.
- 
-### Material 3 Theming
-Built-in Material 3 stylesheets provide a modern, accessible design out of the box. Enjoy sharp visuals, consistent theming, and minimal setup.
+The library is designed with performance in mind, minimizing renders, optimizing updates, and implementing efficient state handling to deliver fast and responsive applications.
+
+### `Material3` Theming
+Built-in `Material3` stylesheets offer a modern, accessible, and visually appealing design with minimal setup, ensuring consistent theming across components.
 
 ## Component List
 
@@ -75,7 +74,6 @@ Built-in Material 3 stylesheets provide a modern, accessible design out of the b
        </td>
    </tr>
 </table>
-
 
 ### Buttons
 
@@ -338,7 +336,8 @@ Built-in Material 3 stylesheets provide a modern, accessible design out of the b
  Product support is available for through following mediums.
  * [Support ticket](https://support.syncfusion.com/support/tickets/create) - Guaranteed Response in 24 hours | Unlimited tickets | Holiday support or [Community forum](https://www.syncfusion.com/forums/pure-react?utm_source=npm&utm_campaign=react-ui-components).
 * New [GitHub issue](https://github.com/syncfusion/react-ui-components/issues/new).
-* Ask your query in [Stack Overflow](https://stackoverflow.com/) with tag `syncfusion` and `pure-react`.
+* Ask your query in [Stack Overflow](https://stackoverflow.com/) with tag `syncfusion` and `react`.
+
 ## License
 Check the license detail [here](https://github.com/syncfusion/react-ui-components/blob/master/license).
 

@@ -1,10 +1,4 @@
-# React Data Grid Components
-
-## What's Included in the React Grid Package
-
-The React Grid package includes the Data Grid component.
-
-### React Data Grid
+# React Data Grid Component
 
 The **Syncfusion React Data Grid** is a high-performance, feature-rich component designed for building scalable, responsive, and data-intensive web applications. Engineered to meet the requirements of enterprise-grade solutions, it provides a robust architecture that supports dynamic data handling, seamless integration with modern react frameworks, and a highly customizable interface.
 
