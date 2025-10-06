@@ -1,7 +1,7 @@
 {
   "name": "@syncfusion/react-navigations",
   "version": "31.1.17",
-  "description": "A package of React navigation components such as Toolbar and Context-menu which is used to navigate from one page to another",
+  "description": "Syncfusion React Navigations with Toolbar and Context Menu for seamless page navigation",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
   "keywords": [

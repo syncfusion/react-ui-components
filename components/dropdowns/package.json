@@ -1,7 +1,7 @@
 {
   "name": "@syncfusion/react-dropdowns",
   "version": "31.1.17",
-  "description": "A package of React Dropdown components",
+  "description": "Syncfusion React Dropdown package is a feature-rich UI collection for dynamic dropdown interactions in React apps.",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
   "keywords": [

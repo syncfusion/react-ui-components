@@ -2,8 +2,6 @@
 
 The Chart component is designed to deliver high-performance, interactive data visualizations with a wide range of chart types and customization options.
 
-Explore the demo [here](https://react.syncfusion.com/chart/overview).
-
 **Key features**
 
 - **High Performance:** Optimized to render large datasets with minimal lag, ensuring smooth interactions and fast updates.
@@ -20,6 +18,35 @@ Explore the demo [here](https://react.syncfusion.com/chart/overview).
 
 - **Customization Options:** Allows developers to tailor data points, series styles, and UI behaviors to meet specific application needs.
 
+**Setup**
+
+To install `@syncfusion/react-charts` and its dependent packages, use the following command:
+
+```sh
+npm install @syncfusion/react-charts
+```
+
+**Usage**
+
+```tsx
+import { Chart, ChartPrimaryXAxis, ChartSeries, ChartSeriesCollection } from '@syncfusion/react-charts';
+
+export default function App() {
+  return (
+    <Chart>
+      <ChartPrimaryXAxis valueType='Category' />
+      <ChartSeriesCollection >
+         <ChartSeries dataSource={categoryData} xField="x" yField="y" type="Line" />
+      </ChartSeriesCollection >
+    </Chart> 
+  );
+};
+```
+
+**Resources**
+
+- [Chart Demo/Docs](https://react.syncfusion.com/chart/overview)
+- [Chart API](https://react-api.syncfusion.com/chart/overview)
 
 <p align="center">
 Trusted by the world's leading companies
@@ -27,14 +54,6 @@ Trusted by the world's leading companies
     <img src="https://raw.githubusercontent.com/SyncfusionExamples/nuget-img/master/syncfusion/syncfusion-trusted-companies.webp" alt="Syncfusion logo">
   </a>
 </p>
-
-## Setup
-
-To install `@syncfusion/react-charts` and its dependent packages, use the following command:
-
-```sh
-npm install @syncfusion/react-charts
-```
 
 ## Support
 
@@ -54,4 +73,4 @@ Check the changelog [here](https://github.com/syncfusion/react-ui-components/blo
 
 See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campaign=notification) for more info.
 
-© Copyright 2025 Syncfusion, Inc. All Rights Reserved. The Syncfusion Essential Studio license and copyright applies to this distribution.
+© Copyright 2025 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential Studio® license and copyright applies to this distribution.

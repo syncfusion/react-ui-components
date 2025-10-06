@@ -1,7 +1,7 @@
 {
   "name": "@syncfusion/react-data",
   "version": "31.1.17",
-  "description": "A shared React package providing foundational data management classes, utilities, and methods for handling data operations across UI components.",
+  "description": "Syncfusion React data package provides foundational data management classes, utilities, and methods for handling data operations across UI components.",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
   "keywords": [

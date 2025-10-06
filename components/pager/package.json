@@ -1,7 +1,7 @@
 {
   "name": "@syncfusion/react-pager",
   "version": "31.1.17",
-  "description": "A React component for managing pagination in data-centric interfaces, optimized for seamless navigation in data grids and tabular UI Components.",
+  "description": "Syncfusion React Pager component for managing pagination in data-centric interfaces, optimized for seamless navigation in data grids and tabular UI components.",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
   "keywords": [

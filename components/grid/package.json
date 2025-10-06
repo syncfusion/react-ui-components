@@ -1,7 +1,7 @@
 {
   "name": "@syncfusion/react-grid",
   "version": "31.1.17",
-  "description": "A high-performance React Data Grid component designed for modern web applications.",
+  "description": "Syncfusion React Data Grid, a high-performance component designed for modern web applications.",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
   "keywords": [
