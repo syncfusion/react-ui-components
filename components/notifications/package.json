@@ -1,7 +1,7 @@
 {
   "name": "@syncfusion/react-notifications",
   "version": "31.1.17",
-  "description": "A package of React notification components such as Toast and Message which used to notify important information to end-users.",
+  "description": "Syncfusion React Notifications package is a feature-rich collection of UI components, including Message, Skeleton and Toast, with animations, templates, and positioning to notify important information in React apps.",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
   "keywords": [

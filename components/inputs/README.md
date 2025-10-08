@@ -1,14 +1,18 @@
 # React Input Components
 
-## What's Included in the React Inputs Package
+The Syncfusion React Input package is a feature-rich collection of UI components, including Textbox, Textarea, Numeric-textbox and Form-validator, designed to capture user input in React applications.
 
-The React Inputs package includes the following list of components.
+## Setup
 
-### React Form
+To install `inputs` and its dependent packages, use the following command,
+
+```sh
+npm install @syncfusion/react-inputs
+```
+
+## React Form
 
 The Form component provides comprehensive form validation and state management functionality with built-in validation rules and field interaction tracking. It offers a powerful way to handle complex forms with real-time validation, error handling, and submission management.
-
-Explore the demo <a href="https://react.syncfusion.com/form" target="_blank" rel="noopener noreferrer">here</a>
 
 **Key features**
 
@@ -24,11 +28,48 @@ Explore the demo <a href="https://react.syncfusion.com/form" target="_blank" rel
 
 - **Initial Values:** Support for pre-populated form fields with validation on initial load.
 
-### React Numeric TextBox
+**Usage**
+
+```tsx
+import React, { useState } from 'react';
+import { Form, FormField, FormState } from '@syncfusion/react-inputs';
+
+export default function App() {
+  const [formState, setFormState] = useState<FormState>();
+
+  return (
+    <Form
+      rules={{ username: { required: [true, 'Username is required'] } }}
+      onSubmit={(data) => console.log(data)}
+      onFormStateChange={setFormState}
+    >
+      <FormField name="username">
+        <input
+          name="username"
+          value={(formState?.values.username || '') as string}
+          onChange={(e) => formState?.onChange('username', { value: e.target.value })}
+          onBlur={() => formState?.onBlur('username')}
+          onFocus={() => formState?.onFocus('username')}
+        />
+        {formState?.errors?.username && (
+          <div className="error">{formState.errors.username}</div>
+        )}
+      </FormField>
+
+      <button type="submit">Submit</button>
+    </Form>
+  );
+}
+```
+
+**Resources**
+
+- [Form Demo/Docs](https://react.syncfusion.com/form)
+- [Form API](https://react-api.syncfusion.com/form/overview)
+
+## React Numeric TextBox
 
 The NumericTextBox component provides a specialized input field for numeric values with validation, formatting, and increment/decrement capabilities. It offers precise control over numeric input with support for various number formats, validation rules, and user interaction patterns.
-
-Explore the demo [here](https://react.syncfusion.com/numeric-textbox).
 
 **Key features**
 
@@ -44,11 +85,26 @@ Explore the demo [here](https://react.syncfusion.com/numeric-textbox).
 
 - **Keyboard navigation:** Enhanced keyboard support for incrementing/decrementing values using arrow keys.
 
-### React TextArea
+**Usage**
+
+```tsx
+import { NumericTextBox } from "@syncfusion/react-inputs";
+
+export default function App() {
+  return (
+    <NumericTextBox defaultValue={100} min={0} max={1000} />
+  );
+}
+```
+
+**Resources**
+
+- [Numeric TextBox Demo/Docs](https://react.syncfusion.com/numeric-textbox)
+- [Numeric TextBox API](https://react-api.syncfusion.com/numeric-textbox/overview)
+
+## React TextArea
 
 The TextArea component provides a multi-line text input field with enhanced functionality for collecting longer text content from users. It offers various customization options to adapt to different application requirements and design systems.
-
-Explore the demo [here](https://react.syncfusion.com/textarea).
 
 **Key features**
 
@@ -62,11 +118,26 @@ Explore the demo [here](https://react.syncfusion.com/textarea).
 
 - **Controlled and uncontrolled modes:** Supports both controlled mode (using the `value` prop) and uncontrolled mode (using the `defaultValue` prop) to accommodate different state management approaches.
 
-### React TextBox
+**Usage**
+
+```tsx
+import { TextArea } from '@syncfusion/react-inputs';
+
+export default function App() {
+  return (
+    <TextArea defaultValue="Initial text" placeholder="Enter text" rows={5} cols={40} />
+  );
+}
+```
+
+**Resources**
+
+- [TextArea Demo/Docs](https://react.syncfusion.com/textarea)
+- [TextArea API](https://react-api.syncfusion.com/textarea/overview)
+
+## React TextBox
 
 The TextBox component provides a feature-rich input field for collecting user text input with enhanced styling options and validation states. It supports both controlled and uncontrolled input modes to fit various application requirements.
-
-Explore the demo [here](https://react.syncfusion.com/textbox).
 
 **Key features**
 
@@ -82,20 +153,29 @@ Explore the demo [here](https://react.syncfusion.com/textbox).
 
 - **Controlled and uncontrolled modes:** Supports both controlled mode (using the `value` prop) and uncontrolled mode (using the `defaultValue` prop) to accommodate different state management approaches.
 
+**Usage**
+
+```tsx
+import { TextBox } from "@syncfusion/react-inputs";
+
+export default function App() {
+  return (
+    <TextBox defaultValue="Initial text" placeholder="Enter text" />
+  );
+}
+```
+
+**Resources**
+
+- [TextBox Demo/Docs](https://react.syncfusion.com/textbox)
+- [TextBox API](https://react-api.syncfusion.com/textbox/overview)
+
 <p align="center">
 Trusted by the world's leading companies
   <a href="https://www.syncfusion.com/">
     <img src="https://raw.githubusercontent.com/SyncfusionExamples/nuget-img/master/syncfusion/syncfusion-trusted-companies.webp" alt="Syncfusion logo">
   </a>
 </p>
-
-## Setup
-
-To install `inputs` and its dependent packages, use the following command,
-
-```sh
-npm install @syncfusion/react-inputs
-```
 
 ## Support
 
@@ -116,4 +196,4 @@ Check the changelog [here](https://github.com/syncfusion/react-ui-components/blo
 
 See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campaign=notification) for more info.
 
-&copy; Copyright 2025 Syncfusion, Inc. All Rights Reserved. The Syncfusion Essential Studio license and copyright applies to this distribution.
+&copy; Copyright 2025 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential Studio® license and copyright applies to this distribution.

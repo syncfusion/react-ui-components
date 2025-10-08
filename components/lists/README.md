@@ -1,10 +1,16 @@
 # React Lists Components
 
-## What's Included in the React Lists Package
+The Syncfusion React List package is a feature-rich UI components, including ListView, for dynamic list interactions in React apps.
 
-The React Lists package includes the following list of components.
+## Setup
 
-### React ListView
+To install `lists` and its dependent packages, use the following command,
+
+```sh
+npm install @syncfusion/react-lists
+```
+
+## React ListView
 
 The ListView component is designed to display a list of items with rich functionality and customization options. It provides a flexible and interactive way to present data in a list format with support for grouping, selection, templates, and virtualization.
 
@@ -33,14 +39,6 @@ Trusted by the world's leading companies
   </a>
 </p>
 
-## Setup
-
-To install `lists` and its dependent packages, use the following command,
-
-```sh
-npm install @syncfusion/react-lists
-```
-
 ## Support
 
 Product support is available through following mediums.
@@ -59,4 +57,4 @@ Check the changelog [here](https://github.com/syncfusion/react-ui-components/blo
 
 See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campaign=notification) for more info.
 
-&copy; Copyright 2025 Syncfusion, Inc. All Rights Reserved. The Syncfusion Essential Studio license and copyright applies to this distribution.
+&copy; Copyright 2025 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential Studio® license and copyright applies to this distribution.

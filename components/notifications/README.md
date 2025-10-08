@@ -1,14 +1,18 @@
 # React Notifications Components
 
-## What's Included in the React Notification Package
+The Syncfusion React Notifications package is a feature-rich collection of UI components, including Message, Skeleton and Toast, with animations, templates, and positioning to notify important information in React apps.
 
-The React Notification package includes the following list of components.
+## Setup
 
-### React Message
+To install `notifications` and its dependent packages, use the following command,
+
+```sh
+npm install @syncfusion/react-notifications
+```
+
+## React Message
 
 The Message component has an option to display the messages with severity by differentiating icons and colors to denote the importance and context of the message to the end user. The following key features are available in the Message component.
-
-Explore the demo [here](https://react.syncfusion.com/message)
 
 **Key features**
 
@@ -20,11 +24,27 @@ Explore the demo [here](https://react.syncfusion.com/message)
 
 - **Template:** Provides an option to customize the content of the message.
 
-### React Toast
+**Usage**
+
+```tsx
+import { Message } from '@syncfusion/react-notifications';
+
+export default function App() {
+
+  return (
+    <Message closeIcon={true}>Editing is restricted</Message>
+  );
+}
+```
+
+**Resources**
+
+- [Message Demo/Docs](https://react.syncfusion.com/message)
+- [Message API](https://react-api.syncfusion.com/message/overview)
+
+## React Toast
 
 The Toast component provides a non-intrusive way to display temporary notifications to users. It offers a flexible system for showing messages that automatically dismiss after a configurable timeout period.
-
-Explore the demo [here](https://react.syncfusion.com/toast)
 
 **Key features**
 
@@ -38,11 +58,27 @@ Explore the demo [here](https://react.syncfusion.com/toast)
 
 - **Global Toast Service:**  Use the ToastUtility or useToast hook to display toasts from anywhere in your application without needing to include the component in your JSX.
 
-### React Skeleton
+**Usage**
+
+```tsx
+import { Toast } from "@syncfusion/react-notifications";
+
+export default function App() {
+
+  return (
+    <Toast content="Operation completed successfully" open={true} position={{ xAxis: 'Right', yAxis: 'Bottom' }} />
+  );
+}
+```
+
+**Resources**
+
+- [Toast Demo/Docs](https://react.syncfusion.com/toast)
+- [Toast API](https://react-api.syncfusion.com/toast/overview)
+
+## React Skeleton
 
 The Skeleton component provides a visual placeholder that simulates the layout of content while it's being loaded, improving the perceived performance of your application. It offers various shapes and animation effects to match your UI design needs.
-
-Explore the demo [here](https://react.syncfusion.com/skeleton)
 
 **Key features**
 
@@ -52,20 +88,30 @@ Explore the demo [here](https://react.syncfusion.com/skeleton)
 
 - **Customizable Dimensions:** Easily configure the width and height of skeleton elements using CSS units or pixel values.
 
+**Usage**
+
+```tsx
+import { Skeleton, Variants } from "@syncfusion/react-notifications";
+
+export default function App() {
+  
+  return (
+    <Skeleton variant={Variants.Circle} width={50} height={50} animation={AnimationType.Wave} />
+  );
+}
+```
+
+**Resources**
+
+- [Skeleton Demo/Docs](https://react.syncfusion.com/skeleton)
+- [Skeleton API](https://react-api.syncfusion.com/skeleton/overview)
+
 <p align="center">
 Trusted by the world's leading companies
   <a href="https://www.syncfusion.com/">
     <img src="https://raw.githubusercontent.com/SyncfusionExamples/nuget-img/master/syncfusion/syncfusion-trusted-companies.webp" alt="Syncfusion logo">
   </a>
 </p>
-
-## Setup
-
-To install `notifications` and its dependent packages, use the following command,
-
-```sh
-npm install @syncfusion/react-notifications
-```
 
 ## Support
 
@@ -86,4 +132,4 @@ Check the changelog [here](https://github.com/syncfusion/react-ui-components/blo
 
 See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campaign=notification) for more info.
 
-&copy; Copyright 2025 Syncfusion, Inc. All Rights Reserved. The Syncfusion Essential Studio license and copyright applies to this distribution.
+&copy; Copyright 2025 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential Studio® license and copyright applies to this distribution.

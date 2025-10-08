@@ -1,7 +1,7 @@
 {
   "name": "@syncfusion/react-buttons",
   "version": "31.1.17",
-  "description": "A package of feature-rich React components such as Button, CheckBox and RadioButton.",
+  "description": "Syncfusion React Buttons package is a feature-rich collection of UI components including Button, CheckBox, RadioButton, Switch, Chip, and more for building modern, interactive React applications.",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
   "keywords": [

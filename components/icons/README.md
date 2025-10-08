@@ -9,7 +9,30 @@ The React Icon Library is a centralized and scalable collection of SVG-based ico
 * Icons are exported as lightweight, reusable React functional components. They can be seamlessly embedded in buttons, inputs, navigation items, cards, and other custom components.
 * With modular exports, only the icons used in your application are included in the final bundle, ensuring optimal performance with minimal overhead.
 
+**Setup**
 
+To install `icons`, use the following command,
+
+```sh
+npm install @syncfusion/react-icons
+```
+
+**Usage**
+
+```tsx
+import { SearchIcon } from '@syncfusion/react-icons';
+
+export default function App() {
+  return (
+    <SearchIcon  width={24} height={24} color={"#4285F4"} />   
+  );
+};
+```
+
+**Resources**
+
+- [Icons Demo/Docs](https://react.syncfusion.com/appearance/icons)
+- [Icons API](https://react-api.syncfusion.com/icons/overview)
 
 <p align="center">
 Trusted by the world's leading companies
@@ -17,14 +40,6 @@ Trusted by the world's leading companies
     <img src="https://raw.githubusercontent.com/SyncfusionExamples/nuget-img/master/syncfusion/syncfusion-trusted-companies.webp" alt="Syncfusion logo">
   </a>
 </p>
-
-## Setup
-
-To install `icons`, use the following command,
-
-```sh
-npm install @syncfusion/react-icons
-```
 
 ## Support
 
@@ -41,4 +56,4 @@ Product support is available through following mediums.
 
 See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campaign=notification) for more info.
 
-&copy; Copyright 2025 Syncfusion, Inc. All Rights Reserved. The Syncfusion Essential Studio license and copyright applies to this distribution.
+&copy; Copyright 2025 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential Studio® license and copyright applies to this distribution.

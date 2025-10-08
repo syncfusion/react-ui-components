@@ -1,14 +1,18 @@
 # React Split Button Components
 
-## What's Included in the React Split Button Package
+The Syncfusion React SplitButton package is a feature-rich collection of UI components, including SplitButton and DropDownButton, designed for advanced button interactions in React applications.
 
-The React Split Button package includes the following list of components.
+## Setup
 
-### React Split Button
+To install `splitbuttons` and its dependent packages, use the following command,
+
+```sh
+npm install @syncfusion/react-splitbuttons
+```
+
+## React Split Button
 
 The Split Button component combines a primary button action with a dropdown menu, allowing users to access additional options or actions from a compact interface, enhancing user interaction with contextual commands.
-
-Explore the demo [here](https://react.syncfusion.com/split-button).
 
 **Key features**
 
@@ -22,11 +26,28 @@ Explore the demo [here](https://react.syncfusion.com/split-button).
 
 - **Template Support:** Utilize the `itemTemplate` prop to customize the dropdown menu items, ensuring a tailored user experience that matches application needs.
 
-### React Dropdown Button
+**Usage**
+
+```tsx
+import { SplitButton } from "@syncfusion/react-splitbuttons";
+
+export default function App() {
+    const menuItems = [{ text: 'Cut' }, { text: 'Copy' }, { text: 'Paste' }];
+
+    return (
+      <SplitButton items={menuItems}>Default Action</SplitButton>
+    );  
+}
+```
+
+**Resources**
+
+- [SplitButton Demo/Docs](https://react.syncfusion.com/split-button)
+- [SplitButton API](https://react-api.syncfusion.com/split-button/overview)
+
+## React Dropdown Button
 
 The Dropdown Button component enhances user interfaces with a menu of actions or options that appears on button click, offering an intuitive dropdown mechanism for users.
-
-Explore the demo [here](https://react.syncfusion.com/dropdown-button).
 
 **Key features**
 
@@ -40,20 +61,31 @@ Explore the demo [here](https://react.syncfusion.com/dropdown-button).
 
 - **Popup Control:** The `isPopupCreatedOnClick` prop controls the dynamic creation of the popup for enhanced performance. Manage the button's open/close states with the `toggle` prop for precise control over user interactions.
 
+**Usage**
+
+```tsx
+import { DropDownButton } from "@syncfusion/react-splitbuttons";
+
+export default function App() {
+    const menuItems = [{ text: 'Cut' }, { text: 'Copy' }, { text: 'Paste' }];
+
+    return (
+      <DropDownButton items={menuItems}>Default</DropDownButton>
+    );  
+}
+```
+
+**Resources**
+
+- [Dropdown Button Demo/Docs](https://react.syncfusion.com/dropdown-button)
+- [Dropdown Button API](https://react-api.syncfusion.com/dropdown-button/overview)
+
 <p align="center">
 Trusted by the world's leading companies
   <a href="https://www.syncfusion.com/">
     <img src="https://raw.githubusercontent.com/SyncfusionExamples/nuget-img/master/syncfusion/syncfusion-trusted-companies.webp" alt="Syncfusion logo">
   </a>
 </p>
-
-## Setup
-
-To install `splitbuttons` and its dependent packages, use the following command,
-
-```sh
-npm install @syncfusion/react-splitbuttons
-```
 
 ## Support
 
@@ -74,4 +106,4 @@ Check the changelog [here](https://github.com/syncfusion/react-ui-components/blo
 
 See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campaign=notification) for more info.
 
-&copy; Copyright 2025 Syncfusion, Inc. All Rights Reserved. The Syncfusion Essential Studio license and copyright applies to this distribution.
+&copy; Copyright 2025 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential Studio® license and copyright applies to this distribution.

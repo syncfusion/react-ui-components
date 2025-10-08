@@ -1,10 +1,16 @@
 # React Dropdown Components
 
-## What's Included in the React Dropdown Package
+The Syncfusion React Dropdowns package is a feature-rich UI collection for dynamic dropdown interactions in React apps.
 
-The React Dropdown package includes the following list of components.
+## Setup
 
-### React Dropdown List
+To install `dropdowns` and its dependent packages, use the following command,
+
+```sh
+npm install @syncfusion/react-dropdowns
+```
+
+## React Dropdown List
 
 The Dropdown List component provides a user-friendly interface for selecting a single option from a list of predefined values. It supports rich customization, filtering, and templating features, making it ideal for forms, data filtering, and guided user selections.
 
@@ -33,14 +39,6 @@ Trusted by the world's leading companies
   </a>
 </p>
 
-## Setup
-
-To install `dropdowns` and its dependent packages, use the following command,
-
-```sh
-npm install @syncfusion/react-dropdowns
-```
-
 ## Support
 
 Product support is available through following mediums.
@@ -59,5 +57,5 @@ Check the changelog [here](https://github.com/syncfusion/react-ui-components/blo
 
 See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campaign=notification) for more info.
 
-&copy; Copyright 2025 Syncfusion, Inc. All Rights Reserved. The Syncfusion Essential Studio license and copyright applies to this distribution.
+&copy; Copyright 2025 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential Studio® license and copyright applies to this distribution.
 

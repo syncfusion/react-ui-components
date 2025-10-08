@@ -1,14 +1,18 @@
 # React Popups Components
 
-## What's Included in the React Popups Package
+The Syncfusion React popup package is a feature-rich collection of UI components such as Dialog and Tooltip, used to display contextual information or messages in separate pop-ups.
 
-The React Popups package includes the following component.
+## Setup
 
-### React Dialog
+To install `popups` and its dependent packages, use the following command,
+
+```sh
+npm install @syncfusion/react-popups
+```
+
+## React Dialog
 
 The Dialog component is a modal pop-up used to display important information, gather user input, or present detailed content without navigating away from the current page. It offers flexible positioning, interaction, and customization options to suit various application needs.
-
-Explore the demo [here](https://react.syncfusion.com/dialog).
 
 **Key features**
 
@@ -22,11 +26,42 @@ Explore the demo [here](https://react.syncfusion.com/dialog).
 
 - **Custom Animations:** Use the animation property to apply custom open and close animations, enhancing the visual experience and user feedback.
 
-### React Tooltip
+**Usage**
+
+```tsx
+
+import React, { useState } from "react";
+import { Dialog } from "@syncfusion/react-popups";
+
+export default function App() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <Dialog
+      open={isOpen}
+      onClose={() => setIsOpen(false)}
+      modal={true}
+      header="Dialog Title"
+      footer={
+        <>
+          <button onClick={() => setIsOpen(false)}>Close</button>
+        </>
+      }
+    >
+      <p>This is the dialog content.</p>
+    </Dialog>
+  );
+
+```
+
+**Resources**
+
+- [Dialog Demo/Docs](https://react.syncfusion.com/dialog)
+- [Dialog API](https://react-api.syncfusion.com/dialog/overview)
+
+## React Tooltip
 
 The Tooltip component displays additional information when users hover, click, or focus on an element. It provides a flexible way to enhance user experience by showing contextual information.
-
-Explore the demo [here](https://react.syncfusion.com/tooltip).
 
 **Key features**
 
@@ -42,20 +77,31 @@ Explore the demo [here](https://react.syncfusion.com/tooltip).
 
 - **Arrow Pointer:** Configurable arrow pointer that indicates which element the tooltip relates to.
 
+**Usage**
+
+```tsx
+import { Tooltip } from "@syncfusion/react-popups";
+
+export default function App() {
+    return (
+      <Tooltip content={<>This is a Tooltip</>}>
+        Hover me
+      </Tooltip>
+    );
+}
+```
+
+**Resources**
+
+- [Tooltip Demo/Docs](https://react.syncfusion.com/tooltip)
+- [Tooltip API](https://react-api.syncfusion.com/tooltip/overview)
+
 <p align="center">
 Trusted by the world's leading companies
   <a href="https://www.syncfusion.com/">
     <img src="https://raw.githubusercontent.com/SyncfusionExamples/nuget-img/master/syncfusion/syncfusion-trusted-companies.webp" alt="Syncfusion logo">
   </a>
 </p>
-
-## Setup
-
-To install `popups` and its dependent packages, use the following command,
-
-```sh
-npm install @syncfusion/react-popups
-```
 
 ## Support
 
@@ -76,4 +122,4 @@ Check the changelog [here](https://github.com/syncfusion/react-ui-components/blo
 
 See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campaign=notification) for more info.
 
-&copy; Copyright 2025 Syncfusion, Inc. All Rights Reserved. The Syncfusion Essential Studio license and copyright applies to this distribution.
+&copy; Copyright 2025 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential Studio® license and copyright applies to this distribution.

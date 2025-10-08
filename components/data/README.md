@@ -2,12 +2,6 @@
 
 `@syncfusion/react-data` is a data management package to perform data operations such as grouping, sorting in client applications. It will act as an abstraction for using local data sources like array of JavaScript objects and remote data sources like web services returning JSON, JSONP, oData or XML.
 
-<p align="center">
-Trusted by the world's leading companies
-  <a href="https://www.syncfusion.com/">
-    <img src="https://raw.githubusercontent.com/SyncfusionExamples/nuget-img/master/syncfusion/syncfusion-trusted-companies.webp" alt="Syncfusion logo">
-  </a>
-</p>
 
 ## Setup
 
@@ -16,6 +10,13 @@ To install `@syncfusion/react-data` and its dependent packages, use the followin
 ```sh
 npm install @syncfusion/react-data
 ```
+
+<p align="center">
+Trusted by the world's leading companies
+  <a href="https://www.syncfusion.com/">
+    <img src="https://raw.githubusercontent.com/SyncfusionExamples/nuget-img/master/syncfusion/syncfusion-trusted-companies.webp" alt="Syncfusion logo">
+  </a>
+</p>
 
 ## Support
 
@@ -35,4 +36,4 @@ Check the changelog [here](https://github.com/syncfusion/react-ui-components/blo
 
 See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campaign=notification) for more info.
 
-© Copyright 2025 Syncfusion, Inc. All Rights Reserved. The Syncfusion Essential Studio license and copyright applies to this distribution.
+© Copyright 2025 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential Studio® license and copyright applies to this distribution.

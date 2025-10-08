@@ -1,7 +1,7 @@
 {
   "name": "@syncfusion/react-icons",
   "version": "31.1.17",
-  "description": "A common package for React icon components",
+  "description": "Syncfusion React Icons for React applications",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
   "keywords": [

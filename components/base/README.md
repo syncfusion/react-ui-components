@@ -10,7 +10,7 @@ The `@syncfusion/react-base` package is a foundational library for Syncfusion's 
 - `Localization`: Adaptable content for region-specific requirements.
 - `Right-to-Left (RTL)`: Built-in support for RTL languages like Arabic and Hebrew.
 
-## Installation
+**Setup**
 
 To install `@syncfusion/react-base` and its dependencies, run the following command:
 
@@ -18,7 +18,7 @@ To install `@syncfusion/react-base` and its dependencies, run the following comm
 npm install @syncfusion/react-base
 ```
 
-## Usage
+**Usage**
 
 This package serves as a dependency for other Syncfusion® React components. Import the necessary utilities or providers as needed in your React application. For example:
 
@@ -31,7 +31,10 @@ import { Button } from '@syncfusion/react-buttons';
 </Provider>
 ```
 
-Refer to the [Syncfusion® Documentation](https://react.syncfusion.com/overview/introduction) for detailed usage instructions and examples.
+**Resources**
+
+- [Base Demo/Docs](https://react.syncfusion.com/common-features/right-to-left)
+- [Base API](https://react-api.syncfusion.com/base/overview)
 
 ## Support
 
@@ -51,4 +54,4 @@ Check the changelog [here](https://github.com/syncfusion/react-ui-components/blo
 
 See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campaign=notification) for more info.
 
-&copy; Copyright 2025 Syncfusion, Inc. All Rights Reserved. The Syncfusion® Essential® Studio license and copyright applies to this distribution.
+&copy; Copyright 2025 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential® Studio license and copyright applies to this distribution.

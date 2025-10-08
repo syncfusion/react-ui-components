@@ -1,7 +1,7 @@
 {
   "name": "@syncfusion/react-calendars",
   "version": "31.1.17",
-  "description": "A complete package of date or time components with built-in features such as date formatting, inline editing, multiple (range) selection, range restriction, month and year selection, strict mode, and globalization.",
+  "description": "Syncfusion React Calendar for date/time with formatting, editing, multi-select, range limits, month/year views, strict mode, and globalization.",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
   "keywords": [

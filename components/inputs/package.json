@@ -1,7 +1,7 @@
 {
   "name": "@syncfusion/react-inputs",
   "version": "31.1.17",
-  "description": "A package of react input components such as Textbox, Color-picker, Masked-textbox, Numeric-textbox, Slider, Upload, and Form-validator that is used to get input from the users.",
+  "description": "Syncfusion React Input package is a feature-rich collection of UI components, including Textbox, Textarea, Numeric-textbox and Form, designed to capture user input in React applications.",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
   "keywords": [
