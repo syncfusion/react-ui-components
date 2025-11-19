@@ -1,15 +1,24 @@
 {
   "name": "@syncfusion/react-grid",
-  "version": "31.1.17",
+  "version": "31.2.12",
   "description": "Syncfusion React Data Grid, a high-performance component designed for modern web applications.",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
   "keywords": [
-    "syncfusion",
     "web-components",
     "react",
     "syncfusion-react",
-    "react-grid"
+    "react-grid",
+    "react-data-grid",
+    "data-grid",
+    "react-table",
+    "react-datatable",
+    "grid-component",
+    "react-grid-component",
+    "react-grid-layout",
+    "datatable",
+    "data-table",
+    "table"
   ],
   "repository": {
     "type": "git",
@@ -19,16 +28,16 @@
   "module": "./index.js",
   "readme": "README.md",
   "dependencies": {
-    "@syncfusion/react-base": "~31.1.17",
-    "@syncfusion/react-buttons": "~31.1.17",
-    "@syncfusion/react-calendars": "~31.1.17",
-    "@syncfusion/react-data": "~31.1.17",
-    "@syncfusion/react-dropdowns": "~31.1.17",
-    "@syncfusion/react-inputs": "~31.1.17",
-    "@syncfusion/react-navigations": "~31.1.17",
-    "@syncfusion/react-notifications": "~31.1.17",
-    "@syncfusion/react-popups": "~31.1.17",
-    "@syncfusion/react-pager": "~31.1.17"
+    "@syncfusion/react-base": "~31.2.12",
+    "@syncfusion/react-buttons": "~31.2.12",
+    "@syncfusion/react-calendars": "~31.2.12",
+    "@syncfusion/react-data": "~31.2.12",
+    "@syncfusion/react-dropdowns": "~31.2.12",
+    "@syncfusion/react-inputs": "~31.2.12",
+    "@syncfusion/react-navigations": "~31.2.12",
+    "@syncfusion/react-notifications": "~31.2.12",
+    "@syncfusion/react-popups": "~31.2.12",
+    "@syncfusion/react-pager": "~31.2.12"
   },
   "devDependencies": {
     "gulp": "4.0.2",

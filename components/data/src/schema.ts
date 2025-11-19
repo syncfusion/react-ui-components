@@ -3,7 +3,7 @@
 export const schema =
 // tslint:disable-next-line:no-multiline-string
 `input Sort {
-    name: String!
+    field: String!
     direction: String!
 }
 
@@ -15,7 +15,7 @@ input Aggregate {
 input DataManager {
     skip: Int
     take: Int
-    sorted: [Sort]
+    sort: [Sort]
     group: [String]
     table: String
     select: [String]

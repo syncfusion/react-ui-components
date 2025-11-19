@@ -1,0 +1,35 @@
+@mixin grid-top-bottom-padding($bottom, $top) {
+  padding-bottom: $bottom;
+  padding-top: $top;
+}
+
+@mixin grid-line-height-padding-styles($lheight, $padding) {
+  line-height: $lheight;
+  padding: $padding;
+}
+
+@mixin grid-font-size-weight-styles($size, $weight) {
+  font-size: $size;
+  font-weight: $weight;
+}
+
+@mixin grid-border-style-weight($style, $width) {
+  border-style: $style;
+  border-width: $width;
+}
+
+@mixin border-and-font($style, $width, $size, $weight) {
+  @include grid-border-style-weight($style, $width);
+  @include grid-font-size-weight-styles($size, $weight);
+}
+
+@mixin bgcolor-color-styles($bgcolor, $color) {
+  background: $bgcolor;
+  color: $color;
+}
+
+%no-wrap-styles {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

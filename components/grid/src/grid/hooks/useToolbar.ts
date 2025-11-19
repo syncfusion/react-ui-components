@@ -89,7 +89,7 @@ export const useToolbar: (config: ToolbarConfig, editModule?: editModule, select
         const hasSelection: boolean = selectedRowIndexes.length > 0;
 
         const gridElement: HTMLElement | null = toolbarRef.current?.element?.closest('.sf-grid');
-        const addRow: boolean = editSettings?.showAddNewRow && !gridElement?.querySelector('.sf-editedrow');
+        const addRow: boolean = editSettings?.showAddNewRow && !gridElement?.querySelector('.sf-grid-edit-row');
 
         if (editSettings?.allowAdd) {
             enableItemsList.push(`${gridId}_add`);
@@ -197,7 +197,7 @@ export const useToolbar: (config: ToolbarConfig, editModule?: editModule, select
 
     const disableShowAddNewRowInputs: (enable: boolean) => void = useCallback((enable: boolean): void => {
         const gridElement: HTMLElement | null = toolbarRef.current?.element?.closest('.sf-grid');
-        const addRow: HTMLElement | null = gridElement?.querySelector('.sf-addedrow');
+        const addRow: HTMLElement | null = gridElement?.querySelector('.sf-grid-add-row');
         if (!addRow) {
             return;
         }
@@ -244,15 +244,15 @@ export const useToolbar: (config: ToolbarConfig, editModule?: editModule, select
             break;
 
         case `${gridId}_edit`:
-            editMod?.editRow();
+            editMod?.editRecord();
             break;
 
         case `${gridId}_update`:
-            editMod?.saveChanges();
+            editMod?.saveDataChanges();
             break;
 
         case `${gridId}_cancel`:
-            editMod?.cancelChanges();
+            editMod?.cancelDataChanges();
             break;
 
         case `${gridId}_delete`:

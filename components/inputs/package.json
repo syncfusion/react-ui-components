@@ -1,6 +1,6 @@
 {
   "name": "@syncfusion/react-inputs",
-  "version": "31.1.17",
+  "version": "31.2.12",
   "description": "Syncfusion React Input package is a feature-rich collection of UI components, including Textbox, Textarea, Numeric-textbox and Form, designed to capture user input in React applications.",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
@@ -50,10 +50,10 @@
   "module": "./index.js",
   "readme": "README.md",
   "dependencies": {
-    "@syncfusion/react-base": "~31.1.17",
-    "@syncfusion/react-buttons": "~31.1.17",
-    "@syncfusion/react-popups": "~31.1.17",
-    "@syncfusion/react-splitbuttons": "~31.1.17"
+    "@syncfusion/react-base": "~31.2.12",
+    "@syncfusion/react-buttons": "~31.2.12",
+    "@syncfusion/react-popups": "~31.2.12",
+    "@syncfusion/react-splitbuttons": "~31.2.12"
   },
   "devDependencies": {
     "gulp": "4.0.2",

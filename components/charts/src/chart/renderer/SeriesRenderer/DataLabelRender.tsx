@@ -476,7 +476,7 @@ export const DataLabelRenderer: IDataLabelRenderer  = {
                 DataLabelRenderer.calculatePathPosition(
                     location.y, dataLabelPosition as LabelPosition, textSize, dataLabel, series, point, labelIndex
                 ) : DataLabelRenderer.calculateRectPosition(
-                    location.y, labelRegion, Number(point.yValue) < 0,
+                    location.y, labelRegion, (Number(point.yValue)) < 0 !== (series.yAxis?.inverted ?? false),
                     dataLabelPosition as LabelPosition, series, textSize, labelIndex, point, dataLabel
                 );
         }

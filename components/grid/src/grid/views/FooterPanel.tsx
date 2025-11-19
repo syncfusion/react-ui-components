@@ -6,7 +6,7 @@ import {
 } from '../types';
 
 // Constant CSS class
-const CSS_FOOTER_TABLE: string = 'sf-table';
+const CSS_FOOTER_TABLE: string = 'sf-grid-table';
 
 /**
  * Default styles for footer table to ensure consistent rendering

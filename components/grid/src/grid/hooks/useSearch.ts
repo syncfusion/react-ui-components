@@ -3,6 +3,7 @@ import {  SearchEvent, SearchSettings } from '../types/search.interfaces';
 import { isNullOrUndefined} from '@syncfusion/react-base';
 import { GridRef } from '../types/grid.interfaces';
 import { SearchAPI } from '../types/search.interfaces';
+import { ActionType } from '../types';
 
 /**
  * Custom hook to manage Search configuration
@@ -70,8 +71,8 @@ export const useSearch: (gridRef?: RefObject<GridRef>, searchSetting?: SearchSet
             } else {
                 searchValue = searchString.toString();
             }
-            const args: SearchEvent = { cancel: false, requestType: 'searching', value: searchValue };
-            args.type = 'searching';
+            const args: SearchEvent = { cancel: false, requestType: ActionType.Searching, value: searchValue };
+            args.type = ActionType.Searching;
             const confirmResult: boolean = await gridRef.current?.editModule?.checkUnsavedChanges?.();
             if (!isNullOrUndefined(confirmResult) && !confirmResult) {
                 return;

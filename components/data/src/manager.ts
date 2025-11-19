@@ -6,7 +6,10 @@ import { DataUtil, Aggregates, Group } from './util';
 import { Predicate, Query, QueryOptions } from './query';
 import { ODataAdaptor, JsonAdaptor, CacheAdaptor, RemoteSaveAdaptor, RemoteOptions, CustomDataAdaptor, DataResult, Requests } from './adaptors';
 /**
- * DataManager is used to manage and manipulate relational data.
+ * Provides data management capabilities for local and remote data sources.
+ *
+ * Supports CRUD operations, query execution, and data transformation through adaptors.
+ * Commonly used with components that require structured data handling, such as grids, lists, and more.
  */
 export class DataManager {
     /** @hidden */
@@ -151,6 +154,8 @@ export class DataManager {
 
     /**
      * Get the queries maintained in the persisted state.
+     *
+     * @private
      * @param {string} id - The identifier of the persisted query to retrieve.
      * @returns {object} The persisted data object.
      */
@@ -161,6 +166,8 @@ export class DataManager {
 
      /**
      * Set the queries to be maintained in the persisted state.
+     *
+     * @private
      * @param {Event} e - The event parameter that triggers the setPersistData method.
      * @param {string} id - The identifier of the persisted query to set.
      * @param {object} persistData - The data to be persisted.
@@ -217,6 +224,7 @@ export class DataManager {
     /**
      * Overrides DataManager's default query with given query.
      *
+     * @private
      * @param  {Query} query - Defines the new default query.
      */
     public setDefaultQuery(query: Query): DataManager {
@@ -225,9 +233,13 @@ export class DataManager {
     }
 
     /**
-     * Executes the given query with local data source.
+     * Executes the specified query against the local data source.
      *
-     * @param  {Query} query - Defines the query to retrieve data.
+     * If no query is provided, the default query is used. Throws an error if neither is available.
+     *
+     * @param {Query} query - Defines the query used to retrieve data from the local source.
+     *
+     * @return {Object[]} - Returns the result set after applying the query to the local data.
      */
     public executeLocal(query?: Query): Object[] {
         if (!this.defaultQuery && !(query instanceof Query)) {
@@ -269,13 +281,17 @@ export class DataManager {
     }
 
     /**
-     * Executes the given query with either local or remote data source.
-     * It will be executed as asynchronously and returns Promise object which will be resolved or rejected after action completed.
+     * Executes the specified query against either a local or remote data source.
      *
-     * @param  {Query|Function} query - Defines the query to retrieve data.
-     * @param  {Function} done - Defines the callback function and triggers when the Promise is resolved.
-     * @param  {Function} fail - Defines the callback function and triggers when the Promise is rejected.
-     * @param  {Function} always - Defines the callback function and triggers when the Promise is resolved or rejected.
+     * The operation is asynchronous and returns a `Promise` that resolves or rejects once the action is completed.
+     * If a function is passed instead of a query, it is treated as the `done` callback.
+     *
+     * @param {Query | Function} query - Defines the query used to retrieve data, or a callback function.
+     * @param {Function} done - Specifies the callback function triggered when the `Promise` is resolved.
+     * @param {Function} fail - Specifies the callback function triggered when the `Promise` is rejected.
+     * @param {Function} always - Specifies the callback function triggered when the `Promise` is either resolved or rejected.
+     *
+     * @return {Promise<Response>} - Returns a `Promise` that resolves with the query result or rejects with an error.
      */
     public executeQuery(query: Query | Function, done?: Function, fail?: Function, always?: Function): Promise<Response> {
         const makeRequest: string = 'makeRequest';
@@ -587,6 +603,8 @@ export class DataManager {
 
     /**
      * Processes the middleware stack after receiving the response.
+     *
+     * @private
      * @param {Response} response - The response object.
      * @returns {Response} - The potentially modified response.
      */
@@ -597,6 +615,8 @@ export class DataManager {
 
     /**
      * Registers a new middleware in the DataManager.
+     *
+     * @private
      * @param {Middleware} middleware - The middleware instance to register.
      * @returns {void}
      */
@@ -609,6 +629,8 @@ export class DataManager {
 
     /**
      * Processes the middleware stack before sending the request.
+     *
+     * @private
      * @param {Request} request - The request object.
      * @returns {Request} - The potentially modified request.
      */
@@ -637,16 +659,20 @@ export class DataManager {
         }
     }
 
+    
     /**
-     * Save bulk changes to the given table name.
-     * User can add a new record, edit an existing record, and delete a record at the same time.
-     * If the datasource from remote, then updated in a single post.
+     * Saves multiple changes—such as additions, updates, and deletions—to the specified data source.
      *
-     * @param {Object} changes - Defines the CrudOptions.
-     * @param {string} key - Defines the column field.
-     * @param {string|Query} tableName - Defines the table name.
-     * @param {Query} query - Sets default query for the DataManager.
-     * @param original
+     * When the data source is remote, all changes are submitted in a single request.
+     * If `tableName` is a `Query` instance, it is treated as the query and the table name is ignored.
+     *
+     * @param {Object} changes - Defines the set of CRUD operations to be performed.
+     * @param {string} key - Specifies the primary key field used to identify records.
+     * @param {string | Query} tableName - Specifies the target table name or a `Query` instance.
+     * @param {Query} query - Defines the query context for the batch operation.
+     * @param {Object} original - Provides the original data set for comparison or tracking.
+     *
+     * @returns {Object | Promise<Object>} A `Promise` resolving to the result of the batch operation, or the result object directly in offline mode.
      */
     public saveChanges(
         changes: Object, key?: string, tableName?: string | Query, query?: Query, original?: Object): Promise<Object> | Object {
@@ -698,13 +724,19 @@ export class DataManager {
         }
     }
 
+    
     /**
-     * Inserts new record in the given table.
+     * Inserts a new record into the specified table or data source.
      *
-     * @param {Object} data - Defines the data to insert.
-     * @param {string|Query} tableName - Defines the table name.
-     * @param {Query} query - Sets default query for the DataManager.
-     * @param position
+     * If `tableName` is a `Query` instance, it will be treated as the query and the table name will be ignored.
+     * The method supports both offline and remote data operations based on the `DataManager` configuration.
+     *
+     * @param {Object} data - The data object to be inserted.
+     * @param {string | Query} tableName - Specifies the target table name or a `Query` instance.
+     * @param {Query} query - Defines the query context for the insert operation.
+     * @param {number} position - Specifies the index at which the data should be inserted.
+     *
+     * @returns {Object | Promise<Object>} The inserted record or a `Promise` resolving to the inserted record, depending on the data source mode.
      */
     public insert(data: Object, tableName?: string | Query, query?: Query, position?: number): Object | Promise<Object> {
         if (tableName instanceof Query) {
@@ -728,12 +760,17 @@ export class DataManager {
     }
 
     /**
-     * Removes data from the table with the given key.
+     * Removes a record from the data source using the specified key field and value.
      *
-     * @param  {string} keyField - Defines the column field.
-     * @param  {Object} value - Defines the value to find the data in the specified column.
-     * @param  {string|Query} tableName - Defines the table name
-     * @param  {Query} query - Sets default query for the DataManager.
+     * If the data source is remote, the removal is performed via a fetch request.
+     * If `tableName` is a `Query` instance, it is treated as the query and the table name is ignored.
+     *
+     * @param {string} keyField - Specifies the column primary key field used to identify the record.
+     * @param {Object} value - Defines the value to match against the specified column primary key field.
+     * @param {string|Query} tableName - Specifies the target table name or a `Query` instance.
+     * @param {Query} query - Defines the query context for the remove operation.
+     *
+     * @return {Object | Promise<Object>} - Returns the result of the remove operation, either directly or as a `Promise` based on the data source mode.
      */
     public remove(keyField: string, value: Object, tableName?: string | Query, query?: Query): Object | Promise<Object> {
         if (typeof value === 'object') {
@@ -761,13 +798,18 @@ export class DataManager {
         }
     }
     /**
-     * Updates existing record in the given table.
+     * Updates an existing record in the specified data source.
      *
-     * @param {string} keyField - Defines the column field.
-     * @param {Object} value - Defines the value to find the data in the specified column.
-     * @param {string|Query} tableName - Defines the table name
-     * @param {Query} query - Sets default query for the DataManager.
-     * @param original
+     * If `tableName` is a `Query` instance, it is treated as the query and the table name is ignored.
+     * When caching is enabled, the query key is generated for cache tracking.
+     *
+     * @param {string} keyField - Specifies the column field used to identify the record.
+     * @param {Object} value - Defines the updated data object for the specified record.
+     * @param {string|Query} tableName - Specifies the target table name or a `Query` instance.
+     * @param {Query} query - Defines the query context for the update operation.
+     * @param {Object} original - Provides the original data object for comparison or tracking.
+     *
+     * @return {Object | Promise<Object>} - Returns the result of the update operation, either directly or as a `Promise` based on the data source mode.
      */
     public update(keyField: string, value: Object, tableName?: string | Query, query?: Query, original?: Object): Object | Promise<Object> {
 
@@ -897,6 +939,8 @@ export class DataManager {
 
 /**
  * Deferred is used to handle asynchronous operation.
+ *
+ * @private
  */
 export class Deferred {
     /**

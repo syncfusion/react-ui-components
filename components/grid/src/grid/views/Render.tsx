@@ -10,13 +10,14 @@ import {
     JSX,
     RefObject,
     ReactNode,
-    useEffect
+    useEffect,
+    ReactElement
 } from 'react';
 import { HeaderPanelBase, ContentPanelBase, PagerPanelBase, GridToolbar } from './index';
-import { RenderRef, IRenderBase, HeaderPanelRef, ContentPanelRef, FooterPanelRef } from '../types';
+import { RenderRef, IRenderBase, HeaderPanelRef, ContentPanelRef, FooterPanelRef, WrapMode } from '../types';
 import { useGridComputedProvider, useGridMutableProvider } from '../contexts';
 import { useRender, useScroll } from '../hooks';
-import { ToolbarItemConfig, ToolbarAPI } from '../types/toolbar.interfaces';
+import { ToolbarItemProps, ToolbarAPI } from '../types/toolbar.interfaces';
 import { PagerRef } from '@syncfusion/react-pager';
 import { FooterPanelBase } from './FooterPanel';
 import { Spinner } from '@syncfusion/react-popups';
@@ -25,13 +26,13 @@ import { Spinner } from '@syncfusion/react-popups';
  * CSS class names used in the Render component
  */
 const CSS_CLASS_NAMES: Record<string, string> = {
-    GRID_HEADER: 'sf-gridheader sf-lib sf-droppable',
-    HEADER_CONTENT: 'sf-headercontent',
-    GRID_CONTENT: 'sf-gridcontent',
-    CONTENT: 'sf-content',
-    GRID_FOOTER: 'sf-gridfooter',
-    GRID_FOOTER_PADDING: 'sf-footerpadding',
-    FOOTER_CONTENT: 'sf-summarycontent'
+    GRID_HEADER: 'sf-grid-header-container',
+    HEADER_CONTENT: 'sf-grid-header-content',
+    GRID_CONTENT: 'sf-grid-content-container',
+    CONTENT: 'sf-grid-content',
+    GRID_FOOTER: 'sf-grid-footer-container',
+    GRID_FOOTER_PADDING: 'sf-grid-footer-padding',
+    FOOTER_CONTENT: 'sf-grid-summary-content'
 };
 
 /**
@@ -88,20 +89,20 @@ const useSyncScrollElements: (
  *
  * @component
  */
-const RenderBase: ForwardRefExoticComponent<Partial<IRenderBase> & RefAttributes<RenderRef>> = memo(
-    forwardRef<RenderRef, Partial<IRenderBase>>((_props: Partial<IRenderBase>, ref: RefObject<RenderRef>) => {
+const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>) => ReactElement = memo(
+    forwardRef<RenderRef, Partial<IRenderBase>>(<T, >(_props: Partial<IRenderBase>, ref: RefObject<RenderRef<T>>) => {
         const headerPanelRef: RefObject<HeaderPanelRef> = useRef<HeaderPanelRef>(null);
-        const contentPanelRef: RefObject<ContentPanelRef> = useRef<ContentPanelRef>(null);
+        const contentPanelRef: RefObject<ContentPanelRef<T>> = useRef<ContentPanelRef<T>>(null);
         const footerPanelRef: RefObject<FooterPanelRef> = useRef<FooterPanelRef>(null);
         const pagerObjectRef:  RefObject<PagerRef> = useRef<PagerRef>(null);
 
-        const { privateRenderAPI, protectedRenderAPI } = useRender();
+        const { privateRenderAPI, protectedRenderAPI } = useRender<T>();
         const { privateScrollAPI, protectedScrollAPI, setHeaderScrollElement, setContentScrollElement, setFooterScrollElement } =
-            useScroll();
+            useScroll<T>();
         const { setPadding } = protectedScrollAPI;
         const { headerContentBorder, headerPadding, onContentScroll, onHeaderScroll, onFooterScroll, getCssProperties } = privateScrollAPI;
-        const { textWrapSettings, pageSettings, aggregates, toolbar, id } = useGridComputedProvider();
-        const { columnsDirective, currentViewData, totalRecordsCount, cssClass, toolbarModule, editModule } = useGridMutableProvider();
+        const { textWrapSettings, pageSettings, aggregates, toolbar, id } = useGridComputedProvider<T>();
+        const { columnsDirective, currentViewData, totalRecordsCount, cssClass, toolbarModule, editModule } = useGridMutableProvider<T>();
 
         // Synchronize scroll elements between header and content panels
         useSyncScrollElements(
@@ -123,7 +124,7 @@ const RenderBase: ForwardRefExoticComponent<Partial<IRenderBase> & RefAttributes
             scrollModule: protectedScrollAPI,
             // Forward all properties from header and content panels
             ...(headerPanelRef.current as HeaderPanelRef),
-            ...(contentPanelRef.current as ContentPanelRef),
+            ...(contentPanelRef.current as ContentPanelRef<T>),
             ...(footerPanelRef.current as FooterPanelRef),
             pagerModule: pagerObjectRef.current
         }), [
@@ -161,12 +162,12 @@ const RenderBase: ForwardRefExoticComponent<Partial<IRenderBase> & RefAttributes
 
         // Memoize content panel to prevent unnecessary re-renders
         const contentPanel: JSX.Element = useMemo(() => (
-            <ContentPanelBase
+            <ContentPanelBase<T>
                 ref={contentPanelRef}
                 setHeaderPadding={setPadding}
                 panelAttributes={{
                     className: `${CSS_CLASS_NAMES.GRID_CONTENT} ${textWrapSettings?.enabled &&
-                        textWrapSettings?.wrapMode === 'Content' ? 'sf-wrap' : ''}`.trim()
+                        textWrapSettings?.wrapMode === WrapMode.Content ? 'sf-wrap' : ''}`.trim()
                 }}
                 scrollContentAttributes={{
                     className: CSS_CLASS_NAMES.CONTENT,
@@ -211,7 +212,7 @@ const RenderBase: ForwardRefExoticComponent<Partial<IRenderBase> & RefAttributes
                     <GridToolbar
                         key={id + '_grid_toolbar'}
                         className={cssClass}
-                        toolbar={(toolbar as (string | ToolbarItemConfig)[]) || []}
+                        toolbar={(toolbar as (string | ToolbarItemProps)[]) || []}
                         gridId={id}
                         toolbarAPI={toolbarModule as ToolbarAPI}
                     />
@@ -223,7 +224,7 @@ const RenderBase: ForwardRefExoticComponent<Partial<IRenderBase> & RefAttributes
             </>
         );
     })
-);
+) as (_props: Partial<IRenderBase> & RefAttributes<RenderRef>) => ReactElement;
 
 /**
  * Columns component that wraps RenderBase for external usage
@@ -238,4 +239,4 @@ export {
     RenderBase
 };
 
-RenderBase.displayName = 'RenderBase';
+(RenderBase as ForwardRefExoticComponent<Partial<IRenderBase> & RefAttributes<RenderRef>>).displayName = 'RenderBase';

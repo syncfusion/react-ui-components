@@ -1,54 +1,12 @@
-@mixin padding-bottom-right-top-styles($bottom, $right, $top) {
-  padding-bottom: $bottom;
-  padding-right: $right;
-  padding-top: $top;
-}
-
-@mixin fontsize-padding-styles($fontsize, $padding) {
-  font-size: $fontsize;
-  padding: $padding;
-}
-
-@mixin textalign-width-styles($align, $width) {
-  text-align: $align;
-  width: $width;
-}
-
 @include export-module('pager-layout') {
 
-  #{&}.sf-pager {
-    border-style: $pager-border-style;
-    border-width: 1px;
-    display: inline-block;
+  .sf-pager {
     @include fontsize-padding-styles($pager-font-size, $pager-padding);
+    border-style: $pager-border-style;
+    border-width: $pager-border-1;
+    display: inline-block;
     white-space: normal;
-    width: 100%;
-
-    [class ^= 'sf-'] {
-      box-sizing: border-box;
-    }
-
-    .sf-parentmsgbar {
-      font-weight: $pager-message-bar-font-weight;
-      float: right;
-      @include padding-bottom-right-top-styles($pager-message-bar-padding-bottom, $pager-message-bar-padding-right, $pager-message-bar-padding-top);
-      letter-spacing: 0.24px;
-      line-height: 20px;
-    }
-
-    .sf-icon-size {
-      font-size: $pager-icon-size;
-    }
-
-    .sf-numericitem {
-      display: inline-block;
-      line-height: $pager-numeric-item-line-height;
-      padding: $pager-numeric-icon-padding;
-      text-align: center;
-      vertical-align: middle;
-      font-weight: $pager-numeric-font-weight;
-      margin: $pager-numeric-item-marging;
-    }
+    width: $pager-percentage-100;
 
     div,
     a {
@@ -56,134 +14,124 @@
       user-select: none;
     }
 
-    .sf-pagercontainer {
-      display: inline-block;
-
-      .sf-icons {
-        display: inline-block;
-        line-height: $pager-focus-triple-dot-line-height;
-        padding: $pager-container-icon-padding;
-        vertical-align: middle;
-        margin: $pager-numeric-item-marging;
-      }
-    }
-
-    .sf-pager-default,
-    .sf-currentitem {
-      border-radius: $pager-border-radius;
-      cursor: pointer;
-      text-decoration: none;
-    }
-
-    .sf-nextprevitemdisabled {
+    .sf-pager-mfirst,
+    .sf-pager-mprevious,
+    .sf-pager-mnext,
+    .sf-pager-mlast,
+    .sf-pager-item-disable {
       display: none;
     }
 
-    .sf-pagerexternalmsg {
+    .sf-pager-external-message {
       display: block;
       margin: $pager-external-message-padding;
       overflow: hidden;
       text-overflow: ellipsis;
     }
+  }
 
-    .sf-mfirst,
-    .sf-mprev,
-    .sf-mnext,
-    .sf-mlast {
+  .sf-pager-message-bar {
+    padding-bottom: $pager-message-bar-padding-bottom;
+    padding-right: $pager-message-bar-padding-right;
+    padding-top: $pager-message-bar-padding-top;
+    font-weight: $pager-message-bar-font-weight;
+    float: right;
+    letter-spacing: $pager-message-letter-spacing;
+    line-height: $pager-message-line-height;
+  }
+
+  .sf-numeric-item {
+    display: inline-block;
+    line-height: $pager-numeric-item-line-height;
+    padding: $pager-numeric-icon-padding;
+    text-align: center;
+    vertical-align: middle;
+    font-weight: $pager-numeric-font-weight;
+    margin: $pager-numeric-item-marging;
+  }
+
+  .sf-pager-container {
+    display: inline-block;
+
+    .sf-icons {
+      display: inline-block;
+      line-height: $pager-focus-triple-dot-line-height;
+      padding: $pager-container-icon-padding;
+      vertical-align: middle;
+      margin: $pager-numeric-item-marging;
+    }
+  }
+
+  .sf-pager-icons,
+  .sf-current-item {
+    border-radius: $pager-border-radius;
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  .sf-pager-mprevious {
+    text-indent: $pager-negative-indent-3;
+  }
+
+  .sf-pager-mnext {
+    text-indent: $pager-negative-indent-2;
+  }
+
+  .sf-pp,
+  .sf-np {
+    @include fontsize-padding-styles($pager-triple-dot-font-size, $pager-triple-dot-padding);
+  }
+
+  @media (max-width: 769px) {
+    .sf-pager {
+      padding: $pager-spacing-12 $pager-spacing-0 $pager-spacing-13;
+
+      .sf-pager-message-bar {
+        @include textalign-width-styles(center, calc(60% - 48px));
+        display: inline-block;
+        float: initial;
+      }
+
+      .sf-pager-mfirst,
+      .sf-pager-mprevious,
+      .sf-pager-mnext,
+      .sf-pager-mlast {
+        display: inline-block;
+        padding: $pager-percentage-1 $pager-percentage-5;
+      }
+    }
+
+    .sf-pager-count-message-container,
+    .sf-pager .sf-pager-container {
       display: none;
     }
 
-    .sf-mprev {
-      text-indent: -3px;
+    .sf-pager-mfirst {
+      @include textalign-width-styles(right, calc(10% + 11px));
+      margin-right: $pager-spacing-4;
     }
 
-    .sf-mnext {
-      text-indent: -2px;
+    .sf-pager-mprevious {
+      @include textalign-width-styles(right, 10%);
+      margin: $pager-spacing-0 $pager-spacing-4;
     }
 
-    .sf-pp,
-    .sf-np {
-      @include fontsize-padding-styles($pager-triple-dot-font-size, $pager-triple-dot-padding);
+    .sf-pager-mnext {
+      @include textalign-width-styles(left, 10%);
+      margin: $pager-spacing-0 $pager-spacing-4;
     }
+
+    .sf-pager-mlast {
+      @include textalign-width-styles(left, calc(10% + 11px));
+      margin-left: $pager-spacing-4;
+    }
+  }
+
+  .sf-rtl .sf-pager-message-bar {
+    float: left;
 
     @media (max-width: 769px) {
-      padding: 12px 0px 13px;
-
-      .sf-parentmsgbar {
-        @include padding-bottom-right-top-styles(0, 0, 0);
-        box-sizing: border-box;
-        display: inline-block;
-        float: initial;
-        @include textalign-width-styles(center, calc(60% - 48px));
-      }
-
-      .sf-pagecountmsg,
-      .sf-pagercontainer {
-        display: none;
-      }
-
-      .sf-icons {
-        font-size: $pager-mobile-icon-size;
-      }
-
-      .sf-mfirst,
-      .sf-mprev,
-      .sf-mnext,
-      .sf-mlast {
-        border: 0;
-        box-sizing: border-box;
-        display: inline-block;
-        padding: 1% 5%;
-      }
-
-      .sf-mfirst {
-        margin-right: 4px;
-        @include textalign-width-styles(right, calc(10% + 11px));
-      }
-
-      .sf-mprev {
-        margin: 0 4px;
-        @include textalign-width-styles(right, 10%);
-      }
-
-      .sf-mnext {
-        margin: 0 4px;
-        @include textalign-width-styles(left, 10%);
-      }
-
-      .sf-mlast {
-        margin-left: 4px;
-        @include textalign-width-styles(left, calc(10% + 11px));
-      }
-    }
-
-    &.sf-rtl {
-      direction: rtl;
-
-      .sf-pagercontainer,
-      div,
-      a {
-        float: initial;
-      }
-
-      .sf-parentmsgbar {
-        float: left;
-      }
-
-      @media (max-width: 769px) {
-        .sf-mfirst,
-        .sf-mprev,
-        .sf-mnext,
-        .sf-mlast {
-          border: 0;
-        }
-
-        .sf-parentmsgbar {
-          float: initial;
-          margin-left: 0;
-          margin-top: $pager-rtl-device-message-bar-margin-top;
-        }
-      }
+      float: initial;
     }
   }
 }

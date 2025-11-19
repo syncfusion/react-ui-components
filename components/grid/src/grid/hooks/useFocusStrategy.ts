@@ -4,7 +4,6 @@ import {
     useMemo
 } from 'react';
 import {
-    CellType,
     IRow,
     ICell
 } from '../types';
@@ -339,11 +338,11 @@ export const useFocusStrategy: (
     const swapInfo: RefObject<SwapInfo> = useRef<SwapInfo>({
         swap: false,
         toHeader: false,
-        toMatrix: 'content'
+        toMatrix: 'Content'
     });
 
     // Ref for active matrix
-    const activeMatrix: RefObject<Matrix> = useRef<Matrix>('content');
+    const activeMatrix: RefObject<Matrix> = useRef<Matrix>('Content');
 
     // Ref for previous indexes
     const prevIndexes: RefObject<{ rowIndex?: number, cellIndex?: number }> = useRef<{ rowIndex?: number, cellIndex?: number }>({});
@@ -385,9 +384,9 @@ export const useFocusStrategy: (
      */
     const getActiveMatrix: () => IFocusMatrix = useCallback(() => {
         switch (activeMatrix.current) {
-        case 'content': return contentMatrix.current;
-        case 'aggregate': return aggregateMatrix.current;
-        case 'header':
+        case 'Content': return contentMatrix.current;
+        case 'Aggregate': return aggregateMatrix.current;
+        case 'Header':
         default: return headerMatrix.current;
         }
     }, []);
@@ -492,26 +491,26 @@ export const useFocusStrategy: (
         if (action === 'ctrlHome') {
             // First cell of first row
             switch (activeMatrix.current) {
-            case 'content': return firstFocusableContentCellIndex;
-            case 'aggregate': return firstFocusableAggregateCellIndex;
-            case 'header':
+            case 'Content': return firstFocusableContentCellIndex;
+            case 'Aggregate': return firstFocusableAggregateCellIndex;
+            case 'Header':
             default: return firstFocusableHeaderCellIndex;
             }
         } else if (action === 'ctrlEnd') {
             // Last cell of last row
             switch (activeMatrix.current) {
-            case 'content': return lastFocusableContentCellIndex;
-            case 'aggregate': return lastFocusableAggregateCellIndex;
-            case 'header':
+            case 'Content': return lastFocusableContentCellIndex;
+            case 'Aggregate': return lastFocusableAggregateCellIndex;
+            case 'Header':
             default: return lastFocusableHeaderCellIndex;
             }
         } else if (action === 'home') {
             // First cell of current row
             let firstColIndex: number;
             switch (activeMatrix.current) {
-            case 'content': firstColIndex = firstFocusableContentCellIndex[1]; break;
-            case 'aggregate': firstColIndex = firstFocusableAggregateCellIndex[1]; break;
-            case 'header':
+            case 'Content': firstColIndex = firstFocusableContentCellIndex[1]; break;
+            case 'Aggregate': firstColIndex = firstFocusableAggregateCellIndex[1]; break;
+            case 'Header':
             default: firstColIndex = firstFocusableHeaderCellIndex[1]; break;
             }
             return [rowIndex, firstColIndex];
@@ -519,39 +518,39 @@ export const useFocusStrategy: (
             // Last cell of current row
             let lastColIndex: number;
             switch (activeMatrix.current) {
-            case 'content': lastColIndex = lastFocusableContentCellIndex[1]; break;
-            case 'aggregate': lastColIndex = lastFocusableAggregateCellIndex[1]; break;
-            case 'header':
+            case 'Content': lastColIndex = lastFocusableContentCellIndex[1]; break;
+            case 'Aggregate': lastColIndex = lastFocusableAggregateCellIndex[1]; break;
+            case 'Header':
             default: lastColIndex = lastFocusableHeaderCellIndex[1]; break;
             }
             return [rowIndex, lastColIndex];
         }
 
         // For tab/shift+tab navigation at boundaries
-        if (action === 'tab' && ((activeMatrix.current === 'content' && cellIndex >= lastFocusableContentCellIndex[1]) ||
-            (activeMatrix.current === 'header' && cellIndex >= lastFocusableHeaderCellIndex[1]) ||
-            (activeMatrix.current === 'aggregate' && cellIndex >= lastFocusableAggregateCellIndex[1]))) {
+        if (action === 'tab' && ((activeMatrix.current === 'Content' && cellIndex >= lastFocusableContentCellIndex[1]) ||
+            (activeMatrix.current === 'Header' && cellIndex >= lastFocusableHeaderCellIndex[1]) ||
+            (activeMatrix.current === 'Aggregate' && cellIndex >= lastFocusableAggregateCellIndex[1]))) {
             // At the end of a row, move to the first cell of the next row
             if (rowIndex < matrix.rows) {
                 let firstColIndex: number;
                 switch (activeMatrix.current) {
-                case 'content': firstColIndex = firstFocusableContentCellIndex[1]; break;
-                case 'aggregate': firstColIndex = firstFocusableAggregateCellIndex[1]; break;
-                case 'header':
+                case 'Content': firstColIndex = firstFocusableContentCellIndex[1]; break;
+                case 'Aggregate': firstColIndex = firstFocusableAggregateCellIndex[1]; break;
+                case 'Header':
                 default: firstColIndex = firstFocusableHeaderCellIndex[1]; break;
                 }
                 return [rowIndex + 1, firstColIndex];
             }
-        } else if (action === 'shiftTab' && ((activeMatrix.current === 'content' && cellIndex <= firstFocusableContentCellIndex[1]) ||
-            (activeMatrix.current === 'header' && cellIndex <= firstFocusableHeaderCellIndex[1]) ||
-            (activeMatrix.current === 'aggregate' && cellIndex <= firstFocusableAggregateCellIndex[1]))) {
+        } else if (action === 'shiftTab' && ((activeMatrix.current === 'Content' && cellIndex <= firstFocusableContentCellIndex[1]) ||
+            (activeMatrix.current === 'Header' && cellIndex <= firstFocusableHeaderCellIndex[1]) ||
+            (activeMatrix.current === 'Aggregate' && cellIndex <= firstFocusableAggregateCellIndex[1]))) {
             // At the beginning of a row, move to the last cell of the previous row
             if (rowIndex > 0) {
                 let lastColIndex: number;
                 switch (activeMatrix.current) {
-                case 'content': lastColIndex = lastFocusableContentCellIndex[1]; break;
-                case 'aggregate': lastColIndex = lastFocusableAggregateCellIndex[1]; break;
-                case 'header':
+                case 'Content': lastColIndex = lastFocusableContentCellIndex[1]; break;
+                case 'Aggregate': lastColIndex = lastFocusableAggregateCellIndex[1]; break;
+                case 'Header':
                 default: lastColIndex = lastFocusableHeaderCellIndex[1]; break;
                 }
                 return [rowIndex - 1, lastColIndex];
@@ -617,39 +616,39 @@ export const useFocusStrategy: (
         if (!current) { return true; }
 
         // Check if we're at the boundary of the current matrix
-        const isAtHeaderBottom: boolean = activeMatrix.current === 'header' &&
+        const isAtHeaderBottom: boolean = activeMatrix.current === 'Header' &&
             current.toString() === headerMatrix.current.current.toString() && action === 'downArrow';
-        const isAtContentTop: boolean = activeMatrix.current === 'content' &&
+        const isAtContentTop: boolean = activeMatrix.current === 'Content' &&
             current.toString() === contentMatrix.current.current.toString() && action === 'upArrow';
-        const isAtContentBottom: boolean = activeMatrix.current === 'content' &&
+        const isAtContentBottom: boolean = activeMatrix.current === 'Content' &&
             current.toString() === contentMatrix.current.current.toString() && action === 'downArrow';
-        const isAtAggregateTop: boolean = activeMatrix.current === 'aggregate' &&
+        const isAtAggregateTop: boolean = activeMatrix.current === 'Aggregate' &&
             current.toString() === aggregateMatrix.current.current.toString() && action === 'upArrow';
-        const isAtAggregateBottom: boolean = activeMatrix.current === 'aggregate' &&
+        const isAtAggregateBottom: boolean = activeMatrix.current === 'Aggregate' &&
             current.toString() === aggregateMatrix.current.current.toString() && action === 'downArrow';
-        const isAtHeaderRight: boolean = activeMatrix.current === 'header' &&
+        const isAtHeaderRight: boolean = activeMatrix.current === 'Header' &&
             current.toString() === headerMatrix.current.current.toString() && action === 'tab';
-        const isAtContentLeft: boolean = activeMatrix.current === 'content' &&
+        const isAtContentLeft: boolean = activeMatrix.current === 'Content' &&
             current.toString() === contentMatrix.current.current.toString() && action === 'shiftTab';
-        const isAtContentRight: boolean = activeMatrix.current === 'content' &&
+        const isAtContentRight: boolean = activeMatrix.current === 'Content' &&
             current.toString() === contentMatrix.current.current.toString() && action === 'tab';
-        const isAtAggregateLeft: boolean = activeMatrix.current === 'aggregate' &&
+        const isAtAggregateLeft: boolean = activeMatrix.current === 'Aggregate' &&
             current.toString() === aggregateMatrix.current.current.toString() && action === 'shiftTab';
-        const isAtAggregateRight: boolean = activeMatrix.current === 'aggregate' &&
+        const isAtAggregateRight: boolean = activeMatrix.current === 'Aggregate' &&
             current.toString() === aggregateMatrix.current.current.toString() && action === 'tab';
 
         // Handle boundary navigation between header, content, and aggregate
         if (isAtHeaderBottom || isAtHeaderRight) {
-            swapInfo.current = { swap: true, toMatrix: 'content' };
+            swapInfo.current = { swap: true, toMatrix: 'Content' };
             return false;
         } else if (isAtContentTop || isAtContentLeft) {
-            swapInfo.current = { swap: true, toMatrix: 'header' };
+            swapInfo.current = { swap: true, toMatrix: 'Header' };
             return false;
         } else if ((isAtContentBottom || isAtContentRight) && aggregateRowCount > 0) {
-            swapInfo.current = { swap: true, toMatrix: 'aggregate' };
+            swapInfo.current = { swap: true, toMatrix: 'Aggregate' };
             return false;
         } else if (isAtAggregateTop || isAtAggregateLeft) {
-            swapInfo.current = { swap: true, toMatrix: 'content' };
+            swapInfo.current = { swap: true, toMatrix: 'Content' };
             return false;
         } else if (isAtAggregateBottom || isAtAggregateRight) {
             // From aggregate, exit the grid (no more matrices below)
@@ -704,7 +703,7 @@ export const useFocusStrategy: (
     const removeFocusTabIndex: () => void = (): void => {
         // Find the currently focused cell and remove focus
         const currentFocusedCell: NodeListOf<Element> = gridRef.current?.element?.
-            querySelectorAll('[tabindex="0"]:not([data-role="page"], [data-role="page"] *, [role="toolbar"], [role="toolbar"] *, .sf-filterbar *, .sf-gridform *)');
+            querySelectorAll('[tabindex="0"]:not([data-role="page"], [data-role="page"] *, [role="toolbar"], [role="toolbar"] *, .sf-filter-row *, .sf-grid-edit-form *)');
         currentFocusedCell?.forEach((cell: HTMLElement) => {
             cell.classList.remove(CSS_FOCUSED, CSS_FOCUS);
             cell.tabIndex = -1;
@@ -724,7 +723,7 @@ export const useFocusStrategy: (
 
             const newInfo: FocusedCellInfo = {
                 ...info,
-                outline: info.outline !== false && !info.element?.classList?.contains?.('sf-filterbarcell'), // Default to true if not explicitly set to false
+                outline: info.outline !== false && !info.element?.closest?.('tr.sf-filter-row .sf-cell'), // Default to true if not explicitly set to false
                 element: info.element,
                 elementToFocus: info.elementToFocus
             };
@@ -750,7 +749,7 @@ export const useFocusStrategy: (
                 );
                 const container: HTMLDivElement | null = gridRef.current?.contentScrollRef;
                 const element: HTMLElement | null =
-                    (firstFocusableElement ?? newInfo.elementToFocus)?.closest?.('td.sf-rowcell, th.sf-headercell');
+                    (firstFocusableElement ?? newInfo.elementToFocus)?.closest?.('.sf-grid-content-row td.sf-cell, .sf-grid-header-row th.sf-cell');
 
                 if (container && element) {
                     const containerRect: DOMRect = container.getBoundingClientRect();
@@ -784,15 +783,15 @@ export const useFocusStrategy: (
                 keyArgs: e,
                 isJump: swapInfo.current.swap,
                 container: {
-                    isContent: activeMatrix.current === 'content',
-                    isHeader: activeMatrix.current === 'header'
+                    isContent: activeMatrix.current === 'Content',
+                    isHeader: activeMatrix.current === 'Header'
                 },
                 outline: newInfo.outline,
                 swapInfo: swapInfo.current,
                 rowIndex: newInfo.rowIndex,
                 columnIndex: newInfo.colIndex,
                 column: gridRef.current.getColumns()[newInfo.colIndex],
-                rowData: gridRef.current.getRowsObject()[newInfo.rowIndex]?.data,
+                data: gridRef.current.getRowsObject()[newInfo.rowIndex]?.data,
                 event: e
             };
 
@@ -822,13 +821,13 @@ export const useFocusStrategy: (
             const rowElement: HTMLTableRowElement = cellElement.closest('tr');
 
             const isHeader: boolean = cellElement.tagName.toLowerCase() === 'th';
-            const isAggregate: boolean = cellElement.closest('.sf-summaryrow') !== null;
+            const isAggregate: boolean = cellElement.closest('.sf-grid-summary-row') !== null;
             if (isHeader) {
-                setActiveMatrix('header');
+                setActiveMatrix('Header');
             } else if (isAggregate) {
-                setActiveMatrix('aggregate');
+                setActiveMatrix('Aggregate');
             } else {
-                setActiveMatrix('content');
+                setActiveMatrix('Content');
             }
 
             const matrix: IFocusMatrix = getActiveMatrix();
@@ -841,7 +840,7 @@ export const useFocusStrategy: (
                 const contentTable: HTMLTableElement = gridRef.current?.getContentTable();
                 const contentRows: HTMLCollectionOf<HTMLTableRowElement> | NodeListOf<HTMLTableRowElement> = gridRef.current?.isEdit &&
                         gridRef.current?.editModule?.isShowAddNewRowActive ?
-                    contentTable?.querySelectorAll?.('tr.sf-row:not(.sf-addedrow)') : contentTable?.rows;
+                    contentTable?.querySelectorAll?.('tr.sf-grid-content-row:not(.sf-grid-add-row)') : contentTable?.rows;
                 rows = contentRows as HTMLCollectionOf<HTMLTableRowElement>;
             }
 
@@ -901,7 +900,7 @@ export const useFocusStrategy: (
                 rowIndex: rowIndex,
                 columnIndex: cellIndex,
                 column: gridRef.current.getColumns()[parseInt(cellIndex.toString(), 10)],
-                rowData: gridRef.current.getRowsObject()[parseInt(rowIndex.toString(), 10)]?.data,
+                data: gridRef.current.getRowsObject()[parseInt(rowIndex.toString(), 10)]?.data,
                 event: e
             };
             callbacks?.onCellClick?.(args);
@@ -925,8 +924,8 @@ export const useFocusStrategy: (
 
         matrix.current = [rowIndex, cellIndex];
 
-        const isContent: boolean = activeMatrix.current === 'content';
-        const isAggregate: boolean = activeMatrix.current === 'aggregate';
+        const isContent: boolean = activeMatrix.current === 'Content';
+        const isAggregate: boolean = activeMatrix.current === 'Aggregate';
         let table: HTMLTableElement | undefined;
         if (isContent) {
             table = gridRef.current?.getContentTable();
@@ -936,7 +935,7 @@ export const useFocusStrategy: (
             table = gridRef.current?.getHeaderTable();
         }
         const rows: HTMLCollectionOf<HTMLTableRowElement> | NodeListOf<HTMLTableRowElement> = gridRef.current?.isEdit &&
-            gridRef.current?.editModule?.isShowAddNewRowActive ? table?.querySelectorAll?.('tr.sf-row:not(.sf-addedrow)') :
+            gridRef.current?.editModule?.isShowAddNewRowActive ? table?.querySelectorAll?.('tr.sf-grid-content-row:not(.sf-grid-add-row)') :
             table?.rows;
         if (!table || !rows || rowIndex >= rows.length) {
             return info;
@@ -978,13 +977,13 @@ export const useFocusStrategy: (
         // Get the table based on active matrix
         let table: HTMLTableElement | null;
         switch (activeMatrix.current) {
-        case 'content':
+        case 'Content':
             table = gridRef.current?.getContentTable();
             break;
-        case 'aggregate':
+        case 'Aggregate':
             table = gridRef.current?.getFooterTable();
             break;
-        case 'header':
+        case 'Header':
         default:
             table = gridRef.current?.getHeaderTable();
             break;
@@ -994,13 +993,13 @@ export const useFocusStrategy: (
         const info: FocusedCellInfo = {
             rowIndex,
             colIndex: cellIndex,
-            isHeader: activeMatrix.current === 'header',
-            isAggregate: activeMatrix.current === 'aggregate',
+            isHeader: activeMatrix.current === 'Header',
+            isAggregate: activeMatrix.current === 'Aggregate',
             outline: true
         };
 
         const rows: HTMLCollectionOf<HTMLTableRowElement> | NodeListOf<HTMLTableRowElement> = gridRef.current?.isEdit &&
-            gridRef.current?.editModule?.isShowAddNewRowActive ? table?.querySelectorAll?.('tr.sf-row:not(.sf-addedrow)') :
+            gridRef.current?.editModule?.isShowAddNewRowActive ? table?.querySelectorAll?.('tr.sf-grid-content-row:not(.sf-grid-add-row)') :
             table?.rows;
         // Find the element in the DOM
         if (table && rows.length > rowIndex &&
@@ -1041,11 +1040,11 @@ export const useFocusStrategy: (
         // Enhanced detection for edit context elements
         const activeElement: HTMLElement | null = document.activeElement as HTMLElement;
         const isInEditCell: boolean | Element = activeElement && (
-            activeElement.closest('.sf-edit-cell') ||
-            activeElement.closest('.sf-editedrow') ||
-            activeElement.closest('.sf-addedrow')
+            activeElement.closest('.sf-grid-edit-cell') ||
+            activeElement.closest('.sf-grid-edit-row') ||
+            activeElement.closest('.sf-grid-add-row')
         );
-        const isInFilterBar: boolean | Element = activeElement?.closest('.sf-filterbarcell');
+        const isInFilterBar: boolean | Element = activeElement?.closest('.sf-filter-row .sf-cell');
 
         // Enhanced edit mode handling for proper Tab navigation between fields
         // Prevent grid navigation from interfering with edit field focus
@@ -1098,7 +1097,7 @@ export const useFocusStrategy: (
         if ((!isNavigationKey(event) && !(getNavigationDirection(event) === 'escape'
             || getNavigationDirection(event) === 'ctrlPlusA' || getNavigationDirection(event) === 'space')) || (!event.key.includes('Tab')
             && document.activeElement.tagName === 'INPUT'
-            && document.activeElement.closest('.sf-filterbarcell'))) { return; }
+            && document.activeElement.closest('.sf-filter-row .sf-cell'))) { return; }
 
         // Prevent default browser behavior for navigation keys
         event.preventDefault();
@@ -1123,7 +1122,7 @@ export const useFocusStrategy: (
             // Handle boundary navigation
             if (swapInfo.current.swap) {
                 // Determine target matrix from swap info
-                const targetMatrix: Matrix = swapInfo.current.toMatrix || 'content';
+                const targetMatrix: Matrix = swapInfo.current.toMatrix || 'Content';
                 setActiveMatrix(targetMatrix);
 
                 // Get the appropriate matrix after switching
@@ -1132,7 +1131,7 @@ export const useFocusStrategy: (
                 // Determine the action from the key event
                 const action: string = getNavigationDirection(event);
 
-                if (targetMatrix === 'header') {
+                if (targetMatrix === 'Header') {
                     // Moving to header - find appropriate header cell based on navigation direction
                     if (matrix.matrix?.length > 0 && columns?.length > 0) {
                         if (action === 'upArrow' || action === 'shiftTab') {
@@ -1145,7 +1144,7 @@ export const useFocusStrategy: (
                             matrix.current = [lastHeaderRow, lastHeaderCol];
                         }
                     }
-                } else if (targetMatrix === 'content') {
+                } else if (targetMatrix === 'Content') {
                     // Moving to content - find appropriate content cell based on navigation direction
                     if (contentRowCount > 0 && columns?.length > 0) {
                         if (action === 'downArrow' || action === 'tab') {
@@ -1163,7 +1162,7 @@ export const useFocusStrategy: (
                             matrix.current = [lastContentRow, lastContentCol];
                         }
                     }
-                } else if (targetMatrix === 'aggregate') {
+                } else if (targetMatrix === 'Aggregate') {
                     // Moving to aggregate - find appropriate aggregate cell based on navigation direction
                     if (aggregateRowCount > 0 && columns?.length > 0) {
                         if (action === 'downArrow' || action === 'tab') {
@@ -1177,7 +1176,7 @@ export const useFocusStrategy: (
                 }
                 focus(event);
                 // Reset swap info
-                swapInfo.current = { swap: false, toHeader: false, toMatrix: 'content' };
+                swapInfo.current = { swap: false, toHeader: false, toMatrix: 'Content' };
             }
             return;
         }
@@ -1233,8 +1232,7 @@ export const useFocusStrategy: (
             // Generate matrix with proper selector function
             contentMatrix.current.generate(rows, (row: IRow<ColumnProps>, cell: ICell<ColumnProps>) => {
                 return (row.isDataRow && cell.visible && (cell.isDataCell)) ||
-                (cell.column && cell.visible)
-                || (cell.cellType === CellType.CommandColumn);
+                (cell.column && cell.visible);
             }, isRowTemplate);
 
             // Initialize current position to first valid cell
@@ -1260,7 +1258,7 @@ export const useFocusStrategy: (
             headerMatrix.current.generate(rows, (_unusedRow: IRow<ColumnProps>, cell: ICell<ColumnProps>) => {
                 return cell.visible && (cell.column.field !== undefined || cell.isTemplate ||
                 cell.column.template !== undefined ||
-                cell.column.type === 'checkbox' || cell.cellType === CellType.StackedHeader);
+                cell.column.type === 'checkbox');
             }, isRowTemplate);
             generateHeaderFilterRow(rows);
 
@@ -1298,7 +1296,7 @@ export const useFocusStrategy: (
     }, [headerRowCount, contentRowCount, aggregateRowCount, columns?.length, columns]);
     useEffect(() => {
         if (isGridFocused && focusedCell.current.rowIndex === -1 && focusedCell.current.colIndex === -1 &&
-                activeMatrix.current === 'content') {
+                activeMatrix.current === 'Content') {
             setLastContentCellTabIndex();
         }
     }, [isGridFocused]);
@@ -1326,7 +1324,7 @@ export const useFocusStrategy: (
             const headerTable: HTMLTableElement = gridRef.current.getHeaderTable();
             if (headerTable && headerTable.rows.length > 0) {
                 // Set active matrix to header
-                setActiveMatrix('header');
+                setActiveMatrix('Header');
 
                 // Get the active matrix (which should now be the header matrix)
                 const matrix: IFocusMatrix = getActiveMatrix();
@@ -1343,7 +1341,7 @@ export const useFocusStrategy: (
                     const firstHeaderCell: HTMLElement =
                         headerTable.rows[firstFocusableActiveCellIndex[0]].cells[firstFocusableActiveCellIndex[1]];
 
-                    if (firstHeaderCell && !firstHeaderCell.classList.contains('sf-hide')) {
+                    if (firstHeaderCell && !firstHeaderCell.classList.contains('sf-display-none')) {
                         // Set tabIndex to 0 for first cell
                         firstHeaderCell.tabIndex = 0;
 
@@ -1355,7 +1353,7 @@ export const useFocusStrategy: (
                 }
 
                 // Fallback to first visible header cell if the calculated one is hidden or invalid
-                const firstVisibleHeaderCell: HTMLElement = headerTable.querySelector('.sf-headercell:not(.sf-hide)') as HTMLElement;
+                const firstVisibleHeaderCell: HTMLElement = headerTable.querySelector('.sf-grid-header-row .sf-cell:not(.sf-display-none)') as HTMLElement;
                 if (firstVisibleHeaderCell) {
                     firstVisibleHeaderCell.tabIndex = 0;
 
@@ -1446,7 +1444,7 @@ export const useFocusStrategy: (
 
                         const cell: HTMLTableCellElement = aggregateTable.rows[rowIndex as number].cells[colIndex as number];
 
-                        if (cell && !cell.classList.contains('sf-hide')) {
+                        if (cell && !cell.classList.contains('sf-display-none')) {
                             // Set tabIndex to 0 for last aggregate cell
                             cell.tabIndex = 0;
 
@@ -1455,7 +1453,7 @@ export const useFocusStrategy: (
                             aggregateMatrix.current.current = [rowIndex, colIndex];
 
                             // Set active matrix to aggregate
-                            setActiveMatrix('aggregate');
+                            setActiveMatrix('Aggregate');
                             return;
                         }
                     }
@@ -1478,7 +1476,7 @@ export const useFocusStrategy: (
 
                     const cell: HTMLTableCellElement = contentTable.rows[rowIndex as number].cells[colIndex as number];
 
-                    if (cell && !cell.classList.contains('sf-hide')) {
+                    if (cell && !cell.classList.contains('sf-display-none')) {
                         // Set tabIndex to 0 for last content cell
                         cell.tabIndex = 0;
 
@@ -1487,7 +1485,7 @@ export const useFocusStrategy: (
                         contentMatrix.current.current = [rowIndex, colIndex];
 
                         // Set active matrix to content
-                        setActiveMatrix('content');
+                        setActiveMatrix('Content');
                         return;
                     }
                 }
@@ -1528,7 +1526,7 @@ export const useFocusStrategy: (
                 removeFocus();
 
                 // 2.  Reset active matrix to header for proper Tab navigation return behavior
-                setActiveMatrix('header');
+                setActiveMatrix('Header');
 
                 // 3. Set tabIndex for proper Tab navigation when returning to the grid
                 // This ensures that when focus returns to grid via Tab/Shift+Tab,
@@ -1560,7 +1558,7 @@ export const useFocusStrategy: (
      * @returns {void}
      */
     const navigateToCell: (rowIndex: number, colIndex: number, matrixType?: Matrix) => void =
-        useCallback((rowIndex: number, colIndex: number, matrixType: Matrix = 'content') => {
+        useCallback((rowIndex: number, colIndex: number, matrixType: Matrix = 'Content') => {
             if (!gridRef.current?.allowKeyboard) { return; }
             // Set the active matrix
             setActiveMatrix(matrixType);
@@ -1590,19 +1588,19 @@ export const useFocusStrategy: (
                 // Get the table based on matrix type
                 let table: HTMLTableElement | undefined;
                 switch (matrixType) {
-                case 'header':
+                case 'Header':
                     table = gridRef.current?.getHeaderTable();
                     break;
-                case 'aggregate':
+                case 'Aggregate':
                     table = gridRef.current?.getFooterTable();
                     break;
-                case 'content':
+                case 'Content':
                 default:
                     table = gridRef.current?.getContentTable();
                     break;
                 }
                 const rows: HTMLCollectionOf<HTMLTableRowElement> | NodeListOf<HTMLTableRowElement> = gridRef.current?.isEdit &&
-                    gridRef.current?.editModule?.isShowAddNewRowActive ? table?.querySelectorAll?.('tr.sf-row:not(.sf-addedrow)') :
+                    gridRef.current?.editModule?.isShowAddNewRowActive ? table?.querySelectorAll?.('tr.sf-grid-content-row:not(.sf-grid-add-row)') :
                     table?.rows;
                 if (table && rows.length > rowIndex) {
                     const row: HTMLTableRowElement = rows[rowIndex as number];
@@ -1614,8 +1612,8 @@ export const useFocusStrategy: (
                         const info: FocusedCellInfo = {
                             rowIndex: rowIndex,
                             colIndex: colIndex,
-                            isHeader: matrixType === 'header',
-                            isAggregate: matrixType === 'aggregate',
+                            isHeader: matrixType === 'Header',
+                            isAggregate: matrixType === 'Aggregate',
                             element: cellElement,
                             elementToFocus: cellElement,
                             outline: true
@@ -1635,7 +1633,7 @@ export const useFocusStrategy: (
      */
     const navigateToFirstCell: () => void = useCallback(() => {
         const startInHeader: boolean = headerRowCount > 0;
-        setActiveMatrix(startInHeader ? 'header' : 'content');
+        setActiveMatrix(startInHeader ? 'Header' : 'Content');
         const matrix: IFocusMatrix = getActiveMatrix();
         // Find first valid cell using findCellIndex
         const firstCell: number[] = matrix.matrix[0][0] === 1 ? [0, 0] : matrix.findCellIndex([0, 0], true);
@@ -1653,7 +1651,7 @@ export const useFocusStrategy: (
     const navigateToLastCell: () => void = useCallback(() => {
         // Use aggregate if available, otherwise use content
         if (aggregateRowCount > 0) {
-            setActiveMatrix('aggregate');
+            setActiveMatrix('Aggregate');
             const matrix: IFocusMatrix = getActiveMatrix();
             const [rowIndex, colIndex] = lastFocusableAggregateCellIndex;
 
@@ -1662,7 +1660,7 @@ export const useFocusStrategy: (
             matrix.current = [rowIndex, colIndex];
         } else {
             // Fallback to content area for last cell
-            setActiveMatrix('content');
+            setActiveMatrix('Content');
             const matrix: IFocusMatrix = getActiveMatrix();
             const [rowIndex, colIndex] = lastFocusableContentCellIndex;
 
@@ -1722,7 +1720,7 @@ export const useFocusStrategy: (
      */
     const focusContent: () => void = useCallback(() => {
         // Set active matrix to content
-        setActiveMatrix('content');
+        setActiveMatrix('Content');
 
         // Reset focus to first cell in content
         const matrix: IFocusMatrix = getActiveMatrix();

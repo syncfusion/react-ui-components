@@ -1,7 +1,7 @@
 {
   "name": "@syncfusion/react-svg-tooltip",
-  "version": "31.1.17",
-  "description": "Syncfusion React SVG tooltip component is a lightweight and customizable React SVG tooltip component for enhancing data visualizations with interactive overlays.",
+  "version": "31.2.12",
+  "description": "A lightweight and customizable React SVG tooltip component for enhancing data visualizations with interactive overlays.",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
   "keywords": [

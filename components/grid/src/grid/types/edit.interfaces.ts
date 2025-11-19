@@ -7,7 +7,7 @@ import { INumericTextBox, NumericTextBoxProps } from '@syncfusion/react-inputs';
 import { ICheckbox, CheckboxProps } from '@syncfusion/react-buttons';
 import { IDatePicker, DatePickerProps } from '@syncfusion/react-calendars';
 import { IDropDownList, DropDownListProps } from '@syncfusion/react-dropdowns';
-import { EditType } from '../types/enum';
+import { ActionType, EditType, NewRowPosition } from '../types/enum';
 import { ValueType } from './';
 
 /**
@@ -23,7 +23,7 @@ export type EditMode = 'Normal';
  * This interface provides control over record-level operations such as adding, editing, and deleting,
  * as well as customization of edit modes, confirmation dialogs, and integration of custom templates.
  */
-export interface EditSettings {
+export interface EditSettings<T = unknown> {
     /**
      * Determines whether new records can be added to the grid.
      *
@@ -70,7 +70,7 @@ export interface EditSettings {
     mode?: EditMode;
 
     /**
-     * Indicates whether double-clicking a row should activate edit mode in the Grid.
+     * Indicates whether double-clicking a row should activate edit mode in the Data Grid.
      *
      * When set to true, users can initiate editing by double-clicking a row.
      * If set to false, double-click interactions will not trigger edit mode.
@@ -118,8 +118,30 @@ export interface EditSettings {
      * It can be used to implement advanced form layouts, validation logic, or third-party integrations.
      *
      * @default null
+     * @example
+     * ```tsx
+     * const CustomForm = (props: EditFormTemplate<T>) => (
+     *   <table>
+     *     <colgroup><col style={{width: `${props.columns.filter((column) => column.field === 'name')[0].width}`}}/></colgroup>
+     *     <tbody role='rowgroup'>
+     *         <tr role='row' style={{ height: `${rowHeight}px` }} >
+     *             <FormField name={props.columns.filter((column) => column.field === 'name')[0]}>
+     *                 <input value={props.data.name} onChange={(e) => {
+     *                     props.setInternalData({...editedData});
+     *                     props.formState?.onChange?.('name', { value: value as FormValueType });
+     *                     props.onFieldChange('name', e.target.value);
+     *                 }} />
+     *             </FormField>
+     *         </tr>
+     *     </tbody>
+     *     <button onClick={() => props.onSave()}>Save</button>
+     *     <button onClick={props.onCancel}>Cancel</button>
+     *   </table>
+     * );
+     * <Grid editSettings={{ template: CustomForm }} />
+     * ```
      */
-    template?: React.ComponentType<string | number | boolean | Record<string, unknown> | Date>;
+    template?: ComponentType<EditFormTemplate<T>>;
 
     /**
      * Specifies the position at which a new row is inserted into the grid.
@@ -128,9 +150,9 @@ export interface EditSettings {
      * - Top: Inserts the new row at the beginning of the grid.
      * - Bottom: Inserts the new row at the end of the grid.
      *
-     * @default 'Top'
+     * @default 'Top' | NewRowPosition.Top
      */
-    newRowPosition?: 'Top' | 'Bottom';
+    newRowPosition?: string | NewRowPosition;
 }
 
 /**
@@ -138,14 +160,14 @@ export interface EditSettings {
  *
  * @private
  */
-export interface EditState {
+export interface EditState<T = unknown> {
     isEdit: boolean;
     editRowIndex: number;
     editCellField: string | null;
-    editData: Object;
-    originalData: Record<string, string | number | boolean | Object | Date> | Object;
-    validationErrors: { [field: string]: string };
-    showAddNewRowData: Record<string, ValueType | null>; // Data for the persistent add new row
+    editData: T;
+    originalData: T;
+    validationErrors: { [field in keyof T]: string } | {};
+    showAddNewRowData: T; // Data for the persistent add new row
     isShowAddNewRowActive: boolean; // Whether the add new row is currently active
     isShowAddNewRowDisabled: boolean; // Whether the add new row inputs should be disabled (but still visible)
 }
@@ -155,26 +177,26 @@ export interface EditState {
  *
  * @private
  */
-export interface UseEditResult {
+export interface UseEditResult<T = unknown> {
     isEdit: boolean;
-    editSettings: EditSettings;
+    editSettings: EditSettings<T>;
     editRowIndex: number;
-    editData: Object;
-    validationErrors: { [field: string]: string };
-    originalData: Record<string, string | number | boolean | Date> | Object;
-    showAddNewRowData: Record<string, unknown>;
+    editData: T;
+    validationErrors: { [field in keyof T]: string } | {};
+    originalData: T;
+    showAddNewRowData: T;
     isShowAddNewRowActive: boolean;
     isShowAddNewRowDisabled: boolean;
-    editRow: (rowElement?: HTMLTableRowElement) => Promise<void>;
-    saveChanges: () => Promise<boolean>;
-    cancelChanges: () => Promise<void>;
-    addRecord: (data?: Object | null, index?: number) => void;
-    deleteRecord: (fieldName?: string, data?: ValueType | null) => Promise<void>;
-    updateRow: (index: number, data: Object) => void;
+    editRecord: (rowElement?: HTMLTableRowElement) => Promise<void>;
+    saveDataChanges: () => Promise<boolean>;
+    cancelDataChanges: () => Promise<void>;
+    addRecord: (data?: T | null, index?: number) => void;
+    deleteRecord: (fieldName?: string, data?: T) => Promise<void>;
+    updateRecord: (index: number, data: T) => void;
     validateEditForm: () => boolean;
     validateField: (field: string) => boolean;
-    updateEditData: (field: string, value: ValueType | null) => void;
-    getCurrentEditData: () => ValueType | null;
+    updateEditData: (field: string, value: ValueType | Object | null) => void;
+    getCurrentEditData: () => T;
     handleGridClick: (event: React.MouseEvent) => void;
     handleGridDoubleClick: (event: React.MouseEvent, rowElement?: HTMLTableRowElement) => void;
     checkUnsavedChanges: () => Promise<boolean>;
@@ -193,7 +215,7 @@ export interface UseEditResult {
  *
  * @private
  */
-export type editModule = ReturnType<typeof useEdit>;
+export type editModule<T = unknown> = ReturnType<typeof useEdit<T>>;
 
 /**
  * Props interface for custom edit template components used in grid.
@@ -201,7 +223,7 @@ export type editModule = ReturnType<typeof useEdit>;
  * This interface defines the structure of data and callbacks passed to a custom
  * React component used for editing grid rows.
  */
-export interface EditTemplateProps {
+export interface EditTemplateProps<T = unknown> {
     /**
      * The initial value for the field being edited.
      *
@@ -209,7 +231,7 @@ export interface EditTemplateProps {
      *
      * @default -
      */
-    defaultValue: ValueType;
+    defaultValue: ValueType | Object;
 
     /**
      * Configuration object for the current column being edited.
@@ -227,7 +249,7 @@ export interface EditTemplateProps {
      *
      * @default -
      */
-    rowData: Object | Record<string, ValueType>;
+    data: T;
 
     /**
      * Validation error message associated with the current field.
@@ -247,12 +269,12 @@ export interface EditTemplateProps {
      * based on the editing mode.
      *
      * Supported values:
-     * - Add: The template is used to create a new record.
-     * - Edit: The template is used to modify an existing record.
+     * - `Add`: The template is used to create a new record.
+     * - `Edit`: The template is used to modify an existing record.
      *
      * @default -
      */
-    action: 'Add' | 'Edit';
+    action: string | ActionType;
 
     /**
      * Callback function triggered when the field value changes.
@@ -260,7 +282,97 @@ export interface EditTemplateProps {
      * @param value - The updated value from the input control.
      * @returns void
      */
-    onChange(value: ValueType): void;
+    onChange(value: ValueType | Object): void;
+}
+
+/**
+ * Props interface for custom row-level edit form templates in the grid.
+ * Provides row data, column configurations, validation state, and action callbacks for implementing full editing forms.
+ * Enables dynamic field updates, error display, and control over save/cancel operations during add or edit modes.
+ */
+export interface EditFormTemplate<T = unknown> {
+    /**
+     * Complete data object for the row being edited or added.
+     * Contains current field values updates via `onFieldChange` reflect here for form state management.
+     *
+     * @default {}
+     */
+    data: T;
+
+    /**
+     * Array of column configurations for the grid.
+     * Used to render fields matching editable columns, including types and validation rules.
+     *
+     * @default []
+     */
+    columns: ColumnProps[];
+
+    /**
+     * Object mapping field keys to validation error messages.
+     * Displays per-field errors when present empty for valid states.
+     *
+     * @default {}
+     */
+    validationErrors: {} | { [field in keyof T]: string; };
+
+    /**
+     * Callback to save the current form state and commit changes.
+     *
+     * @param isForwardTab - Optional. Indicates if save is triggered by tab navigation.
+     * @returns void
+     * @private
+     */
+    onSave: (isForwardTab?: boolean) => void;
+
+    /**
+     * Callback to cancel the edit operation and discard changes.
+     *
+     * @returns void
+     * @private
+     */
+    onCancel: () => void;
+
+    /**
+     * Callback to update a specific field value in the row data.
+     * Triggers validation and form re-render on change.
+     *
+     * @param field - The field key to update.
+     * @param value - The new value for the field.
+     * @returns void
+     */
+    onFieldChange: (field: string, value: ValueType | null) => void;
+
+    /**
+     * Current state of the form, including validity and dirty flags.
+     * Used for conditional rendering or disabling controls.
+     *
+     * @default {}
+     */
+    formState: FormState;
+
+    /**
+     * Boolean indicating if the operation is for adding a new row.
+     * True for add mode, false for edit mode—enables conditional logic.
+     *
+     * @default false
+     */
+    isAddOperation: boolean;
+
+    /**
+     * Boolean to disable form controls during processing.
+     * Set true during save operations to prevent concurrent edits.
+     *
+     * @default false
+     */
+    disabled: boolean;
+
+    /**
+     * State setter for internal form data updates.
+     * Allows manual synchronization of data beyond `onFieldChange`.
+     *
+     * @default {}
+     */
+    setInternalData: React.Dispatch<React.SetStateAction<T>>;
 }
 
 /**
@@ -269,7 +381,7 @@ export interface EditTemplateProps {
  * This interface provides access to the form validator and the associated row data,
  * allowing configuration of validation logic and dynamic form behavior during rendering.
  */
-export interface FormRenderEvent {
+export interface FormRenderEvent<T = unknown> {
     /**
      * Holds a reference to the form validator instance used for validating input fields.
      *
@@ -278,7 +390,7 @@ export interface FormRenderEvent {
      *
      * @default null
      */
-    formRef?: RefObject<IFormValidator>;
+    formRef: RefObject<IFormValidator>;
 
     /**
      * Specifies the index of the row for which the form is rendered.
@@ -288,7 +400,7 @@ export interface FormRenderEvent {
      *
      * @default -
      */
-    rowIndex?: number;
+    rowIndex: number;
 
     /**
      * Contains the complete data object for the row being edited or added.
@@ -298,7 +410,7 @@ export interface FormRenderEvent {
      *
      * @default -
      */
-    rowData?: Object;
+    data: T;
 }
 
 
@@ -308,20 +420,20 @@ export interface FormRenderEvent {
  * This interface allows access to the row data and index, and supports cancellation
  * of the edit operation based on custom conditions.
  */
-export interface RowEditEvent {
+export interface RowEditEvent<T = unknown> {
     /**
      * Data object containing the current values of the row being edited.
      *
      * @default -
      */
-    rowData?: Object;
+    data: T;
 
     /**
      * Index of the row being edited in the grid's data source.
      *
      * @default -
      */
-    rowIndex?: number;
+    rowIndex: number;
 
     /**
      * Flag indicating whether to cancel the edit operation.
@@ -339,7 +451,7 @@ export interface RowEditEvent {
  * Provides access to the new row's data and index, and supports conditional cancellation
  * of the insertion process based on custom logic or validation requirements.
  */
-export interface RowAddEvent {
+export interface RowAddEvent<T = unknown> {
     /**
      * The initial data object for the row being added.
      *
@@ -348,7 +460,7 @@ export interface RowAddEvent {
      *
      * @default -
      */
-    rowData?: Object;
+    data: T;
 
     /**
      * The zero-based index at which the new row will be inserted in the grid's data source.
@@ -358,10 +470,10 @@ export interface RowAddEvent {
      *
      * @default -
      */
-    rowIndex?: number;
+    rowIndex: number;
 
     /**
-     * Indicates whether the add operation should be canceled.
+     * Indicates whether the add operation should be cancelled.
      *
      * When set to true, the row insertion is prevented, allowing conditional control
      * over grid updates based on business rules or validation outcomes.
@@ -377,7 +489,7 @@ export interface RowAddEvent {
  * It provides access to the records targeted for deletion and
  * supports cancellation of the operation based on custom logic.
  */
-export interface DeleteEvent {
+export interface DeleteEvent<T = unknown> {
     /**
      * Array of record objects that are about to be deleted from the grid.
      *
@@ -385,7 +497,7 @@ export interface DeleteEvent {
      *
      * @default -
      */
-    data?: Object[];
+    data: T[];
 
     /**
      * Specifies whether to cancel the delete operation.
@@ -400,7 +512,7 @@ export interface DeleteEvent {
      *
      * @default -
      */
-    action?: string;
+    action: string | ActionType;
 }
 
 /**
@@ -409,15 +521,15 @@ export interface DeleteEvent {
  * It provides access to the current and previous row data,
  * and supports cancellation of the save based on validation or business rules.
  */
-export interface SaveEvent {
+export interface SaveEvent<T = unknown> {
     /**
      * Data object containing the latest values for the row being saved.
      *
-     * Includes all fields that were edited or added.
+     * Includes all fields that were modified or added during the edit session.
      *
      * @default -
      */
-    editedRowData?: Object;
+    data: T;
 
     /**
      * Index of the row being saved within the grid's data source.
@@ -426,16 +538,16 @@ export interface SaveEvent {
      *
      * @default -
      */
-    rowIndex?: number;
+    rowIndex: number;
 
     /**
-     * Original data of the row before any modifications were made.
+     * Data object representing the row's state before the current changes were applied.
      *
-     * Useful for comparing changes or reverting edits.
+     * Useful for comparing values or implementing conditional save logic.
      *
      * @default -
      */
-    rowData?: Object;
+    previousData: T;
 
     /**
      * Flag indicating whether to cancel the save operation.
@@ -451,7 +563,7 @@ export interface SaveEvent {
      *
      * @default -
      */
-    action?: string;
+    action: string | ActionType;
 }
 
 /**
@@ -460,7 +572,7 @@ export interface SaveEvent {
  * It provides access to the form state and row context,
  * allowing cleanup or rollback logic to be executed.
  */
-export interface CancelFormEvent {
+export interface FormCancelEvent<T = unknown> {
     /**
      * Data object containing the current form state for the row.
      *
@@ -468,14 +580,14 @@ export interface CancelFormEvent {
      *
      * @default -
      */
-    rowData?: Object;
+    data: T;
 
     /**
      * Index of the row being edited or added in the grid's data source.
      *
      * @default -
      */
-    rowIndex?: number;
+    rowIndex: number;
 
     /**
      * Reference to the form component used for editing or adding the row.
@@ -484,7 +596,7 @@ export interface CancelFormEvent {
      *
      * @default -
      */
-    formRef?: RefObject<IFormValidator>;
+    formRef: RefObject<IFormValidator>;
 }
 
 /**
@@ -507,7 +619,7 @@ export type EditParams = Partial<TextBoxProps & NumericTextBoxProps & CheckboxPr
  * Defines the type of input component to render during editing and allows
  * passing component-specific configuration parameters.
  */
-export interface ColumnEditConfig {
+export interface ColumnEditParams {
     /**
      * Specifies the type of edit component to be rendered for the column.
      *
@@ -515,7 +627,7 @@ export interface ColumnEditConfig {
      * date picker, or checkbox. Custom string identifiers may also be used for
      * custom edit components.
      *
-     * @default EditType.TextBox | 'stringEdit'
+     * @default EditType.TextBox | 'StringEdit'
      */
     type?: EditType | string;
 
@@ -527,7 +639,7 @@ export interface ColumnEditConfig {
      * and dropdown data sources.
      *
      * Supports partial props from multiple component types including:
-     * TextBoxProps, `NumericTextBoxProps`, `CheckboxProps`, `DatePickerProps`, and `DropDownListProps`.
+     * `TextBoxProps`, `NumericTextBoxProps`, `CheckboxProps`, `DatePickerProps`, and `DropDownListProps`.
      *
      * @default -
      */
@@ -539,27 +651,27 @@ export interface ColumnEditConfig {
  *
  * @private
  */
-export interface EditCellProps {
+export interface EditCellProps<T = unknown> {
     /**
      * Column configuration object containing properties and settings for the current column being edited.
      *
      * @default -
      */
-    column: ColumnProps;
+    column: ColumnProps<T>;
 
     /**
      * The current value of the cell being edited.
      *
-     * @defaut -
+     * @default -
      */
-    value: string | number | boolean | Object | undefined;
+    value: ValueType | Object | undefined;
 
     /**
      * The complete data object for the current row, providing context for the edit operation.
      *
      * @default -
      */
-    rowData: Object;
+    data: T;
 
     /**
      * Validation error message to display for the current cell, if any validation fails.
@@ -589,7 +701,7 @@ export interface EditCellProps {
      * @param value - The current value when focus is lost
      * @returns {void}
      */
-    onBlur(value: string | number | boolean | Object | undefined): void;
+    onBlur(value: ValueType | Object | undefined): void;
 
     /**
      * Callback function triggered when the input gains focus.
@@ -636,9 +748,9 @@ export interface EditCellRef {
     /**
      * Retrieves the current value from the edit cell input.
      *
-     * @returns {ValueType | null} The current value of the edit cell
+     * @returns {ValueType | Object | null} The current value of the edit cell
      */
-    getValue(): ValueType | null;
+    getValue(): ValueType | Object | null;
 
     /**
      * Sets a new value for the edit cell input.
@@ -646,7 +758,7 @@ export interface EditCellRef {
      * @param value - The value to set in the edit cell
      * @returns {void}
      */
-    setValue(value: ValueType | null): void;
+    setValue(value: ValueType | Object | null): void;
 }
 
 /**
@@ -654,27 +766,27 @@ export interface EditCellRef {
  *
  * @private
  */
-export interface EditFormProps {
+export interface EditFormProps<T = unknown> {
     /**
      * Array of column configuration objects that define the structure and properties of the form fields.
      *
      * @default []
      */
-    columns: ColumnProps[];
+    columns: ColumnProps<T>[];
 
     /**
      * The current data object containing the values being edited in the form.
      *
      * @default {}
      */
-    editData: Object;
+    editData: T;
 
     /**
      * Object containing validation error messages for each field, keyed by field name.
      *
      * @default {}
      */
-    validationErrors: { [field: string]: string };
+    validationErrors: { [field in keyof T]: string } | {};
 
     /**
      * The index of the row being edited in the grid's data source.
@@ -719,7 +831,7 @@ export interface EditFormProps {
      *
      * @default null
      */
-    template?: ComponentType<string | number | boolean | Record<string, unknown> | Date>;
+    template?: ComponentType<EditFormTemplate<T>>;
 
     /**
      * Specifies whether the form inputs should be disabled. Used for showAddNewRow feature when editing an existing row.
@@ -734,7 +846,7 @@ export interface EditFormProps {
  *
  * @private
  */
-export interface InlineEditFormRef {
+export interface InlineEditFormRef<T = unknown> {
     /**
      * Sets focus on the first editable field in the form.
      *
@@ -766,16 +878,16 @@ export interface InlineEditFormRef {
     /**
      * Retrieves the current data from all form fields.
      *
-     * @returns {string | number | boolean | Record<string, ValueType> | Date} The current form data
+     * @returns {Object} The current form data
      */
-    getCurrentData: () => string | number | boolean | Record<string, ValueType> | Date;
+    getCurrentData: () => T;
 
     /**
      * Reference object containing all edit cell refs organized by field name.
      *
      * @default {}
      */
-    editCellRefs: React.RefObject<{ [field: string]: EditCellRef }>;
+    editCellRefs: React.RefObject<{ [field in keyof T]?: EditCellRef }>;
 
     /**
      * Current state of the form validation from FormValidator.
@@ -797,7 +909,7 @@ export interface InlineEditFormRef {
  *
  * @private
  */
-export interface InlineEditFormProps extends EditFormProps {
+export interface InlineEditFormProps<T = unknown> extends EditFormProps<T> {
     /**
      * Stable key used for React memoization to prevent unnecessary re-renders.
      *
@@ -914,9 +1026,9 @@ export interface ConfirmDialogConfig {
     /**
      * The type of dialog which determines the styling, icons, and color scheme used.
      *
-     * @default 'confirm'
+     * @default 'Confirm'
      */
-    type?: 'confirm' | 'delete' | 'warning' | 'info';
+    type?: 'Confirm' | 'Delete' | 'Warning' | 'Info';
 }
 
 /**

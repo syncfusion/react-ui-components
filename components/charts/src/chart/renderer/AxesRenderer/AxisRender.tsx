@@ -298,11 +298,11 @@ export const AxisRenderer: React.FC<ChartAxesProps> = ({ axes }: { axes: AxisMod
                                             height={chart.chartAreaRect.height + (currentAxis.majorGridLines.width as number)} />
                                     </clipPath>
                                 </defs>
-                                {drawYAxisLabels(axis, idx, axis.updatedRect, chart, yScale)}
                                 {drawMajorGridLines(idx, axis, chart, currentAxis, yScale)}
                                 {drawYAxisTickLines(axis, idx, yScale, chart, currentAxis)}
                                 {drawYAxisMinorGridLines(axis, idx, chart, yScale, currentAxis)}
                                 {drawYAxisMinorTicks(axis, idx, yScale, chart, currentAxis)}
+                                {drawYAxisLabels(axis, idx, axis.updatedRect, chart, yScale)}
                                 {drawAxisTitle(axis, chart, idx, currentAxis)}
                                 {drawAxisLine(axis, currentAxis, chart)}
                             </>
@@ -316,11 +316,11 @@ export const AxisRenderer: React.FC<ChartAxesProps> = ({ axes }: { axes: AxisMod
                                             width={chart.chartAreaRect.width} height={chart.chartAreaRect.height} />
                                     </clipPath>
                                 </defs>
-                                {drawXAxisLabels(axis, idx, axis.updatedRect, chart, xScale)}
                                 {drawMajorGridLines(idx, axis, chart, currentAxis, xScale)}
                                 {drawXAxisTickLines(axis, idx, xScale, chart, currentAxis)}
                                 {drawXAxisMinorGridLines(axis, idx, chart, xScale, currentAxis)}
                                 {drawXAxisMinorTicks(axis, idx, xScale, chart, currentAxis)}
+                                {drawXAxisLabels(axis, idx, axis.updatedRect, chart, xScale)}
                                 {drawAxisTitle(axis, chart, idx, currentAxis)}
                                 {drawAxisLine(axis, currentAxis, chart)}
                             </>

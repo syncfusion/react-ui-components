@@ -4,32 +4,32 @@ import { DataUtil, Predicate } from '@syncfusion/react-data';
 import { EditSettings, IValueFormatter, ValueType } from '../types';
 import { FilterPredicates } from '../types/filter.interfaces';
 import { ServiceLocator } from '../types/interfaces';
-import { ColumnProps, HeaderValueAccessorEvent, ValueAccessorEvent } from '../types/column.interfaces';
+import { ColumnProps, HeaderValueAccessorProps, ValueAccessorProps } from '../types/column.interfaces';
 
 /**
  * Function to get value from provided data
  *
- * @param  {ValueAccessorEvent} props - specifies the onValueAccessor event props.
+ * @param  {ValueAccessorProps} props - specifies the valueAccessor event props.
  * @returns {Object} returns the object
  * @private
  */
 
 // eslint-disable-next-line
-export function valueAccessor(props: ValueAccessorEvent): Object {
-    const { field, rowData: data } = props;
-    return (isNullOrUndefined(field) || field === '') ? '' : DataUtil.getObject(field, data);
+export function valueAccessor<T, >(props: ValueAccessorProps<T>): T {
+    const { field, data: data } = props;
+    return (isNullOrUndefined(field) || field === '') ? '' as T : DataUtil.getObject(field, data) as T;
 }
 
 /**
  * Defines the method used to apply custom header cell values from external function and display this on each header cell rendered.
  *
- * @param  {HeaderValueAccessorEvent} props - specifies the onHeaderValueAccessor event props
+ * @param  {HeaderValueAccessorProps} props - specifies the headerValueAccessor event props
  * @returns {object} headerValueAccessor
  * @private
  */
-export function headerValueAccessor(props: HeaderValueAccessorEvent): Object {
+export function headerValueAccessor<T, >(props: HeaderValueAccessorProps): T {
     const { headerText, column } = props;
-    return DataUtil.getObject(headerText, column);
+    return DataUtil.getObject(headerText, column) as T;
 }
 
 /**
@@ -82,7 +82,7 @@ export const setStringFormatter: (fmtr: IValueFormatter, type: string, format: s
  * @returns {boolean} - whether value is date or number.
  * @private
  */
-export const isDateOrNumber: (value: ValueType) => boolean = (value: ValueType): boolean => {
+export const isDateOrNumber: (value: ValueType | Object) => boolean = (value: ValueType | Object): boolean => {
     let isDateOrNumber: boolean = false;
     if (typeof value === 'number') {
         isDateOrNumber = true;
@@ -425,11 +425,11 @@ export function parseUnit(value: string | number): number {
  */
 export function addLastRowBorder(contentTableRef?: HTMLTableElement, editSettings?: EditSettings): void {
     const table: Element = contentTableRef;
-    removeClass(table?.querySelectorAll?.('td'), 'sf-lastrowcell');
+    removeClass(table?.querySelectorAll?.('td'), 'sf-last-cell');
     if (table?.querySelector?.('tr:nth-last-child(2)')) {
         if (editSettings?.showAddNewRow && editSettings?.newRowPosition === 'Bottom') {
-            addClass(table.querySelector('tr:nth-last-child(2)').querySelectorAll('td'), 'sf-lastrowcell');
+            addClass(table.querySelector('tr:nth-last-child(2)').querySelectorAll('td'), 'sf-last-cell');
         }
     }
-    addClass(table?.querySelectorAll?.('tr:last-child td'), 'sf-lastrowcell');
+    addClass(table?.querySelectorAll?.('tr:last-child td'), 'sf-last-cell');
 }

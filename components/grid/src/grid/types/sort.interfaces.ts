@@ -1,14 +1,14 @@
 import { Dispatch, SetStateAction } from 'react';
-import { SortDirection } from './enum';
+import { ActionType, SortDirection, SortMode } from './enum';
 import { GridActionEvent } from './grid.interfaces';
 import { useSort } from '../hooks';
 
 /**
- * Defines the configuration for a sort descriptor in the Grid component.
+ * Defines the configuration for a sort descriptor in the Data Grid component.
  * Specifies the column `field` and `direction` for sorting operations.
  * Used to describe individual column sorting rules within the grid.
  */
-export interface SortDescriptorModel {
+export interface SortDescriptor {
     /**
      * Identifies the column `field` in the data source to apply sorting operations.
      * Determines which column’s data is sorted during the operation.
@@ -28,28 +28,19 @@ export interface SortDescriptorModel {
 }
 
 /**
- * Enumerates the sorting modes supported by the Grid.
- * Defines whether sorting is restricted to a single column or allows multiple columns.
- * Used internally to configure sorting behavior.
- *
- * @private
- */
-export type SortMode = 'single' | 'multiple';
-
-/**
- * Configures sorting behavior in the Grid component.
+ * Configures sorting behavior in the Data Grid component.
  * Manages settings for enabling sorting, defining sorted columns, and controlling sort persistence.
  * Determines how to interact with column sorting via headers or programmatically.
  */
 export interface SortSettings {
     /**
-     * Contains an array of `SortDescriptorModel` objects to define initial or active sort conditions.
+     * Contains an array of `SortDescriptor` objects to define initial or active sort conditions.
      * Specifies which columns are sorted and in what direction at grid initialization or during runtime.
      * Enables pre-sorting data or retrieving the current sort state.
      *
      * @default []
      */
-    columns?: SortDescriptorModel[];
+    columns?: SortDescriptor[];
 
     /**
      * Determines whether clicking a sorted column header can clear its sort state.
@@ -71,43 +62,16 @@ export interface SortSettings {
 
     /**
      * Specifies whether sorting is restricted to a single column or allows multiple columns.
-     * Supports `single` for sorting one column at a time or `multiple` for sorting multiple columns simultaneously.
+     * Supports `Single` for sorting one column at a time or `Multiple` for sorting multiple columns simultaneously.
      * Influences the grid’s sorting behavior and user experience.
      *
-     * @default 'multiple'
+     * @default 'Multiple'
      */
-    mode?: SortMode;
+    mode?: string | SortMode;
 }
 
 /**
- * Defines sorting properties for custom data services in the Grid.
- * Specifies the field and direction for sorting operations in external data handling.
- * Used internally to integrate with custom data sources or APIs.
- *
- * @private
- */
-export interface Sorts {
-    /**
-     * Identifies the field name of the column to be sorted in the data source.
-     * Maps to the column field used for sorting in custom data service operations.
-     * Ensures accurate targeting of the column for external sorting logic.
-     *
-     * @default -
-     */
-    name?: string;
-
-    /**
-     * Specifies the direction of the sort operation for the column.
-     * Supports values like 'asc' for ascending or 'desc' for descending order.
-     * Determines the order in which data is sorted for the specified field.
-     *
-     * @default 'asc'
-     */
-    direction?: string;
-}
-
-/**
- * Represents event arguments for sort complete events in the Grid.
+ * Represents event arguments for sort complete events in the Data Grid.
  * Provides details about the completed sort operation, including column and direction.
  * Used to handle post-sort logic or UI updates in the grid header.
  */
@@ -119,7 +83,7 @@ export interface SortEvent extends GridActionEvent {
      *
      * @default -
      */
-    field?: string;
+    field: string;
 
     /**
      * Defines the direction of the completed sort operation for the column.
@@ -130,13 +94,15 @@ export interface SortEvent extends GridActionEvent {
     direction?: SortDirection | string;
 
     /**
-     * References the DOM element associated with the completed sort action, such as the column header.
-     * Identifies the element that triggered the sort operation, typically a clicked header.
-     * Used to manage UI feedback or post-sort interactions.
+     * The React event that triggered the sort operation.
+     *
+     * Can be a mouse or keyboard event, depending on the interaction type.
+     * Provides access to event metadata such as the target element, key pressed,
+     * or mouse coordinates, enabling contextual handling of sort logic.
      *
      * @default null
      */
-    target?: Element;
+    event?: React.MouseEvent | React.KeyboardEvent;
 
     /**
      * Allows cancellation of the sort action before it is applied.
@@ -149,18 +115,26 @@ export interface SortEvent extends GridActionEvent {
     cancel?: boolean;
 
     /**
-     * Indicates the type of sort action that was completed (e.g., 'sorting', 'clearSorting').
+     * Indicates the type of sort action that was completed (e.g., 'Sorting', 'ClearSorting').
      * Describes the operation performed, aiding in post-sort processing.
      * Helps differentiate between various sort-related actions.
      *
-     * @type {string}
      * @default -
      */
-    action?: 'sorting' | 'clearSorting';
+    action: string | ActionType;
+
+    /**
+     * Contains an array of active sort descriptors.
+     * Each descriptor defines a column `field` and its sort direction.
+     * Useful for retrieving the current sort state across multiple `columns`.
+     *
+     * @default []
+     */
+    columns?: SortDescriptor[];
 }
 
 /**
- * Defines the type for the sort strategy module in the Grid.
+ * Defines the type for the sort strategy module in the Data Grid.
  * Represents the return type of the useSort hook for managing sorting operations.
  * Used internally to encapsulate sorting functionality.
  *
@@ -169,7 +143,7 @@ export interface SortEvent extends GridActionEvent {
 export type SortModule = ReturnType<typeof useSort>;
 
 /**
- * Defines the API for handling sorting actions in the Grid.
+ * Defines the API for handling sorting actions in the Data Grid.
  * Provides methods and properties to manage sort operations, state, and user interactions.
  * Used internally to control sorting behavior and configuration.
  *
@@ -203,9 +177,10 @@ export interface SortAPI {
      * Resets the sort state, removing all sorted columns and reverting to the original data order.
      * Updates the grid’s UI to reflect the unsorted state.
      *
+     * @param {string[]} [fields] - Array of field names to clear sorts from. if omitted, clears all sorts.
      * @returns {void}
      */
-    clearSort?(): void;
+    clearSort?(fields?: string[]): void;
 
     /**
      * Processes grid click events to handle sorting functionality.

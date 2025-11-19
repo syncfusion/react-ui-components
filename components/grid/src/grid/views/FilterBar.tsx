@@ -6,11 +6,15 @@ import {
     RefObject,
     MemoExoticComponent,
     useEffect,
-    useState
+    useState,
+    isValidElement,
+    createElement
 } from 'react';
 import {
     FilterBarType,
-    IValueFormatter
+    FilterTemplateProps,
+    IValueFormatter,
+    ValueType
 } from '../types';
 import { MutableGridSetter } from '../types/interfaces';
 import { GridRef } from '../types/grid.interfaces';
@@ -26,7 +30,7 @@ import {
 import { DatePicker, ChangeEvent, DatePickerProps } from '@syncfusion/react-calendars';
 import { getCustomDateFormat } from '../utils';
 
-const CSS_FILTER_DIV_INPUT: string = 'sf-filterdiv sf-fltrinputdiv';
+const CSS_FILTER_DIV_INPUT: string = 'sf-filter-cell';
 
 /**
  * FilterBase component renders a table cell (th or td) with appropriate content
@@ -42,7 +46,7 @@ const FilterBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
     // Get column-specific APIs and properties
     const { publicAPI, privateAPI } = useColumn(props);
     const { cssClass, filterModule } = useGridMutableProvider();
-    const CSS_FILTER_INPUT_TEXT: string = 'sf-filtertext' + (cssClass !== '' ? (' ' + cssClass) : '');
+    const CSS_FILTER_INPUT_TEXT: string = 'sf-filter-text' + (cssClass !== '' ? (' ' + cssClass) : '');
 
     const {
         cellType,
@@ -62,8 +66,8 @@ const FilterBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
     const grid: Partial<GridRef> & Partial<MutableGridSetter> = useGridComputedProvider();
     const { serviceLocator } = grid;
     const formatter: IValueFormatter = serviceLocator?.getService<IValueFormatter>('valueFormatter');
-    const filterBarClass: string = column.filterTemplate ? 'sf-fltrtemp' : '';
-    const fltrData: { column: ColumnProps } = { column: column };
+    const filterBarClass: string = column.filterTemplate ? 'sf-filter-template-cell' : '';
+    const fltrData: FilterTemplateProps = { column: column };
     fltrData[column.field] = undefined;
     const filterBarType: string | FilterBarType = column.filter.filterBarType;
 
@@ -71,20 +75,21 @@ const FilterBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
     const cellRef: RefObject<ColumnRef> = useRef<ColumnRef>({
         cellRef: useRef<HTMLTableCellElement>(null)
     });
-    const [inputValue, setInputValue] = useState<string | number | boolean | Date | (string | number | boolean | Date)[]>(null);
+    const [inputValue, setInputValue] = useState<ValueType | ValueType[]>(null);
 
     const filterColumn: FilterPredicates = grid.filterSettings?.columns?.find((col: FilterPredicates) => col.field === column.field);
     const updateColumn: ColumnProps = grid.getColumns().find((col: ColumnProps) => col.field === column.field);
-    const filterVal: string | number | boolean | Date | (string | number | boolean | Date)[] = filterColumn?.value;
+    const filterVal: ValueType | ValueType[] = filterColumn?.value;
 
     useEffect(() => {
-        let value: string | number | boolean | Date | (string | number | boolean | Date)[] = !isNullOrUndefined(filterVal) ?
+        let value: ValueType | ValueType[] = !isNullOrUndefined(filterVal) ?
             filterVal : '';
         if (!isNullOrUndefined(column.format) && !isNullOrUndefined(filterVal) && typeof filterVal !== 'string'
-            && (updateColumn as IColumnBase).formatFn && filterBarType !== 'datePickerFilter' && filterBarType !== 'numericFilter') {
+            && (updateColumn as IColumnBase).formatFn && filterBarType !== FilterBarType.DatePicker &&
+            filterBarType !== FilterBarType.NumericTextBox) {
             value = formatter.toView(filterVal as  number | Date, (updateColumn as IColumnBase).formatFn).toString();
         }
-        if (filterBarType === 'datePickerFilter' || filterBarType === 'numericFilter') {
+        if (filterBarType === FilterBarType.DatePicker || filterBarType === FilterBarType.NumericTextBox) {
             setInputValue(filterVal ? filterVal : null);
         } else if (!(updateColumn?.type === 'number' && isNaN(value as number))) {
             setInputValue(value.toString());
@@ -94,9 +99,9 @@ const FilterBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
     const handleChange: (e: TextBoxChangeEvent | NumericChangeEvent | ChangeEvent) => void = (
         e: TextBoxChangeEvent |NumericChangeEvent | ChangeEvent) => {
         setInputValue((e as NumericChangeEvent | ChangeEvent | TextBoxChangeEvent).value);
-        if (filterBarType === 'datePickerFilter' && grid.filterSettings?.mode === 'Immediate' && e.value instanceof Date) {
+        if (filterBarType === FilterBarType.DatePicker && grid.filterSettings?.mode === 'Immediate' && e.value instanceof Date) {
             filterModule?.filterByColumn(column.field, 'equal', e.value);
-        } else if (filterBarType === 'datePickerFilter' && grid.filterSettings?.mode === 'Immediate' && e.value === null &&
+        } else if (filterBarType === FilterBarType.DatePicker && grid.filterSettings?.mode === 'Immediate' && e.value === null &&
             document.activeElement.tagName === 'INPUT' && (document.activeElement as HTMLInputElement).value.length > 1) {
             filterModule?.removeFilteredColsByField?.(column.field, true);
         }
@@ -116,7 +121,7 @@ const FilterBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
         const isDisabled: boolean = !column.allowFilter;
 
         switch (filterBarType) {
-        case 'numericFilter':
+        case FilterBarType.NumericTextBox:
             return (
                 <NumericTextBox
                     id={id}
@@ -134,7 +139,7 @@ const FilterBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
                 />
             );
 
-        case 'datePickerFilter':
+        case FilterBarType.DatePicker:
             return (
                 <DatePicker
                     id={id}
@@ -183,10 +188,11 @@ const FilterBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
                 className={combinedClassName}
                 data-mappinguid={column.uid}
             >
-                { column.filterTemplate ? (typeof column.filterTemplate === 'function' ? column.filterTemplate(fltrData) : column.filterTemplate)
+                {column.filterTemplate ? (typeof column.filterTemplate === 'string' || isValidElement(column.filterTemplate) ?
+                    column.filterTemplate : createElement(column.filterTemplate, fltrData))
                     : <div className={CSS_FILTER_DIV_INPUT}>
                         {renderFilter()}
-                    </div> }
+                    </div>}
             </th>
         );
     }, [cellType, index, className, visibleClass, formattedValue, field, inputValue, cssClass]);

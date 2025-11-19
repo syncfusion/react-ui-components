@@ -1,5 +1,5 @@
 import { getDateFormat, getDateParser, getNumberFormat, getNumberParser, isNullOrUndefined } from '@syncfusion/react-base';
-import { setCulture, NumberFormatOptions, DateFormatOptions } from '@syncfusion/react-base';
+import { NumberFormatOptions, DateFormatOptions } from '@syncfusion/react-base';
 import { useMemo } from 'react';
 import { IValueFormatter } from '../types';
 /**
@@ -62,9 +62,6 @@ export const useValueFormatter: (cultureName?: string) => IValueFormatter = (cul
                 console.error('Error converting to view:', error);
                 return value?.toString();
             }
-        },
-        setCulture: (cultureName: string): void => {
-            setCulture(cultureName);
         }
     }), [cultureName]);
     return formatter;

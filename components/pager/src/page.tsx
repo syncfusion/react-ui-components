@@ -31,29 +31,23 @@ export const defaultConstants: { [key: string]: string } = {
     previousPageTooltip: 'Go to previous page',
     nextPageGroupTooltip: 'Go to next page group',
     previousPageGroupTooltip: 'Go to previous page group',
-    paginationStatusMessage: 'Pager external message',
+    pagerStatusMessage: 'Pager external message',
     pageLabel: 'Page ',
-    ofLabel: ' of ',
+    pagerOfLabel: ' of ',
     pagesLabel: ' Pages'
 };
 
 // CSS class constants following enterprise naming convention
-const CSS_MOBLIE_FIRST_PAGE: string = 'sf-mfirst sf-icons sf-icon-first';
-const CSS_MOBLIE_PREV_PAGE: string = 'sf-mprev sf-icons sf-icon-prev';
-const CSS_MOBLIE_NEXT_PAGE: string = 'sf-mnext sf-icons sf-icon-next';
-const CSS_MOBLIE_LAST_PAGE: string = 'sf-mlast sf-icons sf-icon-last';
-const CSS_MOBLIE_FIRST_PAGE_ENABLE: string = ' sf-firstpage sf-pager-default';
-const CSS_MOBLIE_FIRST_PAGE_DISABLE: string = ' sf-firstpagedisabled sf-disable';
-const CSS_MOBLIE_PREV_PAGE_ENABLE: string = ' sf-prevpage sf-pager-default';
-const CSS_MOBLIE_PREV_PAGE_DISABLE: string = ' sf-prevpagedisabled sf-disable';
-const CSS_MOBLIE_NEXT_PAGE_DISABLE: string = ' sf-nextpagedisabled sf-disable';
-const CSS_MOBLIE_NEXT_PAGE_ENABLE: string = ' sf-nextpage sf-pager-default';
-const CSS_MOBLIE_LAST_PAGE_DISABLE: string = ' sf-lastpagedisabled sf-disable';
-const CSS_MOBLIE_LAST_PAGE_ENABLE: string = ' sf-lastpage sf-pager-default';
-const CSS_PARENT_MSG_BAR: string = 'sf-parentmsgbar';
-const CSS_PAGE_MSG: string = 'sf-pagenomsg';
-const CSS_PAGE_COUNT_MSG: string = 'sf-pagecountmsg';
-const CSS_PAGE_EXTERNAL_MSG: string = 'sf-pagerexternalmsg';
+const CSS_MOBLIE_FIRST_PAGE: string = 'sf-pager-mfirst sf-icons';
+const CSS_MOBLIE_PREV_PAGE: string = 'sf-pager-mprevious sf-icons';
+const CSS_MOBLIE_NEXT_PAGE: string = 'sf-pager-mnext sf-icons';
+const CSS_MOBLIE_LAST_PAGE: string = 'sf-pager-mlast sf-icons';
+const CSS_DISABLE: string = ' sf-disable';
+const CSS_DEFAULT: string = ' sf-pager-icons';
+const CSS_PARENT_MSG_BAR: string = 'sf-pager-message-bar';
+const CSS_PAGE_MSG: string = 'sf-pager-number-message-container';
+const CSS_PAGE_COUNT_MSG: string = 'sf-pager-count-message-container';
+const CSS_PAGE_EXTERNAL_MSG: string = 'sf-pager-external-message';
 
 /**
  * Page component props for configuring and rendering a pager.
@@ -315,7 +309,7 @@ export const Pager: React.ForwardRefExoticComponent<IPageProps & RefAttributes<P
         const { actionFocus, handleBlur, handleFocus, handleKeyDown, setFirstLastTabIndex, getClass, removeDisabledTabIndex } =
             usePagerFocus({ pageRef, currentPage, allowKeyboard, totalRecordsCount, pageSize });
         const [enableExternalMsg, setEnableExternalMsg] = useState<boolean>(enableExternalMessage);
-        const [paginationStatusMessage, setExternalMsg] = useState<string>(externalMessage);
+        const [pagerStatusMessage, setExternalMsg] = useState<string>(externalMessage);
         const updateAriaAttribute: (args: {}) => void = props.updateAriaAttribute;
         // Update pegerRef with render properties when they become available
         useEffect(() => {
@@ -410,7 +404,7 @@ export const Pager: React.ForwardRefExoticComponent<IPageProps & RefAttributes<P
         const handleContainerClick: (e: MouseEvent<HTMLDivElement> | KeyboardEvent<HTMLDivElement>) => void = useCallback((
             e: MouseEvent<HTMLDivElement> | KeyboardEvent<HTMLDivElement>) => {
             let target: HTMLElement = e.target as HTMLElement;
-            if (target.classList.contains('sf-numericitem')) {
+            if (target.classList.contains('sf-numeric-item')) {
                 e.preventDefault();
             }
             if (target.tagName === 'svg' || target.tagName === 'path') {
@@ -437,29 +431,29 @@ export const Pager: React.ForwardRefExoticComponent<IPageProps & RefAttributes<P
         const pagerElement: () => React.ReactNode = useCallback((): React.ReactNode => {
             return (<>
                 <div
-                    className={`${CSS_MOBLIE_FIRST_PAGE}${currentPage as number > 1 ? `${CSS_MOBLIE_FIRST_PAGE_ENABLE}` : `${CSS_MOBLIE_FIRST_PAGE_DISABLE}`}`}
+                    className={`${CSS_MOBLIE_FIRST_PAGE}${currentPage as number > 1 ? `${CSS_DEFAULT}` : `${CSS_DISABLE}`}`}
                     title={pageInfoLocale.getConstant('firstPageTooltip')}
                     aria-label={pageInfoLocale.getConstant('firstPageTooltip')}
                     tabIndex={-1}
                     page-index={1}
                 >
                     {enableRtl ? (
-                        <LastPageIcon className={`${currentPage as number > 1 ? '' : 'sf-disabled'} sf-font-size-11`} />
+                        <LastPageIcon className={`sf-font-size-xs ${currentPage as number > 1 ? '' : 'sf-disabled'}`} />
                     ) : (
-                        <FirstPageIcon className={`${currentPage as number > 1 ? '' : 'sf-disabled'} sf-font-size-11`} />
+                        <FirstPageIcon className={`sf-font-size-xs ${currentPage as number > 1 ? '' : 'sf-disabled'}`} />
                     )}
                 </div>
                 <div
-                    className={`${CSS_MOBLIE_PREV_PAGE}${currentPage as number > 1 ? `${CSS_MOBLIE_PREV_PAGE_ENABLE}` : `${CSS_MOBLIE_PREV_PAGE_DISABLE}`}`}
+                    className={`${CSS_MOBLIE_PREV_PAGE}${currentPage as number > 1 ? `${CSS_DEFAULT}` : `${CSS_DISABLE}`}`}
                     title={pageInfoLocale.getConstant('previousPageTooltip')}
                     aria-label={pageInfoLocale.getConstant('previousPageTooltip')}
                     tabIndex={-1}
                     page-index={(currentPage as number) - 1}
                 >
                     {enableRtl ? (
-                        <ChevronRightIcon className={`${ currentPage === totalPages || totalRecordsCount === 0 ? 'sf-disabled' : '' } sf-font-size-11`} />
+                        <ChevronRightIcon className={`sf-font-size-xs ${ currentPage === totalPages || totalRecordsCount === 0 ? 'sf-disabled' : '' }`} />
                     ) : (
-                        <ChevronLeftIcon className={`${ currentPage === totalPages || totalRecordsCount === 0 ? 'sf-disabled' : '' } sf-font-size-11`} />
+                        <ChevronLeftIcon className={`sf-font-size-xs ${ currentPage === totalPages || totalRecordsCount === 0 ? 'sf-disabled' : '' }`} />
                     )}
                 </div>
 
@@ -474,50 +468,50 @@ export const Pager: React.ForwardRefExoticComponent<IPageProps & RefAttributes<P
                     </span>
                 </div>
                 <div
-                    className={`${CSS_MOBLIE_NEXT_PAGE}${((currentPage === totalPages) || totalRecordsCount === 0) ? `${CSS_MOBLIE_NEXT_PAGE_DISABLE}` : `${CSS_MOBLIE_NEXT_PAGE_ENABLE}`}`}
+                    className={`${CSS_MOBLIE_NEXT_PAGE}${((currentPage === totalPages) || totalRecordsCount === 0) ? `${CSS_DISABLE}` : `${CSS_DEFAULT}`}`}
                     title={pageInfoLocale.getConstant('nextPageTooltip')}
                     aria-label={pageInfoLocale.getConstant('nextPageTooltip')}
                     tabIndex={-1}
                     page-index={(currentPage as number) + 1}
                 >
                     {enableRtl ? (
-                        <ChevronLeftIcon className={`${ currentPage === totalPages || totalRecordsCount === 0 ? 'sf-disabled' : '' } sf-font-size-11`} />
+                        <ChevronLeftIcon className={`sf-font-size-xs ${ currentPage === totalPages || totalRecordsCount === 0 ? 'sf-disabled' : '' }`} />
                     ) : (
-                        <ChevronRightIcon className={`${ currentPage === totalPages || totalRecordsCount === 0 ? 'sf-disabled' : '' } sf-font-size-11`} />
+                        <ChevronRightIcon className={`sf-font-size-xs ${ currentPage === totalPages || totalRecordsCount === 0 ? 'sf-disabled' : '' }`} />
                     )}
                 </div>
                 <div
-                    className={`${CSS_MOBLIE_LAST_PAGE}${((currentPage === totalPages) || totalRecordsCount === 0) ? `${CSS_MOBLIE_LAST_PAGE_DISABLE}` : `${CSS_MOBLIE_LAST_PAGE_ENABLE}`}`}
+                    className={`${CSS_MOBLIE_LAST_PAGE}${((currentPage === totalPages) || totalRecordsCount === 0) ? `${CSS_DISABLE}` : `${CSS_DEFAULT}`}`}
                     title={pageInfoLocale.getConstant('lastPageTooltip')}
                     aria-label={pageInfoLocale.getConstant('lastPageTooltip')}
                     tabIndex={-1}
                     page-index={totalPages}
                 >
                     {enableRtl ? (
-                        <FirstPageIcon className={`${currentPage as number > 1 ? '' : 'sf-disabled'} sf-font-size-11`} />
+                        <FirstPageIcon className={`sf-font-size-xs ${currentPage as number > 1 ? '' : 'sf-disabled'}`} />
                     ) : (
-                        <LastPageIcon className={`${currentPage as number > 1 ? '' : 'sf-disabled'} sf-font-size-11`} />
+                        <LastPageIcon className={`sf-font-size-xs ${currentPage as number > 1 ? '' : 'sf-disabled'}`} />
                     )}
                 </div>
             </>);
         }, [currentPage, totalPages, totalRecordsCount, pageCount, pageNumberText, pageCountText, locale, enableRtl]);
 
         const enablePagerMessage:  string = useMemo(() => {
-            if (paginationStatusMessage && paginationStatusMessage.toString().length) {
+            if (pagerStatusMessage && pagerStatusMessage.toString().length) {
                 return '';
             }
             return 'none';
 
-        }, [paginationStatusMessage]);
+        }, [pagerStatusMessage]);
 
         const enableExternalPanel: JSX.Element = useMemo<JSX.Element>(() => (
             <div
                 className={`${CSS_PAGE_EXTERNAL_MSG}`}
-                aria-label={pageInfoLocale.getConstant('paginationStatusMessage')}
+                aria-label={pageInfoLocale.getConstant('pagerStatusMessage')}
                 style={{ display: enablePagerMessage }}
-            >{paginationStatusMessage}
+            >{pagerStatusMessage}
             </div>
-        ), [paginationStatusMessage, enablePagerMessage]);
+        ), [pagerStatusMessage, enablePagerMessage]);
 
         return (
             <div

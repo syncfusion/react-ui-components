@@ -9,7 +9,8 @@ import {
     memo,
     RefObject,
     JSX,
-    useEffect
+    useEffect,
+    ReactElement
 } from 'react';
 import {
     HeaderRowsRef,
@@ -17,7 +18,9 @@ import {
     RowRef,
     IRow,
     ICell,
-    RenderType
+    RenderType,
+    RowType,
+    WrapMode
 } from '../types';
 import { ColumnProps } from '../types/column.interfaces';
 import {
@@ -28,8 +31,8 @@ import { ColumnsChildren } from '../types/interfaces';
 import { isNullOrUndefined } from '@syncfusion/react-base';
 
 // CSS class constants following enterprise naming convention
-const CSS_COLUMN_HEADER: string = 'sf-columnheader';
-const CSS_FILTER_HEADER: string = 'sf-filterbar';
+const CSS_COLUMN_HEADER: string = 'sf-grid-header-row';
+const CSS_FILTER_HEADER: string = 'sf-filter-row';
 
 /**
  * HeaderRowsBase component renders the header rows within the table header section
@@ -40,16 +43,16 @@ const CSS_FILTER_HEADER: string = 'sf-filterbar';
  * @param {RefObject<HeaderRowsRef>} ref - Forwarded ref to expose internal elements and methods
  * @returns {JSX.Element} The rendered thead element with header rows
  */
-const HeaderRowsBase: ForwardRefExoticComponent<Partial<IHeaderRowsBase> & RefAttributes<HeaderRowsRef>> =
+const HeaderRowsBase: (props: Partial<IHeaderRowsBase> & RefAttributes<HeaderRowsRef>) => ReactElement =
     memo(forwardRef<HeaderRowsRef, Partial<IHeaderRowsBase>>(
-        (props: Partial<IHeaderRowsBase>, ref: RefObject<HeaderRowsRef>) => {
-            const { columnsDirective, headerRowDepth } = useGridMutableProvider();
-            const { filterSettings, rowClass } = useGridComputedProvider();
-            const { rowHeight, textWrapSettings } = useGridComputedProvider();
+        <T, >(props: Partial<IHeaderRowsBase>, ref: RefObject<HeaderRowsRef>) => {
+            const { columnsDirective, headerRowDepth } = useGridMutableProvider<T>();
+            const { filterSettings, rowClass } = useGridComputedProvider<T>();
+            const { rowHeight, textWrapSettings } = useGridComputedProvider<T>();
 
             // Refs for DOM elements and child components
             const headerSectionRef: RefObject<HTMLTableSectionElement> = useRef<HTMLTableSectionElement>(null);
-            const rowsObjectRef: RefObject<IRow<ColumnProps>[]> = useRef<IRow<ColumnProps>[]>([]);
+            const rowsObjectRef: RefObject<IRow<ColumnProps<T>>[]> = useRef<IRow<ColumnProps<T>>[]>([]);
 
             /**
              * Returns the collection of header row elements
@@ -65,7 +68,7 @@ const HeaderRowsBase: ForwardRefExoticComponent<Partial<IHeaderRowsBase> & RefAt
              *
              * @returns {IRow<ColumnProps>[]} Array of row options objects with element references
              */
-            const getHeaderRowsObject: () => IRow<ColumnProps>[] = useCallback(() => rowsObjectRef.current, [rowsObjectRef.current]);
+            const getHeaderRowsObject: () => IRow<ColumnProps<T>>[] = useCallback(() => rowsObjectRef.current, [rowsObjectRef.current]);
 
             /**
              * Expose internal elements and methods through the forwarded ref
@@ -82,8 +85,8 @@ const HeaderRowsBase: ForwardRefExoticComponent<Partial<IHeaderRowsBase> & RefAt
              * @param {number} index - Row index
              * @param {HTMLTableRowElement} element - Row DOM element
              */
-            const storeRowRef: (index: number, element: HTMLTableRowElement, cellRef: ICell<ColumnProps>[]) => void =
-                useCallback((index: number, element: HTMLTableRowElement, cellRef: ICell<ColumnProps>[]) => {
+            const storeRowRef: (index: number, element: HTMLTableRowElement, cellRef: ICell<ColumnProps<T>>[]) => void =
+                useCallback((index: number, element: HTMLTableRowElement, cellRef: ICell<ColumnProps<T>>[]) => {
                     // Directly update the element reference in the row object
                     if (rowsObjectRef.current[index as number]) { // StrictMode purpose type gaurd condition added.
                         rowsObjectRef.current[index as number].element = element;
@@ -96,19 +99,19 @@ const HeaderRowsBase: ForwardRefExoticComponent<Partial<IHeaderRowsBase> & RefAt
              */
             const headerRowContent: JSX.Element[] | null = useMemo(() => {
                 const rows: JSX.Element[] = [];
-                const rowOptions: IRow<ColumnProps>[] = [];
+                const rowOptions: IRow<ColumnProps<T>>[] = [];
                 // Generate header rows based on headerRowDepth
                 for (let rowIndex: number = 0; rowIndex < headerRowDepth; rowIndex++) {
-                    const options: IRow<ColumnProps> = {};
+                    const options: IRow<ColumnProps<T>> = {};
                     options.index = rowIndex;
                     const rowId: string = `grid-header-row-${rowIndex}-${Math.random().toString(36).substr(2, 5)}`;
                     // Store the options object for getRowsObject
                     rowOptions.push({ ...options });
                     const rowCustomClass: string = !isNullOrUndefined(rowClass) ? (typeof rowClass === 'function' ?
-                        rowClass({rowType: 'header', rowIndex: options.index}) : rowClass) : '';
+                        rowClass({rowType: RowType.Header, rowIndex: options.index}) : rowClass) : '';
                     rows.push(
-                        <RowBase
-                            ref={(element: RowRef) => {
+                        <RowBase<T>
+                            ref={(element: RowRef<T>) => {
                                 if (element?.rowRef?.current) {
                                     storeRowRef(rowIndex, element.rowRef.current, element.getCells());
                                 }
@@ -117,7 +120,7 @@ const HeaderRowsBase: ForwardRefExoticComponent<Partial<IHeaderRowsBase> & RefAt
                             row={options}
                             key={rowId}
                             rowType={RenderType.Header}
-                            className={`${CSS_COLUMN_HEADER} ${textWrapSettings?.enabled && textWrapSettings?.wrapMode === 'Header' ? 'sf-wrap' : ''}`.trim()
+                            className={`${CSS_COLUMN_HEADER} ${textWrapSettings?.enabled && textWrapSettings?.wrapMode === WrapMode.Header ? 'sf-wrap' : ''}`.trim()
                                 + (rowCustomClass.length ? `${' ' + rowCustomClass}` : '')}
                             style={{ height : `${rowHeight}px`}}
                         >
@@ -126,7 +129,7 @@ const HeaderRowsBase: ForwardRefExoticComponent<Partial<IHeaderRowsBase> & RefAt
                     );
                     if (rowIndex === headerRowDepth - 1 && filterSettings?.enabled) {
                         rows.push(
-                            <RowBase
+                            <RowBase<T>
                                 role='row'
                                 key={rowId + '-filterbar'}
                                 rowType={RenderType.Filter}
@@ -158,12 +161,12 @@ const HeaderRowsBase: ForwardRefExoticComponent<Partial<IHeaderRowsBase> & RefAt
                 </thead>
             );
         }
-    ));
+    )) as (props: Partial<IHeaderRowsBase> & RefAttributes<HeaderRowsRef>) => ReactElement;
 
 /**
  * Set display name for debugging purposes
  */
-HeaderRowsBase.displayName = 'HeaderRowsBase';
+(HeaderRowsBase as ForwardRefExoticComponent<Partial<IHeaderRowsBase> & RefAttributes<HeaderRowsRef>>).displayName = 'HeaderRowsBase';
 
 /**
  * Export the HeaderRowsBase component for use in other components

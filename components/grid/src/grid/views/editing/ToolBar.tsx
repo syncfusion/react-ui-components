@@ -1,7 +1,7 @@
 import { Button, Color, Variant } from '@syncfusion/react-buttons';
 import { Toolbar, ToolbarItem, ToolbarSpacer } from '@syncfusion/react-navigations';
 import { JSX, RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ToolbarAPI, ToolbarClickEvent, ToolbarItemConfig, ToolbarConfig } from '../../types/toolbar.interfaces';
+import { ToolbarAPI, ToolbarClickEvent, ToolbarItemProps, ToolbarConfig } from '../../types/toolbar.interfaces';
 import { MutableGridBase } from '../../types';
 import { SelectionModel } from '../../types/selection.interfaces';
 import { editModule } from '../../types/edit.interfaces';
@@ -93,11 +93,10 @@ const SearchInputWrapper: React.FC<{
     const searchId: string = `${gridId}_searchbar`;
 
     return (
-        <div className={`sf-input-group sf-search${isFocused ? ' sf-input-focus' : ''}`}>
+        <div className={`sf-input-group sf-control sf-medium sf-grid-search${isFocused ? ' sf-input-focus' : ''}`}>
             <InputBase
                 ref={searchInputRef}
                 id={searchId}
-                className="sf-search"
                 type="search"
                 tabIndex={0}
                 placeholder="Search"
@@ -113,7 +112,7 @@ const SearchInputWrapper: React.FC<{
             {renderClearButton(searchValue, clearInput)}
             <span
                 id={`${gridId}_searchbutton`}
-                className="sf-input-group-icon sf-search-icon"
+                className="sf-input-icon sf-search-icon"
                 role="button"
                 title={localization?.getConstant('searchButtonLabel')}
                 onClick={(e: React.MouseEvent<HTMLSpanElement>) => {
@@ -131,28 +130,23 @@ const SearchInputWrapper: React.FC<{
     );
 };
 
-const rearrangeToolbar: (toolbar: (string | ToolbarItemConfig)[]) => (string | ToolbarItemConfig)[] =
-    (toolbar: (string | ToolbarItemConfig)[]): (string | ToolbarItemConfig)[] => {
-        const withoutSearch: (string | ToolbarItemConfig)[] = toolbar.filter((item: string | ToolbarItemConfig) => {
+const rearrangeToolbar: (toolbar: (string | ToolbarItemProps)[]) => (string | ToolbarItemProps)[] =
+    (toolbar: (string | ToolbarItemProps)[]): (string | ToolbarItemProps)[] => {
+        const withoutSearch: (string | ToolbarItemProps)[] = toolbar.filter((item: string | ToolbarItemProps) => {
             if (typeof item === 'string') {
                 return item !== 'Search';
             }
             return item.id !== 'Search' && item.text !== 'Search';
         });
 
-        const hasSearch: boolean = toolbar.some((item: string | ToolbarItemConfig) => {
+        const searchItem: string | ToolbarItemProps | undefined = toolbar.find((item: string | ToolbarItemProps) => {
             if (typeof item === 'string') {
                 return item === 'Search';
             }
             return item.id === 'Search' || item.text === 'Search';
         });
 
-        return hasSearch ? [...withoutSearch, toolbar.find((item: string | ToolbarItemConfig) => {
-            if (typeof item === 'string') {
-                return item === 'Search';
-            }
-            return item.id === 'Search' || item.text === 'Search';
-        })!] : toolbar;
+        return searchItem !== undefined ? [...withoutSearch, searchItem] : toolbar;
     };
 
 /**
@@ -171,13 +165,13 @@ export const GridToolbar: React.FC<ToolbarConfig> = ({
     className,
     toolbarAPI
 }: {
-    toolbar?: (string | ToolbarItemConfig)[],
+    toolbar?: (string | ToolbarItemProps)[],
     gridId?: string,
     className?: string,
     toolbarAPI?: ToolbarAPI
 }) => {
     toolbar = rearrangeToolbar(toolbar || []);
-    const { serviceLocator, allowKeyboard } = useGridComputedProvider();
+    const { serviceLocator, allowKeyboard, editSettings } = useGridComputedProvider();
     const localization: IL10n = serviceLocator?.getService<IL10n>('localization');
     const modulesRef: React.RefObject<{
         editModule?: editModule,
@@ -220,8 +214,8 @@ export const GridToolbar: React.FC<ToolbarConfig> = ({
     const renderToolbarItems: React.ReactElement<unknown, string | React.JSXElementConstructor<unknown>>[] = useMemo(() => {
         const items: React.ReactElement[] = [];
 
-        toolbar.forEach((item: string | ToolbarItemConfig, index: number) => {
-            let itemConfig: ToolbarItemConfig;
+        toolbar.forEach((item: string | ToolbarItemProps, index: number) => {
+            let itemConfig: ToolbarItemProps;
 
             if (typeof item === 'string') {
                 // Predefined items
@@ -272,7 +266,7 @@ export const GridToolbar: React.FC<ToolbarConfig> = ({
                     };
                     break;
                 case 'Search':
-                    items.push(<ToolbarSpacer />); // condition based need to handle adding spacer.
+                    items.push(<ToolbarSpacer key={`spacer-${index}`} />); // condition based need to handle adding spacer.
                     // Search functionality using InputBase component similar to FilterBar pattern
                     items.push(
                         <ToolbarItem key={`search-${index}`} className='sf-search-wrapper'>
@@ -317,7 +311,7 @@ export const GridToolbar: React.FC<ToolbarConfig> = ({
         });
 
         return items;
-    }, [toolbar, gridId, handleButtonClick, disabledItems]); // Include disabledItems in dependencies
+    }, [toolbar, gridId, handleButtonClick, disabledItems, localization]); // Include disabledItems in dependencies
 
     // Only do initial refresh once when toolbar is ready
     useEffect(() => {
@@ -326,7 +320,7 @@ export const GridToolbar: React.FC<ToolbarConfig> = ({
             toolbarAPI.refreshToolbarItems();
         }
         return undefined;
-    }, [toolbarAPI.isRendered]); // Only depend on isRendered
+    }, [toolbarAPI.isRendered, editSettings]); // Only depend on isRendered
 
     // Add event-based toolbar refresh to prevent reactive dependencies
     useEffect(() => {

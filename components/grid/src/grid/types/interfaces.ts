@@ -1,19 +1,20 @@
 import { Dispatch, HTMLAttributes, JSX, ReactElement, ReactNode, RefObject, SetStateAction, MouseEvent, FocusEvent, CSSProperties, UIEvent } from 'react';
-import { ReturnType, DataManager, Predicate, Query, DataResult } from '@syncfusion/react-data';
+import { ReturnType, DataManager, Predicate, Query, DataResult, Aggregates } from '@syncfusion/react-data';
 import { DateFormatOptions, NumberFormatOptions } from '@syncfusion/react-base';
-import { CellType, RenderType } from '../types/enum';
+import { CellTypes, RenderType } from '../types/enum';
 import { FilterSettings, FilterEvent, filterModule } from '../types/filter.interfaces';
 import { ColumnProps, IColumnBase } from '../types/column.interfaces';
 import { FocusStrategyModule } from '../types/focus.interfaces';
 import { InlineEditFormRef, editModule } from '../types/edit.interfaces';
 import { selectionModule } from '../types/selection.interfaces';
 import { PagerRef } from '@syncfusion/react-pager';
-import { AggregateColumnProps, AggregateRowProps } from '../types/aggregate.interfaces';
+import { AggregateColumnProps, AggregateData, AggregateRowProps } from '../types/aggregate.interfaces';
 import { GridActionEvent, IGrid, IGridBase } from '../types/grid.interfaces';
 import { PageEvent } from '../types/page.interfaces';
 import { searchModule, SearchSettings, SearchEvent } from './search.interfaces';
-import { SortSettings, Sorts, SortModule, SortEvent } from '../types/sort.interfaces';
+import { SortSettings, SortModule, SortEvent, SortDescriptor } from '../types/sort.interfaces';
 import { ToolbarAPI } from './toolbar.interfaces';
+import * as React from 'react';
 
 /**
  * IValueFormatter interface defines the methods for value formatting services
@@ -39,13 +40,6 @@ export interface IValueFormatter {
      * @returns {string | Object} The formatted value
      */
     toView(value: number | Date, format: Function): string | Object;
-
-    /**
-     * Sets the culture for formatting
-     *
-     * @param {string} cultureName - The culture name to set
-     */
-    setCulture?(cultureName: string): void;
 
     /**
      * Gets a format function for the specified format options
@@ -88,7 +82,7 @@ export interface ICell<T> {
      *
      * @default -
      */
-    cellType?: CellType;
+    cellType?: CellTypes;
 
     /**
      * Specifies whether the cell is visible.
@@ -130,7 +124,7 @@ export interface ICell<T> {
      *
      * @default null
      */
-    aggregateColumn?: AggregateColumnProps;
+    aggregateColumn?: AggregateColumnProps<T extends IColumnBase<infer C> ? C : unknown>;
 
     /**
      * The unique identifier for the row containing this cell.
@@ -171,7 +165,7 @@ export interface IRow<T> {
      *
      * @default null
      */
-    setRowObject?: Dispatch<SetStateAction<IRow<ColumnProps>>>;
+    setRowObject?: Dispatch<SetStateAction<IRow<ColumnProps<T extends IColumnBase<infer C> ? C : unknown>>>>;
 
     /**
      * Unique identifier for the row.
@@ -185,7 +179,7 @@ export interface IRow<T> {
      *
      * @default null
      */
-    data?: Object;
+    data?: T extends IColumnBase<infer C> ? C : unknown;
 
     /**
      * Group summary count for the row.
@@ -304,7 +298,7 @@ export interface IRow<T> {
      *
      * @default null
      */
-    editInlineRowFormRef?: RefObject<InlineEditFormRef>;
+    editInlineRowFormRef?: RefObject<InlineEditFormRef<T extends IColumnBase<infer C> ? C : unknown>>;
 }
 
 /**
@@ -320,7 +314,7 @@ export interface Scroll {
 /**
  * @private
  */
-export interface MutableGridBase {
+export interface MutableGridBase<T = unknown> {
     /**
      * Column directives element
      */
@@ -331,7 +325,7 @@ export interface MutableGridBase {
      *
      * @private
      */
-    uiColumns?: ColumnProps[];
+    uiColumns?: ColumnProps<T>[];
 
     /**
      * Sort settings model
@@ -348,12 +342,12 @@ export interface MutableGridBase {
      *
      * @param {Object[]} data - The data to set
      */
-    setCurrentViewData?: (data: Object[]) => void;
+    setCurrentViewData?: (data: T[]) => void;
 
     /**
      * Current view data
      */
-    currentViewData?: Object[];
+    currentViewData?: T[];
 
     /**
      * Header row depth for stacked headers
@@ -372,29 +366,29 @@ export interface MutableGridBase {
     focusModule?: FocusStrategyModule;
 
     /**
-     * The `selectionModule` is used to selecting the row in the Grid.
+     * The `selectionModule` is used to selecting the row in the Data Grid.
      */
-    selectionModule?: selectionModule;
+    selectionModule?: selectionModule<T>;
 
     /**
-     * The `sortModule` is used to manipulate sorting in the Grid.
+     * The `sortModule` is used to manipulate sorting in the Data Grid.
      */
     sortModule?: SortModule;
 
     /**
-     * The `filterModule` is used to manipulate filtering in the Grid.
+     * The `filterModule` is used to manipulate filtering in the Data Grid.
      */
     filterModule?: filterModule;
 
     /**
-     * The `searchModule` is used to manipulate searching in the Grid.
+     * The `searchModule` is used to manipulate searching in the Data Grid.
      */
     searchModule?: searchModule;
 
     /**
-     * The `editModule` is used to manipulate editing in the Grid.
+     * The `editModule` is used to manipulate editing in the Data Grid.
      */
-    editModule?: editModule;
+    editModule?: editModule<T>;
 
     gridAction?: GridActionEvent;
     filterSettings?: FilterSettings;
@@ -437,7 +431,7 @@ export interface MutableGridBase {
  *
  * @private
  */
-export interface RowRef {
+export interface RowRef<T = unknown> {
     /**
      * Reference to the row DOM element.
      *
@@ -450,21 +444,21 @@ export interface RowRef {
      *
      * @returns {ICell<ColumnProps>[]} The cell options objects
      */
-    getCells?: () => ICell<ColumnProps>[];
+    getCells?: () => ICell<ColumnProps<T>>[];
 
     /**
      * Reference to the inline edit form for this row.
      *
      * @default null
      */
-    editInlineRowFormRef?: RefObject<InlineEditFormRef>;
+    editInlineRowFormRef?: RefObject<InlineEditFormRef<T>>;
 
     /**
      * Function to set the row object state.
      *
      * @default null
      */
-    setRowObject?: Dispatch<SetStateAction<IRow<ColumnProps>>>;
+    setRowObject?: Dispatch<SetStateAction<IRow<ColumnProps<T>>>>;
 }
 
 /**
@@ -510,7 +504,7 @@ export interface ICustomOptr {
  *
  * @private
  */
-export interface IRowBase extends Omit<HTMLAttributes<HTMLTableRowElement>, 'children'> {
+export interface IRowBase<T = unknown> extends Omit<HTMLAttributes<HTMLTableRowElement>, 'children'> {
     /**
      * Type of row rendering
      */
@@ -519,7 +513,7 @@ export interface IRowBase extends Omit<HTMLAttributes<HTMLTableRowElement>, 'chi
     /**
      * Row data and metadata
      */
-    row?: IRow<ColumnProps>;
+    row?: IRow<ColumnProps<T>>;
 
     /**
      * Child elements of the row
@@ -539,7 +533,7 @@ export interface IRowBase extends Omit<HTMLAttributes<HTMLTableRowElement>, 'chi
     /**
      * column cells of the row
      */
-    column?: ColumnProps;
+    column?: ColumnProps<T>;
 }
 
 /**
@@ -549,19 +543,16 @@ export interface IRowBase extends Omit<HTMLAttributes<HTMLTableRowElement>, 'chi
  * * string :- Represents text values.
  * * Date :- Represents date values.
  * * boolean :- Represents true/false values.
- * * Object :- Represents complex object values.
  * ```
- *
- * @private
  */
-export type ValueType = number | string | Date | boolean | Object;
+export type ValueType = number | string | Date | boolean;
 
 /**
  * Interface for render reference
  *
  * @private
  */
-export interface RenderRef extends HeaderPanelRef, ContentPanelRef, FooterPanelRef {
+export interface RenderRef<T = unknown> extends HeaderPanelRef, ContentPanelRef<T>, FooterPanelRef {
     /**
      * Refreshes the grid view by getting the updated data
      */
@@ -685,7 +676,7 @@ export type IHeaderRowsBase = HTMLAttributes<HTMLTableSectionElement>;
  *
  * @private
  */
-export interface ContentPanelRef extends ContentTableRef {
+export interface ContentPanelRef<T = unknown> extends ContentTableRef<T> {
     /**
      * Reference to the content panel element
      */
@@ -724,7 +715,7 @@ export interface IContentPanelBase {
  *
  * @private
  */
-export interface ContentTableRef extends ContentRowsRef {
+export interface ContentTableRef<T = unknown> extends ContentRowsRef<T> {
     /**
      * Reference to the content table element
      */
@@ -734,11 +725,11 @@ export interface ContentTableRef extends ContentRowsRef {
     /**
      * @private
      */
-    addInlineRowFormRef?: RefObject<InlineEditFormRef>;
+    addInlineRowFormRef?: RefObject<InlineEditFormRef<T>>;
     /**
      * @private
      */
-    editInlineRowFormRef?: RefObject<InlineEditFormRef>;
+    editInlineRowFormRef?: RefObject<InlineEditFormRef<T>>;
 }
 
 /**
@@ -753,7 +744,7 @@ export type IContentTableBase = HTMLAttributes<HTMLTableElement>;
  *
  * @private
  */
-export interface ContentRowsRef {
+export interface ContentRowsRef<T = unknown> {
     /**
      * Reference to the content section element
      */
@@ -764,7 +755,7 @@ export interface ContentRowsRef {
      *
      * @returns {Object[]} The current records
      */
-    getCurrentViewRecords(): Object[];
+    getCurrentViewRecords(): T[];
 
     /**
      * Gets the rows collection
@@ -778,7 +769,7 @@ export interface ContentRowsRef {
      *
      * @returns {IRow<ColumnProps>[]} The row options objects with element references
      */
-    getRowsObject(): IRow<ColumnProps>[];
+    getRowsObject(): IRow<ColumnProps<T>>[];
 
     /**
      * Gets the row by index
@@ -792,7 +783,7 @@ export interface ContentRowsRef {
      *
      * @returns {IRow<ColumnProps>}
      */
-    getRowObjectFromUID(uid: string): IRow<ColumnProps>;
+    getRowObjectFromUID(uid: string): IRow<ColumnProps<T>>;
 }
 
 /**
@@ -905,7 +896,7 @@ export interface FooterRowsRef {
 export type IContentRowsBase = HTMLAttributes<HTMLTableSectionElement>;
 
 /**
- * Defines event arguments for custom data service requests in the Grid component.
+ * Defines event arguments for custom data service requests in the Data Grid component.
  * Provides parameters for querying data from a remote or custom data source, including pagination, filtering, sorting, and searching.
  * Used to configure and execute data retrieval operations for the grid.
  */
@@ -950,7 +941,7 @@ export interface DataRequestEvent {
      *
      * @default []
      */
-    sorted?: Sorts[];
+    sort?: SortDescriptor[];
 
     /**
      * Contains an array of search criteria for full-text or field-specific searches.
@@ -968,7 +959,7 @@ export interface DataRequestEvent {
      *
      * @default []
      */
-    aggregates?: Object[];
+    aggregates?: Aggregates[];
 
     /**
      * Contains details about the grid action (e.g., paging, grouping, filtering, sorting, searching) that triggered the request.
@@ -988,11 +979,11 @@ export interface DataRequestEvent {
 }
 
 /**
- * Defines event arguments for custom data source change requests in the Grid component.
+ * Defines event arguments for custom data source change requests in the Data Grid component.
  * Provides parameters for handling data modifications, such as adding, updating, or deleting records.
  * Used to manage data change operations and their associated actions in the grid.
  */
-export interface DataChangeRequestEvent {
+export interface DataChangeRequestEvent<T = unknown> {
     /**
      * Specifies the type of action being performed, such as add, edit, or delete.
      *
@@ -1025,7 +1016,7 @@ export interface DataChangeRequestEvent {
      *
      * @default null
      */
-    data?: Object | Object[];
+    data?: T | T[];
 
     /**
      * Specifies the index of the row affected by the data change operation.
@@ -1043,7 +1034,7 @@ export interface DataChangeRequestEvent {
      *
      * @default null
      */
-    saveChanges?: Function;
+    saveDataChanges?: Function;
 
     /**
      * Specifies a function to cancel the editing process.
@@ -1052,13 +1043,14 @@ export interface DataChangeRequestEvent {
      *
      * @default null
      */
-    cancelChanges?: Function;
+    cancelDataChanges?: Function;
 
     /**
      * Specifies a promise that resolves with the result of the data change operation.
      * Enables asynchronous handling of data modifications, such as API responses.
      * Used to manage the outcome of remote data operations.
      *
+     * @private
      * @default null
      */
     promise?: Promise<Object>;
@@ -1111,11 +1103,11 @@ export interface HeaderCellRenderEvent {
  *
  * @private
  */
-export interface CellRenderEvent {
+export interface CellRenderEvent<T = unknown> {
     /**
      * Defines the row data associated with this cell.
      */
-    rowData: Object;
+    data: T;
     /** Defines the cell element.
      *
      * @blazorType CellDOM
@@ -1124,7 +1116,7 @@ export interface CellRenderEvent {
     /**
      * Defines the column object associated with this cell.
      */
-    column: ColumnProps;
+    column: ColumnProps<T>;
     /**
      * Defines the number of columns to be spanned.
      */
@@ -1140,11 +1132,11 @@ export interface CellRenderEvent {
  *
  * @private
  */
-export interface RowRenderEvent {
+export interface RowRenderEvent<T = unknown> {
     /**
      * Defines the current row data.
      */
-    data: Object;
+    data: T;
     /** Defines the row element. */
     row?: Element;
     /** Defines the row height */
@@ -1189,9 +1181,9 @@ export interface ScrollElements {
  * @private
  * @interface UseScrollResult
  */
-export interface UseScrollResult {
+export interface UseScrollResult<T> {
     /** Public API exposed to consumers */
-    publicScrollAPI: Partial<IGrid>;
+    publicScrollAPI: Partial<IGrid<T>>;
     /** Private API for internal component use */
     privateScrollAPI: {
         /** Get CSS properties based on RTL/LTR mode */
@@ -1201,11 +1193,11 @@ export interface UseScrollResult {
         /** Padding styles for header */
         headerPadding: CSSProperties;
         /** Event handler for content scroll events */
-        onContentScroll: (args: UIEvent<HTMLDivElement>) => void;
+        onContentScroll: (event: UIEvent<HTMLDivElement>) => void;
         /** Event handler for header scroll events */
-        onHeaderScroll: (args: UIEvent<HTMLDivElement>) => void;
+        onHeaderScroll: (event: UIEvent<HTMLDivElement>) => void;
         /** Event handler for footer scroll events */
-        onFooterScroll: (args: UIEvent<HTMLDivElement>) => void;
+        onFooterScroll: (event: UIEvent<HTMLDivElement>) => void;
     };
     /** Protected API for extended components */
     protectedScrollAPI: {
@@ -1226,7 +1218,7 @@ export interface UseScrollResult {
  * @private
  */
 export interface SortProperties {
-    currentTarget: Element | null;
+    currentEvent: React.MouseEvent | React.KeyboardEvent;
     isMultiSort: boolean;
     sortSettings: SortSettings;
     contentRefresh: boolean;
@@ -1238,7 +1230,7 @@ export interface SortProperties {
  *
  * @private
  */
-export interface UseDataResult {
+export interface UseDataResult<T = unknown> {
     /**
      * The function is used to generate updated Query from Grid model.
      */
@@ -1257,7 +1249,7 @@ export interface UseDataResult {
     /**
      * Perform data operations through DataManager
      */
-    getData: (args?: { requestType?: string; data?: Object; index?: number }, query?: Query) =>
+    getData: (props?: { requestType?: string; data?: T; index?: number }, query?: Query) =>
     Promise<Response | ReturnType | DataResult>;
     dataState: RefObject<PendingState>;
 }
@@ -1304,11 +1296,11 @@ export interface ServiceLocator {
  *
  * @private
  */
-export interface MutableGridSetter {
+export interface MutableGridSetter<T = unknown> {
     /**
      * Function to set the current view data.
      */
-    setCurrentViewData: Dispatch<SetStateAction<Object[]>>;
+    setCurrentViewData: Dispatch<SetStateAction<T[]>>;
     /**
      * Function to set the initial load state.
      */
@@ -1332,11 +1324,11 @@ export interface MutableGridSetter {
  *
  * @private
  */
-export interface GridResult {
+export interface GridResult<T> {
     /**
      * Public API exposed to consumers of the grid
      */
-    publicAPI: IGrid;
+    publicAPI: IGrid<T>;
 
     /**
      * Private API for internal grid operations
@@ -1371,7 +1363,7 @@ export interface GridResult {
     /**
      * Protected API for internal grid components
      */
-    protectedAPI: Partial<IGridBase>;
+    protectedAPI: Partial<IGridBase<T>>;
 }
 
 
@@ -1380,11 +1372,11 @@ export interface GridResult {
  *
  * @private
  */
-export interface UseRenderResult {
+export interface UseRenderResult<T> {
     /**
      * Public API exposed to consumers
      */
-    publicRenderAPI: Partial<IGrid>;
+    publicRenderAPI: Partial<IGrid<T>>;
 
     /**
      * Private API for internal operations
@@ -1426,8 +1418,8 @@ export interface UseRenderResult {
  *
  * @private
  */
-export interface ColumnsChildren {
-    children: ReactElement<IColumnBase>[];
+export interface ColumnsChildren<T = unknown> {
+    children: ReactElement<IColumnBase<T>>[] | ReactElement<IColumnBase<T>>;
 }
 
 /**
@@ -1436,7 +1428,7 @@ export interface ColumnsChildren {
  * @private
  */
 export interface SummaryData {
-    aggregates?: Object;
+    aggregates?: Aggregates;
     level?: number;
     parentUid?: string;
 }
@@ -1446,15 +1438,15 @@ export interface SummaryData {
  *
  * @private
  */
-export interface Group {
+export interface Group<T = unknown> {
     GroupGuid?: string;
     level?: number;
     childLevels?: number;
-    records?: Object[];
+    records?: T[];
     key?: string;
     count?: number;
-    items?: Object[];
-    aggregates?: Object;
+    items?: T[];
+    aggregates?: AggregateData<T>;
     field?: string;
-    result?: Object;
+    result?: T[];
 }

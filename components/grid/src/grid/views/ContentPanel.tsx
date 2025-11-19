@@ -8,7 +8,8 @@ import {
     memo,
     CSSProperties,
     RefObject,
-    JSX
+    JSX,
+    ReactElement
 } from 'react';
 import { ContentTableBase } from './index';
 import {
@@ -21,7 +22,7 @@ import {
 } from '../contexts';
 
 // CSS class constants following enterprise naming convention
-const CSS_CONTENT_TABLE: string = 'sf-table';
+const CSS_CONTENT_TABLE: string = 'sf-grid-table';
 
 /**
  * Default styles for content table to ensure consistent rendering
@@ -44,16 +45,16 @@ const DEFAULT_TABLE_STYLE: CSSProperties = {
  * @param {RefObject<ContentPanelRef>} ref - Forwarded ref to expose internal elements and methods
  * @returns {JSX.Element} The rendered grid content wrapper
  */
-const ContentPanelBase: ForwardRefExoticComponent<Partial<IContentPanelBase> & RefAttributes<ContentPanelRef>> =
+const ContentPanelBase: <T>(props: Partial<IContentPanelBase> & RefAttributes<ContentPanelRef<T>>) => ReactElement =
     memo(forwardRef<ContentPanelRef, Partial<IContentPanelBase>>(
-        (props: Partial<IContentPanelBase>, ref: RefObject<ContentPanelRef>) => {
+        <T, >(props: Partial<IContentPanelBase>, ref: RefObject<ContentPanelRef<T>>) => {
             const { panelAttributes, scrollContentAttributes } = props;
-            const { id } = useGridComputedProvider();
+            const { id } = useGridComputedProvider<T>();
 
             // Refs for DOM elements and child components
             const contentPanelRef: RefObject<HTMLDivElement> = useRef<HTMLDivElement>(null);
             const contentScrollRef: RefObject<HTMLDivElement> = useRef<HTMLDivElement>(null);
-            const contentTableRef: RefObject<ContentTableRef> = useRef<ContentTableRef>(null);
+            const contentTableRef: RefObject<ContentTableRef<T>> = useRef<ContentTableRef<T>>(null);
 
             /**
              * Expose internal elements and methods through the forwarded ref
@@ -65,14 +66,14 @@ const ContentPanelBase: ForwardRefExoticComponent<Partial<IContentPanelBase> & R
                 contentScrollRef: contentScrollRef.current,
 
                 // Forward all properties from ContentTable
-                ...(contentTableRef.current as ContentTableRef)
+                ...(contentTableRef.current as ContentTableRef<T>)
             }), [contentPanelRef.current, contentScrollRef.current, contentTableRef.current]);
 
             /**
              * Memoized content table component to prevent unnecessary re-renders
              */
             const contentTable: JSX.Element = useMemo(() => (
-                <ContentTableBase
+                <ContentTableBase<T>
                     ref={contentTableRef}
                     className={CSS_CONTENT_TABLE}
                     role="presentation"
@@ -107,12 +108,12 @@ const ContentPanelBase: ForwardRefExoticComponent<Partial<IContentPanelBase> & R
         const stylesEqual: boolean = JSON.stringify(prevStyle) === JSON.stringify(nextStyle);
 
         return stylesEqual && isBusyEqual;
-    });
+    }) as <T>(props: Partial<IContentPanelBase> & RefAttributes<ContentPanelRef<T>>) => ReactElement;
 
 /**
  * Set display name for debugging purposes
  */
-ContentPanelBase.displayName = 'ContentPanelBase';
+(ContentPanelBase as ForwardRefExoticComponent<Partial<IContentPanelBase> & RefAttributes<ContentPanelRef>>).displayName = 'ContentPanelBase';
 
 /**
  * Export the ContentPanelBase component for use in other components

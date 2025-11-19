@@ -3,7 +3,7 @@ import {
     Action, DataChangeRequestEvent, DataRequestEvent,
     MutableGridBase, PendingState
 } from '../types';
-import { SortDescriptorModel } from '../types/sort.interfaces';
+import { SortDescriptor } from '../types/sort.interfaces';
 import { GridActionEvent, IGrid } from '../types/grid.interfaces';
 import { FilterPredicates } from '../types/filter.interfaces';
 import { ColumnProps } from '../types/column.interfaces';
@@ -23,11 +23,11 @@ import { getCaseValue, getDatePredicate } from '../utils';
  * @returns {UseDataResult} Object containing APIs for data operations
  * @private
  */
-export const useData: (gridInstance?: Partial<IGrid> & Partial<MutableGridSetter>, gridAction?: Object,
-    dataState?: RefObject<PendingState>) => UseDataResult = (
-    gridInstance?: Partial<IGrid> & Partial<MutableGridSetter>, gridAction?: Object, dataState?: RefObject<PendingState>
-): UseDataResult => {
-    const grid: Partial<IGrid> & Partial<MutableGridSetter> & Partial<MutableGridBase> = gridInstance;
+export const useData: <T>(gridInstance?: Partial<IGrid<T>> & Partial<MutableGridSetter<T>>, gridAction?: Object,
+    dataState?: RefObject<PendingState>) => UseDataResult<T> = <T>(
+    gridInstance?: Partial<IGrid<T>> & Partial<MutableGridSetter<T>>, gridAction?: Object, dataState?: RefObject<PendingState>
+): UseDataResult<T> => {
+    const grid: Partial<IGrid<T>> & Partial<MutableGridSetter<T>> & Partial<MutableGridBase<T>> = gridInstance;
     const dataManager: DataManager | DataResult = useMemo(() => {
         const gridDataSource: DataManager | DataResult = grid.dataSource as DataManager | DataResult;
         return gridDataSource;
@@ -64,15 +64,16 @@ export const useData: (gridInstance?: Partial<IGrid> & Partial<MutableGridSetter
 
     const sortQuery: (query: Query) => Query = useCallback((query: Query): Query => {
         if ((grid?.sortSettings?.enabled && grid.sortSettings?.columns?.length)) {
-            const columns: SortDescriptorModel[] = grid.sortSettings?.columns;
+            const columns: SortDescriptor[] = grid.sortSettings?.columns;
             for (let i: number = columns.length - 1; i > -1; i--) {
-                const col: ColumnProps = grid.columns.find((c: ColumnProps) => c.field === columns[parseInt(i.toString(), 10)].field);
+                const col: ColumnProps<T> = (grid.columns as ColumnProps<T>[]).find((c: ColumnProps<T>) =>
+                    c.field === columns[parseInt(i.toString(), 10)].field);
                 col.sortDirection = columns[parseInt(i.toString(), 10)].direction;
                 let fn: Function | string = columns[parseInt(i.toString(), 10)].direction;
-                if (col.onSortComparer) {
-                    fn = !isRemote() ? (col.onSortComparer as Function).bind(col) : columns[parseInt(i.toString(), 10)].direction;
+                if (col.sortComparer) {
+                    fn = !isRemote() ? (col.sortComparer as Function).bind(col) : columns[parseInt(i.toString(), 10)].direction;
                 }
-                if (col.onSortComparer) {
+                if (col.sortComparer) {
                     query.sortByForeignKey(col.field, fn, undefined, columns[parseInt(i.toString(), 10)].direction.toLowerCase());
                 } else {
                     query.sortBy(col.field, fn);
@@ -82,9 +83,9 @@ export const useData: (gridInstance?: Partial<IGrid> & Partial<MutableGridSetter
         return query;
     }, [grid?.sortSettings, grid?.sortSettings?.enabled]);
 
-    const grabColumnByFieldFromAllCols: (field: string) => ColumnProps = (field: string): ColumnProps => {
-        let column: ColumnProps;
-        const gCols: ColumnProps[] = grid.columns;
+    const grabColumnByFieldFromAllCols: (field: string) => ColumnProps<T> = (field: string): ColumnProps<T> => {
+        let column: ColumnProps<T>;
+        const gCols: ColumnProps<T>[] = grid.columns as ColumnProps<T>[];
         for (let i: number = 0; i < gCols?.length; i++) {
             if (field === gCols[parseInt(i.toString(), 10)].field) {
                 column = gCols[parseInt(i.toString(), 10)];
@@ -97,22 +98,22 @@ export const useData: (gridInstance?: Partial<IGrid> & Partial<MutableGridSetter
     const filterQuery: (query: Query) => Query = useCallback((query: Query): Query => {
         const predicateList: Predicate[] = [];
         if (grid.filterSettings?.enabled && grid.filterSettings?.columns?.length) {
-            const gObj: Partial<IGrid> & Partial<MutableGridSetter> = grid;
+            const gObj: Partial<IGrid<T>> & Partial<MutableGridSetter<T>> = grid;
             const columns: FilterPredicates[] = grid.filterSettings?.columns;
             const colType: Object = {};
-            for (const col of gObj.columns as ColumnProps[]) {
+            for (const col of gObj.columns as ColumnProps<T>[]) {
                 colType[col.field] = grid?.filterSettings?.type;
             }
             const defaultFltrCols: FilterPredicates[] = [];
             for (const col of columns) {
-                const gridColumn: ColumnProps = gObj.columns.find((c: ColumnProps) => c.field === col.field);
+                const gridColumn: ColumnProps<T> = (gObj.columns as ColumnProps<T>[]).find((c: ColumnProps<T>) => c.field === col.field);
                 if (isNullOrUndefined(col.type) && gridColumn && (gridColumn.type === 'dateonly' || gridColumn.type === 'datetime' || gridColumn.type === 'date')) {
-                    col.type = (gObj.columns.find((c: ColumnProps) => c.field === col.field)).type;
+                    col.type = (gObj.columns.find((c: ColumnProps<T>) => c.field === col.field)).type;
                 }
                 defaultFltrCols.push(col);
             }
             for (let i: number = 0, len: number = defaultFltrCols.length; i < len; i++) {
-                const columnFromField: ColumnProps = grabColumnByFieldFromAllCols(defaultFltrCols[parseInt(i.toString(), 10)].field);
+                const columnFromField: ColumnProps<T> = grabColumnByFieldFromAllCols(defaultFltrCols[parseInt(i.toString(), 10)].field);
                 defaultFltrCols[parseInt(i.toString(), 10)].uid = defaultFltrCols[parseInt(i.toString(), 10)].uid ||
                     columnFromField?.uid;
             }
@@ -158,7 +159,7 @@ export const useData: (gridInstance?: Partial<IGrid> & Partial<MutableGridSetter
         for (let i: number = 0; rows && i < rows.length; i++) {
             const row: AggregateRowProps = rows[parseInt(i.toString(), 10)];
             for (let j: number = 0; j < row.columns.length; j++) {
-                const cols: AggregateColumnProps = row.columns[parseInt(j.toString(), 10)];
+                const cols: AggregateColumnProps<T> = row.columns[parseInt(j.toString(), 10)];
                 const types: string[] = cols.type instanceof Array ? cols.type : [cols.type];
                 for (let k: number = 0; k < types.length; k++) {
                     query.aggregate(types[parseInt(k.toString(), 10)].toLowerCase(), cols.field);
@@ -192,7 +193,7 @@ export const useData: (gridInstance?: Partial<IGrid> & Partial<MutableGridSetter
 
     const getSearchColumnFieldNames: () => string[] = (): string[] => {
         const colFieldNames: string[] = [];
-        const columns: ColumnProps[] = grid.columns;
+        const columns: ColumnProps<T>[] = grid.columns as ColumnProps<T>[];
         for (const col of columns) {
             if (col.allowSearch && !isNullOrUndefined(col.field)) {
                 colFieldNames.push(col.field);
@@ -267,8 +268,8 @@ export const useData: (gridInstance?: Partial<IGrid> & Partial<MutableGridSetter
         return predicate;
     };
 
-    const getData: (args?: { requestType?: string; data?: Object; index?: number }, query?: Query) => Promise<Object> = useCallback(async (
-        args: { requestType?: string; data?: Object; index?: number } = { requestType: '' },
+    const getData: (args?: { requestType?: string; data?: T; index?: number }, query?: Query) => Promise<Object> = useCallback(async (
+        args: { requestType?: string; data?: T; index?: number } = { requestType: '' },
         query?: Query
     ): Promise<Object> => {
         const currentQuery: Query = query || generateQuery().requiresCount();
@@ -280,10 +281,10 @@ export const useData: (gridInstance?: Partial<IGrid> & Partial<MutableGridSetter
             return def.promise;
         } else {
             switch (args.requestType) {
-            case 'delete': {
+            case 'Delete': {
                 if (Array.isArray(args.data)) {
                     // Multiple deletions
-                    const changes: { addedRecords: Object[]; deletedRecords: Object[]; changedRecords: Object[] } = {
+                    const changes: { addedRecords: T[]; deletedRecords: T[]; changedRecords: T[] } = {
                         addedRecords: [],
                         deletedRecords: args.data,
                         changedRecords: []
@@ -328,16 +329,16 @@ export const useData: (gridInstance?: Partial<IGrid> & Partial<MutableGridSetter
         return extend(data, state.pvtData);
     };
 
-    const eventPromise: (args: { requestType?: string; data?: Object; index?: number }, query: Query, key: string) => Deferred =
-        useCallback((args: { requestType?: string; data?: Object; index?: number }, query: Query, key: string): Deferred => {
+    const eventPromise: (args: { requestType?: string; data?: T; index?: number }, query: Query, key: string) => Deferred =
+        useCallback((args: { requestType?: string; data?: T; index?: number }, query: Query, key: string): Deferred => {
             const def: Deferred = new Deferred();
             const requestType: Action = (gridAction as GridActionEvent).requestType;
             if (requestType !== undefined || args.requestType !== undefined) {
                 const state: DataRequestEvent = getStateEventArgument(query);
                 state.name = 'onDataRequest';
-                if (args.requestType === 'save' || args.requestType === 'delete') {
+                if (args.requestType === 'save' || args.requestType === 'Delete') {
                     const argsRef: {
-                        requestType?: string; data?: Object; rowData?: Object; index?: number;
+                        requestType?: string; data?: T; rowData?: T; index?: number;
                         cancel?: boolean; previousData?: Object; type?: string; rows?: Element[];
                     } = { ...args };
                     delete argsRef.cancel;
@@ -352,12 +353,12 @@ export const useData: (gridInstance?: Partial<IGrid> & Partial<MutableGridSetter
                     }
                     state.action = <{}>argsRef;
                     const deff: Deferred = new Deferred();
-                    const editArgs: DataChangeRequestEvent = argsRef;
+                    const editArgs: DataChangeRequestEvent<T> = argsRef;
                     editArgs.key = key;
                     editArgs.promise = deff.promise;
                     editArgs.state = state;
-                    editArgs.saveChanges = deff.resolve;
-                    editArgs.cancelChanges = deff.reject;
+                    editArgs.saveDataChanges = deff.resolve;
+                    editArgs.cancelDataChanges = deff.reject;
                     grid.onDataChangeRequest?.(editArgs);
                     deff.promise.then(() => {
                         dataState.current = { isPending: true, resolver: def.resolve, isEdit: true };

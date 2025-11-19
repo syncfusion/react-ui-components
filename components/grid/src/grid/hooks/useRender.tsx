@@ -32,7 +32,7 @@ import {
 import { defaultColumnProps } from '../hooks';
 import { Columns, RenderBase, Aggregates } from '../views';
 import { addLastRowBorder, compareSelectedProperties, getObject, setFormatter } from '../utils';
-import { FilterEvent, PageEvent, SearchEvent, SortEvent } from '../types';
+import { ActionType, FilterEvent, PageEvent, SearchEvent, SortEvent } from '../types';
 
 /**
  * CSS class names used in the component
@@ -48,12 +48,12 @@ const CSS_CLASS_NAMES: Record<string, string> = {
  * @private
  * @returns {UseRenderResult} Object containing APIs for grid rendering
  */
-export const useRender: () => UseRenderResult = (): UseRenderResult => {
-    const grid: Partial<GridRef> & Partial<MutableGridSetter> = useGridComputedProvider();
+export const useRender: <T>() => UseRenderResult<T> = <T, >(): UseRenderResult<T> => {
+    const grid: Partial<GridRef<T>> & Partial<MutableGridSetter<T>> = useGridComputedProvider<T>();
     const { setCurrentViewData, setInitialLoad, setTotalRecordsCount, aggregates, pageSettings,
-        height, contentPanelRef, contentTableRef } = grid;
+        height, contentPanelRef, contentTableRef, sortSettings } = grid;
     const { currentViewData, currentPage, gridAction, uiColumns, isInitialLoad,
-        setResponseData, dataModule, totalRecordsCount } = useGridMutableProvider();
+        setResponseData, dataModule, totalRecordsCount } = useGridMutableProvider<T>();
 
     const [isLayoutRendered, setIsLayoutRendered] = useState<boolean>(false);
     const [isContentBusy, setIsContentBusy] = useState<boolean>(true);
@@ -75,7 +75,7 @@ export const useRender: () => UseRenderResult = (): UseRenderResult => {
 
     const updateColumnTypes: (data: Object) => void = useCallback((data: Object) => {
         let value: string | number | boolean | Object;
-        (uiColumns ?? grid.columns).map((newColumn: Partial<IColumnBase>) => {
+        (uiColumns ?? grid.columns).map((newColumn: Partial<IColumnBase<T>>) => {
             if (isNullOrUndefined(newColumn.field)) {
                 return newColumn;
             }
@@ -98,9 +98,9 @@ export const useRender: () => UseRenderResult = (): UseRenderResult => {
                 newColumn.formatFn = valueFormatter.getFormatFunction(extend({}, newColumn.format as DateFormatOptions));
                 newColumn.parseFn = valueFormatter.getParserFunction(newColumn.format as DateFormatOptions);
             }
-            if (newColumn.onSortComparer) {
-                let a: Function = newColumn.onSortComparer;
-                newColumn.onSortComparer = (x: number | string, y: number | string, xObj?: Object, yObj?: Object) => {
+            if (newColumn.sortComparer) {
+                let a: Function = newColumn.sortComparer;
+                newColumn.sortComparer = (x: number | string, y: number | string, xObj?: Object, yObj?: Object) => {
                     if (typeof a === 'string') {
                         a = getObject(a, window) as Function;
                     }
@@ -134,13 +134,13 @@ export const useRender: () => UseRenderResult = (): UseRenderResult => {
     const dataManagerSuccess: (response: Response | ReturnType) => void = useCallback((response: Response | ReturnType): void => {
         const data: ReturnType = response as ReturnType;
         if (!data?.result?.length && data.count && grid.pageSettings?.enabled
-            && gridAction.requestType !== 'paging') {
+            && gridAction.requestType !== ActionType.Paging) {
             if (Object.keys(gridAction).length) {
                 delete gridAction.cancel;
-                if (gridAction.requestType === 'filtering' || gridAction.requestType === 'clearFiltering') {
+                if (gridAction.requestType === ActionType.Filtering || gridAction.requestType === ActionType.ClearFiltering) {
                     gridAction.type = 'filtered';
                     grid.onFilter?.(gridAction);
-                } else if (gridAction.requestType === 'searching') {
+                } else if (gridAction.requestType === ActionType.Searching) {
                     gridAction.type = 'searched';
                     grid.onSearch?.(gridAction);
                 }
@@ -158,7 +158,7 @@ export const useRender: () => UseRenderResult = (): UseRenderResult => {
             grid.onDataLoadStart(data);
         }
         grid.clearSelection();
-        setCurrentViewData(data.result as Object[]);
+        setCurrentViewData(data.result as T[]);
         if (!isColTypeDef.current && data.result.length > 0) {
             updateColumnTypes(data.result[0]);
         }
@@ -170,7 +170,7 @@ export const useRender: () => UseRenderResult = (): UseRenderResult => {
      */
     const dataManagerFailure: (error: Error) => void = useCallback((error: Error): void => {
         setIsContentBusy(false);
-        grid.onError?.({ error });
+        grid.onError?.(error);
     }, [grid.onError]);
 
     /**
@@ -231,31 +231,32 @@ export const useRender: () => UseRenderResult = (): UseRenderResult => {
             }
             if (Object.keys(gridAction).length) {
                 delete gridAction.cancel;
-                if (gridAction.requestType === 'filtering' || gridAction.requestType === 'clearFiltering') {
+                if (gridAction.requestType === ActionType.Filtering || gridAction.requestType === ActionType.ClearFiltering) {
                     gridAction.type = 'filtered';
                     const eventArgs: FilterEvent = {
                         action: (gridAction as FilterEvent).action,
                         columns: (gridAction as FilterEvent).columns,
                         currentFilterColumn: (gridAction as FilterEvent).currentFilterColumn,
-                        currentFilterObject: (gridAction as FilterEvent).currentFilterObject
+                        currentFilterPredicate: (gridAction as FilterEvent).currentFilterPredicate
                     };
                     grid.onFilter?.(eventArgs);
-                } else if (gridAction.requestType === 'sorting' || gridAction.requestType === 'clearSorting') {
+                } else if (gridAction.requestType === ActionType.Sorting || gridAction.requestType === ActionType.ClearSorting) {
                     gridAction.type = 'sorted';
                     const eventArgs: SortEvent = {
                         direction: (gridAction as SortEvent).direction,
                         field: (gridAction as SortEvent).field,
-                        target: (gridAction as SortEvent).target,
-                        action: gridAction.requestType
+                        event: (gridAction as SortEvent).event,
+                        action: gridAction.requestType,
+                        columns: sortSettings.columns
                     };
                     grid.onSort?.(eventArgs);
-                } else if (gridAction.requestType === 'searching') {
+                } else if (gridAction.requestType === ActionType.Searching) {
                     gridAction.type = 'searched';
                     const eventArgs: SearchEvent = {
                         value: (gridAction as SearchEvent).value
                     };
                     grid.onSearch?.(eventArgs);
-                } else if (gridAction.requestType === 'paging') {
+                } else if (gridAction.requestType === ActionType.Paging) {
                     gridAction.type = 'pageChanged';
                     const eventArgs: PageEvent = {
                         currentPage: (gridAction as PageEvent).currentPage,
@@ -263,7 +264,7 @@ export const useRender: () => UseRenderResult = (): UseRenderResult => {
                         totalRecordsCount: totalRecordsCount
                     };
                     grid.onPageChange?.(eventArgs);
-                } else if (gridAction.requestType === 'refresh') {
+                } else if (gridAction.requestType === 'Refresh') {
                     gridAction.type = 'refreshed';
                     grid.onRefresh?.();
                 }
@@ -285,15 +286,15 @@ export const useRender: () => UseRenderResult = (): UseRenderResult => {
     }, []);
 
     // Memoize APIs to prevent unnecessary re-renders
-    const publicRenderAPI: Partial<IGrid> = useMemo(() => ({ ...grid }), [grid]);
+    const publicRenderAPI: Partial<IGrid<T>> = useMemo(() => ({ ...grid }), [grid]);
 
-    const privateRenderAPI: UseRenderResult['privateRenderAPI'] = useMemo(() => ({
+    const privateRenderAPI: UseRenderResult<T>['privateRenderAPI'] = useMemo(() => ({
         contentStyles,
         isLayoutRendered,
         isContentBusy
     }), [contentStyles, isLayoutRendered, isContentBusy]);
 
-    const protectedRenderAPI: UseRenderResult['protectedRenderAPI'] = useMemo(() => ({
+    const protectedRenderAPI: UseRenderResult<T>['protectedRenderAPI'] = useMemo(() => ({
         refresh: refreshDataManager,
         showSpinner,
         hideSpinner
@@ -351,7 +352,7 @@ function getUIColumnCompareKeys(): ColumnCompareKeys {
     return [
         'textAlign', 'headerTextAlign', 'disableHtmlEncode', 'clipMode', 'customAttributes', 'format', 'displayAsCheckBox', 'allowEdit',
         'templateSettings', 'edit', 'width', 'visible', 'headerText', 'template', 'headerTemplate', 'editTemplate',
-        'onValueAccessor'
+        'valueAccessor'
     ];
 }
 
@@ -376,25 +377,25 @@ function getAggregateColumnCompareKeys(): AggregateColumnCompareKeys {
  * @param {ColumnProps[]} prevColumns - previous columns which is used to compare old and new and detect whether customer changed state is related to column or not.
  * @returns {Object} Object containing columns, depth, children, and column group elements
  */
-const prepareColumns: (
-    children: ReactNode | (ColumnProps | ReactElement)[],
+const prepareColumns: <T>(
+    children: ReactNode | (ColumnProps<T> | ReactElement)[],
     parentDepth?: number,
     parentIndex?: string,
-    prevColumns?: ColumnProps[]
+    prevColumns?: ColumnProps<T>[]
 ) => {
-    columns: ColumnProps[];
+    columns: ColumnProps<T>[];
     depth: number;
     children: ReactNode;
     colGroup: JSX.Element[];
     isColumnChanged: boolean;
     isUIColumnpropertiesChanged: boolean;
-} = (
-    children: ReactNode | (ColumnProps | ReactElement)[],
+} = <T, >(
+    children: ReactNode | (ColumnProps<T> | ReactElement)[],
     parentDepth: number = 0,
     parentIndex: string = '',
-    prevColumns?: ColumnProps[]
+    prevColumns?: ColumnProps<T>[]
 ): {
-    columns: ColumnProps[];
+    columns: ColumnProps<T>[];
     depth: number;
     children: ReactNode;
     colGroup: JSX.Element[];
@@ -404,7 +405,7 @@ const prepareColumns: (
     let maxDepth: number = parentDepth;
     let isColumnChanged: boolean = false; // currently used/handled always column state changed manner even unrelated state change props.children changed.
     let isUIColumnpropertiesChanged: boolean = false;
-    const columns: ColumnProps[] = [];
+    const columns: ColumnProps<T>[] = [];
     const adjustedChildren: ReactNode[] = [];
     const colGroup: JSX.Element[] = [];
     const childArray: ReactElement[] = Array.isArray(children)
@@ -421,7 +422,7 @@ const prepareColumns: (
             child.type === Columns ||
             child.type === Column
         )) {
-            const columnProps: ColumnProps = defaultColumnProps(child.props as ColumnProps);
+            const columnProps: ColumnProps<T> = defaultColumnProps<T>(child.props as ColumnProps<T>);
             // Generate a unique key for the column
             const columnKey: string = generateUniqueKey(columnProps, currentIndex);
 
@@ -429,13 +430,13 @@ const prepareColumns: (
                 // Check for and process nested columns
                 if ((child.props as { children: ReactNode })?.children) {
                     const childContents: {
-                        columns: ColumnProps[];
+                        columns: ColumnProps<T>[];
                         depth: number;
                         children: ReactNode;
                         colGroup: JSX.Element[];
                         isColumnChanged: boolean;
                         isUIColumnpropertiesChanged: boolean;
-                    } = prepareColumns(
+                    } = prepareColumns<T>(
                         (child.props as { children: ReactElement })?.children,
                         parentDepth + 1,
                         currentIndex,
@@ -480,7 +481,7 @@ const prepareColumns: (
                 }
 
                 adjustedChildren.push(
-                    <ColumnBase key={`col-base-${columnKey}`} {...columnProps}>
+                    <ColumnBase<T> key={`col-base-${columnKey}`} {...columnProps}>
                         {(child.props as { children: ReactElement })?.children}
                     </ColumnBase>
                 );
@@ -492,7 +493,7 @@ const prepareColumns: (
                     children,
                     isColumnChanged: isChildrenColumnsChanged,
                     isUIColumnpropertiesChanged: isChildrenColumnsUIChanged
-                } = prepareColumns(
+                } = prepareColumns<T>(
                     (child.props as { children: ReactElement })?.children,
                     parentDepth,
                     currentIndex,
@@ -508,7 +509,7 @@ const prepareColumns: (
                 maxDepth = Math.max(maxDepth, depth);
             }
         } else if (isColumnObject(child)) {
-            const columnObject: ColumnProps = defaultColumnProps(child);
+            const columnObject: ColumnProps<T> = defaultColumnProps<T>(child as ColumnProps<T>);
             const columnKey: string = generateUniqueKey(columnObject, currentIndex, 'obj-');
 
             if (prevColumns?.[i as number]?.field === columnObject.field) {
@@ -528,7 +529,7 @@ const prepareColumns: (
                 isUIColumnpropertiesChanged = isUIColumnpropertiesChanged || hasUIChanged;
             }
             columns.push(columnObject);
-            adjustedChildren.push(<ColumnBase key={columnKey} {...columnObject} />);
+            adjustedChildren.push(<ColumnBase<T> key={columnKey} {...columnObject} />);
 
             // Generate col element for object definitions
             colGroup.push(
@@ -552,7 +553,7 @@ const prepareColumns: (
     return {
         columns,
         depth: maxDepth,
-        children: <RenderBase key={'Columns'}>{adjustedChildren}</RenderBase>,
+        children: <RenderBase<T> key={'Columns'}>{adjustedChildren}</RenderBase>,
         colGroup,
         isColumnChanged,
         isUIColumnpropertiesChanged
@@ -591,12 +592,12 @@ function isColumnObject(child: ColumnProps | ReactNode): child is ColumnProps {
  * @param {RefObject<boolean>} isInitialBeforePaint - UI column properties changes not trigger event purpose boolean
  * @returns {Partial<IGridBase>} Updated grid properties with processed columns
  */
-export const useColumns: (props: Partial<IGridBase>, gridRef: RefObject<GridRef>, dataState?: RefObject<PendingState>,
+export const useColumns: <T>(props: Partial<IGridBase<T>>, gridRef: RefObject<GridRef<T>>, dataState?: RefObject<PendingState>,
     isInitialBeforePaint?: RefObject<boolean>) =>
-Partial<IGridBase> & { uiColumns: ColumnProps[] } =
-    (props: Partial<IGridBase>, gridRef: RefObject<GridRef>, dataState?: RefObject<PendingState>,
-     isInitialBeforePaint?: RefObject<boolean>): Partial<IGridBase> & { uiColumns: ColumnProps[] } => {
-        const prevPrepareColumns: RefObject<PrepareColumns> = useRef({} as PrepareColumns);
+Partial<IGridBase<T>> & { uiColumns: ColumnProps<T>[] } =
+    <T, >(props: Partial<IGridBase<T>>, gridRef: RefObject<GridRef<T>>, dataState?: RefObject<PendingState>,
+        isInitialBeforePaint?: RefObject<boolean>): Partial<IGridBase<T>> & { uiColumns: ColumnProps<T>[] } => {
+        const prevPrepareColumns: RefObject<PrepareColumns<T>> = useRef({} as PrepareColumns<T>);
         const isNoColumnRemoteData: boolean = useMemo(() => {
             return !props.columns && !props.children && props.dataSource instanceof DataManager && props.dataSource.dataSource.url
                 && Array.isArray(gridRef.current?.currentViewData) && gridRef.current?.currentViewData?.length > 0;
@@ -605,8 +606,8 @@ Partial<IGridBase> & { uiColumns: ColumnProps[] } =
             if (dataState.current.isPending) {
                 return prevPrepareColumns.current;
             }
-            const result: PrepareColumns = prepareColumns(
-                props.columns ??
+            const result: PrepareColumns<T> = prepareColumns<T>(
+                props.columns as ColumnProps<T>[] ??
                 props.children ??
                 ((Array.isArray(props.dataSource) && (props.dataSource as Object[]).length > 0)
                     ? Object.keys((props.dataSource as Object[])[0])
@@ -621,7 +622,7 @@ Partial<IGridBase> & { uiColumns: ColumnProps[] } =
                                 headerText: key
                             }))
                         : undefined)
-                ), null, null, gridRef.current?.columns
+                ), null, null, gridRef.current?.columns as ColumnProps<T>[]
             );
             if (!result.isColumnChanged && gridRef.current?.columns) {
                 if (result.isUIColumnpropertiesChanged || prevPrepareColumns.current?.columns?.length !== result.columns?.length) {
@@ -676,11 +677,11 @@ const generateDirectiveAggregates: (props: { children?: ReactNode }) => Aggregat
         return aggregates;
     };
 
-const prepareAggregates: (aggregates: AggregateRowProps[], gridRef: RefObject<GridRef>) => boolean =
-(aggregates: AggregateRowProps[], gridRef: RefObject<GridRef>): boolean => {
+const prepareAggregates: <T>(aggregates: AggregateRowProps[], gridRef: RefObject<GridRef<T>>) => boolean =
+<T, >(aggregates: AggregateRowProps[], gridRef: RefObject<GridRef<T>>): boolean => {
     let isAggregateColumnsChanged: boolean = false;
     for (let i: number = 0; i < aggregates?.length; i++) {
-        const columns: AggregateColumnProps[] = aggregates[parseInt(i.toString(), 10)].columns;
+        const columns: AggregateColumnProps<T>[] = aggregates[parseInt(i.toString(), 10)].columns;
         for (let j: number = 0; j < columns.length; j++) {
             if (!columns[parseInt(j.toString(), 10)].columnName) {
                 if (gridRef.current?.aggregates?.[i as number]?.columns?.[j as number]?.columnName === columns[j as number].columnName
@@ -701,8 +702,8 @@ const prepareAggregates: (aggregates: AggregateRowProps[], gridRef: RefObject<Gr
     return isAggregateColumnsChanged;
 };
 
-export const useAggregates: (props: Partial<IGridBase>, gridRef?: RefObject<GridRef>) => AggregateRowProps[] =
-    (props: Partial<IGridBase>, gridRef?: RefObject<GridRef>): AggregateRowProps[] => {
+export const useAggregates: <T>(props: Partial<IGridBase<T>>, gridRef?: RefObject<GridRef<T>>) => AggregateRowProps[] =
+    <T, >(props: Partial<IGridBase<T>>, gridRef?: RefObject<GridRef<T>>): AggregateRowProps[] => {
         let aggregates: AggregateRowProps[] = [];
         let isAggregateColumnsChanged: boolean = false;
         const childArray: ReactElement[] = Array.isArray(props.children)
@@ -716,7 +717,7 @@ export const useAggregates: (props: Partial<IGridBase>, gridRef?: RefObject<Grid
         } else if (directiveAggregates) {
             aggregates = useMemo(() => generateDirectiveAggregates(directiveAggregates.props), [props.children]);
         }
-        isAggregateColumnsChanged = prepareAggregates(aggregates, gridRef);
+        isAggregateColumnsChanged = prepareAggregates<T>(aggregates, gridRef);
         return useMemo(() => {
             if (isAggregateColumnsChanged) {
                 return aggregates;
