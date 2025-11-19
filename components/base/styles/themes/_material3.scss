@@ -57,6 +57,7 @@
   --color-sf-warning-text: 255, 255, 255;
   --color-sf-error-text: 255, 255, 255;
   --color-sf-info-text: 255, 255, 255;
+  --color-sf-line-color: 231, 227, 240;
 }
 
 $black: sf-color('black') !default;
@@ -108,6 +109,8 @@ $success-text: sf-color('success-text') !default;
 $warning-text: sf-color('warning-text') !default;
 $info-text: sf-color('info-text') !default;
 $error-text: sf-color('error-text') !default;
+$grid-line: sf-color('line-color') !default;
+$pager-line: sf-color('line-color') !default;
 
 $surface1: linear-gradient(0deg, rgba($primary, $opacity5), rgba($primary, $opacity5)), rgba($surface) !default;
 $surface2: linear-gradient(0deg, rgba($primary, $opacity8), rgba($primary, $opacity8)), rgba($surface) !default;
@@ -550,6 +553,7 @@ $gray-400: #ced4da !default;
   --color-sf-warning-text: 0, 0, 0;
   --color-sf-info-text: 0, 0, 0;
   --color-sf-error-text: 0, 0, 0;
+  --color-sf-line-color: 57, 53, 67;
 }
 
 $font-size: 1rem !default;

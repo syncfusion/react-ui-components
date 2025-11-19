@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect, RefObject, SetStateAction, Dispatch } from 'react';
-import { EditEndAction, IRow, ValueType } from '../types';
+import { ActionType, EditEndAction, IRow, ValueType } from '../types';
 import { GridRef, RowInfo } from '../types/grid.interfaces';
-import { EditSettings, EditState, UseEditResult, UseConfirmDialogResult, SaveEvent, DeleteEvent, CancelFormEvent, FormRenderEvent, RowAddEvent, RowEditEvent } from '../types/edit.interfaces';
+import { EditSettings, EditState, UseEditResult, UseConfirmDialogResult, SaveEvent, DeleteEvent, FormCancelEvent, FormRenderEvent, RowAddEvent, RowEditEvent } from '../types/edit.interfaces';
 import { ColumnProps } from '../types/column.interfaces';
 import { UseDataResult } from '../types/interfaces';
 import { useConfirmDialog } from './useEditDialog';
@@ -10,6 +10,7 @@ import { IL10n, isNullOrUndefined, addClass } from '@syncfusion/react-base';
 import { FocusedCellInfo, FocusStrategyResult } from '../types/focus.interfaces';
 import { DataManager, DataResult, DataUtil, ReturnType } from '@syncfusion/react-data';
 import { FormState, IFormValidator } from '@syncfusion/react-inputs';
+import { selectionModule } from '../types/selection.interfaces';
 
 /**
  * Edit hook for managing inline editing functionality in React Grid
@@ -21,37 +22,40 @@ import { FormState, IFormValidator } from '@syncfusion/react-inputs';
  * @param {Object[]} currentViewData - Current data source array
  * @param {UseDataResult} dataOperations - Data operations object containing DataManager and related methods
  * @param {FocusStrategyResult} focusModule - Reference to the focus module
+ * @param {selectionModule} selectionModule - Reference to the selection module
  * @param {EditSettings} editSettings - Edit configuration settings
  * @param {Dispatch<SetStateAction<Object>>} setGridAction - Function to set grid actions
  * @param {Dispatch<SetStateAction<number>>} setCurrentPage - Function to set grid currentpage
  * @param {Dispatch<SetStateAction<Object>>} setResponseData - Function to set aggregate updated data
  * @returns {Object} Edit state and methods
  */
-export const useEdit: (
-    _gridRef: RefObject<GridRef>,
+export const useEdit: <T>(
+    _gridRef: RefObject<GridRef<T>>,
     serviceLocator: ServiceLocator,
-    columns: ColumnProps[],
-    currentViewData: Object[],
-    dataOperations: UseDataResult,
+    columns: ColumnProps<T>[],
+    currentViewData: T[],
+    dataOperations: UseDataResult<T>,
     focusModule: FocusStrategyResult,
-    editSettings: EditSettings,
+    selectionModule: selectionModule<T>,
+    editSettings: EditSettings<T>,
     setGridAction: Dispatch<SetStateAction<Object>>,
     setCurrentPage: Dispatch<SetStateAction<number>>,
     setResponseData: Dispatch<SetStateAction<Object>>
-) => UseEditResult = (
-    _gridRef: RefObject<GridRef>,
+) => UseEditResult<T> = <T>(
+    _gridRef: RefObject<GridRef<T>>,
     serviceLocator: ServiceLocator,
-    columns: ColumnProps[],
-    currentViewData: Object[],
-    dataOperations: UseDataResult,
+    columns: ColumnProps<T>[],
+    currentViewData: T[],
+    dataOperations: UseDataResult<T>,
     focusModule: FocusStrategyResult,
-    editSettings: EditSettings,
+    selectionModule: selectionModule<T>,
+    editSettings: EditSettings<T>,
     setGridAction: Dispatch<SetStateAction<Object>>,
     setCurrentPage: Dispatch<SetStateAction<number>>,
     setResponseData: Dispatch<SetStateAction<Object>>
 ) => {
     // Use currentViewData (processed array) for display
-    const viewData: Object[] = currentViewData;
+    const viewData: T[] = currentViewData;
 
     const dialogHook: UseConfirmDialogResult = useConfirmDialog(serviceLocator);
     const localization: IL10n = serviceLocator?.getService<IL10n>('localization');
@@ -63,7 +67,7 @@ export const useEdit: (
     const notKeyBoardAllowedClickRowInfo: RefObject<RowInfo> = useRef<RowInfo>({});
 
     // Edit state management
-    const [editState, setEditState] = useState<EditState>({
+    const [editState, setEditState] = useState<EditState<T>>({
         isEdit: false,
         editRowIndex: -1,
         editCellField: null,
@@ -78,7 +82,7 @@ export const useEdit: (
     /**
      * Default edit settings with fallbacks
      */
-    const defaultEditSettings: EditSettings = {
+    const defaultEditSettings: EditSettings<T> = {
         allowAdd: false,
         allowEdit: false,
         allowDelete: false,
@@ -101,7 +105,7 @@ export const useEdit: (
     ]);
 
     const validateField: (field: string) => boolean = useCallback((field: string): boolean => {
-        const column: ColumnProps | undefined = columns.find((col: ColumnProps) => col.field === field);
+        const column: ColumnProps<T> | undefined = columns.find((col: ColumnProps<T>) => col.field === field);
         if (!column || !column.validationRules) {
             return true;
         }
@@ -124,7 +128,7 @@ export const useEdit: (
     /**
      * Starts editing for the specified row or selected row
      */
-    const editRow: (rowElement?: HTMLTableRowElement) => Promise<void> = useCallback(async (rowElement?: HTMLTableRowElement) => {
+    const editRecord: (rowElement?: HTMLTableRowElement) => Promise<void> = useCallback(async (rowElement?: HTMLTableRowElement) => {
         const eventTarget: HTMLElement = event?.target as HTMLElement;
         if (!defaultEditSettings.allowEdit) {
             return;
@@ -165,7 +169,7 @@ export const useEdit: (
                 message: message,
                 confirmText: localization.getConstant('okButtonLabel'),
                 cancelText: '',
-                type: 'info'
+                type: 'Info'
             });
             eventTarget?.focus?.();
             return;
@@ -176,25 +180,25 @@ export const useEdit: (
             return;
         }
 
-        const rowData: Object = viewData[rowIndex as number];
-        if (!rowData) {
+        const data: T = viewData[rowIndex as number];
+        if (!data) {
             return;
         }
 
-        const actionBeginArgs: Record<string, ValueType | null> = {
+        const actionBeginArgs: Record<string, ValueType | Object | null> = {
             cancel: false,
-            requestType: 'beginEdit',
+            requestType: 'BeginEdit',
             type: 'actionBegin',
             rowIndex: rowIndex,
-            action: 'beginEdit',
-            rowData: { ...rowData }
+            action: 'BeginEdit',
+            data: { ...data }
         };
 
         // Get grid reference for actionBegin event
         const gridRef: GridRef | null = _gridRef?.current;
-        const startArgs: RowEditEvent = {
+        const startArgs: RowEditEvent<T> = {
             cancel: false,
-            rowData: actionBeginArgs.rowData,
+            data: actionBeginArgs.data as T,
             rowIndex: actionBeginArgs.rowIndex as number
         };
         gridRef?.onRowEditStart?.(startArgs);
@@ -204,12 +208,12 @@ export const useEdit: (
             return;
         }
 
-        editDataRef.current = { ...rowData };
-        const updateState: Partial<EditState> = {
+        editDataRef.current = { ...startArgs.data };
+        const updateState: Partial<EditState<T>> = {
             isEdit: true,
-            editRowIndex: rowIndex,
-            editData: { ...rowData },
-            originalData: { ...rowData },
+            editRowIndex: startArgs.rowIndex,
+            editData: { ...startArgs.data },
+            originalData: { ...startArgs.data },
             validationErrors: {}
         };
 
@@ -220,28 +224,28 @@ export const useEdit: (
         }
 
         // Set edit state
-        setEditState((prev: EditState) => ({
+        setEditState((prev: EditState<T>) => ({
             ...prev,
             ...updateState
         }));
         const editGridElement: HTMLDivElement | null | undefined = _gridRef?.current?.element;
         const editStateEvent: CustomEvent = new CustomEvent('editStateChanged', {
-            detail: { isEdit: true, editRowIndex: rowIndex }
+            detail: { isEdit: true, editRowIndex: startArgs.rowIndex }
         });
         editGridElement?.dispatchEvent(editStateEvent);
         requestAnimationFrame(() => {
             setTimeout(() => {
-                const actionCompleteArgs: Record<string, ValueType | null> = {
-                    requestType: 'beginEdit',
+                const actionCompleteArgs: Record<string, ValueType | Object | null> = {
+                    requestType: 'BeginEdit',
                     type: 'actionComplete',
-                    rowData: { ...rowData },
-                    rowIndex: rowIndex,
-                    action: 'beginEdit',
+                    data: { ...startArgs.data },
+                    rowIndex: startArgs.rowIndex,
+                    action: 'BeginEdit',
                     formRef: gridRef?.editInlineRowFormRef.current?.formRef?.current
                 };
                 const eventArgs: FormRenderEvent = {
                     formRef: gridRef?.editInlineRowFormRef.current?.formRef as RefObject<IFormValidator>,
-                    rowData: actionCompleteArgs.rowData,
+                    data: actionCompleteArgs.data,
                     rowIndex: actionCompleteArgs.rowIndex as number
                 };
                 gridRef?.onFormRender?.(eventArgs);
@@ -265,9 +269,9 @@ export const useEdit: (
      * Get current edit data from ref for save operations
      * This ensures we always get the latest typed values, not stale state values
      */
-    const getCurrentEditData: () => Object = useCallback(() => {
-        return (editState.originalData ? _gridRef.current?.editInlineRowFormRef?.current?.formState?.values :
-            _gridRef.current?.addInlineRowFormRef?.current?.formState?.values) || editDataRef.current;
+    const getCurrentEditData: () => T = useCallback(() => {
+        return (editState.originalData ? _gridRef.current?.editInlineRowFormRef?.current?.formState?.values as T :
+            _gridRef.current?.addInlineRowFormRef?.current?.formState?.values as T) || editDataRef.current;
     }, [
         editState.editData,
         _gridRef.current?.editInlineRowFormRef?.current,
@@ -292,17 +296,28 @@ export const useEdit: (
         _gridRef.current?.addInlineRowFormRef?.current
     ]);
 
+    const resetSelection: (index: number) => void = useCallback((index: number): void => {
+        const selectedRow: Element = _gridRef?.current?.getRowByIndex(index);
+        if (selectedRow) {
+            selectedRow.setAttribute('aria-selected', 'true');
+            selectionModule?.addRemoveSelectionClasses(selectedRow, true);
+        }
+    }, [
+        _gridRef,
+        selectionModule
+    ]);
+
     /**
      * Ends editing and saves changes using DataManager operations
      */
-    const saveChanges: (isValidationRequired?: boolean, insertIndex?: number, endAction?: EditEndAction) => Promise<boolean> =
+    const saveDataChanges: (isValidationRequired?: boolean, insertIndex?: number, endAction?: EditEndAction) => Promise<boolean> =
         useCallback(async (isValidationRequired: boolean = true, insertIndex: number, endAction?: EditEndAction): Promise<boolean> => {
             if (!editState.isEdit && isNullOrUndefined(insertIndex)) {
                 return false;
             }
 
             const customBinding: boolean = dataOperations.dataManager && 'result' in dataOperations.dataManager;
-            const currentEditData: Object = getCurrentEditData();
+            const currentEditData: T = getCurrentEditData();
 
             if (!currentEditData) {
                 return false;
@@ -313,7 +328,7 @@ export const useEdit: (
 
             const isFormValid: boolean = isValidationRequired ? validateEditForm() : true;
             if (!isFormValid) {
-                setEditState((prev: EditState) => ({
+                setEditState((prev: EditState<T>) => ({
                     ...prev,
                     validationErrors: !prev.originalData ? _gridRef.current?.addInlineRowFormRef.current?.formState.errors :
                         _gridRef.current?.editInlineRowFormRef.current?.formState.errors
@@ -326,22 +341,22 @@ export const useEdit: (
                                 Object.keys(editState.originalData).length === 0;
             const customBindingEdit: boolean = customBinding && !isAddOperation;
 
-            const actionBeginArgs: Record<string, ValueType | null> = {
+            const actionBeginArgs: Record<string, ValueType | Object | null> = {
                 cancel: false,
                 requestType: 'save',
                 type: 'actionBegin',
-                rowData: currentEditData,
+                data: currentEditData,
                 rowIndex: editState.editRowIndex,
-                action: isAddOperation ? 'add' : 'edit',
+                action: isAddOperation ? ActionType.Add : ActionType.Edit,
                 previousData: editState.originalData
             };
 
             // Get grid reference for actionBegin event
             const gridRef: GridRef | null = _gridRef?.current;
-            const startArgs: SaveEvent = {
+            const startArgs: SaveEvent<T> = {
                 action: actionBeginArgs.action as string,
-                editedRowData: actionBeginArgs.rowData,
-                rowData: actionBeginArgs.previousData,
+                data: actionBeginArgs.data as T,
+                previousData: actionBeginArgs.previousData as T,
                 rowIndex: actionBeginArgs.rowIndex as number,
                 cancel: false
             };
@@ -364,9 +379,9 @@ export const useEdit: (
                         } else {
                             insertIndex = 0; // Add at the beginning (Top - default)
                         }
-                    } else if (editState.editRowIndex !== -1) {
+                    } else if (startArgs.rowIndex !== -1) {
                         // For programmatic addRecord(data, index), use the specified index
-                        insertIndex = editState.editRowIndex;
+                        insertIndex = startArgs.rowIndex;
                     } else {
                         // Fallback to newRowPosition setting for regular add operations
                         if (defaultEditSettings.newRowPosition === 'Top') {
@@ -376,20 +391,20 @@ export const useEdit: (
                         }
                     }
 
-                    await dataOperations.getData(customBinding ? { ...actionBeginArgs, index: insertIndex } : {
+                    await dataOperations.getData(customBinding ? { ...actionBeginArgs, ...startArgs, index: insertIndex } : {
                         requestType: 'save',
-                        data: currentEditData,
+                        data: startArgs.data,
                         index: insertIndex
                     });
 
                     if (!customBinding) {
-                        _gridRef.current?.refresh(); // initiate getData with requestType as 'refresh'
+                        _gridRef.current?.refresh(); // initiate getData with requestType as 'Refresh'
                     }
                 } else {
                     // For edit operations, use update operation
-                    await dataOperations.getData(customBinding ? actionBeginArgs : {
+                    await dataOperations.getData(customBinding ? { ...actionBeginArgs, ...startArgs } : {
                         requestType: 'update',
-                        data: currentEditData
+                        data: startArgs.data
                     });
                     if (_gridRef.current?.aggregates?.length) {
                         let isFiltered: boolean = false;
@@ -399,21 +414,21 @@ export const useEdit: (
                                 || _gridRef.current?.searchSettings?.value?.length)) {
                             isFiltered = true;
                         }
-                        let currentViewData: Object[];
+                        let currentViewData: T[];
                         if (!isNullOrUndefined(dataOperations.dataManager) && (dataOperations.dataManager as DataResult).result) {
                             currentViewData = _gridRef.current?.getCurrentViewRecords();
                         } else {
                             currentViewData = ((dataOperations.dataManager as DataManager).dataSource.json.length ?
-                                (isFiltered ? (await (_gridRef.current?.getData(true, true) as Promise<ReturnType>)).result :
-                                    (dataOperations.dataManager as DataManager).dataSource.json)
+                                (isFiltered ? (await (_gridRef.current?.getData(true, true) as Promise<ReturnType>)).result as T[] :
+                                    (dataOperations.dataManager as DataManager).dataSource.json as T[])
                                 : _gridRef.current?.getCurrentViewRecords());
                         }
                         setResponseData((prevData: DataResult) => ({
                             ...prevData,
                             aggregates: customBinding ? prevData.aggregates : undefined,
-                            result: [...currentViewData.map((item: Object) =>
-                                item[getPrimaryKeyField()] === currentEditData[getPrimaryKeyField()] ?
-                                    { ...item, ...currentEditData } : item
+                            result: [...currentViewData.map((item: T) =>
+                                item[getPrimaryKeyField()] === startArgs.data[getPrimaryKeyField()] ?
+                                    { ...item, ...startArgs.data } : item
                             )]
                         }));
                     }
@@ -421,18 +436,16 @@ export const useEdit: (
             } catch (error) {
                 // Trigger actionFailure event on error
                 // This provides consistent error handling similar to other grid operations
-                gridRef?.onError({
-                    error: error as Error
-                });
+                gridRef?.onError(error as Error);
                 return false;
             }
 
-            const actionCompleteArgs: Record<string, ValueType | null> = {
+            const actionCompleteArgs: Record<string, ValueType | Object | null> = {
                 requestType: 'save',
                 type: 'actionComplete',
-                rowData: currentEditData,
-                rowIndex: isNullOrUndefined(insertIndex) ? editState.editRowIndex : insertIndex,
-                action: isAddOperation ? 'add' : 'edit',
+                data: startArgs.data,
+                rowIndex: isNullOrUndefined(insertIndex) ? startArgs.rowIndex : insertIndex,
+                action: isAddOperation ? ActionType.Add : ActionType.Edit,
                 previousData: editState.originalData
             };
 
@@ -448,7 +461,7 @@ export const useEdit: (
                     setTimeout(() => {
                         gridRef.selectionModule?.selectRow(shiftKey ? editState.editRowIndex - 1 : editState.editRowIndex + 1);
                         setTimeout(() => {
-                            editRow();
+                            editRecord();
                         }, 0);
                     }, 0);
                 }
@@ -463,7 +476,7 @@ export const useEdit: (
                     });
                 } else if (isAddOperation && gridRef && gridRef.selectionModule) {
                     // Calculate the correct row index to select based on newRowPosition
-                    let rowIndexToSelect: number = editState.editRowIndex;
+                    let rowIndexToSelect: number = !isNullOrUndefined(insertIndex) ? insertIndex : editState.editRowIndex;
 
                     // For showAddNewRow with Bottom position, the newly added row will be at the end
                     if (defaultEditSettings.showAddNewRow) {
@@ -494,13 +507,13 @@ export const useEdit: (
                     const tr: HTMLTableRowElement = gridRef.contentTableRef?.rows?.[gridRef.contentTableRef?.rows?.length - 1];
                     if (gridRef.height !== 'auto' && !isAddOperation && (editState.editRowIndex + 1).toString() === tr.getAttribute('aria-rowindex') &&
                         (gridRef.contentPanelRef?.firstElementChild as HTMLElement)?.offsetHeight > gridRef.contentTableRef?.scrollHeight) {
-                        addClass([].slice.call(tr.getElementsByClassName('sf-rowcell')), 'sf-lastrowcell');
+                        addClass([].slice.call(tr.getElementsByClassName('sf-cell')), 'sf-last-cell');
                     }
                 });
                 const eventArgs: SaveEvent = {
                     action: actionCompleteArgs.action as string,
-                    editedRowData: actionCompleteArgs.rowData,
-                    rowData: actionCompleteArgs.previousData,
+                    data: actionCompleteArgs.data,
+                    previousData: actionCompleteArgs.previousData,
                     rowIndex: actionCompleteArgs.rowIndex as number
                 };
                 gridRef?.onDataChangeComplete?.(eventArgs);
@@ -515,7 +528,7 @@ export const useEdit: (
             editDataRef.current = null;
 
             // This ensures showAddNewRow inputs are properly re-enabled after saving edits
-            const newEditState: Partial<EditState> = {
+            const newEditState: Partial<EditState<T>> = {
                 editRowIndex: -1,
                 editData: null,
                 originalData: null,
@@ -547,7 +560,7 @@ export const useEdit: (
 
             // Always ensure isShowAddNewRowDisabled is explicitly set to false
             // This is essential for test case: "should re-enable showAddNewRow inputs after saving edited row"
-            setEditState((prev: EditState) => ({
+            setEditState((prev: EditState<T>) => ({
                 ...prev,
                 ...newEditState,
                 // Always force isShowAddNewRowDisabled to false when showAddNewRow is enabled
@@ -578,7 +591,12 @@ export const useEdit: (
                 gridRef?.focusModule?.setGridFocus(true);
 
                 // Select the appropriate row
-                gridRef?.selectionModule?.selectRow(lastFocusedCellinfo?.rowIndex > -1 && endAction === 'Click' ? lastFocusedCellinfo?.rowIndex : savedRowIndex);
+                const rowIndexToSelect: number = lastFocusedCellinfo?.rowIndex > -1 && endAction === 'Click' ? lastFocusedCellinfo?.rowIndex : savedRowIndex;
+                if (selectionModule?.selectedRowIndexes.indexOf(rowIndexToSelect) === -1 || customBindingEdit) {
+                    selectionModule?.selectRow(rowIndexToSelect);
+                } else {
+                    resetSelection(rowIndexToSelect);
+                }
 
                 // Calculate the proper target row index based on configuration
                 const targetRowIndex: number = lastFocusedCellinfo?.rowIndex > -1 ? lastFocusedCellinfo?.rowIndex :
@@ -604,6 +622,9 @@ export const useEdit: (
             getCurrentEditData,
             dataOperations,
             _gridRef,
+            selectionModule,
+            selectionModule?.selectedRowIndexes,
+            resetSelection,
             focusModule
         ]);
 
@@ -612,14 +633,14 @@ export const useEdit: (
      * Enhanced to handle showAddNewRow behavior correctly
      * When showAddNewRow is enabled, canceling should re-enable the add new row and keep grid in edit state
      */
-    const cancelChanges: (endAction?: EditEndAction) => Promise<void> = useCallback(async (endAction?: EditEndAction) => {
+    const cancelDataChanges: (endAction?: EditEndAction) => Promise<void> = useCallback(async (endAction?: EditEndAction) => {
         // Handle showAddNewRow special case
         // If showAddNewRow is enabled and we only have the add new row active (no edited row),
         // then we should just re-enable the add new row and return
         if (defaultEditSettings.showAddNewRow && editState.isShowAddNewRowActive && editState.editRowIndex === -1 &&
             !editState.isShowAddNewRowDisabled && !editState.originalData &&
             Object.keys(_gridRef.current?.addInlineRowFormRef?.current?.formState?.modified).length) {
-            const defaultRecord: Object = {};
+            const defaultRecord: T = {} as T;
             setDefaultValueRecords(defaultRecord);
             const editStateEvent: CustomEvent = new CustomEvent('resetShowAddNewRowForm', {
                 detail: {
@@ -628,7 +649,7 @@ export const useEdit: (
             });
             _gridRef.current?.addInlineRowFormRef?.current?.formRef?.current?.element?.dispatchEvent?.(editStateEvent);
             // Re-enable the add new row and clear any validation errors
-            setEditState((prev: EditState) => ({
+            setEditState((prev: EditState<T>) => ({
                 ...prev,
                 validationErrors: {},
                 editData: prev.showAddNewRowData // Reset to original add new row data
@@ -645,30 +666,34 @@ export const useEdit: (
 
         // For inline/normal editing, do NOT show confirm dialog
         // Trigger cancel event
-        const cancelArgs: Record<string, ValueType | null> = {
+        const cancelArgs: Record<string, ValueType | Object | null> = {
             requestType: 'cancel',
             rowIndex: editState.editRowIndex,
-            rowData: getCurrentEditData(),
+            data: getCurrentEditData(),
             formRef: getCurrentFormRef()
         };
 
         setTimeout(() => {
-            _gridRef.current?.selectionModule?.selectRow(editState.editRowIndex);
+            if (selectionModule?.selectedRowIndexes.indexOf(editState.editRowIndex) === -1) {
+                selectionModule?.selectRow(editState.editRowIndex);
+            } else {
+                resetSelection(editState.editRowIndex);
+            }
             _gridRef.current?.focusModule?.setGridFocus(true);
             requestAnimationFrame(() => {
                 _gridRef.current?.focusModule?.navigateToCell(editState.editRowIndex, endAction === 'Key' ? escEnterIndex.current : 0);
             });
         }, 0);
-        const eventArgs: CancelFormEvent = {
+        const eventArgs: FormCancelEvent<T> = {
             formRef: cancelArgs.formRef as RefObject<IFormValidator>,
-            rowData: cancelArgs.rowData,
+            data: cancelArgs.data as T,
             rowIndex: cancelArgs.rowIndex as number
         };
         _gridRef.current?.onDataChangeCancel?.(eventArgs);
 
         // Enhanced reset edit state with improved showAddNewRow handling
         // This ensures showAddNewRow inputs are properly re-enabled after cancel
-        const newEditState: Partial<EditState> = {
+        const newEditState: Partial<EditState<T>> = {
             editRowIndex: -1,
             editData: null,
             originalData: null,
@@ -702,7 +727,7 @@ export const useEdit: (
 
         // Always ensure isShowAddNewRowDisabled is explicitly set to false
         // This is essential for test case: "should re-enable showAddNewRow inputs after canceling edited row"
-        setEditState((prev: EditState) => ({
+        setEditState((prev: EditState<T>) => ({
             ...prev,
             ...newEditState,
             // Always force isShowAddNewRowDisabled to false when showAddNewRow is enabled
@@ -719,10 +744,10 @@ export const useEdit: (
         });
         cancelEditGridElement?.dispatchEvent(editStateEvent);
     }, [editState, defaultEditSettings.showAddNewRow, _gridRef, _gridRef.current?.editInlineRowFormRef?.current?.formState,
-        _gridRef.current?.addInlineRowFormRef?.current?.formState]);
+        _gridRef.current?.addInlineRowFormRef?.current?.formState, selectionModule, selectionModule?.selectedRowIndexes, resetSelection]);
 
-    const setDefaultValueRecords: (data: Object) => void = (data: Object) => {
-        columns.forEach((column: ColumnProps) => {
+    const setDefaultValueRecords: (data: T) => void = (data: T) => {
+        columns.forEach((column: ColumnProps<T>) => {
             // Only set value if column has explicit defaultValue
             // Otherwise leave undefined to render truly empty edit forms
             if (column.defaultValue !== undefined) {
@@ -741,15 +766,15 @@ export const useEdit: (
     /**
      * Adds a new record to the grid
      */
-    const addRecord: (data?: Object, index?: number) => void =
-        useCallback(async (data?: Record<string, ValueType | null>, index?: number) => {
+    const addRecord: (data?: T, index?: number) => void =
+        useCallback(async (data?: T, index?: number) => {
             if (!defaultEditSettings.allowAdd || _gridRef.current?.addInlineRowFormRef?.current?.formRef?.current) {
                 return;
             }
 
             // Create new record with proper default value handling
             // Only apply defaultValue when explicitly set, otherwise leave undefined
-            const newRecord: Record<string, ValueType | null> = data || {};
+            const newRecord: T = data || {} as T;
 
             // If no data provided, only initialize fields that have explicit defaultValue
             if (!data) {
@@ -773,23 +798,23 @@ export const useEdit: (
                 // This was causing the issue where add record was adding at selected row index
             }
 
-            const actionBeginArgs: Record<string, ValueType | null> = {
+            const actionBeginArgs: Record<string, ValueType | Object | null> = {
                 cancel: false,
-                requestType: 'add',
+                requestType: ActionType.Add,
                 type: 'actionBegin',
-                rowData: newRecord,
+                data: newRecord,
                 index: insertIndex,
-                action: 'add'
+                action: ActionType.Add
             };
 
             // Get grid reference for actionBegin event
             const gridRef: GridRef | null = _gridRef?.current;
+            const startArgs: RowAddEvent = {
+                cancel: false,
+                data: actionBeginArgs.data,
+                rowIndex: actionBeginArgs.index as number
+            };
             if (gridRef && (gridRef.onRowAddStart) && !data) {
-                const startArgs: RowAddEvent = {
-                    cancel: false,
-                    rowData: actionBeginArgs.rowData,
-                    rowIndex: actionBeginArgs.index as number
-                };
                 gridRef?.onRowAddStart?.(startArgs);
 
                 // If the operation was cancelled, return early
@@ -802,16 +827,16 @@ export const useEdit: (
             // This creates a dummy edit row that doesn't affect the data source until save
 
             // Initialize the edit data ref to prevent re-renders during typing
-            editDataRef.current = { ...newRecord };
+            editDataRef.current = { ...startArgs.data as T };
 
             // When using toolbar add or programmatic addRecord(),
             // we need to ensure we're not triggering the isEditingExistingRow logic
             // Set originalData explicitly to null or empty object to signal this is an add operation
-            setEditState((prev: EditState) => ({
+            setEditState((prev: EditState<T>) => ({
                 ...prev,
                 isEdit: !data ? true : false,
-                editRowIndex: insertIndex,
-                editData: { ...newRecord }, // Use the newRecord (which may be empty) for add operations
+                editRowIndex: startArgs.rowIndex,
+                editData: { ...startArgs.data as T }, // Use the startArgs.data (which may be empty) for add operations
                 originalData: null, // For toolbar/programmatic add, explicitly set to null
                 validationErrors: {}
             }));
@@ -822,7 +847,7 @@ export const useEdit: (
                 const editStateEvent: CustomEvent = new CustomEvent('editStateChanged', {
                     detail: {
                         isEdit: true,
-                        editRowIndex: insertIndex,
+                        editRowIndex: startArgs.rowIndex,
                         isAdd: true // Explicitly mark this as an add operation
                     }
                 });
@@ -833,18 +858,18 @@ export const useEdit: (
                 requestAnimationFrame(() => {
                     // Additional timeout to ensure edit form is fully rendered
                     setTimeout(() => {
-                        const actionCompleteArgs: Record<string, ValueType | null> = {
-                            requestType: 'add',
+                        const actionCompleteArgs: Record<string, ValueType | Object | null> = {
+                            requestType: ActionType.Add,
                             type: 'actionComplete',
-                            data: { ...newRecord },
-                            rowIndex: insertIndex,
-                            action: 'add',
-                            rowData: { ...newRecord },
+                            data: { ...startArgs.data as T },
+                            rowIndex: startArgs.rowIndex,
+                            action: ActionType.Add,
+                            rowData: { ...startArgs.data as T },
                             form: gridRef?.addInlineRowFormRef.current?.formRef.current?.element
                         };
                         const eventArgs: FormRenderEvent = {
                             formRef: gridRef?.addInlineRowFormRef.current?.formRef as RefObject<IFormValidator>,
-                            rowData: actionCompleteArgs.rowData,
+                            data: actionCompleteArgs.rowData,
                             rowIndex: actionCompleteArgs.rowIndex as number
                         };
                         gridRef?.onFormRender?.(eventArgs);
@@ -853,7 +878,7 @@ export const useEdit: (
                     }, 0);
                 });
             } else {
-                saveChanges(false, insertIndex);
+                saveDataChanges(false, insertIndex);
             }
         }, [
             defaultEditSettings.allowAdd,
@@ -868,14 +893,14 @@ export const useEdit: (
     /**
      * Deletes a record from the grid
      */
-    const deleteRecord: (fieldName?: string, data?: Object | Object[]) => Promise<void> =
-        useCallback(async (fieldName?: string, data?: Object | Object[]) => {
+    const deleteRecord: (fieldName?: string, data?: T | T[]) => Promise<void> =
+        useCallback(async (fieldName?: string, data?: T | T[]) => {
             const eventTarget: HTMLElement = event?.target as HTMLElement;
             if (!defaultEditSettings.allowDelete) {
                 return;
             }
 
-            let recordsToDelete: Object[] = [];
+            let recordsToDelete: T[] = [];
             let deleteIndexes: number[] = [];
 
             if (!data) {
@@ -894,7 +919,7 @@ export const useEdit: (
                         message: message,
                         confirmText:  localization?.getConstant('okButtonLabel'),
                         cancelText: '', // No cancel button for alert dialogs
-                        type: 'info'
+                        type: 'Info'
                     });
                     eventTarget?.focus?.();
                     return;
@@ -906,8 +931,8 @@ export const useEdit: (
                     const primaryKeyField: string = fieldName || getPrimaryKeyField();
 
                     for (let i: number = 0; i < dataLen; i++) {
-                        let tmpRecord: Object;
-                        const contained: boolean = viewData.some((record: Object) => {
+                        let tmpRecord: T;
+                        const contained: boolean = viewData.some((record: T) => {
                             tmpRecord = record;
                             return data[i as number] === (record as Record<string, unknown>)[primaryKeyField as string] ||
                                 data[i as number] === record;
@@ -921,12 +946,12 @@ export const useEdit: (
                             }
                         } else {
                             // Handle case where data[i] is a partial record with primary key
-                            const recordData: Object = (data[i as number] as Record<string, unknown>)[primaryKeyField as string] ?
-                                data[i as number] : { [primaryKeyField as string]: data[i as number] };
+                            const recordData: T = (data[i as number])[primaryKeyField as string] ?
+                                data[i as number] : { [primaryKeyField as string]: data[i as number] } as T;
                             recordsToDelete.push(recordData);
 
                             // Find index by primary key
-                            const index: number = viewData.findIndex((item: Object) =>
+                            const index: number = viewData.findIndex((item: T) =>
                                 (item as Record<string, unknown>)[primaryKeyField as string] ===
                                 (recordData as Record<string, unknown>)[primaryKeyField as string]
                             );
@@ -937,16 +962,16 @@ export const useEdit: (
                     }
                 } else if (fieldName) {
                     // Find record by field value
-                    const deleteIndex: number = viewData.findIndex((item: Object) =>
-                        (item as Record<string, unknown>)[fieldName as string] === (data as Record<string, unknown>)[fieldName as string]
+                    const deleteIndex: number = viewData.findIndex((item: T) =>
+                        (item)[fieldName as string] === (data)[fieldName as string]
                     );
                     if (deleteIndex !== -1) {
-                        recordsToDelete = [viewData[deleteIndex as number] as Object];
+                        recordsToDelete = [viewData[deleteIndex as number]];
                         deleteIndexes = [deleteIndex as number];
                     }
                 } else {
                     // Single record deletion
-                    recordsToDelete = [data as Object];
+                    recordsToDelete = [data];
                     const index: number = viewData.indexOf(data);
                     if (index !== -1) {
                         deleteIndexes = [index as number];
@@ -970,20 +995,20 @@ export const useEdit: (
             }
 
             // This ensures consistent event handling pattern across all grid operations
-            const actionBeginArgs: Record<string, ValueType | null> = {
+            const actionBeginArgs: Record<string, ValueType | Object | null> = {
                 cancel: false,
-                requestType: 'delete',
+                requestType: ActionType.Delete,
                 type: 'actionBegin',
                 data: recordsToDelete,
                 rows: deleteIndexes.map((index: number) => _gridRef?.current?.getRowByIndex?.(index)).filter(Boolean),
-                action: 'delete'
+                action: ActionType.Delete
             };
 
             // Get grid reference for actionBegin event
             const gridRef: GridRef | null = _gridRef?.current;
-            const startArgs: DeleteEvent = {
+            const startArgs: DeleteEvent<T> = {
                 action: actionBeginArgs.action as string,
-                data: actionBeginArgs.data as Object[],
+                data: actionBeginArgs.data as T[],
                 cancel: false
             };
             gridRef?.onDataChangeStart?.(startArgs);
@@ -995,77 +1020,44 @@ export const useEdit: (
             setGridAction({});
 
             // Store the selected row index before deletion for auto-selection after deletion
-            const lastFocusedCellinfo: FocusedCellInfo = _gridRef.current.focusModule.getFocusedCell();
-            const selectedRowIndexBeforeDeletion: number = lastFocusedCellinfo.rowIndex;
             const customBinding: boolean = dataOperations.dataManager && 'result' in dataOperations.dataManager;
 
             // Single deletion: use dataManager.remove()
-            // Multiple deletion: use dataManager.saveChanges() with deletedRecords
+            // Multiple deletion: use dataManager.saveDataChanges() with deletedRecords
             try {
-                const len: number = recordsToDelete.length;
+                const len: number = startArgs.data.length;
 
                 if (len === 1) {
                     await dataOperations.getData(customBinding ? actionBeginArgs : {
-                        requestType: 'delete',
-                        data: recordsToDelete[0]
+                        requestType: ActionType.Delete,
+                        data: startArgs.data[0]
                     });
                     // Single record deletion
                 } else {
                     await dataOperations.getData(customBinding ? actionBeginArgs : {
-                        requestType: 'delete',
-                        data: recordsToDelete
+                        requestType: ActionType.Delete,
+                        data: startArgs.data
                     });
                 }
-                let isCurrentPageChanged: boolean = false;
                 if (((len === 1 && (_gridRef.current?.currentViewData.length - len) <= 0) ||
-                    ((_gridRef.current?.currentViewData.length - recordsToDelete.length) <= 0)) &&
+                    ((_gridRef.current?.currentViewData.length - startArgs.data.length) <= 0)) &&
                     (_gridRef.current?.pageSettings?.currentPage - 1) >= 1 && _gridRef.current?.pagerModule) {
                     setCurrentPage(_gridRef.current?.pageSettings?.currentPage - 1);
                     _gridRef.current?.pagerModule?.goToPage(_gridRef.current?.pageSettings?.currentPage - 1);
-                    isCurrentPageChanged = true;
                 } else if (!customBinding) {
-                    _gridRef.current?.refresh(); // initiate getData with requestType as 'refresh'
+                    _gridRef.current?.refresh(); // initiate getData with requestType as 'Refresh'
                 }
 
                 // Trigger actionComplete event after successful operation
-                const actionCompleteArgs: Record<string, ValueType | null> = {
-                    requestType: 'delete',
+                const actionCompleteArgs: Record<string, ValueType | Object | null> = {
+                    requestType: ActionType.Delete,
                     type: 'actionComplete',
-                    data: recordsToDelete,
+                    data: startArgs.data,
                     rows: deleteIndexes.map((index: number) => _gridRef?.current?.getRowByIndex?.(index)).filter(Boolean),
-                    action: 'delete'
+                    action: ActionType.Delete
                 };
 
                 const addDeleteActionComplete: () => void = () => {
-                    // This ensures that after deletion, the grid automatically selects the corresponding row index
-                    if (gridRef && gridRef.selectionModule && selectedRowIndexBeforeDeletion >= 0 && !eventTarget) {
-                        // Calculate the new row index to select after deletion
-                        let newRowIndexToSelect: number = selectedRowIndexBeforeDeletion;
-
-                        // If the deleted row was the last row, select the previous row
-                        if (selectedRowIndexBeforeDeletion >= _gridRef.current?.currentViewData?.length - recordsToDelete.length) {
-                            newRowIndexToSelect = Math.max(0, _gridRef.current?.currentViewData?.length - recordsToDelete.length - 1);
-                        }
-
-                        // Auto-select the corresponding row after deletion
-                        // the row at the same index (or previous if it was the last row) after deletion
-                        if ((newRowIndexToSelect >= 0 && newRowIndexToSelect < viewData.length - recordsToDelete.length) ||
-                            isCurrentPageChanged) {
-                            // Use setTimeout to ensure the data source is updated before selection
-                            setTimeout(() => {
-                                gridRef?.selectionModule?.selectRow(newRowIndexToSelect);
-
-                                // Focus the corresponding cell after auto-selection
-                                // This ensures that the focus moves to the selected row's first visible cell
-                                gridRef?.focusModule?.setGridFocus(true);
-                                requestAnimationFrame(() => {
-                                    // Navigate to the selected row's first visible cell
-                                    gridRef.focusModule?.navigateToCell(newRowIndexToSelect, lastFocusedCellinfo.colIndex !== -1 ?
-                                        lastFocusedCellinfo.colIndex : 0);
-                                });
-                            }, 0);
-                        }
-                    }
                     eventTarget?.focus?.();
                     const eventArgs: DeleteEvent = {
                         action: actionCompleteArgs.action as string,
@@ -1078,9 +1070,7 @@ export const useEdit: (
             } catch (error) {
                 // Trigger actionFailure event on error
                 // This provides consistent error handling similar to other grid operations
-                gridRef?.onError({
-                    error: error as Error
-                });
+                gridRef?.onError(error as Error);
                 return;
             }
         }, [
@@ -1095,30 +1085,30 @@ export const useEdit: (
     /**
      * Updates a specific row with new data
      */
-    const updateRow: (index: number, data: Object) => void =
-        useCallback(async (index: number, data: Object) => {
+    const updateRecord: (index: number, data: T) => void =
+        useCallback(async (index: number, data: T) => {
             if (!defaultEditSettings.allowEdit || index < 0 || index >= viewData.length) {
                 return;
             }
 
-            const previousData: Object = viewData[index as number];
+            const previousData: T = viewData[index as number];
 
-            const actionBeginArgs: Record<string, ValueType | null> = {
+            const actionBeginArgs: Record<string, ValueType | Object | null> = {
                 cancel: false,
                 requestType: 'save',
                 type: 'actionBegin',
-                rowData: data,
+                data: data,
                 index: index,
-                action: 'edit',
+                action: ActionType.Edit,
                 previousData: previousData
             };
 
             // Get grid reference for actionBegin event
             const gridRef: GridRef | null = _gridRef?.current;
-            const startArgs: SaveEvent = {
+            const startArgs: SaveEvent<T> = {
                 action: actionBeginArgs.action as string,
-                editedRowData: actionBeginArgs.rowData,
-                rowData: actionBeginArgs.previousData,
+                data: actionBeginArgs.data as T,
+                previousData: actionBeginArgs.previousData as T,
                 rowIndex: actionBeginArgs.index as number,
                 cancel: false
             };
@@ -1133,27 +1123,27 @@ export const useEdit: (
             try {
                 await dataOperations.getData({
                     requestType: 'update',
-                    data
+                    data: startArgs.data
                 });
 
                 // Update local data source for immediate UI feedback
-                const selectedRow: IRow<ColumnProps> = _gridRef.current?.getRowsObject()[index as number];
-                const rowObjectData: Object = { ...selectedRow.data, ...data };
+                const selectedRow: IRow<ColumnProps<T>> = _gridRef.current?.getRowsObject()[startArgs.rowIndex];
+                const rowObjectData: T = { ...selectedRow.data, ...startArgs.data };
                 selectedRow.setRowObject({ ...selectedRow, data: rowObjectData });
 
                 // Trigger actionComplete event AFTER successful operation
-                const actionCompleteArgs: Record<string, ValueType | null> = {
+                const actionCompleteArgs: Record<string, ValueType | Object | null> = {
                     requestType: 'save',
                     type: 'actionComplete',
-                    rowData: data,
-                    rowIndex: index,
-                    action: 'edit',
+                    data: startArgs.data,
+                    rowIndex: startArgs.rowIndex,
+                    action: ActionType.Edit,
                     previousData: previousData
                 };
                 const eventArgs: SaveEvent = {
                     action: actionCompleteArgs.action as string,
-                    editedRowData: actionCompleteArgs.rowData,
-                    rowData: actionCompleteArgs.previousData,
+                    data: actionCompleteArgs.data,
+                    previousData: actionCompleteArgs.previousData,
                     rowIndex: actionCompleteArgs.rowIndex as number
                 };
                 gridRef?.onDataChangeComplete?.(eventArgs);
@@ -1161,9 +1151,7 @@ export const useEdit: (
             } catch (error) {
                 // Trigger actionFailure event on error
                 // This provides consistent error handling similar to other grid operations
-                gridRef?.onError({
-                    error: error as Error
-                });
+                gridRef?.onError(error as Error);
             }
         }, [defaultEditSettings.allowEdit, viewData, _gridRef]);
 
@@ -1171,8 +1159,8 @@ export const useEdit: (
      * Use a stable ref-based approach for edit data management
      * This prevents re-renders during typing while maintaining data consistency
      */
-    const editDataRef: React.RefObject<Object> =
-        useRef<Record<string, ValueType | null>>(null);
+    const editDataRef: React.RefObject<T> =
+        useRef<T>(null);
 
     /**
      * Enhanced updateEditData function with proper data isolation and persistence
@@ -1191,18 +1179,18 @@ export const useEdit: (
             // Update ref immediately for instant access without triggering re-renders
             // This is the key to preventing multiple EditForm re-renders during typing
             const topLevelKey: string = field.split('.')[0];
-            const copiedComplexData: Object = field.includes('.') && typeof editDataRef.current[topLevelKey as string] === 'object'
+            const copiedComplexData: T = field.includes('.') && typeof editDataRef.current[topLevelKey as string] === 'object'
                 ? {
                     ...editDataRef.current,
                     [topLevelKey]: JSON.parse(JSON.stringify(editDataRef.current[topLevelKey as string]))
                 }
                 : { ...editDataRef.current };
 
-            editDataRef.current = DataUtil.setValue(field, value, copiedComplexData);
+            editDataRef.current = DataUtil.setValue(field, value, copiedComplexData) as T;
 
             // Update the state editData to persist values
             // This ensures that typed values are maintained even when focus moves out of grid
-            setEditState((prev: EditState) => ({
+            setEditState((prev: EditState<T>) => ({
                 ...prev,
                 editData: {
                     ...editDataRef.current
@@ -1218,17 +1206,17 @@ export const useEdit: (
         const target: Element = event.target as Element;
 
         // Check if the click is within grid content or header content (for frozen rows)
-        const isWithinGridContent: boolean | Element = target.closest('.sf-gridcontent');
+        const isWithinGridContent: boolean | Element = target.closest('.sf-grid-content-container');
 
         // Only handle clicks within grid content and not on unbound cells
-        if (isWithinGridContent && !target.closest('.sf-unboundcelldiv')) {
+        if (isWithinGridContent && !target.closest('.sf-unbound-cell')) {
 
             // If grid is in edit mode with an actual edited row, end the current edit
             const hasEditedRow: boolean = editState.editRowIndex >= 0 && !isNullOrUndefined(editState.editData);
 
             if (editState.isEdit && hasEditedRow && !target.closest('.sf-form-validator')) {
                 notKeyBoardAllowedClickRowInfo.current = !_gridRef.current?.allowKeyboard ? _gridRef.current?.getRowInfo?.(target) : {};
-                saveChanges(undefined, undefined, 'Click');
+                saveDataChanges(undefined, undefined, 'Click');
                 const isValid: boolean = validateEditForm();
                 // If save failed (validation errors), prevent the click from proceeding
                 if (!isValid) {
@@ -1245,7 +1233,7 @@ export const useEdit: (
         editState.editData,
         editState.originalData,
         editState.isEdit,
-        saveChanges,
+        saveDataChanges,
         _gridRef
     ]);
 
@@ -1286,9 +1274,9 @@ export const useEdit: (
             // Handle showAddNewRow double-click behavior first - this is critical
             if (editSettings.showAddNewRow) {
                 // Check if the double-click is on the add new row - if so, ignore it
-                const isAddNewRowClick: boolean = target.closest('.sf-addedrow') !== null ||
+                const isAddNewRowClick: boolean = target.closest('.sf-grid-add-row') !== null ||
                                         target.closest('tr[data-uid*="grid-add-row"]') !== null ||
-                                        clickedRow.classList.contains('sf-addedrow') ||
+                                        clickedRow.classList.contains('sf-grid-add-row') ||
                                         (clickedRow.getAttribute('data-uid') && clickedRow.getAttribute('data-uid').includes('grid-add-row'));
                 if (isAddNewRowClick) {
                     return; // Don't allow editing the add new row via double-click
@@ -1311,12 +1299,12 @@ export const useEdit: (
             // even when showAddNewRow is enabled
             event.preventDefault(); // Prevent text selection on double-click
 
-            editRow(rowElement);
+            editRecord(rowElement);
         }, [
             defaultEditSettings.editOnDoubleClick,
             defaultEditSettings.allowEdit,
             defaultEditSettings.showAddNewRow,
-            editRow,
+            editRecord,
             editState.isEdit,
             editState.editRowIndex,
             editState.editData,
@@ -1331,10 +1319,10 @@ export const useEdit: (
     useEffect(() => {
         if (defaultEditSettings.showAddNewRow && defaultEditSettings.allowAdd) {
             // Initialize the add new row data with default values
-            const newRowData: string | number | boolean | Record<string, unknown> | Date = {};
+            const newRowData: T = {} as T;
 
             // Only apply defaultValue when explicitly set, otherwise leave undefined
-            columns.forEach((column: ColumnProps) => {
+            columns.forEach((column: ColumnProps<T>) => {
                 if (column.field && column.defaultValue !== undefined) {
                     // Apply the explicit default value
                     if (column.type === 'string') {
@@ -1349,20 +1337,20 @@ export const useEdit: (
             });
 
             // Set the grid in edit state with the add new row
-            setEditState((prev: EditState) => ({
+            setEditState((prev: EditState<T>) => ({
                 ...prev,
                 isEdit: true, // Grid remains in edit state when showAddNewRow is enabled
-                showAddNewRowData: newRowData,
+                showAddNewRowData: newRowData as T,
                 isShowAddNewRowActive: true,
                 isShowAddNewRowDisabled: false, // Initially enabled
                 editRowIndex: -1, // Special index for add new row
-                editData: newRowData,
+                editData: newRowData as T,
                 originalData: null, // Empty for add operations
                 validationErrors: {}
             }));
 
             // Initialize the edit data ref for the add new row
-            editDataRef.current = { ...newRowData };
+            editDataRef.current = { ...newRowData as T };
 
             // Dispatch custom event for toolbar refresh when entering showAddNewRow mode
             // This ensures toolbar buttons maintain proper state (Update/Cancel enabled)
@@ -1378,7 +1366,7 @@ export const useEdit: (
             gridElement?.dispatchEvent(toolbarStateEvent);
         } else {
             // Reset showAddNewRow state when disabled
-            setEditState((prev: EditState) => ({
+            setEditState((prev: EditState<T>) => ({
                 ...prev,
                 showAddNewRowData: null,
                 isShowAddNewRowActive: false,
@@ -1419,7 +1407,7 @@ export const useEdit: (
                 message: message,
                 confirmText: localization.getConstant('okButtonLabel'),
                 cancelText: localization.getConstant('cancelButtonLabel'),
-                type: 'warning'
+                type: 'Warning'
             });
 
             focusModule?.addFocus?.(focusModule?.getFocusedCell?.());
@@ -1430,7 +1418,7 @@ export const useEdit: (
         }
         // User confirmed to proceed with losing changes
         // Force close edit state without saving
-        setEditState((prev: EditState) => ({
+        setEditState((prev: EditState<T>) => ({
             ...prev,
             originalData: null,
             editRowIndex: -1,
@@ -1465,14 +1453,14 @@ export const useEdit: (
         isShowAddNewRowDisabled: editState.isShowAddNewRowDisabled,
 
         // Edit operations
-        editRow,
-        saveChanges,
-        cancelChanges,
+        editRecord,
+        saveDataChanges,
+        cancelDataChanges,
 
         // CRUD operations
         addRecord,
         deleteRecord,
-        updateRow,
+        updateRecord,
 
         // Validation
         validateEditForm,

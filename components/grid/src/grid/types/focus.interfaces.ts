@@ -1,10 +1,10 @@
-import { SyntheticEvent, MouseEvent, KeyboardEvent } from 'react';
+import { MouseEvent, KeyboardEvent } from 'react';
 import { IRow } from '../types';
 import { ColumnProps } from '../types/column.interfaces';
 import { useFocusStrategy } from '../hooks';
 
 /**
- * Defines the type for the focus strategy module in the Grid.
+ * Defines the type for the focus strategy module in the Data Grid.
  * Represents the return type of the useFocusStrategy hook for managing focus navigation.
  * Used internally to encapsulate focus-related functionality.
  *
@@ -13,7 +13,7 @@ import { useFocusStrategy } from '../hooks';
 export type FocusStrategyModule = ReturnType<typeof useFocusStrategy>;
 
 /**
- * Represents the matrix object for managing focusable cells in the Grid.
+ * Represents the matrix object for managing focusable cells in the Data Grid.
  * Provides a grid-like structure to track and navigate focusable cells in content, header, or aggregate sections.
  * Used internally to facilitate keyboard navigation and cell focus operations.
  *
@@ -144,11 +144,11 @@ export interface IFocusMatrix {
 }
 
 /**
- * Defines event arguments for cell focus events in the Grid.
+ * Defines event arguments for cell focus events in the Data Grid.
  * Provides detailed context about the focused cell, including its position, data, and triggering event.
  * Used to handle focus-related interactions and updates.
  */
-export interface CellFocusEvent {
+export interface CellFocusEvent<T = unknown> {
     /**
      * Specifies the zero-based row index of the focused cell in the grid.
      * Identifies the row position of the cell that has received focus.
@@ -183,7 +183,7 @@ export interface CellFocusEvent {
      *
      * @default null
      */
-    rowData?: Object;
+    data?: T;
 
     /**
      * Contains the column configuration associated with the focused cell.
@@ -201,7 +201,7 @@ export interface CellFocusEvent {
      *
      * @default null
      */
-    event?: SyntheticEvent;
+    event?: MouseEvent | KeyboardEvent;
 
     /**
      * References the parent DOM element of the focused cell.
@@ -303,16 +303,16 @@ export interface CellFocusEvent {
 }
 
 /**
- * Enumerates the matrix types used for focus navigation in the Grid.
+ * Enumerates the matrix types used for focus navigation in the Data Grid.
  * Defines the grid sections (content, header, or aggregate) for focus management.
  * Used internally to differentiate focus contexts during navigation.
  *
  * @private
  */
-export type Matrix = 'content' | 'header' | 'aggregate';
+export type Matrix = 'Content' | 'Header' | 'Aggregate';
 
 /**
- * Defines information for swapping focus between matrices during navigation in the Grid.
+ * Defines information for swapping focus between matrices during navigation in the Data Grid.
  * Specifies details about transitions between grid sections, such as content or header.
  * Used internally to manage focus movement across different matrix types.
  *
@@ -342,13 +342,13 @@ export interface SwapInfo {
      * Defines the grid section (content, header, or aggregate) to move focus to.
      * Guides the focus system to the appropriate matrix during swaps.
      *
-     * @default 'content'
+     * @default 'Content'
      */
     toMatrix?: Matrix;
 }
 
 /**
- * Defines the return value of the useFocusStrategy hook in the Grid.
+ * Defines the return value of the useFocusStrategy hook in the Data Grid.
  * Provides methods and properties for managing focus navigation, cell selection, and grid focus state.
  * Used internally to control focus behavior and interactions within the grid.
  *
@@ -667,7 +667,7 @@ export interface FocusStrategyResult {
 }
 
 /**
- * Defines callback functions for focus-related events in the Grid.
+ * Defines callback functions for focus-related events in the Data Grid.
  * Specifies handlers for cell focus, click, and pre-focus events to customize focus behavior.
  * Used internally to manage focus-related interactions.
  *
@@ -679,34 +679,34 @@ export interface FocusStrategyCallbacks {
      * Provides event arguments to process or respond to the focus change, such as updating UI or state.
      * Used to handle post-focus logic for user or programmatic interactions.
      *
-     * @param {CellFocusEvent} args - The cell focus event arguments.
+     * @param {CellFocusEvent} event - The cell focus event arguments.
      * @event cellFocused
      */
-    onCellFocus?: (args: CellFocusEvent) => void;
+    onCellFocus?: (event: CellFocusEvent) => void;
 
     /**
      * Invoked when a cell is clicked in the grid.
      * Provides event arguments to process click-based focus changes or trigger related actions.
      * Used to handle user interactions that involve clicking cells.
      *
-     * @param {CellFocusEvent} args - The cell focus event arguments.
+     * @param {CellFocusEvent} event - The cell focus event arguments.
      * @event cellClick
      */
-    onCellClick?: (args: CellFocusEvent) => void;
+    onCellClick?: (event: CellFocusEvent) => void;
 
     /**
      * Invoked before a cell receives focus, allowing cancellation of the focus action.
      * Provides event arguments to validate or modify the focus change before it occurs.
      * Used to control focus behavior with conditional logic.
      *
-     * @param {CellFocusEvent} args - The cell focus event arguments.
+     * @param {CellFocusEvent} event - The cell focus event arguments.
      * @event beforeCellFocus
      */
-    beforeCellFocus?: (args: CellFocusEvent) => void;
+    beforeCellFocus?: (event: CellFocusEvent) => void;
 }
 
 /**
- * Defines information about a focused cell in the Grid.
+ * Defines information about a focused cell in the Data Grid.
  * Provides detailed context about the cell’s position, DOM element, and focus properties.
  * Used internally to manage focus state and navigation.
  *

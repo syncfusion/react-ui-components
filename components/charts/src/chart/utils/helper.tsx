@@ -1250,7 +1250,7 @@ export function getMinPointsDelta(axis: AxisModel, seriesCollection: SeriesPrope
         xValues = [];
         if (series.visible &&
             (axis.name === series.xAxisName || (axis.name === 'primaryXAxis' && series.xAxisName === null)
-                || (axis.name === series.chart.axisCollection[0].name && !series.xAxisName))) {
+                || (axis.name === series.chart?.axisCollection[0].name && !series.xAxisName))) {
             xValues = series.points.map((point: Points) => {
                 return point.xValue;
             });

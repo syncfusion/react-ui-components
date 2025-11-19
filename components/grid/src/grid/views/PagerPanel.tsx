@@ -5,6 +5,7 @@ import { useGridComputedProvider, useGridMutableProvider } from '../contexts';
 import { isNullOrUndefined } from '@syncfusion/react-base';
 import { PagerArgsInfo } from '../types/page.interfaces';
 import { MutableGridSetter } from '../types/interfaces';
+import { ActionType } from '../types';
 
 /**
  * PagerPanelBase component renders the pagination controls for the grid.
@@ -26,7 +27,7 @@ const PagerPanelBase: ForwardRefExoticComponent<PageProps & RefAttributes<PagerR
         const [_, setPagerCurrentPage] = useState(props.currentPage);
         const clickHander: (e: PagerArgsInfo) => void = async(e: PagerArgsInfo) => {
             const args: PagerArgsInfo = {
-                cancel: false, currentPage: e.currentPage, previousPage: e.oldPage, requestType: 'paging'
+                cancel: false, currentPage: e.currentPage, previousPage: e.oldPage, requestType: ActionType.Paging
             };
             args.type = 'pageChanging';
             const confirmResult: boolean = await editModule?.checkUnsavedChanges?.();
@@ -56,7 +57,7 @@ const PagerPanelBase: ForwardRefExoticComponent<PageProps & RefAttributes<PagerR
         return (
             <Pager
                 ref={ref}
-                className={cssClass}
+                className={cssClass + ' sf-grid-pager'}
                 totalRecordsCount={totalRecordsCount}
                 pageSize={props.pageSize}
                 pageCount={props.pageCount}

@@ -2,7 +2,7 @@ import { ReactElement } from 'react';
 import { GridActionEvent } from '../types/grid.interfaces';
 
 /**
- * Configures pagination settings for the Grid component.
+ * Configures pagination settings for the Data Grid component.
  * Controls the behavior and appearance of pagination, including page size and navigation.
  * Enables customization of how data is paginated and displayed in the grid.
  */
@@ -63,7 +63,7 @@ export interface PageSettings {
 }
 
 /**
- * Represents the event triggered when a page change operation completes in the Grid component.
+ * Represents the event triggered when a page change operation completes in the Data Grid component.
  * Provides details about the completed navigation, including page transitions and record count.
  * Used to handle post-navigation logic or UI updates in the pager component.
  */
@@ -106,7 +106,7 @@ export interface PageEvent extends GridActionEvent {
 }
 
 /**
- * Represents arguments for pager events during page navigation in the Grid.
+ * Represents arguments for pager events during page navigation in the Data Grid.
  * Provides detailed context about the pagination process, including loading state.
  * Used internally to manage pager interactions and state.
  *

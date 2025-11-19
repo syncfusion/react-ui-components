@@ -1,9 +1,9 @@
-import { TextAlign, ClipMode, ColumnType } from '../types/enum';
-import { CSSProperties, ReactElement, ReactNode, TdHTMLAttributes, ThHTMLAttributes, RefObject, JSX } from 'react';
+import { TextAlign, ClipMode, ColumnType, CellType } from '../types/enum';
+import { CSSProperties, ReactElement, ReactNode, TdHTMLAttributes, ThHTMLAttributes, RefObject, JSX, ComponentType } from 'react';
 import { DateFormatOptions, NumberFormatOptions } from '@syncfusion/react-base';
 import { ValueType, IRow, ICell } from '../types/interfaces';
-import { FilterType, FilterBarType } from './index';
-import { ColumnEditConfig, EditTemplateProps } from '../types/edit.interfaces';
+import { FilterType, FilterBarType, FilterTemplateProps } from './index';
+import { ColumnEditParams, EditTemplateProps } from '../types/edit.interfaces';
 import { FormValueType } from '@syncfusion/react-inputs';
 import { NumericTextBoxProps, TextBoxProps } from '@syncfusion/react-inputs';
 import { DatePickerProps } from '@syncfusion/react-calendars';
@@ -14,7 +14,7 @@ import { DropDownListProps } from '@syncfusion/react-dropdowns';
  * Specifies comprehensive column settings that control appearance, functionality, and user interaction capabilities.
  * Enables customization of sorting, filtering, editing, and display characteristics for individual grid columns.
  */
-export interface ColumnProps {
+export interface ColumnProps<T = unknown> {
     /**
      * Defines the field name that maps the column to a specific data source property for data binding operations.
      * Enables sorting and filtering functionality based on the specified field name within the dataset.
@@ -122,7 +122,7 @@ export interface ColumnProps {
      *
      * @default null
      */
-    template?: string | ReactElement | ((props?: ColumnTemplateProps) => ReactElement | string);
+    template?: ComponentType<ColumnTemplateProps<T>> | ReactElement | string;
 
     /**
      * Renders custom content in the header cell using a template string, function, or HTML element ID.
@@ -130,7 +130,7 @@ export interface ColumnProps {
      *
      * @default null
      */
-    headerTemplate?: string | ReactElement | ((props?: ColumnHeaderTemplateProps) => ReactElement | string);
+    headerTemplate?: ComponentType<ColumnHeaderTemplateProps> | ReactElement | string;
 
     /**
      * If false, disables sorting for the column, preventing header click sorting.
@@ -177,51 +177,48 @@ export interface ColumnProps {
      * Allows transformation of cell values for display purposes only.
      * Does not affect the underlying data source.
      *
-     * @event onValueAccessor
      * @example
      * ```tsx
      * const GridComponent = () => {
-     *   const handleValueAccessor = (args: ValueAccessorEvent) => {
-     *     return `#${args.rowData[args.field]}`;
+     *   const handleValueAccessor = (props: ValueAccessorProps<T>) => {
+     *     return `#${props.data[props.field]}`;
      *   };
      *
      *   return (
      *     <Grid dataSource={orderData}>
      *       <Columns>
-     *         <Column field="OrderID" onValueAccessor={handleValueAccessor} />
+     *         <Column field="OrderID" valueAccessor={handleValueAccessor} />
      *       </Columns>
      *     </Grid>
      *   );
      * };
      * ```
      */
-    onValueAccessor?: (props?: ValueAccessorEvent) => ValueType;
+    valueAccessor?: (props?: ValueAccessorProps<T>) => ValueType | T;
 
     /**
      * Fires when a header cell begins to render or refresh in the grid.
      * Allows transformation of header text for display purposes only.
      * Does not affect the underlying data source.
      *
-     * @event onHeaderValueAccessor
      * @example
      * ```tsx
      * const GridComponent = () => {
-     *   const handleHeaderValueAccessor = (args: HeaderValueAccessorEvent) => {
-     *     return `Column: ${args.headerText}`;
+     *   const handleHeaderValueAccessor = (props: HeaderValueAccessorProps) => {
+     *     return `Column: ${props.headerText}`;
      *   };
      *
      *   return (
      *     <Grid dataSource={orderData}>
      *       <Columns>
-     *         <Column field="OrderID" onHeaderValueAccessor={handleHeaderValueAccessor} />
+     *         <Column field="OrderID" headerValueAccessor={handleHeaderValueAccessor} />
      *       </Columns>
      *     </Grid>
      *   );
      * };
      * ```
      */
-    onHeaderValueAccessor?: (props?: HeaderValueAccessorEvent) => ValueType;
-
+    headerValueAccessor?: (props?: HeaderValueAccessorProps) => ValueType | T;
 
     /**
      * Defines nested columns for stacked or hierarchical headers.
@@ -230,7 +227,7 @@ export interface ColumnProps {
      * @private
      * @default null
      */
-    columns?: ColumnProps[];
+    columns?: ColumnProps<T>[];
 
     /**
      * If true, marks the column as a primary key for unique record identification.
@@ -245,7 +242,7 @@ export interface ColumnProps {
      *
      *  @default {}
      */
-    filter?: ColumnFilterConfig;
+    filter?: ColumnFilterParams;
 
     /**
      * Validation rules for editing (e.g., `required`, `minLength`).
@@ -253,7 +250,7 @@ export interface ColumnProps {
      *
      * @default null
      */
-    validationRules?: ColumnValidationConfig;
+    validationRules?: ColumnValidationParams;
 
     /**
      * Default value for the column when adding new records.
@@ -261,7 +258,7 @@ export interface ColumnProps {
      *
      * @default null
      */
-    defaultValue?: string | number | Date | boolean | null;
+    defaultValue?: ValueType | null;
 
     /**
      * Custom edit cell configuration for advanced editing, such as custom input types or validation logic.
@@ -269,7 +266,7 @@ export interface ColumnProps {
      *
      * @default {}
      */
-    edit?: ColumnEditConfig;
+    edit?: ColumnEditParams;
 
     /**
      * If true, marks the column as an identity column for auto-incrementing values.
@@ -294,13 +291,11 @@ export interface ColumnProps {
      * Allows overriding the default sorting behavior with custom logic by comparing reference and comparer values.
      * Advanced custom sorting can be implemented using complete row data and the current sort direction context.
      *
-     * @event onSortComparer
-     *
-     * @param referenceValue - The value from the reference row to compare. Typically the current row being sorted.
-     * @param comparerValue - The value from the comparer row to compare against. Used to determine sort order.
-     * @param referenceRowData - Optional. Complete data object of the reference row. Useful for advanced sorting logic.
-     * @param comparerRowData - Optional. Complete data object of the comparer row. Useful for advanced sorting logic.
-     * @param sortDirection - Optional. Current sort direction: 'Ascending', 'Descending', or ''. Helps determine sort logic flow.
+     * * `referenceValue` - The value from the reference row to compare. Typically the current row being sorted.
+     * * `comparerValue` - The value from the comparer row to compare against. Used to determine sort order.
+     * * `referenceRowData` - Optional. Complete data object of the reference row. Useful for advanced sorting logic.
+     * * `comparerRowData` - Optional. Complete data object of the comparer row. Useful for advanced sorting logic.
+     * * `sortDirection` - Optional. Current sort direction: 'Ascending', 'Descending', or ''. Helps determine sort logic flow.
      *
      * @returns A number or string indicating the sort order. Return a negative number if referenceValue should come before comparerValue, positive if after, or zero if equal.
      *
@@ -310,8 +305,8 @@ export interface ColumnProps {
      *   const handleSortComparer = (
      *     referenceValue: ValueType,
      *     comparerValue: ValueType,
-     *     referenceRowData?: Object,
-     *     comparerRowData?: Object,
+     *     referenceRowData?: T,
+     *     comparerRowData?: T,
      *     sortDirection?: string
      *   ): number => {
      *     // Custom sort logic based on values and optional row data
@@ -324,16 +319,15 @@ export interface ColumnProps {
      *       sortSettings={{ enabled: true }}
      *     >
      *       <Columns>
-     *         <Column field="OrderID" onSortComparer={handleSortComparer} />
+     *         <Column field="OrderID" sortComparer={handleSortComparer} />
      *       </Columns>
      *     </Grid>
      *   );
      * };
      * ```
      */
-    onSortComparer?: (referenceValue: ValueType, comparerValue: ValueType, referenceRowData?: Object,
-        comparerRowData?: Object, sortDirection?: string) => number | string;
-
+    sortComparer?: (referenceValue: ValueType, comparerValue: ValueType, referenceRowData?: T,
+        comparerRowData?: T, sortDirection?: string) => number | string;
 
     /**
      * Template for the column's edit UI, as a string, function, or HTML element ID.
@@ -341,7 +335,7 @@ export interface ColumnProps {
      *
      * @default null
      */
-    editTemplate?: string | ReactElement | ((args: EditTemplateProps) => React.ReactElement);
+    editTemplate?: ComponentType<EditTemplateProps<T>> | ReactElement | string;
 
     /**
      * Template for the column's filter UI, as a string, function, or HTML element ID.
@@ -349,7 +343,7 @@ export interface ColumnProps {
      *
      * @default null
      */
-    filterTemplate?: string | ReactElement | Function;
+    filterTemplate?: ComponentType<FilterTemplateProps> | ReactElement | string;
 
     /**
      * If true, enables searching for the column in the grid's search bar.
@@ -359,12 +353,12 @@ export interface ColumnProps {
     allowSearch?: boolean;
 
     /**
-     * Configures the 'aria-label' behavior for cells rendered using column templates.
+     * Configures the `aria-label` behavior for cells rendered using column templates.
      * Improves accessibility by providing screen readers with meaningful labels when templates are used in grid columns.
      *
      * @default {}
      */
-    templateSettings?: TemplateConfig;
+    templateSettings?: TemplateParams;
 
     /**
      * Gets the formatter function for the column.
@@ -421,75 +415,54 @@ export interface ColumnProps {
     sortDirection?: string;
 
     /**
-     * Fires for each content cell during data binding or  subsequent content cell refresh cycles.
-     * Enables dynamic assignment of CSS class names to content cells based on row and column context,
-     * allowing customization of cell appearance.
+     * Applies a CSS class to individual grid cells either globally or conditionally.
+     * Accepts a static class name or a callback function that returns a class name based on cell context.
      *
-     * @param props - Contains column configuration, complete row data, and row index.
+     * The callback receives a `CellClassProps` object with the following properties:
+     * * `cellType` – Identifies the structural role of the cell: `Header`, `Content`, or `Aggregate`. Useful for styling header, data, or summary cells.
+     * * `column` – The column configuration object associated with the cell.
+     * * `data` – The full data object for the row containing the cell, enabling conditional styling based on field values.
+     * * `rowIndex` – The zero-based index of the row.
+     *
+     * @param props - Optional event payload containing cell type, column configuration, row data, and row index.
      * @returns A CSS class name to apply to the cell.
      *
      * @default -
+     *
      * @example
-     * ```tsx
      * const GridComponent = () => {
-     *   const handleCellClass = (args: DataCellClassEvent) => {
-     *     return args.rowIndex % 2 === 0 ? 'even-row' : 'odd-row';
+     *   const handleCellClass = (props?: CellClassProps): string => {
+     *     if (props?.cellType === CellType.Header && props.column.field === 'OrderID') {
+     *       return 'highlight-header';
+     *     }
+     *     if (props?.cellType === CellType.Content) {
+     *       return props.rowIndex % 2 === 0 ? 'even-row' : 'odd-row';
+     *     }
+     *     return '';
      *   };
      *
      *   return (
-     *     <Grid
-     *       dataSource={data}
-     *     >
+     *     <Grid dataSource={data}>
      *       <Columns>
-     *         <Column field='OrderID' dataCellClass={handleCellClass}/>
+     *         <Column field="OrderID" cellClass={handleCellClass} />
      *       </Columns>
      *     </Grid>
      *   );
      * };
-     * ```
      */
-    dataCellClass?: string | ((props?: DataCellClassEvent) => string);
-
-    /**
-     * Fires for each header cell during initial rendering or subsequent header cell refresh cycles.
-     * Enables dynamic assignment of CSS class names to header cells based on column configuration and header row index.
-     *
-     * @param props - Contains column configuration and header row index.
-     * @returns A CSS class name to apply to the header cell.
-     *
-     * @default -
-     * @example
-     * ```tsx
-     * const GridComponent = () => {
-     *   const handleHeaderCellClass = (args: HeaderCellClassEvent) => {
-     *     return args.column.field === 'OrderID' ? 'highlight-header' : '';
-     *   };
-     *
-     *   return (
-     *     <Grid
-     *       dataSource={data}
-     *     >
-     *       <Columns>
-     *         <Column field='OrderID' headerCellClass={handleHeaderCellClass}/>
-     *       </Columns>
-     *     </Grid>
-     *   );
-     * };
-     * ```
-     */
-    headerCellClass?: string | ((props?: HeaderCellClassEvent) => string);
+    cellClass?: string | ((props?: CellClassProps<T>) => string);
 }
 
 /**
- * Defines event arguments for applying custom CSS classes to data cells in the Syncfusion React Grid.
- * Provides metadata to dynamically style cells based on column configuration, row data, or row position.
+ * Defines event arguments for applying custom CSS classes to the cells in the Syncfusion React Data Grid.
+ * Provides metadata to dynamically style cells based on cell type, column configuration, row data, or row position.
  * Used to customize the visual appearance of individual cells during rendering.
  */
-export interface DataCellClassEvent {
+export interface CellClassProps<T = unknown> {
     /**
-     * Represents the column configuration associated with the data cell.
+     * Represents the column configuration associated with the cell.
      * Includes metadata such as field, type, format, and other column-specific properties.
-     * Enables conditional styling logic to the data cell based on column attributes.
+     * Enables conditional styling logic to the cell based on column attributes.
      *
      * @default -
      */
@@ -498,60 +471,42 @@ export interface DataCellClassEvent {
     /**
      * Contains the complete data object for the row containing the cell.
      * Enables conditional styling logic based on any field value within the row.
-     * Useful for dynamic styling to the data cell based on business rules or row data context.
+     * Useful for dynamic styling to the cell based on business rules or row data context.
      *
      * @default -
      */
-    rowData: Object;
+    data?: T;
 
     /**
      * Specifies the zero-based index of the row in the grid.
      * Identifies the row’s position, enabling row-specific styling such as alternating row colors.
-     * Used for applying CSS classes to the data cell based on row position or sequence.
+     * Used for applying CSS classes to the cell based on row position or sequence.
      *
      * @default -
      */
     rowIndex: number;
-}
-
-/**
- * Defines event arguments for applying custom CSS classes to header cells in the Syncfusion React Grid.
- * Provides metadata to dynamically style header cells based on column configuration or row position.
- * Used to customize the visual appearance of column headers during rendering.
- */
-export interface HeaderCellClassEvent {
     /**
-     * Represents the column configuration associated with the header cell.
-     * Includes metadata such as field, type, format, and other column-specific properties.
-     * Enables conditional styling logic to the header cell based on column properties.
+     * Type of the cell: `Header`, `Content`, or `Aggregate`.
+     * Useful for applying different styles based on cell category.
      *
      * @default -
      */
-    column: ColumnProps;
-
-    /**
-     * Specifies the zero-based index of the header row in the grid.
-     * Identifies the header row’s position, useful for multi-level headers or conditional styling.
-     * Used to apply additional CSS classes to the header cell based on header row context.
-     *
-     * @default -
-     */
-    rowIndex: number;
+    cellType: string | CellType;
 }
 
 /**
- * Represents the contextual properties passed to column template functions in the Syncfusion React Grid.
+ * Represents the contextual properties passed to column template functions in the Syncfusion React Data Grid.
  * Enables dynamic rendering of custom cell content by providing access to row data, column metadata, and row index.
  * Commonly used in template-based columns to implement flexible and user-defined cell rendering logic.
  */
-export interface ColumnTemplateProps {
+export interface ColumnTemplateProps<T = unknown> {
     /**
      * The complete data object for the row associated with the current cell.
      * Grants access to all fields in the row, allowing template logic to render or manipulate cell content based on row-level data.
      *
      * @default {}
      */
-    rowData: Object;
+    data: T;
 
     /**
      * The column configuration object containing metadata such as field name, data type, and formatting options.
@@ -571,7 +526,7 @@ export interface ColumnTemplateProps {
 }
 
 /**
- * Represents the contextual properties passed to column header template functions in the Syncfusion React Grid.
+ * Represents the contextual properties passed to column header template functions in the Syncfusion React Data Grid.
  * Enables dynamic rendering of custom header content by providing access to column metadata and index.
  * Commonly used in template-based headers to implement flexible and user-defined header rendering logic.
  */
@@ -602,11 +557,11 @@ export type CustomAttributes = (TdHTMLAttributes<HTMLTableCellElement> | ThHTMLA
 
 
 /**
- * Defines event arguments for customizing header cell rendering in the Syncfusion React Grid.
+ * Defines event arguments for customizing header cell rendering in the Syncfusion React Data Grid.
  * Enables dynamic transformation of header text based on column metadata or application requirements.
  * Used to modify or localize header content during rendering.
  */
-export interface HeaderValueAccessorEvent {
+export interface HeaderValueAccessorProps {
     /**
      * Specifies the text displayed in the header cell of the grid.
      * Allows modification for purposes such as localization, formatting, or custom display logic.
@@ -627,14 +582,15 @@ export interface HeaderValueAccessorEvent {
 }
 
 /**
- * Defines event arguments for customizing data cell rendering in the Syncfusion React Grid. It enables modification of displayed content
+ * Defines event arguments for customizing data cell rendering in the Syncfusion React Data Grid. It enables modification of displayed content
  * based on the column field and row data, strictly for presentation purposes. These changes do not affect the original data source, and
  * operations such as filtering, sorting, searching, CRUD actions, etc., are based on the actual source values.
  */
-export interface ValueAccessorEvent {
+export interface ValueAccessorProps<T = unknown> {
     /**
      * Specifies the field name of the column being rendered. Identifies the corresponding data key in the row object. Typically accessed
      * directly when transforming or displaying cell values, without referencing the full column configuration.
+     *
      * @default -
      */
     field: string;
@@ -645,7 +601,7 @@ export interface ValueAccessorEvent {
      *
      * @default -
      */
-    rowData: Object;
+    data: T;
 
     /**
      * Defines the column configuration object, including metadata such as field, type, headerText, and other column-specific properties.
@@ -657,18 +613,18 @@ export interface ValueAccessorEvent {
 }
 
 /**
- * Defines configuration options for template-based columns in the Syncfusion React Grid.
+ * Defines configuration options for template-based columns in the Syncfusion React Data Grid.
  *
  * This interface is used to control accessibility attributes applied to grid cells rendered using templates.
  * It helps improve usability for assistive technologies and ensures compliance with accessibility standards.
  */
-export interface TemplateConfig {
+export interface TemplateParams {
     /**
-     * Specifies the value of the aria-label attribute applied to cells in template-based columns.
+     * Specifies the value of the `aria-label` attribute applied to cells in template-based columns.
      *
      * When this property is set, the grid assigns the provided string as an accessibility label
      * to each template cell in the column. This enhances screen reader support and improves accessibility
-     * for users relying on assistive technologies. If left empty, the aria-label attribute is not applied.
+     * for users relying on assistive technologies. If left empty, the `aria-label` attribute is not applied.
      *
      * @default ''
      */
@@ -680,7 +636,7 @@ export interface TemplateConfig {
  * Specifies constraints and checks for input values during cell editing operations.
  * Used to enforce data quality and consistency in editable grid columns.
  */
-export interface ColumnValidationConfig {
+export interface ColumnValidationParams {
     /**
      * Indicates whether the field is mandatory during editing.
      * When true, requires a non-empty value to pass validation. when false, allows empty inputs.
@@ -838,11 +794,11 @@ export interface ColumnValidationConfig {
 }
 
 /**
- * Configures filtering behavior for columns in the Syncfusion React Grid.
+ * Configures filtering behavior for columns in the Syncfusion React Data Grid.
  * Defines settings for the filter UI, operator, and component parameters.
  * Used to customize how data is filtered within specific columns.
  */
-export interface ColumnFilterConfig {
+export interface ColumnFilterParams {
     /**
      * Specifies the type of filter UI applied to the column, such as 'FilterBar' or other supported filter types.
      * Determines the user interface and interaction style for filtering data in the column.
@@ -858,7 +814,7 @@ export interface ColumnFilterConfig {
      * Defines the filtering logic applied to the column’s data, aligning with its data type.
      * Ensures appropriate filtering behavior for strings, numbers, or other data.
      *
-     * @default 'stringFilter'
+     * @default 'StringFilter' | FilterBarType.TextBox
      */
     filterBarType?: string | FilterBarType;
 
@@ -886,20 +842,20 @@ export interface ColumnFilterConfig {
  *
  * @private
  */
-export interface IColumnBase extends ColumnProps {
+export interface IColumnBase<T = unknown> extends ColumnProps<T> {
     /**
      * Row data for the column.
      *
      * @default null
      */
-    row?: IRow<IColumnBase>;
+    row?: IRow<IColumnBase<T>>;
 
     /**
      * Cell data for the column.
      *
      * @default null
      */
-    cell?: ICell<IColumnBase>;
+    cell?: ICell<IColumnBase<T>>;
 
     /**
      * Format function for the column.
@@ -949,13 +905,13 @@ export interface IColumnBase extends ColumnProps {
  *
  * @private
  */
-export interface PrepareColumns {
+export interface PrepareColumns<T = unknown> {
     /**
      * Array of column configurations.
      *
      * @default []
      */
-    columns: ColumnProps[];
+    columns: ColumnProps<T>[];
     /**
      * Depth level for nested columns.
      *
@@ -991,7 +947,7 @@ export interface PrepareColumns {
      *
      * @default []
      */
-    uiColumns?: ColumnProps[];
+    uiColumns?: ColumnProps<T>[];
 }
 
 /**

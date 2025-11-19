@@ -11,12 +11,12 @@ import {
     isValidElement,
     Children,
     JSX,
-    MemoExoticComponent,
     ReactNode,
     RefObject,
     useEffect,
     SetStateAction,
-    Dispatch
+    Dispatch,
+    ComponentType
 } from 'react';
 import {
     ContentRowsRef,
@@ -24,84 +24,82 @@ import {
     IContentRowsBase,
     IRow,
     RowRef,
-    CellType, RenderType
+    CellTypes, RenderType
 } from '../types';
-import { ColumnProps, IColumnBase } from '../types/column.interfaces';
-import { InlineEditFormRef } from '../types/edit.interfaces';
+import { ColumnProps, ColumnTemplateProps, IColumnBase } from '../types/column.interfaces';
+import { EditFormTemplate, InlineEditFormRef } from '../types/edit.interfaces';
 import { useGridComputedProvider, useGridMutableProvider } from '../contexts';
 import { ColumnBase, RowBase } from '../components';
 import { IL10n, isNullOrUndefined } from '@syncfusion/react-base';
 import { getUid } from '../utils';
 import { InlineEditForm } from './index';
 import { ColumnsChildren, ValueType } from '../types/interfaces';
-const CSS_EMPTY_ROW: string = 'sf-emptyrow';
-const CSS_DATA_ROW: string = 'sf-row';
-const CSS_ALT_ROW: string = 'sf-altrow';
+const CSS_EMPTY_ROW: string = 'sf-empty-row';
+const CSS_DATA_ROW: string = 'sf-grid-content-row';
+const CSS_ALT_ROW: string = 'sf-alt-row';
 
 /**
  * RenderEmptyRow component displays when no data is available
  *
  * @component
  * @private
- * @param {Partial<IContentRowsBase>} props - Component properties
  * @returns {JSX.Element} The rendered empty row component
  */
-const RenderEmptyRow: MemoExoticComponent<() => JSX.Element> =
-    memo(() => {
-        const { serviceLocator, emptyRecordTemplate } = useGridComputedProvider();
-        const localization: IL10n = serviceLocator?.getService<IL10n>('localization');
-        const { columnsDirective } = useGridMutableProvider();
+function RenderEmptyRow<T>(): JSX.Element {
+    const { serviceLocator, emptyRecordTemplate } = useGridComputedProvider<T>();
+    const localization: IL10n = serviceLocator?.getService<IL10n>('localization');
+    const { columnsDirective } = useGridMutableProvider();
 
-        /**
-         * Calculate the number of columns to span the empty message
-         */
-        const columnsLength: number = useMemo(() => {
-            const children: ReactNode = (columnsDirective.props as ColumnsChildren).children;
-            return Children.count(children);
-        }, [columnsDirective]);
+    /**
+     * Calculate the number of columns to span the empty message
+     */
+    const columnsLength: number = useMemo(() => {
+        const children: ReactNode = (columnsDirective.props as ColumnsChildren<T>).children;
+        return Children.count(children);
+    }, [columnsDirective]);
 
-        const rowRef: RefObject<RowRef> = useRef<RowRef>(null);
+    const rowRef: RefObject<RowRef<T>> = useRef<RowRef<T>>(null);
 
-        /**
-         * Render the empty row template based on configuration
-         */
-        const renderEmptyTemplate: string | (() => ReactElement | string) | ReactElement = useMemo(() => {
-            if (isNullOrUndefined(emptyRecordTemplate)) {
-                return localization?.getConstant('noRecordsMessage');
-            } else if (typeof emptyRecordTemplate === 'string' || isValidElement(emptyRecordTemplate)) {
-                return emptyRecordTemplate;
-            } else {
-                return emptyRecordTemplate();
-            }
-        }, [emptyRecordTemplate, localization]);
+    /**
+     * Render the empty row template based on configuration
+     */
+    const renderEmptyTemplate: ComponentType<void> | ReactElement | string = useMemo(() => {
+        if (isNullOrUndefined(emptyRecordTemplate)) {
+            return <>{localization?.getConstant('noRecordsMessage')}</>;
+        } else if (typeof emptyRecordTemplate === 'string' || isValidElement(emptyRecordTemplate)) {
+            return emptyRecordTemplate;
+        } else {
+            return emptyRecordTemplate;
+        }
+    }, [emptyRecordTemplate, localization]);
 
-        return (
-            <>
-                {useMemo(() => (
-                    <RowBase
-                        ref={rowRef}
-                        key="empty-row"
-                        row={{ index: 0, uid: 'empty-row-uid' }}
-                        rowType={RenderType.Content}
-                        role="row"
-                        className={CSS_EMPTY_ROW}
-                    >
-                        <ColumnBase
-                            key="empty-cell"
-                            index={0}
-                            uid='empty-cell-uid'
-                            customAttributes={{
-                                style: { left: '0px' },
-                                colSpan: columnsLength,
-                                tabIndex: 0 // Make the empty cell focusable
-                            }}
-                            template={renderEmptyTemplate}
-                        />
-                    </RowBase>
-                ), [columnsLength, renderEmptyTemplate])}
-            </>
-        );
-    });
+    return (
+        <>
+            {useMemo(() => (
+                <RowBase<T>
+                    ref={rowRef}
+                    key="empty-row"
+                    row={{ index: 0, uid: 'empty-row-uid' }}
+                    rowType={RenderType.Content}
+                    role="row"
+                    className={CSS_EMPTY_ROW}
+                >
+                    <ColumnBase<T>
+                        key="empty-cell"
+                        index={0}
+                        uid='empty-cell-uid'
+                        customAttributes={{
+                            style: { left: '0px' },
+                            colSpan: columnsLength,
+                            tabIndex: 0 // Make the empty cell focusable
+                        }}
+                        template={renderEmptyTemplate as ComponentType<ColumnTemplateProps<T>> | ReactElement | string}
+                    />
+                </RowBase>
+            ), [columnsLength, renderEmptyTemplate])}
+        </>
+    );
+}
 
 /**
  * Set display name for debugging purposes
@@ -117,19 +115,19 @@ RenderEmptyRow.displayName = 'RenderEmptyRow';
  * @param {RefObject<ContentRowsRef>} ref - Forwarded ref to expose internal elements and methods
  * @returns {JSX.Element} The rendered tbody element with data rows
  */
-const ContentRowsBase: ForwardRefExoticComponent<Partial<IContentRowsBase> & RefAttributes<ContentRowsRef>> =
+const ContentRowsBase: <T>(props: Partial<IContentRowsBase> & RefAttributes<ContentRowsRef<T>>) => ReactElement =
     memo(forwardRef<ContentRowsRef, Partial<IContentRowsBase>>(
-        (_props: Partial<IContentRowsBase>, ref: RefObject<ContentRowsRef>) => {
-            const { columnsDirective, currentViewData, editModule, uiColumns } = useGridMutableProvider();
-            const { rowHeight, enableAltRow, columns, rowTemplate } = useGridComputedProvider();
+        <T, >(_props: Partial<IContentRowsBase>, ref: RefObject<ContentRowsRef<T>>) => {
+            const { columnsDirective, currentViewData, editModule, uiColumns } = useGridMutableProvider<T>();
+            const { rowHeight, enableAltRow, columns, rowTemplate } = useGridComputedProvider<T>();
 
             // Refs for DOM elements and child components
             const contentSectionRef: RefObject<HTMLTableSectionElement> = useRef<HTMLTableSectionElement>(null);
-            const rowsObjectRef: RefObject<IRow<ColumnProps>[]> = useRef<IRow<ColumnProps>[]>([]);
+            const rowsObjectRef: RefObject<IRow<ColumnProps<T>>[]> = useRef<IRow<ColumnProps<T>>[]>([]);
             const rowElementRefs: RefObject<HTMLTableRowElement[] | HTMLCollectionOf<HTMLTableRowElement>> =
                 useRef<HTMLTableRowElement[] | HTMLCollectionOf<HTMLTableRowElement>>([]);
-            const addInlineFormRef: RefObject<InlineEditFormRef> = useRef<InlineEditFormRef>(null);
-            const editInlineFormRef: RefObject<InlineEditFormRef> = useRef<InlineEditFormRef>(null);
+            const addInlineFormRef: RefObject<InlineEditFormRef<T>> = useRef<InlineEditFormRef<T>>(null);
+            const editInlineFormRef: RefObject<InlineEditFormRef<T>> = useRef<InlineEditFormRef<T>>(null);
 
             /**
              * Returns the collection of content row elements
@@ -145,7 +143,7 @@ const ContentRowsBase: ForwardRefExoticComponent<Partial<IContentRowsBase> & Ref
              *
              * @returns {IRow<ColumnProps>[]} Array of row options objects with element references
              */
-            const getRowsObject: () => IRow<ColumnProps>[] = useCallback(() => rowsObjectRef.current, [rowsObjectRef.current]);
+            const getRowsObject: () => IRow<ColumnProps<T>>[] = useCallback(() => rowsObjectRef.current, [rowsObjectRef.current]);
 
             /**
              * Gets a row by index.
@@ -162,8 +160,8 @@ const ContentRowsBase: ForwardRefExoticComponent<Partial<IContentRowsBase> & Ref
              * @returns {IRow<ColumnProps>} Returns the row object
              * @private
              */
-            const getRowObjectFromUID: (uid: string) => IRow<ColumnProps> = useCallback((uid: string) => {
-                const rows: IRow<ColumnProps>[] = getRowsObject() as IRow<ColumnProps>[];
+            const getRowObjectFromUID: (uid: string) => IRow<ColumnProps<T>> = useCallback((uid: string) => {
+                const rows: IRow<ColumnProps<T>>[] = getRowsObject() as IRow<ColumnProps<T>>[];
                 if (rows) {
                     for (const row of rows) {
                         if (row.uid === uid) {
@@ -195,7 +193,7 @@ const ContentRowsBase: ForwardRefExoticComponent<Partial<IContentRowsBase> & Ref
              */
             const emptyRowComponent: JSX.Element | null = useMemo(() => {
                 if (!columnsDirective || !currentViewData || currentViewData.length === 0) {
-                    return <RenderEmptyRow />;
+                    return <RenderEmptyRow<T> />;
                 }
                 return null;
             }, [columnsDirective, currentViewData]);
@@ -206,10 +204,10 @@ const ContentRowsBase: ForwardRefExoticComponent<Partial<IContentRowsBase> & Ref
              * @param {number} index - Row index
              * @param {HTMLTableRowElement} element - Row DOM element
              */
-            const storeRowRef: (index: number, element: HTMLTableRowElement, cellRef: ICell<ColumnProps>[],
-                setRowObject: Dispatch<SetStateAction<IRow<ColumnProps>>>) => void =
-                useCallback((index: number, element: HTMLTableRowElement, cellRef: ICell<ColumnProps>[],
-                             setRowObject: Dispatch<SetStateAction<IRow<ColumnProps>>>) => {
+            const storeRowRef: (index: number, element: HTMLTableRowElement, cellRef: ICell<ColumnProps<T>>[],
+                setRowObject: Dispatch<SetStateAction<IRow<ColumnProps<T>>>>) => void =
+                useCallback((index: number, element: HTMLTableRowElement, cellRef: ICell<ColumnProps<T>>[],
+                             setRowObject: Dispatch<SetStateAction<IRow<ColumnProps<T>>>>) => {
                     // Directly update the element reference in the row object
                     rowsObjectRef.current[index as number].element = element;
                     rowElementRefs.current[index as number] = element;
@@ -219,7 +217,7 @@ const ContentRowsBase: ForwardRefExoticComponent<Partial<IContentRowsBase> & Ref
 
 
             const inlineAddForm: JSX.Element = useMemo(() => {
-                const options: IRow<ColumnProps> = {
+                const options: IRow<ColumnProps<T>> = {
                     uid: getUid('grid-add-row'),
                     data: editModule?.originalData,
                     index: editModule?.editSettings?.newRowPosition === 'Top' ? 0 : currentViewData?.length, // Critical: Use original data index for proper tracking
@@ -232,13 +230,13 @@ const ContentRowsBase: ForwardRefExoticComponent<Partial<IContentRowsBase> & Ref
                     (!options.data && editModule?.isEdit));
 
                 return showAddForm ? (
-                    <InlineEditForm
+                    <InlineEditForm<T>
                         ref={addInlineFormRef}
                         key={`add-edit-${options.uid}`}
                         stableKey={`add-edit-${options.uid}-${editModule?.editRowIndex}`}
                         isAddOperation={true}
-                        columns={uiColumns ?? columns}
-                        editData={editModule?.editData || {}}
+                        columns={uiColumns ?? columns as ColumnProps<T>[]}
+                        editData={editModule?.editData}
                         validationErrors={editModule?.validationErrors || {}}
                         editRowIndex={options.index}
                         rowUid={options.uid}
@@ -250,9 +248,9 @@ const ContentRowsBase: ForwardRefExoticComponent<Partial<IContentRowsBase> & Ref
                                 editModule?.updateEditData?.(field, value);
                             }
                         }}
-                        onSave={() => editModule?.saveChanges()}
-                        onCancel={editModule?.cancelChanges}
-                        template={editModule?.editSettings?.template}
+                        onSave={() => editModule?.saveDataChanges()}
+                        onCancel={editModule?.cancelDataChanges}
+                        template={editModule?.editSettings?.template as React.ComponentType<EditFormTemplate<T>>}
                     />
                 ) : <></>;
             }, [
@@ -266,18 +264,18 @@ const ContentRowsBase: ForwardRefExoticComponent<Partial<IContentRowsBase> & Ref
                 editModule?.editSettings?.template
             ]);
 
-            const generateCell: () => IRow<ColumnProps>[] = useCallback((): IRow<ColumnProps>[] => {
-                const cells: ICell<IColumnBase>[] = [];
-                const childrenArray: ReactElement<IColumnBase>[] = columns as ReactElement<IColumnBase>[];
+            const generateCell: () => IRow<ColumnProps<T>>[] = useCallback((): IRow<ColumnProps<T>>[] => {
+                const cells: ICell<IColumnBase<T>>[] = [];
+                const childrenArray: ReactElement<IColumnBase<T>>[] = columns as ReactElement<IColumnBase<T>>[];
                 for (let index: number = 0; index < childrenArray.length; index++) {
-                    const child: ColumnProps = childrenArray[index as number] as ColumnProps;
-                    const option: ICell<IColumnBase> = {
+                    const child: ColumnProps<T> = childrenArray[index as number] as ColumnProps<T>;
+                    const option: ICell<IColumnBase<T>> = {
                         visible: child.visible !== false,
                         isDataCell: !isNullOrUndefined(child.field),
                         isTemplate: !isNullOrUndefined(child.template),
                         rowID: child.uid,
                         column: child,
-                        cellType: CellType.Data,
+                        cellType: CellTypes.Data,
                         colSpan: 1
                     };
                     cells.push(option);
@@ -285,13 +283,13 @@ const ContentRowsBase: ForwardRefExoticComponent<Partial<IContentRowsBase> & Ref
                 return cells;
             }, [columns]);
 
-            const processRowData: (rowIndex: number, rowData: Object, rows: JSX.Element[], rowOptions: IRow<ColumnProps>[],
+            const processRowData: (rowIndex: number, data: T, rows: JSX.Element[], rowOptions: IRow<ColumnProps<T>>[],
                 indent?: number, currentDataRowIndex?: number,
-                parentUid?: string) => void = (rowIndex: number, rowData: Object, rows: JSX.Element[], rowOptions: IRow<ColumnProps>[],
+                parentUid?: string) => void = (rowIndex: number, data: T, rows: JSX.Element[], rowOptions: IRow<ColumnProps<T>>[],
                                                indent?: number, currentDataRowIndex?: number, parentUid?: string) =>  {
 
-                const row: Object = rowData;
-                const options: IRow<ColumnProps> = {};
+                const row: T = data;
+                const options: IRow<ColumnProps<T>> = {};
                 options.uid = getUid('grid-row');
                 options.parentUid = parentUid;
                 options.data = row;
@@ -310,8 +308,8 @@ const ContentRowsBase: ForwardRefExoticComponent<Partial<IContentRowsBase> & Ref
 
                 // Create the row element with a callback ref to store the element reference
                 rows.push(
-                    <RowBase
-                        ref={(element: RowRef) => {
+                    <RowBase<T>
+                        ref={(element: RowRef<T>) => {
                             if (element?.rowRef?.current) {
                                 storeRowRef(rowIndex, element.rowRef.current, element.getCells(), element.setRowObject);
                             } else if (element?.editInlineRowFormRef?.current) {
@@ -328,7 +326,7 @@ const ContentRowsBase: ForwardRefExoticComponent<Partial<IContentRowsBase> & Ref
                         data-uid={options.uid}
                         style={{ height: `${rowHeight}px` }}
                     >
-                        {(columnsDirective.props as ColumnsChildren).children}
+                        {(columnsDirective.props as ColumnsChildren<T>).children}
                     </RowBase>
                 );
             };
@@ -344,7 +342,7 @@ const ContentRowsBase: ForwardRefExoticComponent<Partial<IContentRowsBase> & Ref
                 rowElementRefs.current = [];
 
                 const rows: JSX.Element[] = [];
-                const rowOptions: IRow<ColumnProps>[] = [];
+                const rowOptions: IRow<ColumnProps<T>>[] = [];
                 for (let rowIndex: number = 0; rowIndex < currentViewData.length; rowIndex++) {
                     processRowData(rowIndex, currentViewData[parseInt(rowIndex.toString(), 10)], rows, rowOptions);
                 }
@@ -372,12 +370,12 @@ const ContentRowsBase: ForwardRefExoticComponent<Partial<IContentRowsBase> & Ref
                 </tbody>
             );
         }
-    ));
+    )) as (props: Partial<IContentRowsBase> & RefAttributes<ContentRowsRef>) => ReactElement;
 
 /**
  * Set display name for debugging purposes
  */
-ContentRowsBase.displayName = 'ContentRowsBase';
+(ContentRowsBase as ForwardRefExoticComponent<Partial<IContentRowsBase> & RefAttributes<ContentRowsRef>>).displayName = 'ContentRowsBase';
 
 /**
  * Export the ContentRowsBase component for use in other components

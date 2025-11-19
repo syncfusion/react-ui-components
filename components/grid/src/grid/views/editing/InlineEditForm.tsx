@@ -1,10 +1,10 @@
-import { memo, useRef, useEffect, useCallback, forwardRef, useMemo, useState, useImperativeHandle, CSSProperties, JSX } from 'react';
+import { memo, useRef, useEffect, useCallback, forwardRef, useMemo, useState, useImperativeHandle, CSSProperties, JSX, RefAttributes, ReactElement } from 'react';
 import { FieldValidationRules, Form, FormField, FormState, FormValueType, IFormValidator, ValidationRules } from '@syncfusion/react-inputs';
 import { EditCell, ValidationTooltips } from '../index';
 import { EditCellRef, InlineEditFormProps, InlineEditFormRef } from '../../types/edit.interfaces';
 import { useGridComputedProvider, useGridMutableProvider } from '../../contexts';
 import { IValueFormatter, ValueType } from '../../types';
-import { ColumnProps, ColumnValidationConfig, IColumnBase } from '../../types/column.interfaces';
+import { ColumnProps, ColumnValidationParams, IColumnBase } from '../../types/column.interfaces';
 import { getObject } from '../../utils';
 import { DataUtil } from '@syncfusion/react-data';
 import { isNullOrUndefined, isUndefined } from '@syncfusion/react-base';
@@ -16,8 +16,8 @@ import { isNullOrUndefined, isUndefined } from '@syncfusion/react-base';
  * @param ref - Forward ref for imperative methods
  * @returns Memoized EditForm component
  */
-export const InlineEditForm: React.ForwardRefExoticComponent<InlineEditFormProps & React.RefAttributes<InlineEditFormRef>> =
-    memo(forwardRef<InlineEditFormRef, InlineEditFormProps>(({
+export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<InlineEditFormRef<T>>) => ReactElement =
+    memo(forwardRef<InlineEditFormRef, InlineEditFormProps>(<T, >({
         editData,
         validationErrors,
         onFieldChange,
@@ -29,7 +29,7 @@ export const InlineEditForm: React.ForwardRefExoticComponent<InlineEditFormProps
         template: CustomTemplate,
         disabled = false,
         isAddOperation
-    }: InlineEditFormProps, ref: React.ForwardedRef<InlineEditFormRef>) => {
+    }: InlineEditFormProps<T>, ref: React.ForwardedRef<InlineEditFormRef<T>>) => {
         // Use refs to store stable callback references
         const onFieldChangeRef: React.RefObject<((field: string, value: ValueType | null) => void) |
         undefined> = useRef(onFieldChange);
@@ -47,20 +47,20 @@ export const InlineEditForm: React.ForwardRefExoticComponent<InlineEditFormProps
             }, []);
 
         const formRef: React.RefObject<IFormValidator> = useRef<IFormValidator>(null);
-        const editCellRefs: React.RefObject<{ [field: string]: EditCellRef }> = useRef<{ [field: string]: EditCellRef }>({});
+        const editCellRefs: React.RefObject<{ [field in keyof T]?: EditCellRef }> = useRef<{ [field in keyof T]?: EditCellRef }>({});
         const { rowHeight, id, getVisibleColumns, serviceLocator, editModule, contentPanelRef, contentTableRef,
-            height } = useGridComputedProvider();
-        const { colElements: ColElements, cssClass } = useGridMutableProvider();
+            height } = useGridComputedProvider<T>();
+        const { colElements: ColElements, cssClass } = useGridMutableProvider<T>();
         const formatter: IValueFormatter = serviceLocator?.getService<IValueFormatter>('valueFormatter');
 
         /**
          * Internal data state that's isolated from grid until save
          */
-        const [internalData, setInternalData] = useState<Object>(() => {
+        const [internalData, setInternalData] = useState<T>(() => {
             // For add operations, start with truly empty data
-            if (isAddOperation) {
-                const addData: Record<string, unknown> = {};
-                columns.forEach((column: ColumnProps) => {
+            if (isAddOperation && !(editData && Object.keys(editData).length)) {
+                const addData: T = {} as T;
+                columns.forEach((column: ColumnProps<T>) => {
                     if (column.field && column.defaultValue !== undefined) {
                         // Apply defaultValue only when explicitly set
                         if (column.type === 'string') {
@@ -76,7 +76,7 @@ export const InlineEditForm: React.ForwardRefExoticComponent<InlineEditFormProps
                 return addData;
             } else {
                 // For edit operations, use all existing data
-                return editData ? { ...editData } : {};
+                return editData ? { ...editData } : {} as T;
             }
         });
 
@@ -93,10 +93,10 @@ export const InlineEditForm: React.ForwardRefExoticComponent<InlineEditFormProps
         const formValidationRules: ValidationRules = useMemo(() => {
             const rules: ValidationRules = {};
 
-            columns.forEach((column: ColumnProps) => {
+            columns.forEach((column: ColumnProps<T>) => {
                 if (column.field && column.visible && (column.validationRules || column.type || column.edit?.type)) {
                     const columnRules: FieldValidationRules = {};
-                    const validationRules: ColumnValidationConfig = column.validationRules || {};
+                    const validationRules: ColumnValidationParams = column.validationRules || {};
 
                     // Convert column validation rules to FormValidator format
                     if (validationRules.required !== undefined && validationRules.required !== false) {
@@ -223,11 +223,11 @@ export const InlineEditForm: React.ForwardRefExoticComponent<InlineEditFormProps
          * For edit operations, skip primary key fields (they're disabled)
          */
         const focusFirstField: () => void = useCallback(() => {
-            let firstEditableColumn: ColumnProps | undefined;
+            let firstEditableColumn: ColumnProps<T> | undefined;
 
             if (isAddOperation) {
                 // For add operations, primary key fields are enabled and should be focused first
-                firstEditableColumn = columns.find((col: ColumnProps) =>
+                firstEditableColumn = columns.find((col: ColumnProps<T>) =>
                     col.allowEdit !== false && col.visible &&
                     col.field &&
                     col.isPrimaryKey === true
@@ -235,7 +235,7 @@ export const InlineEditForm: React.ForwardRefExoticComponent<InlineEditFormProps
 
                 // If no primary key field found, find the first non-primary key editable field
                 if (!firstEditableColumn) {
-                    firstEditableColumn = columns.find((col: ColumnProps) =>
+                    firstEditableColumn = columns.find((col: ColumnProps<T>) =>
                         col.allowEdit !== false && col.visible &&
                         !col.isPrimaryKey &&
                         col.field
@@ -245,13 +245,13 @@ export const InlineEditForm: React.ForwardRefExoticComponent<InlineEditFormProps
                 // For edit operations, skip primary key fields (they're disabled)
                 // Focus the first non-primary key editable field
                 if (editModule.focusLastField.current) {
-                    firstEditableColumn = [...columns].reverse().find((col: ColumnProps) =>
+                    firstEditableColumn = [...columns].reverse().find((col: ColumnProps<T>) =>
                         col.allowEdit !== false && col.visible &&
                         !col.isPrimaryKey &&
                         col.field
                     );
                 } else {
-                    firstEditableColumn = columns.find((col: ColumnProps) =>
+                    firstEditableColumn = columns.find((col: ColumnProps<T>) =>
                         col.allowEdit !== false && col.visible &&
                         !col.isPrimaryKey &&
                         col.field
@@ -306,18 +306,18 @@ export const InlineEditForm: React.ForwardRefExoticComponent<InlineEditFormProps
         /**
          * Get current form data
          */
-        const getCurrentData: () => string | number | boolean | Record<string, unknown> | Date = useCallback(() => {
-            return formState?.values;
+        const getCurrentData: () => T = useCallback(() => {
+            return formState?.values as T;
         }, [formState]);
 
         /**
          * Handle field value change with proper data isolation
          * This prevents re-renders while maintaining data consistency
          */
-        const handleFieldChange: (column: ColumnProps, value: ValueType) =>
-        void = useCallback((column: ColumnProps, value: ValueType) => {
+        const handleFieldChange: (column: ColumnProps<T>, value: ValueType) =>
+        void = useCallback((column: ColumnProps<T>, value: ValueType) => {
             let formattedValue: ValueType = (column?.type === 'date' || column?.type === 'datetime' || column?.type === 'number') && typeof value === 'string' ?
-                (formatter.fromView(value, (column as IColumnBase)?.parseFn, column?.type)) : value;
+                (formatter.fromView(value, (column as IColumnBase<T>)?.parseFn, column?.type)) : value;
             if ((column?.type === 'number' && isNaN(formattedValue as number)) ||
                 ((column?.type === 'date' || column?.type === 'datetime') && isUndefined(formattedValue as string))) {
                 formattedValue = '';
@@ -331,7 +331,7 @@ export const InlineEditForm: React.ForwardRefExoticComponent<InlineEditFormProps
                 }
                 : { ...internalData };
 
-            const editedData: Object = DataUtil.setValue(column.field, formattedValue, copiedComplexData);
+            const editedData: T = DataUtil.setValue(column.field, formattedValue, copiedComplexData) as T;
             setInternalData({...editedData});
 
             // Update FormValidator state
@@ -353,10 +353,10 @@ export const InlineEditForm: React.ForwardRefExoticComponent<InlineEditFormProps
          * Enhanced blur handling to properly trigger FormValidator validation
          * This ensures validation happens on every field blur event
          */
-        const handleFieldBlur: (column: ColumnProps, value: string | number | boolean | Record<string, unknown> | Date) =>
-        void = useCallback((column: ColumnProps, value: string | number | boolean | Record<string, unknown> | Date) => {
+        const handleFieldBlur: (column: ColumnProps<T>, value: ValueType | Record<string, unknown>) =>
+        void = useCallback((column: ColumnProps<T>, value: ValueType | Record<string, unknown>) => {
             value = (column?.type === 'date' || column?.type === 'number') && typeof value === 'string' ?
-                (formatter.fromView(value, (column as IColumnBase)?.parseFn, column?.type)) : value;
+                (formatter.fromView(value, (column as IColumnBase<T>)?.parseFn, column?.type)) : value;
             // Update internal data on blur (consistency check)
             const topLevelKey: string = column.field.split('.')[0];
             const copiedComplexData: Object = column.field.includes('.') && typeof internalData[topLevelKey as string] === 'object'
@@ -366,7 +366,7 @@ export const InlineEditForm: React.ForwardRefExoticComponent<InlineEditFormProps
                 }
                 : { ...internalData };
 
-            const editedData: Object = DataUtil.setValue(column.field, value, copiedComplexData);
+            const editedData: T = DataUtil.setValue(column.field, value, copiedComplexData) as T;
             setInternalData({...editedData});
 
             if (!(isAddOperation && editModule.isShowAddNewRowActive) ||
@@ -420,24 +420,24 @@ export const InlineEditForm: React.ForwardRefExoticComponent<InlineEditFormProps
         const handleTabBoundaryNavigation: (event: KeyboardEvent, currentField: string) => boolean =
             useCallback((event: KeyboardEvent, currentField: string) => {
                 // Get editable columns based on operation type
-                let editableColumns: ColumnProps[];
+                let editableColumns: ColumnProps<T>[];
 
                 if (isAddOperation) {
                     // For add operations, include primary key fields (they're enabled)
-                    editableColumns = columns.filter((col: ColumnProps) =>
+                    editableColumns = columns.filter((col: ColumnProps<T>) =>
                         col.allowEdit !== false &&
                         col.field
                     );
                 } else {
                     // For edit operations, exclude primary key fields (they're disabled)
-                    editableColumns = columns.filter((col: ColumnProps) =>
+                    editableColumns = columns.filter((col: ColumnProps<T>) =>
                         col.allowEdit !== false && col.visible &&
                         !col.isPrimaryKey &&
                         col.field
                     );
                 }
 
-                const currentIndex: number = editableColumns.findIndex((col: ColumnProps) => col.field === currentField);
+                const currentIndex: number = editableColumns.findIndex((col: ColumnProps<T>) => col.field === currentField);
 
                 if (currentIndex === -1) {
                     return false;
@@ -481,7 +481,7 @@ export const InlineEditForm: React.ForwardRefExoticComponent<InlineEditFormProps
         const renderEditCells: React.JSX.Element[] = useMemo(() => {
             if (!formState) { return null; }
 
-            return columns.map((column: ColumnProps, index: number) => {
+            return columns.map((column: ColumnProps<T>, index: number) => {
                 // For add operations, primary key fields should be editable
                 // For edit operations, primary key fields should be disabled
                 // Also check column/field visiibility and the disabled prop for showAddNewRow functionality
@@ -496,8 +496,8 @@ export const InlineEditForm: React.ForwardRefExoticComponent<InlineEditFormProps
                     return column.visible ? (
                         <td
                             key={`edit-cell-${column.field || index}`}
-                            className={'sf-rowcell sf-edit-cell sf-edit-disabled' + (isAddOperation && isLastRow ? ' sf-lastrowadded' : '') +
-                                (!isAddOperation && isLastRow ? ' sf-lastrowcell' : '')}
+                            className={'sf-cell sf-grid-edit-cell sf-edit-disabled' + (isAddOperation && isLastRow ? ' sf-last-row' : '') +
+                                (!isAddOperation && isLastRow ? ' sf-last-cell' : '')}
                             data-mappinguid={column.uid}
                             role='gridcell'
                             aria-colindex={index + 1}
@@ -507,11 +507,11 @@ export const InlineEditForm: React.ForwardRefExoticComponent<InlineEditFormProps
                             }}
                         >
                             <FormField name={column.field}>
-                                <EditCell
+                                <EditCell<T>
                                     ref={(cellRef: EditCellRef | null) => storeEditCellRef(column.field, cellRef)}
                                     column={{ ...column, allowEdit: false }}
                                     value={getObject(column.field, formState?.values) ?? formState?.values?.[column.field]}
-                                    rowData={internalData}
+                                    data={internalData as T}
                                     error={formState?.errors[column.field]}
                                     onChange={handleFieldChange.bind(null, column)}
                                     onBlur={handleFieldBlur.bind(null, column)}
@@ -527,7 +527,7 @@ export const InlineEditForm: React.ForwardRefExoticComponent<InlineEditFormProps
                     ) : (
                         <td
                             key={`edit-cell-${column.field}`}
-                            className='sf-rowcell sf-hide'
+                            className='sf-cell sf-display-none'
                         ></td>
                     );
                 }
@@ -535,8 +535,8 @@ export const InlineEditForm: React.ForwardRefExoticComponent<InlineEditFormProps
                 return column.visible ? (
                     <td
                         key={`edit-cell-${column.field}`}
-                        className={'sf-rowcell sf-edit-cell' + (isAddOperation && isLastRow ? ' sf-lastrowadded' : '') +
-                            (!isAddOperation && isLastRow ? ' sf-lastrowcell' : '')}
+                        className={'sf-cell sf-grid-edit-cell' + (isAddOperation && isLastRow ? ' sf-last-row' : '') +
+                            (!isAddOperation && isLastRow ? ' sf-last-cell' : '')}
                         data-mappinguid={column.uid}
                         role='gridcell'
                         aria-colindex={index + 1}
@@ -551,7 +551,7 @@ export const InlineEditForm: React.ForwardRefExoticComponent<InlineEditFormProps
                                 ref={(cellRef: EditCellRef | null) => storeEditCellRef(column.field, cellRef)}
                                 column={column}
                                 value={getObject(column.field, formState?.values) ?? formState?.values?.[column.field]}
-                                rowData={internalData}
+                                data={internalData}
                                 error={formState?.errors[column.field]}
                                 onChange={handleFieldChange.bind(null, column)}
                                 onBlur={handleFieldBlur.bind(null, column)}
@@ -567,7 +567,7 @@ export const InlineEditForm: React.ForwardRefExoticComponent<InlineEditFormProps
                 ) : (
                     <td
                         key={`edit-cell-${column.field}`}
-                        className='sf-rowcell sf-hide'
+                        className='sf-cell sf-display-none'
                     ></td>
                 );
             });
@@ -578,8 +578,8 @@ export const InlineEditForm: React.ForwardRefExoticComponent<InlineEditFormProps
         // Render custom edit template if provided
         if (CustomTemplate) {
             return (
-                <tr className={`sf-row ${isAddOperation ? 'sf-addedrow' : 'sf-editedrow'}`}>
-                    <td colSpan={getVisibleColumns?.().length} className='sf-editcell sf-normaledit'>
+                <tr className={`sf-grid-content-row ${isAddOperation ? 'sf-grid-add-row' : 'sf-grid-edit-row'}`}>
+                    <td colSpan={getVisibleColumns?.().length} >
                         <Form
                             ref={formRef}
                             rules={formValidationRules}
@@ -587,20 +587,23 @@ export const InlineEditForm: React.ForwardRefExoticComponent<InlineEditFormProps
                             validateOnChange={!(isAddOperation && editModule?.isShowAddNewRowActive) || (isAddOperation &&
                             formState && Object.keys(formState.errors).length > 0)}
                             onFormStateChange={setFormState}
-                            className={'sf-gridform' + (cssClass !== '' ? ' ' + cssClass : '')}
+                            className={'sf-grid-edit-form' + (cssClass !== '' ? ' ' + cssClass : '')}
                             id={`grid-edit-form-${editRowIndex}`}
                             aria-label={`${isAddOperation ? 'Add' : 'Edit'} Record Form`}
                             role='form'
                         >
                             <div className='sf-edit-template-container'>
                                 <CustomTemplate
-                                    rowData={internalData}
+                                    data={internalData as T}
                                     columns={columns}
                                     validationErrors={validationErrors}
                                     onSave={onSave}
                                     onCancel={onCancel}
                                     onFieldChange={stableOnFieldChange}
                                     formState={formState}
+                                    isAddOperation={isAddOperation}
+                                    disabled={disabled}
+                                    setInternalData={setInternalData}
                                 />
                             </div>
                             {formState && Object.keys(formState.errors).length > 0 && (
@@ -687,8 +690,8 @@ export const InlineEditForm: React.ForwardRefExoticComponent<InlineEditFormProps
             focusTimeoutRef.current = setTimeout(() => {
                 const activeElement: HTMLElement | null = document.activeElement as HTMLElement;
                 const isAlreadyFocusedInEdit: boolean | Element = activeElement && (
-                    activeElement.closest('.sf-editedrow') ||
-                    activeElement.closest('.sf-addedrow')
+                    activeElement.closest('.sf-grid-edit-row') ||
+                    activeElement.closest('.sf-grid-add-row')
                 );
 
                 // Always auto-focus for new edit sessions, regardless of current focus
@@ -718,12 +721,12 @@ export const InlineEditForm: React.ForwardRefExoticComponent<InlineEditFormProps
 
         return rowUid ? (
             <tr
-                className={'sf-row ' + (rowUid.includes('grid-add-row') ? 'sf-addedrow' : 'sf-editedrow')}
+                className={'sf-grid-content-row ' + (rowUid.includes('grid-add-row') ? 'sf-grid-add-row' : 'sf-grid-edit-row')}
                 aria-rowindex={editRowIndex + 1}
                 data-uid={rowUid}
                 style={{ height: `${rowHeight}px` }}
             >
-                <td colSpan={getVisibleColumns?.().length} className='sf-editcell sf-normaledit'>
+                <td colSpan={getVisibleColumns?.().length}>
                     <Form
                         ref={formRef}
                         rules={formValidationRules}
@@ -733,13 +736,13 @@ export const InlineEditForm: React.ForwardRefExoticComponent<InlineEditFormProps
                         onFormStateChange={(args: FormState) => {
                             setFormState(args);
                         }}
-                        className={'sf-gridform' + (cssClass !== '' ? ' ' + cssClass : '')}
+                        className={'sf-grid-edit-form' + (cssClass !== '' ? ' ' + cssClass : '')}
                         id={`grid-edit-form-${editRowIndex}`}
                         aria-label={`${isAddOperation ? 'Add' : 'Edit'} Record Form`}
                         role='form'
                     >
                         <table
-                            className='sf-table sf-inline-edit'
+                            className='sf-grid-edit-table'
                             cellSpacing='0.25'
                             role='grid'
                             style={{ borderCollapse: 'separate', borderSpacing: '0.25px', width: '100%' }}
@@ -764,6 +767,6 @@ export const InlineEditForm: React.ForwardRefExoticComponent<InlineEditFormProps
         ) : (
             <></>
         );
-    }));
+    })) as <T>(props: InlineEditFormProps<T> & RefAttributes<InlineEditFormRef<T>>) => ReactElement;
 
-InlineEditForm.displayName = 'InlineEditForm';
+(InlineEditForm as React.ForwardRefExoticComponent<InlineEditFormProps & React.RefAttributes<InlineEditFormRef>>).displayName = 'InlineEditForm';

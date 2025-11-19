@@ -1,6 +1,6 @@
 import { useCallback, RefObject, useEffect, useState } from 'react';
 import { FilterEvent, FilterSettings, FilterPredicates, filterModule, FilterProperties, IFilterOperator } from '../types/filter.interfaces';
-import { IValueFormatter } from '../types';
+import { ActionType, IValueFormatter, ValueType } from '../types';
 import { GridRef } from '../types/grid.interfaces';
 import { IColumnBase, ColumnProps } from '../types/column.interfaces';
 import { closest, extend, IL10n, isNullOrUndefined, matches} from '@syncfusion/react-base';
@@ -89,7 +89,7 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
     const mouseDownHandler: (e: React.MouseEvent) => void  = useCallback((e: React.MouseEvent): void => {
         const target: Element = e.target as Element;
         if (filterSettings?.enabled && filterSettings?.type === 'FilterBar' &&
-            target.closest('th') && target.closest('th').classList.contains('sf-filterbarcell') &&
+            target.closest('th') && target.closest('th').classList.contains('sf-cell') &&
             (target.classList.contains('sf-clear-icon') || target.closest('.sf-clear-icon'))) {
             const targetText: HTMLInputElement = target.classList.contains('sf-clear-icon') ?
                 target.previousElementSibling as  HTMLInputElement :
@@ -103,8 +103,8 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
      */
     const keyUpHandler: (event: React.KeyboardEvent) => void  = useCallback((event: React.KeyboardEvent): void => {
         const target: HTMLInputElement = event.target as HTMLInputElement;
-        if (target && matches(target, '.sf-filterbar input')) {
-            const closeHeaderEle: Element = closest(target, 'th.sf-filterbarcell');
+        if (target && matches(target, '.sf-filter-row input')) {
+            const closeHeaderEle: Element = closest(target, '.sf-filter-row th.sf-cell');
             getFilterProperties.column = gridRef.current.columns.find((col: ColumnProps) => col.uid === closeHeaderEle.getAttribute('data-mappinguid'));
             if (filterSettings?.mode === 'Immediate' || (event.keyCode === 13 && !(getFilterProperties.column && getFilterProperties.column.filterTemplate))) {
                 getFilterProperties.value = target.value.trim();
@@ -174,11 +174,11 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
                     delete getFilterProperties?.value;
                 }
                 const args: FilterEvent = {
-                    cancel: false, requestType: 'clearFiltering', currentFilterObject: currentPred,
-                    currentFilterColumn: column, action: 'clearFiltering'
+                    cancel: false, requestType: ActionType.ClearFiltering, currentFilterPredicate: currentPred,
+                    currentFilterColumn: column, action: ActionType.ClearFiltering
                 };
                 if (getFilterProperties.refresh) {
-                    args.type = 'filtering';
+                    args.type = ActionType.Filtering;
                     const confirmResult: boolean = await gridRef.current?.editModule?.checkUnsavedChanges?.();
                     if (!isNullOrUndefined(confirmResult) && !confirmResult) {
                         return;
@@ -348,8 +348,8 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
         }
     };
 
-    const applyColumnFormat: (filterValue: string | number | Date | boolean) => void  = (
-        filterValue: string | number | Date | boolean): void => {
+    const applyColumnFormat: (filterValue: ValueType) => void  = (
+        filterValue: ValueType): void => {
         const getFlvalue: Date | number | string = (getFilterProperties.column.type === 'date' || getFilterProperties.column.type === 'datetime' || getFilterProperties.column.type === 'dateonly') ?
             filterValue === '' ? new Date(null) : new Date(filterValue as string) : parseFloat(filterValue as string);
         if ((getFilterProperties.column.type === 'date' || getFilterProperties.column.type === 'datetime' || getFilterProperties.column.type === 'dateonly') && filterValue &&
@@ -376,7 +376,7 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
      *
      * @param  {string} fieldName - Defines the field name of the column.
      * @param  {string} operator - Defines the operator to filter records.
-     * @param  {string | number | Date | boolean| number[]| string[]| Date[]| boolean[]} filterValue - Defines the value used to filter records.
+     * @param  {ValueType| ValueType[]} filterValue - Defines the value used to filter records.
      * @param  {string} predicate - Defines the relationship between one filter query and another by using AND or OR predicate.
      * @param  {boolean} caseSensitive - If match case is set to true, the grid filters the records with exact match. if false, it filters case
      * insensitive records (uppercase and lowercase letters treated the same).
@@ -386,10 +386,10 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
      * @returns {void}
      */
     const filterByColumn: (fieldName: string, operator: string,
-        filterValue: string | number | Date | boolean| number[]| string[]| Date[]| boolean[],
+        filterValue: ValueType| ValueType[],
         predicate: string, caseSensitive: boolean, ignoreAccent: boolean
     ) => void  = (fieldName: string,
-                  operator: string, filterValue: string | number | Date | boolean| number[]| string[]| Date[]| boolean[],
+                  operator: string, filterValue: ValueType| ValueType[],
                   predicate: string, caseSensitive: boolean, ignoreAccent: boolean): void => {
         getFilterProperties.column = gridRef.current.getColumns().find((col: ColumnProps) => col.field === fieldName);
         let filterCell: HTMLInputElement;
@@ -403,7 +403,7 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
             filterCell = gridRef.current.headerPanelRef.querySelector('[id=\'' + getFilterProperties.column.field + '_filterBarcell\']') as HTMLInputElement;
         }
         getFilterProperties.predicate = predicate ? predicate : Array.isArray(filterValue) ? 'or' : 'and';
-        getFilterProperties.value = filterValue as string | number | Date | boolean;
+        getFilterProperties.value = filterValue as ValueType;
         getFilterProperties.caseSensitive = caseSensitive || false;
         getFilterProperties.ignoreAccent = getFilterProperties.ignoreAccent = !isNullOrUndefined(ignoreAccent) ?
             ignoreAccent : gridRef.current.filterSettings?.ignoreAccent;
@@ -494,9 +494,9 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
     const updateModel: () => void = async(): Promise<void> => {
         const column: ColumnProps = gridRef.current.getColumns().find((col: ColumnProps) => col.field === getFilterProperties.fieldName);
         const filterCol: FilterPredicates[] = extend([], gridRef.current.filterSettings?.columns) as FilterPredicates[];
-        const arrayVal: (string | number | Date | boolean)[] = Array.isArray(getFilterProperties.value) &&
+        const arrayVal: ValueType[] = Array.isArray(getFilterProperties.value) &&
             getFilterProperties.value.length ? getFilterProperties.value : [getFilterProperties.value];
-        let currentFilterObject: FilterPredicates;
+        let currentFilterPredicate: FilterPredicates;
         const filterObjIndex: number = getFilteredColsIndexByField(getFilterProperties.column);
         const prevFilterObject: FilterPredicates = filterCol[parseInt(filterObjIndex.toString(), 10)];
         const moduleName : string = (gridRef.current.dataSource as DataManager).adaptor && (<{ getModuleName?: Function }>(
@@ -504,7 +504,7 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
                 gridRef.current.dataSource as DataManager).adaptor).getModuleName() : undefined;
         for (let i: number = 0, len: number = arrayVal.length; i < len; i++) {
             const isMenuNotEqual: boolean = getFilterProperties.operator === 'notequal';
-            currentFilterObject = {
+            currentFilterPredicate = {
                 field: getFilterProperties.fieldName, uid: column.uid, isForeignKey: false, operator: getFilterProperties.operator,
                 value: arrayVal[parseInt(i.toString(), 10)], predicate: getFilterProperties.predicate,
                 caseSensitive: getFilterProperties.caseSensitive, ignoreAccent: getFilterProperties.ignoreAccent,
@@ -512,9 +512,9 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
             };
             const index: number = getFilteredColsIndexByField(column);
             if (index > -1 && !Array.isArray(getFilterProperties.value)) {
-                filterCol[parseInt(index.toString(), 10)] = currentFilterObject;
+                filterCol[parseInt(index.toString(), 10)] = currentFilterPredicate;
             } else {
-                filterCol.push(currentFilterObject);
+                filterCol.push(currentFilterPredicate);
             }
             if ((prevFilterObject && (isNullOrUndefined(prevFilterObject.value)
                 || prevFilterObject.value === '') && (prevFilterObject.operator === 'equal'
@@ -544,10 +544,11 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
             }
         }
 
-        const args: FilterEvent = { cancel: false, currentFilterObject: currentFilterObject,
-            currentFilterColumn: getFilterProperties.column, columns: filterCol, action: 'filtering', requestType: 'filtering' };
+        const args: FilterEvent = { cancel: false, currentFilterPredicate: currentFilterPredicate,
+            currentFilterColumn: getFilterProperties.column, columns: filterCol, action: ActionType.Filtering,
+            requestType: ActionType.Filtering };
         if (getFilterProperties.contentRefresh) {
-            args.type = 'filtering';
+            args.type = ActionType.Filtering;
             const confirmResult: boolean = await gridRef.current?.editModule?.checkUnsavedChanges?.();
             if (!isNullOrUndefined(confirmResult) && !confirmResult) {
                 return;
@@ -586,7 +587,7 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
             for (let i: number = 0; i < filterColumn?.length; i++) {
                 getFilterProperties.column = grabColumnByUidFromAllCols(
                     filterColumn[parseInt(i.toString(), 10)].uid, filterColumn[parseInt(i.toString(), 10)].field);
-                let filterValue: string | number | Date | boolean | (string | number | boolean | Date)[] =
+                let filterValue: ValueType | ValueType[] =
                     filterColumn[parseInt(i.toString(), 10)].value;
                 filterValue = !isNullOrUndefined(filterValue) && filterValue.toString();
                 if (!isNullOrUndefined(getFilterProperties.column.format) && !isNullOrUndefined(getFilterProperties.column.type)) {
@@ -628,7 +629,7 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
                 }
             }
             if (gridRef.current.pageSettings?.enabled) {
-                gridRef.current.updatePagerMessage(getFilterProperties.filterStatusMsg);
+                gridRef.current.setPagerMessage(getFilterProperties.filterStatusMsg);
                 if (gridRef.current.height === '100%') {
                     gridRef.current.scrollModule.setPadding();
                 }
@@ -675,21 +676,21 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
                 return;
             }
             gridRef.current?.onRefreshStart?.({
-                requestType: 'refresh', name: 'onActionBegin'
+                requestType: 'Refresh', name: 'onActionBegin'
             });
             if (gridRef.current.filterSettings?.columns.length === 0) {
                 setFilterSettings((prevSettings: FilterSettings) => {
                     return { ...prevSettings, columns: [] };
                 });
                 setGridAction({
-                    requestType: 'refresh', name: 'onActionComplete'
+                    requestType: 'Refresh', name: 'onActionComplete'
                 });
             } else {
                 setFilterSettings((prevSettings: FilterSettings) => {
                     return { ...prevSettings, columns: gridRef.current.filterSettings?.columns || [] };
                 });
                 setGridAction({
-                    requestType: 'refresh', name: 'onActionComplete'
+                    requestType: 'Refresh', name: 'onActionComplete'
                 });
             }
             getFilterProperties.refresh = true;
@@ -711,21 +712,21 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
                 return;
             }
             gridRef.current?.onRefreshStart?.({
-                requestType: 'refresh', name: 'onActionBegin'
+                requestType: 'Refresh', name: 'onActionBegin'
             });
             if (gridRef.current.filterSettings?.columns.length === 0) {
                 setFilterSettings((prevSettings: FilterSettings) => {
                     return { ...prevSettings, columns: [] };
                 });
                 setGridAction({
-                    requestType: 'refresh', name: 'onActionComplete'
+                    requestType: 'Refresh', name: 'onActionComplete'
                 });
             } else {
                 setFilterSettings((prevSettings: FilterSettings) => {
                     return { ...prevSettings, columns: gridRef.current.filterSettings?.columns || [] };
                 });
                 setGridAction({
-                    requestType: 'refresh', name: 'onActionComplete'
+                    requestType: 'Refresh', name: 'onActionComplete'
                 });
             }
         }

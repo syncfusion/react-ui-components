@@ -630,12 +630,17 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
         }
 
         // Filter points to only include those at the same X position as the closest point
-        const collection: PointData[] = [];
-        for (const data of dataCollection) {
-            if (data.point.symbolLocations?.[0].x === lastData?.point?.symbolLocations?.[0].x || ((data.series.type?.indexOf('Column') !== -1 ||
-                lastData?.series.type?.indexOf('Column') !== -1) && (data.point.xValue === lastData?.point.xValue))) {
-                collection.push(data);
+        let collection: PointData[] = [];
+        if (!props.showNearestPoint) {
+            for (const data of dataCollection) {
+                if (data.point.symbolLocations?.[0].x === lastData?.point?.symbolLocations?.[0].x || ((data.series.type?.indexOf('Column') !== -1 ||
+                    lastData?.series.type?.indexOf('Column') !== -1) && (data.point.xValue === lastData?.point.xValue))) {
+                    collection.push(data);
+                }
             }
+        }
+        else {
+            collection = dataCollection;
         }
         // Prepare tooltip data
         const header: string = findHeader(collection[0]);
@@ -664,6 +669,8 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
             location = { x: chart.mouseX, y: chart.mouseY };
         }
 
+        location.x = props.location?.x !== undefined ? props.location?.x : location.x;
+        location.y = props.location?.y !== undefined ? props.location?.y : location.y;
         // Update tooltip data
         setTooltipData({
             header,

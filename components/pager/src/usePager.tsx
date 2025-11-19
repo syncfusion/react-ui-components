@@ -9,7 +9,6 @@ import { Browser } from '@syncfusion/react-base';
 const CSS_CLASS_NAMES: Record<string, string> = {
     CONTROL: 'sf-control',
     PAGER: 'sf-pager',
-    LIB: 'sf-lib',
     RTL: 'sf-rtl',
     MAC_SAFARI: 'sf-mac-safari',
     DEVICE: 'sf-device'
@@ -75,8 +74,7 @@ export const usePager: (props: Partial<PageProps>) => PagerResult = (
     const className: string = useMemo<string>(() => {
         const baseClasses: string[] = [
             CSS_CLASS_NAMES.CONTROL,
-            CSS_CLASS_NAMES.PAGER,
-            CSS_CLASS_NAMES.LIB
+            CSS_CLASS_NAMES.PAGER
         ];
 
         if (enableRtl) {

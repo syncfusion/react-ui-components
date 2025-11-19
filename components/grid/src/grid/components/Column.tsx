@@ -10,28 +10,29 @@ import {
     ReactElement
 } from 'react';
 import {
-    AggregateCellClassEvent,
     CellType,
-    ColumnType
+    CellTypes,
+    ColumnType,
+    WrapMode
 } from '../types';
 import { IGrid } from '../types/grid.interfaces';
-import { SortDescriptorModel } from '../types/sort.interfaces';
+import { SortDescriptor } from '../types/sort.interfaces';
 import { MutableGridSetter } from '../types/interfaces';
 import {
     useGridComputedProvider,
     useGridMutableProvider
 } from '../contexts';
 import { useColumn } from '../hooks';
-import { isNullOrUndefined, SanitizeHtmlHelper, SvgIcon } from '@syncfusion/react-base';
+import { isNullOrUndefined, SanitizeHtmlHelper } from '@syncfusion/react-base';
 import { Checkbox } from '@syncfusion/react-buttons';
 import { ArrowUpIcon, ArrowDownIcon } from '@syncfusion/react-icons';
-import { ColumnProps, IColumnBase, ColumnRef } from '../types/column.interfaces';
+import { ColumnProps, IColumnBase, ColumnRef, CellClassProps } from '../types/column.interfaces';
 
 // CSS class constants following enterprise naming convention
-const CSS_HEADER_CELL_DIV: string = 'sf-headercelldiv';
-const CSS_HEADER_TEXT: string = 'sf-headertext';
-const CSS_SORT_ICON: string = 'sf-sortfilterdiv sf-icons';
-const CSS_SORT_NUMBER: string = 'sf-sortnumber';
+const CSS_HEADER_CELL_DIV: string = 'sf-grid-header-cell';
+const CSS_HEADER_TEXT: string = 'sf-grid-header-text';
+const CSS_SORT_ICON: string = 'sf-grid-sort-container sf-icons';
+const CSS_SORT_NUMBER: string = 'sf-grid-sort-order';
 const CSS_DESCENDING_SORT: string = 'sf-descending sf-icon-descending';
 const CSS_ASENDING_SORT: string = 'sf-ascending sf-icon-ascending';
 
@@ -44,14 +45,14 @@ const CSS_ASENDING_SORT: string = 'sf-ascending sf-icon-ascending';
  * @param {RefObject<ColumnRef>} ref - Forwarded ref to expose internal elements
  * @returns {JSX.Element} The rendered table cell (th or td)
  */
-const ColumnBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Element> = memo((props: Partial<IColumnBase>) => {
-    const grid: Partial<IGrid> & Partial<MutableGridSetter> = useGridComputedProvider();
+const ColumnBase: <T>(props: Partial<IColumnBase<T>>) => JSX.Element = memo(<T, >(props: Partial<IColumnBase<T>>) => {
+    const grid: Partial<IGrid<T>> & Partial<MutableGridSetter<T>> = useGridComputedProvider<T>();
     const { onHeaderCellRender, onCellRender, onAggregateCellRender, enableHtmlSanitizer, getColumnByField,
         textWrapSettings, clipMode } = grid;
-    const { isInitialBeforePaint, cssClass, evaluateTooltipStatus, isInitialLoad } = useGridMutableProvider();
+    const { isInitialBeforePaint, cssClass, evaluateTooltipStatus, isInitialLoad } = useGridMutableProvider<T>();
 
     // Get column-specific APIs and properties
-    const { publicAPI, privateAPI } = useColumn(props);
+    const { publicAPI, privateAPI } = useColumn<T>(props);
 
     const {
         cellType,
@@ -70,10 +71,9 @@ const ColumnBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
         disableHtmlEncode,
         allowSort,
         customAttributes,
-        headerCellClass,
-        dataCellClass
+        cellClass
     } = column;
-    const aggregateCellClass: string | ((props?: AggregateCellClassEvent) => string) = props?.cell?.aggregateColumn?.aggregateCellClass;
+    const aggregateCellClass: string | ((props?: CellClassProps<T>) => string) = props?.cell?.aggregateColumn?.cellClass;
 
     // Create ref for the cell element
     const cellRef: RefObject<ColumnRef> = useRef<ColumnRef>({
@@ -99,7 +99,7 @@ const ColumnBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
     const handleAggregateCellInfo: Function = useCallback(() => {
         if (onAggregateCellRender && cellRef.current?.cellRef.current) {
             onAggregateCellRender({
-                rowData: props.row.data,
+                data: props.row.data,
                 cell: cellRef.current.cellRef.current,
                 column: props.cell.aggregateColumn
             });
@@ -114,7 +114,7 @@ const ColumnBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
             onCellRender({
                 cell: cellRef.current.cellRef.current,
                 column: column,
-                rowData: props.row.data,
+                data: props.row.data,
                 colSpan: props.cell.colSpan,
                 rowSpan: props.cell.rowSpan
             });
@@ -126,13 +126,13 @@ const ColumnBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
             if (cellRef.current?.cellRef.current?.classList?.contains?.('sf-ellipsistooltip')) {
                 cellRef.current?.cellRef.current?.classList?.remove?.('sf-ellipsistooltip');
             }
-            cellRef.current?.cellRef.current?.classList?.add?.('sf-gridclip');
+            cellRef.current?.cellRef.current?.classList?.add?.('sf-clip');
         } else if (column.clipMode === 'EllipsisWithTooltip' || (!column.clipMode && clipMode === 'EllipsisWithTooltip')
-            && !(textWrapSettings?.enabled && (textWrapSettings.wrapMode === 'Content'
+            && !(textWrapSettings?.enabled && (textWrapSettings.wrapMode === WrapMode.Content
             || textWrapSettings.wrapMode === 'Both'))) {
             if (column.type !== 'checkbox' && evaluateTooltipStatus(cellRef.current?.cellRef.current)) {
-                if (cellRef.current?.cellRef.current?.classList?.contains?.('sf-gridclip')) {
-                    cellRef.current?.cellRef.current?.classList?.remove?.('sf-gridclip');
+                if (cellRef.current?.cellRef.current?.classList?.contains?.('sf-clip')) {
+                    cellRef.current?.cellRef.current?.classList?.remove?.('sf-clip');
                 }
                 cellRef.current?.cellRef.current?.classList?.add?.('sf-ellipsistooltip');
             }
@@ -144,9 +144,9 @@ const ColumnBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
      */
     useEffect(() => {
         if (isInitialBeforePaint.current) { return; }
-        if (cellType === CellType.Header) {
+        if (cellType === CellTypes.Header) {
             handleHeaderCellInfo();
-        } else if (cellType === CellType.Summary) {
+        } else if (cellType === CellTypes.Summary) {
             handleAggregateCellInfo();
         } else if (column?.uid !== 'empty-cell-uid') {
             handleQueryCellInfo();
@@ -161,8 +161,8 @@ const ColumnBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
     }, [formattedValue, isInitialLoad, handleQueryCellInfo, isInitialBeforePaint.current]);
 
     const headerSortProperties: { index: number, className: string, direction: string } = useMemo(() => {
-        if (cellType !== CellType.Header) { return null; }
-        const sortedColumn: SortDescriptorModel[] = grid.sortSettings?.columns;
+        if (cellType !== CellTypes.Header) { return null; }
+        const sortedColumn: SortDescriptor[] = grid.sortSettings?.columns;
         let index: number | null = null;
         let cssSortClassName: string = '';
         let direction: string = 'none';
@@ -191,7 +191,7 @@ const ColumnBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
         } else {
             sanitizedValue = value;
         }
-        if (cellType === CellType.Data && getColumnByField?.(column.field)?.type === ColumnType.Boolean && column.displayAsCheckBox) {
+        if (cellType === CellTypes.Data && getColumnByField?.(column.field)?.type === ColumnType.Boolean && column.displayAsCheckBox) {
             const checked: boolean = isNaN(parseInt(sanitizedValue?.toString(), 10)) ? sanitizedValue === 'true' :
                 parseInt(sanitizedValue.toString(), 10) > 0;
             return <Checkbox checked={checked} disabled={true} className={cssClass}/>;
@@ -204,7 +204,7 @@ const ColumnBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
      * Memoized header cell content
      */
     const headerCellContent: JSX.Element | null = useMemo(() => {
-        if (cellType !== CellType.Header) { return null; }
+        if (cellType !== CellTypes.Header) { return null; }
 
         // Extract existing className from customAttributes to avoid duplication
         const existingClassName: string = customAttributes.className;
@@ -221,8 +221,8 @@ const ColumnBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
         classNames.push(alignHeaderClass);
 
         // Add custom header cell class.
-        classNames.push(!isNullOrUndefined(headerCellClass) ? (typeof headerCellClass === 'function' ?
-            headerCellClass({rowIndex: props.row.index, column}) : headerCellClass) : '');
+        classNames.push(!isNullOrUndefined(cellClass) ? (typeof cellClass === 'function' ?
+            cellClass({rowIndex: props.row.index, column, cellType: CellType.Header}) : cellClass) : '');
 
         // Remove duplicates and join
         const finalClassName: string = [...new Set(classNames)].filter((cls: string) => cls).join(' ');
@@ -237,25 +237,33 @@ const ColumnBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
                 aria-sort={headerSortProperties.direction === 'Ascending' ? 'ascending' :
                     headerSortProperties.direction === 'Descending' ? 'descending' : 'none'}
             >
-                <div className={CSS_HEADER_CELL_DIV} data-mappinguid={props.cell.column.uid} key={`header-cell-${props.cell?.column?.uid}`}>
-                    {headerSortProperties.index && <span className={CSS_SORT_NUMBER}>{headerSortProperties.index}</span>}
-                    <span className={CSS_HEADER_TEXT} {...(disableHtmlEncode || isNullOrUndefined(disableHtmlEncode) ?
-                        { children: content } :
-                        { dangerouslySetInnerHTML: { __html: content } })}
-                    />
+                <div className='sf-cell-inner'>
+                    <div className={CSS_HEADER_CELL_DIV} data-mappinguid={props.cell.column.uid} key={`header-cell-${props.cell?.column?.uid}`}>
+                        <span className={CSS_HEADER_TEXT} {...(disableHtmlEncode || isNullOrUndefined(disableHtmlEncode) ?
+                            { children: content } :
+                            { dangerouslySetInnerHTML: { __html: content } })}
+                        />
+                        {allowSort && grid?.sortSettings?.enabled && (
+                            headerSortProperties.direction === 'Ascending' ? (
+                                <span className={`${CSS_SORT_ICON} ${headerSortProperties.className}`}>
+                                    <ArrowUpIcon />
+                                </span>
+                            ) : headerSortProperties.direction === 'Descending' ? (
+                                <span className={`${CSS_SORT_ICON} ${headerSortProperties.className}`}>
+                                    <ArrowDownIcon />
+                                </span>
+                            ) : null
+                        )}
+                        {headerSortProperties.index && <span className={CSS_SORT_NUMBER}>{headerSortProperties.index}</span>}
+                    </div>
                 </div>
-                {allowSort && grid?.sortSettings?.enabled &&
-                <div className={`${CSS_SORT_ICON} ${headerSortProperties.className}`}>
-                    {headerSortProperties.direction === 'Ascending' ? <ArrowUpIcon /> :
-                        headerSortProperties.direction === 'Descending' ?  <ArrowDownIcon /> : <SvgIcon></SvgIcon>}
-                </div>}
             </th>
         );
     }, [
         cellType,
         index,
         customAttributes,
-        headerCellClass,
+        cellClass,
         alignHeaderClass,
         visibleClass,
         formattedValue,
@@ -270,7 +278,7 @@ const ColumnBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
      * Memoized data cell content
      */
     const dataCellContent: JSX.Element | null = useMemo(() => {
-        if (cellType !== CellType.Data) { return null; }
+        if (cellType !== CellTypes.Data) { return null; }
 
         // Extract existing className from customAttributes to avoid duplication
         const existingClassName: string = customAttributes.className;
@@ -287,13 +295,14 @@ const ColumnBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
         classNames.push(alignClass);
 
         // Add custom content cell class.
-        classNames.push(!isNullOrUndefined(dataCellClass) ? (typeof dataCellClass === 'function' ?
-            dataCellClass({rowData: props.row.data, rowIndex: props.row.index, column}) : dataCellClass) : '');
+        classNames.push(!isNullOrUndefined(cellClass) ? (typeof cellClass === 'function' ?
+            cellClass({data: props.row.data, rowIndex: props.row.index, column, cellType: CellType.Content}) : cellClass) : '');
 
-        // Remove duplicates and join
-        const finalClassName: string = [...new Set(classNames)].filter((cls: string) => cls).join(' ');
         const content: string | JSX.Element = !isNullOrUndefined(props.cell.column.template) ? formattedValue as ReactElement
             : sanitizeContent(formattedValue as string);
+        classNames.push(content === '' || isNullOrUndefined(content) ? 'sf-empty-cell' : '');
+        // Remove duplicates and join
+        const finalClassName: string = [...new Set(classNames)].filter((cls: string) => cls).join(' ');
 
         return (
             <td
@@ -307,7 +316,7 @@ const ColumnBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
     }, [
         cellType,
         customAttributes,
-        dataCellClass,
+        cellClass,
         alignClass,
         visibleClass,
         formattedValue,
@@ -320,7 +329,7 @@ const ColumnBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
      * Memoized summary cell content
      */
     const summaryCellContent: JSX.Element | null = useMemo(() => {
-        if (cellType !== CellType.Summary) { return null; }
+        if (cellType !== CellTypes.Summary) { return null; }
 
         // Extract existing className from customAttributes to avoid duplication
         const existingClassName: string = customAttributes.className;
@@ -336,12 +345,14 @@ const ColumnBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
 
         // Add custom aggregate class.
         classNames.push(!isNullOrUndefined(aggregateCellClass) ? (typeof aggregateCellClass === 'function' ?
-            aggregateCellClass({rowData: props.row.data, rowIndex: props.row.index, column}) : aggregateCellClass) : '');
+            aggregateCellClass({data: props.row.data, rowIndex: props.row.index, column, cellType: CellType.Aggregate}) : aggregateCellClass) : '');
 
-        // Remove duplicates and join
-        const finalClassName: string = [...new Set(classNames)].filter((cls: string) => cls).join(' ');
         const content: string | JSX.Element = props.cell.isTemplate ? formattedValue as ReactElement
             : sanitizeContent(formattedValue as string);
+
+        classNames.push(content === '' || isNullOrUndefined(content) ? 'sf-empty-cell' : '');
+        // Remove duplicates and join
+        const finalClassName: string = [...new Set(classNames)].filter((cls: string) => cls).join(' ');
         return (
             <td
                 ref={cellRef.current.cellRef}
@@ -356,7 +367,7 @@ const ColumnBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
     }, [
         cellType,
         customAttributes,
-        aggregateCellClass,
+        cellClass,
         alignClass,
         visibleClass,
         formattedValue,
@@ -366,14 +377,14 @@ const ColumnBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
     ]);
 
     // Return the appropriate cell content based on cell type
-    return cellType === CellType.Header ? headerCellContent : cellType === CellType.Summary ? summaryCellContent : dataCellContent;
+    return cellType === CellTypes.Header ? headerCellContent : cellType === CellTypes.Summary ? summaryCellContent : dataCellContent;
 }
-);
+) as <T>(props: Partial<IColumnBase<T>>) => JSX.Element;
 
 /**
  * Set display name for debugging purposes
  */
-ColumnBase.displayName = 'ColumnBase';
+(ColumnBase as MemoExoticComponent<<T>(props: Partial<IColumnBase<T>>) => JSX.Element>).displayName = 'ColumnBase';
 
 /**
  * Column component for declarative usage in user code
@@ -386,8 +397,9 @@ ColumnBase.displayName = 'ColumnBase';
  * @param {Partial<ColumnProps>} _props - Column configuration properties
  * @returns {JSX.Element} ColumnBase component with the provided properties
  */
+export const Column: <T>(props: Partial<ColumnProps<T>>) => JSX.Element =
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const Column: (props: Partial<ColumnProps>) => JSX.Element = (_props: Partial<ColumnProps>): JSX.Element => {
+<T, >(_props: Partial<ColumnProps<T>>): JSX.Element => {
     return null;
 };
 

@@ -5,7 +5,7 @@ import { IFetch } from '@syncfusion/react-base';
 import { merge, extend, isNullOrUndefined, getValue } from '@syncfusion/react-base';
 import { DataUtil, Aggregates, Group, GraphQLParams } from './util';
 import { DataManager, DataOptions } from './manager';
-import { Query, Predicate, QueryOptions, QueryList, ParamOption } from './query';
+import { Query, Predicate, QueryOptions, QueryList, ParamOption, ValueType } from './query';
 const consts: { [key: string]: string } = { GroupGuid: '{271bbba0-1ee7}' };
 /**
  * Adaptors are specific data source type aware interfaces that are used by DataManager to communicate with DataSource.
@@ -50,7 +50,7 @@ export class Adaptor {
     protected options: RemoteOptions = {
         from: 'table',
         requestType: 'json',
-        sortBy: 'sorted',
+        sortBy: 'sort',
         select: 'select',
         skip: 'skip',
         group: 'group',
@@ -446,14 +446,18 @@ export class JsonAdaptor extends Adaptor {
         return DataUtil.select(ds, DataUtil.getValue<string[]>(e.fieldNames));
     }
 
-    /**
-     * Inserts new record in the table.
+    /**  
+     * Inserts a new record into the data source.
      *
-     * @param {DataManager} dm
-     * @param {Object} data
-     * @param tableName
-     * @param query
-     * @param {number} position
+     * If a position is specified, the record is inserted at that index; otherwise, it is appended to the end.
+     *
+     * @param dm - The `DataManager` instance that performs the insert operation.
+     * @param data - The data object to be inserted.
+     * @param tableName - Optional. Specifies the target table name for the insert operation.
+     * @param query - Optional. Defines the query context for the insert operation.
+     * @param position - Optional. Specifies the index at which the data should be inserted.
+     *
+     * @returns The updated data source after the insert operation.
      */
     public insert(dm: DataManager, data: Object, tableName?: string, query?: Query, position?: number): Object {
         if (isNullOrUndefined(position)) {
@@ -553,7 +557,7 @@ export class UrlAdaptor extends Adaptor {
         for (let i: number = 0; i < queries.sorts.length; i++) {
             temp = DataUtil.getValue(queries.sorts[i].e.fieldName, query) as QueryOptions;
             request.sorts.push(DataUtil.callAdaptorFunction(
-                this, 'onEachSort', { name: temp, direction: queries.sorts[i].e.direction }, query));
+                this, 'onEachSort', { field: temp, direction: queries.sorts[i].e.direction }, query));
         }
         // hierarchy
         if (hierarchyFilters) {
@@ -1131,12 +1135,12 @@ export class ODataAdaptor extends UrlAdaptor {
                 if (val.charAt(0) === '%' && val.lastIndexOf('%') < 2) {
                     val = val.substring(1, val.length);
                     operator = !isNullOrUndefined(this.getModuleName) && this.getModuleName() === 'ODataV4Adaptor' ?
-                        DataUtil.odv4UniOperator['startswith'] : DataUtil.odUniOperator['startswith'];
+                        DataUtil.odv4UniOperator['endswith'] : DataUtil.odUniOperator['endswith'];
                 }
                 else if (val.charAt(val.length - 1) === '%' && val.indexOf('%') > val.length - 3) {
                     val = val.substring(0, val.length - 1);
                     operator = !isNullOrUndefined(this.getModuleName) && this.getModuleName() === 'ODataV4Adaptor' ?
-                        DataUtil.odv4UniOperator['endswith'] : DataUtil.odUniOperator['endswith'];
+                        DataUtil.odv4UniOperator['startswith'] : DataUtil.odUniOperator['startswith'];
                 }
                 else if (val.lastIndexOf('%') !== val.indexOf('%') && val.lastIndexOf('%') > val.indexOf('%') + 1) {
                     val = val.substring(val.indexOf('%') + 1, val.lastIndexOf('%'));
@@ -1331,12 +1335,12 @@ export class ODataAdaptor extends UrlAdaptor {
      */
     public onEachSort(e: QueryOptions): string {
         const res: string[] = [];
-        if (e.name instanceof Array) {
-            for (let i: number = 0; i < e.name.length; i++) {
-                res.push(ODataAdaptor.getField(e.name[i]) + (e.direction === 'descending' ? ' desc' : ''));
+        if (e.field instanceof Array) {
+            for (let i: number = 0; i < e.field.length; i++) {
+                res.push(ODataAdaptor.getField(e.field[i]) + (e.direction === 'descending' ? ' desc' : ''));
             }
         } else {
-            res.push(ODataAdaptor.getField(<string>e.name) + (e.direction === 'descending' ? ' desc' : ''));
+            res.push(ODataAdaptor.getField(<string>e.field) + (e.direction === 'descending' ? ' desc' : ''));
         }
         return res.join(',');
     }
@@ -1882,7 +1886,7 @@ export class ODataV4Adaptor extends ODataAdaptor {
      */
     public onPredicate(predicate: Predicate, query: Query | boolean, requiresCast?: boolean): string {
         let returnValue: string = '';
-        const val: string | number | Date | boolean | Predicate | Predicate[] | (string | number | boolean | Date)[] = predicate.value;
+        const val: string | number | Date | boolean | Predicate | Predicate[] | (ValueType)[] = predicate.value;
         const isDate: boolean = val instanceof Date;
 
         if (query instanceof Query) {
@@ -2521,7 +2525,7 @@ export class GraphQLAdaptor extends UrlAdaptor {
         const dm: { data: string } = JSON.parse(urlQuery.data);
 
         // constructing GraphQL parameters
-        const keys: string[] = ['skip', 'take', 'sorted', 'table', 'select', 'where',
+        const keys: string[] = ['skip', 'take', 'sort', 'table', 'select', 'where',
             'search', 'requiresCounts', 'aggregates', 'params'];
         const temp: GraphQLParams = {};
         const str: string = 'searchwhereparams';
@@ -2902,21 +2906,57 @@ export interface PvtOptions {
 }
 
 /**
- * @hidden
+ * Represents the processed result returned from a data operation.
+ *
+ * This structure is commonly used when working with `DataManager` or remote data sources
+ * to encapsulate the returned records, total count, and additional metadata.
  */
 export interface DataResult {
+    /** @private */
     nodeType?: number;
+
+    /** @private */
     addedRecords?: Object[];
+
+    /** @private */
     d?: DataResult | Object[];
+
+    /** @private */
     Count?: number;
+
+    /**
+     * Specifies the total number of records returned or available in the data source.
+     *
+     * This value is commonly used for pagination, virtual scrolling, or summary display.
+     */
     count?: number;
+
+    /** @private */
     result?: Object;
+
+    /**
+     * Provides the collection of records returned from the data source.
+     *
+     * This can be an array of objects or a nested `DataResult` structure for grouped data.
+     */
     results?: Object[] | DataResult;
+
+    /** @private */
     aggregate?: DataResult;
+
+    /** @private */
     aggregates?: Aggregates;
+
+    /** @private */
     value?: Object;
+
+    /** @private */
     Items?: Object[] | DataResult;
+
+    /** @private */
     keys?: string[];
+
+    /** @private */
     groupDs?: Object[];
 }
 

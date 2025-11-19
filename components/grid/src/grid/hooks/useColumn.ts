@@ -1,8 +1,8 @@
-import { isValidElement, ReactElement, useMemo } from 'react';
+import { ComponentType, createElement, isValidElement, ReactElement, useMemo } from 'react';
 import { DateFormatOptions, IL10n, formatUnit, isNullOrUndefined, NumberFormatOptions } from '@syncfusion/react-base';
-import { IValueFormatter, CellType, IRow, EditType, ValueType } from '../types';
+import { IValueFormatter, CellTypes, IRow, EditType, ValueType, FilterBarType } from '../types';
 import { ColumnProps, IColumnBase } from '../types/column.interfaces';
-import { AggregateColumnProps } from '../types/aggregate.interfaces';
+import { AggregateColumnProps, AggregateData } from '../types/aggregate.interfaces';
 import { useGridComputedProvider } from '../contexts';
 import { setStringFormatter, getObject, getUid, headerValueAccessor as defaultHeaderValueAccessor,
     valueAccessor as defaultValueAccessor, isDateOrNumber } from '../utils';
@@ -10,10 +10,10 @@ import { setStringFormatter, getObject, getUid, headerValueAccessor as defaultHe
  * CSS class names used in the Column component
  */
 const CSS_CLASS_NAMES: Record<string, string> = {
-    LEFT_ALIGN: 'sf-leftalign',
-    RIGHT_ALIGN: 'sf-rightalign',
-    CENTER_ALIGN: 'sf-centeralign',
-    HIDDEN: 'sf-hide'
+    LEFT_ALIGN: 'sf-left-align',
+    RIGHT_ALIGN: 'sf-right-align',
+    CENTER_ALIGN: 'sf-center-align',
+    HIDDEN: 'sf-display-none'
 };
 /**
  * Applies default column properties to the provided column configuration
@@ -22,8 +22,8 @@ const CSS_CLASS_NAMES: Record<string, string> = {
  * @returns {IColumnBase} The column properties with defaults applied
  * @private
  */
-export const defaultColumnProps: (props: Partial<IColumnBase>) => Partial<IColumnBase> =
-    (props: Partial<IColumnBase>): Partial<IColumnBase> => {
+export const defaultColumnProps: <T>(props: Partial<IColumnBase<T>>) => Partial<IColumnBase<T>> =
+    <T>(props: Partial<IColumnBase<T>>): Partial<IColumnBase<T>> => {
         // computed values should handle in component inside alone since react not allowed us to compute here using memo.
         return {
             visible: true,
@@ -31,11 +31,11 @@ export const defaultColumnProps: (props: Partial<IColumnBase>) => Partial<IColum
             disableHtmlEncode: true,
             allowEdit: true,
             edit: {type: EditType.TextBox},
-            filter: { type: 'FilterBar', filterBarType: 'stringFilter' },
+            filter: { type: 'FilterBar', filterBarType: FilterBarType.TextBox },
             ...props,
             width: props.width ? formatUnit(props.width) : '',
-            onValueAccessor: props.onValueAccessor ?? defaultValueAccessor,
-            onHeaderValueAccessor: props.onHeaderValueAccessor ?? defaultHeaderValueAccessor,
+            valueAccessor: props.valueAccessor ?? defaultValueAccessor<T>,
+            headerValueAccessor: props.headerValueAccessor ?? defaultHeaderValueAccessor,
             type: props.type === 'none' ? null : (props.type ? (typeof (props.type) === 'string' ? props.type.toLowerCase() : undefined) : props.type),
             uid: isNullOrUndefined(props.uid) ? getUid('grid-column') : props.uid,
             getFormatter: props.formatFn,
@@ -57,21 +57,21 @@ export const defaultColumnProps: (props: Partial<IColumnBase>) => Partial<IColum
  * @param {IColumnBase} props - The column configuration properties
  * @returns {Object} Object containing publicAPI (ColumnProps) and privateAPI with cell formatting properties
  */
-export const useColumn: (props: Partial<IColumnBase>) => {
-    publicAPI: Partial<ColumnProps>;
+export const useColumn: <T>(props: Partial<IColumnBase<T>>) => {
+    publicAPI: Partial<ColumnProps<T>>;
     privateAPI: {
-        cellType: CellType;
-        row: IRow<ColumnProps>;
+        cellType: CellTypes;
+        row: IRow<ColumnProps<T>>;
         alignClass: string;
         alignHeaderClass: string;
         visibleClass: string;
         formattedValue: string | Object | ReactElement;
     };
-} = (props: Partial<IColumnBase>): {
-    publicAPI: Partial<ColumnProps>;
+} = <T>(props: Partial<IColumnBase<T>>): {
+    publicAPI: Partial<ColumnProps<T>>;
     privateAPI: {
-        cellType: CellType;
-        row: IRow<ColumnProps>;
+        cellType: CellTypes;
+        row: IRow<ColumnProps<T>>;
         alignClass: string;
         alignHeaderClass: string;
         visibleClass: string;
@@ -94,8 +94,8 @@ export const useColumn: (props: Partial<IColumnBase>) => {
         headerText,
         headerTemplate,
         template,
-        onValueAccessor,
-        onHeaderValueAccessor,
+        valueAccessor,
+        headerValueAccessor,
         format,
         type,
         textAlign,
@@ -159,7 +159,7 @@ export const useColumn: (props: Partial<IColumnBase>) => {
      */
     const alignHeaderClass: string = useMemo(() => {
         const alignment: string = (headerTextAlign ?? textAlign ?? 'Left').toLowerCase();
-        return `sf-${alignment}align`;
+        return `sf-${alignment}-align`;
     }, [headerTextAlign, textAlign]);
     /**
      * Computes the CSS class for cell alignment
@@ -168,7 +168,7 @@ export const useColumn: (props: Partial<IColumnBase>) => {
      */
     const alignClass: string = useMemo(() => {
         const alignment: string = (textAlign ?? 'Left').toLowerCase();
-        return `sf-${alignment}align`;
+        return `sf-${alignment}-align`;
     }, [textAlign]);
     /**
      * Computes visibility class and updates style attributes
@@ -176,7 +176,7 @@ export const useColumn: (props: Partial<IColumnBase>) => {
      * @type {string}
      */
     const visibleClass: string = useMemo(() => {
-        if (CellType.Data === cellType && customAttributes) {
+        if (CellTypes.Data === cellType && customAttributes) {
             customAttributes.style = {
                 ...customAttributes.style,
                 display: visible || isNullOrUndefined(visible) ? '' : 'none'
@@ -189,8 +189,8 @@ export const useColumn: (props: Partial<IColumnBase>) => {
      *
      * @type {ValueType}
      */
-    const value: ValueType = useMemo(() => {
-        return (cellType === CellType.Data && field && row && row.isDataRow) ?
+    const value: ValueType | Object = useMemo(() => {
+        return (cellType === CellTypes.Data && field && row && row.isDataRow) ?
             getObject(field, row.data) : undefined;
     }, [cellType, field, row]);
     /**
@@ -200,8 +200,8 @@ export const useColumn: (props: Partial<IColumnBase>) => {
      * @param {AggregateColumnProps} column - The column model with aggregation details
      * @returns {Object} - The aggregated value for the specified column, or an empty string if not found
      */
-    const getAggregateValue: (data: Object, column: AggregateColumnProps) => Object =
-        (data: Object, column: AggregateColumnProps): Object => {
+    const getAggregateValue: (data: Object, column: AggregateColumnProps<T>) => Object =
+        (data: Object, column: AggregateColumnProps<T>): Object => {
             let key: string = !isNullOrUndefined(column.type) ?
                 column.field + ' - ' + (typeof column.type === 'string' ? column.type.toLowerCase() : '') : column.columnName;
             if (column.format && !isNullOrUndefined(column.type) && typeof column.type === 'string') {
@@ -215,36 +215,36 @@ export const useColumn: (props: Partial<IColumnBase>) => {
      * @type {string | ReactElement}
      */
     const formattedValue: string | Object | ReactElement = useMemo(() => {
-        let formattedVal: string | Object | ReactElement = value;
+        let formattedVal: string | Object = value;
         // Handle header cell formatting
-        if (cellType === CellType.Header) {
+        if (cellType === CellTypes.Header) {
             if (isNullOrUndefined(headerTemplate)) {
-                formattedVal = onHeaderValueAccessor({headerText: 'headerText', column});
+                formattedVal = headerValueAccessor({headerText: 'headerText', column});
             } else if (typeof headerTemplate === 'string' || isValidElement(headerTemplate)) {
                 return headerTemplate;
             } else {
-                return headerTemplate({ column: column, columnIndex: cell.index });
+                return createElement(headerTemplate, { column: column, columnIndex: cell.index });
             }
-        } else if (cellType === CellType.Filter) {
+        } else if (cellType === CellTypes.Filter) {
             return formattedVal;
-        } else if (cellType === CellType.Summary) {
-            const footerTemplate: string | ReactElement | ((props?: Object) => ReactElement | string) = aggregateColumn.footerTemplate;
+        } else if (cellType === CellTypes.Summary) {
+            const footerTemplate: ComponentType<AggregateData<T>> | ReactElement | string = aggregateColumn.footerTemplate;
             if (isNullOrUndefined(footerTemplate)) {
                 return getAggregateValue(row.data, aggregateColumn);
             } else if (typeof footerTemplate === 'string' || isValidElement(footerTemplate)) {
                 return footerTemplate;
             } else {
-                return footerTemplate(row.data[aggregateColumn.columnName]);
+                return createElement(footerTemplate, { ...row.data[aggregateColumn.columnName] });
             }
         }
         // Handle data cell formatting
         else {
             if (isNullOrUndefined(template)) {
-                formattedVal = onValueAccessor({field: (field as string), rowData: row.data, column: column});
+                formattedVal = valueAccessor({field: (field as string), data: row.data, column: column});
             } else if (typeof template === 'string' || isValidElement(template)) {
                 return template;
             } else {
-                return template({ column: column, rowData: row.data, rowIndex: row.index });
+                return createElement(template, { column: column, data: row.data, rowIndex: row.index });
             }
         }
         // Apply type-specific formatting for values
@@ -271,18 +271,18 @@ export const useColumn: (props: Partial<IColumnBase>) => {
         headerTemplate,
         headerText,
         type,
-        onValueAccessor,
-        onHeaderValueAccessor,
+        valueAccessor,
+        headerValueAccessor,
         formatValue
     ]);
     /**
      * Private API for internal component use
      *
-     * @type {{ cellType: CellType, row: Object, alignClass: string, alignHeaderClass: string, visibleClass: string, formattedValue: string | ReactElement }}
+     * @type {{ cellType: CellTypes, row: IRow<IColumnBase>, alignClass: string, alignHeaderClass: string, visibleClass: string, formattedValue: string | ReactElement }}
      */
     const privateAPI: {
-        cellType: CellType;
-        row: Object;
+        cellType: CellTypes;
+        row: IRow<IColumnBase<T>>;
         alignClass: string;
         alignHeaderClass: string;
         visibleClass: string;
@@ -300,7 +300,7 @@ export const useColumn: (props: Partial<IColumnBase>) => {
      *
      * @type {Partial<ColumnProps>}
      */
-    const publicAPI: Partial<ColumnProps> = useMemo(() => ({
+    const publicAPI: Partial<ColumnProps<T>> = useMemo(() => ({
         field,
         headerText,
         textAlign,

@@ -1,18 +1,7 @@
-@mixin color-opacity-styles($color, $opacity) {
-  color: $color;
-  opacity: $opacity;
-}
-
-@mixin background-color-opacity-styles($bg, $color, $opacity) {
-  background: $bg;
-  @include color-opacity-styles($color, $opacity);
-}
-
 @include export-module('pager-theme') {
-
-  #{&}.sf-pager {
-    border-color: rgba($border-light);
-    @include background-color-opacity-styles($pager-bg-color, $pager-text-color, $pager-content-opacity);
+  .sf-pager {
+    @include color-styles($pager-text-color, $pager-bg-color);
+    border-color: $pager-border-color;
 
     .sf-icons.sf-disable {
       cursor: auto;
@@ -23,36 +12,36 @@
       opacity: unset;
     }
 
-    .sf-pager-default:hover {
-      background-color: $pager-hover-bg-color;
-    }
-
-    .sf-spacing {
-      @include color-opacity-styles($pager-item-text-color, $pager-content-opacity);
-    }
-
-    .sf-numericitem.sf-focused,
-    .sf-icons.sf-focused {
-      background-color: $pager-focus-bg-color;
-    }
-
-    .sf-currentitem,
-    .sf-currentitem.sf-focused {
-      background-color: $pager-active-bg-color;
-    }
-
-    .sf-currentitem:hover {
-      background-color: $pager-current-hover-bg-color;
-    }
-
     .sf-focused {
       box-shadow: $pager-focus-shadow-color;
     }
+  }
 
-    @media (max-width: 590px) {
-      .sf-pager-default:hover {
-        @include background-color-opacity-styles($pager-bg-color, $pager-mobile-hover-text-color, $pager-content-opacity);
-      }
+  .sf-pager-icons:hover {
+    background-color: $pager-hover-bg-color;
+  }
+
+  .sf-spacing {
+    @include color-styles($pager-item-text-color);
+  }
+
+  .sf-numeric-item.sf-focused,
+  .sf-pager .sf-icons.sf-focused {
+    background-color: $pager-focus-bg-color;
+  }
+
+  .sf-current-item,
+  .sf-current-item.sf-focused {
+    background-color: $pager-active-bg-color;
+  }
+
+  .sf-current-item:hover {
+    background-color: $pager-current-hover-bg-color;
+  }
+
+  @media (max-width: 590px) {
+    .sf-pager-icons:hover {
+      @include color-styles($pager-mobile-hover-text-color, $pager-bg-color);
     }
   }
 }

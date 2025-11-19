@@ -46,7 +46,7 @@ export const usePagerFocus: (props: PagerFocusProps) => PagerFocusResult =
                 const target: Element = element;
                 const targetChildrens: HTMLCollection = target.children;
                 let pagerElements: Element[] = previousElements;
-                const classes: string[] = ['sf-pagesizes', 'sf-first', 'sf-prev', 'sf-next', 'sf-last'];
+                const classes: string[] = ['sf-pager-first', 'sf-pager-previous', 'sf-pager-next', 'sf-pager-last'];
                 for (let i: number = 0; i < targetChildrens.length; i++) {
                     const element: Element = targetChildrens[parseInt(i.toString(), 10)];
                     if (element.children.length > 0 && !classes.some((selector: string) => element.classList.contains(selector))) {
@@ -206,8 +206,8 @@ export const usePagerFocus: (props: PagerFocusProps) => PagerFocusResult =
 
         const getClass: (element: Element) => string = (element: Element): string => {
             let currentClass: string;
-            const classList: string[] = ['sf-mfirst', 'sf-mprev', 'sf-first', 'sf-prev', 'sf-pp',
-                'sf-np', 'sf-next', 'sf-last', 'sf-mnext', 'sf-mlast', 'sf-numericitem'];
+            const classList: string[] = ['sf-pager-mfirst', 'sf-pager-mprevious', 'sf-pager-first', 'sf-pager-previous', 'sf-pp',
+                'sf-np', 'sf-pager-next', 'sf-pager-last', 'sf-pager-mnext', 'sf-pager-mlast', 'sf-numeric-item'];
             for (let i: number = 0; i < classList.length; i++) {
                 if (element && element.classList.contains(classList[parseInt(i.toString(), 10)])) {
                     currentClass = classList[parseInt(i.toString(), 10)];
@@ -244,15 +244,15 @@ export const usePagerFocus: (props: PagerFocusProps) => PagerFocusResult =
         };
 
         const navigateToPageByKey: (e: KeyboardEvent) => void = (e: KeyboardEvent): void => {
-            const actionClass: string = (e.keyCode === 37 || e.keyCode === 33) ? '.sf-prev'
-                : (e.keyCode === 39 || e.keyCode === 34) ? '.sf-next'
-                    : e.keyCode === 35 ? '.sf-last' : e.keyCode === 36 ? '.sf-first' : '';
+            const actionClass: string = (e.keyCode === 37 || e.keyCode === 33) ? '.sf-pager-previous'
+                : (e.keyCode === 39 || e.keyCode === 34) ? '.sf-pager-next'
+                    : e.keyCode === 35 ? '.sf-pager-last' : e.keyCode === 36 ? '.sf-pager-first' : '';
             const pagingItem: Element = pageRef.current.element.querySelector(actionClass);
             if (!isNullOrUndefined(pagingItem) && pagingItem.hasAttribute('page-index')
                 && !isNaN(parseInt(pagingItem.getAttribute('page-index'), 10))) {
                 e.preventDefault();
                 const pageIndex: number = parseInt(pagingItem.getAttribute('page-index'), 10);
-                goToPageByKey('sf-numericitem', pageIndex);
+                goToPageByKey('sf-numeric-item', pageIndex);
             }
         };
 
@@ -295,9 +295,9 @@ export const usePagerFocus: (props: PagerFocusProps) => PagerFocusResult =
             if (focusedElement) {
                 removeFocus(focusedElement, true);
             }
-            if (actionFocus.current.className === 'sf-numericitem') {
+            if (actionFocus.current.className === 'sf-numeric-item') {
                 removeTabIndex();
-                const focusElement: HTMLElement = pageRef.current.element.querySelector(`.sf-numericitem[page-index="${actionFocus.current.pageIndex}"]`);
+                const focusElement: HTMLElement = pageRef.current.element.querySelector(`.sf-numeric-item[page-index="${actionFocus.current.pageIndex}"]`);
                 if (focusElement) {
                     addFocus(focusElement, true);
                     focusElement.focus();

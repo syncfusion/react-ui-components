@@ -1,11 +1,11 @@
 import { Dispatch, SetStateAction } from 'react';
-import { FilterType, FilterBarMode } from './index';
+import { FilterType, FilterBarMode, ActionType, ValueType } from './index';
 import { ColumnProps } from '../types/column.interfaces';
 import { ICustomOptr } from '../types/interfaces';
 import { GridActionEvent } from '../types/grid.interfaces';
 
 /**
- * Defines the configuration for filtering functionality in the Grid component.
+ * Defines the configuration for filtering functionality in the Data Grid component.
  * Specifies settings for enabling filtering, defining filter conditions, and customizing the filter UI.
  * Controls how data is filtered based on user input and predefined criteria.
  */
@@ -21,7 +21,7 @@ export interface FilterSettings {
     enabled?: boolean;
 
     /**
-     * Specifies an array of `PredicateModel` objects to define initial or active filter conditions for grid columns.
+     * Specifies an array of `FilterPredicates` objects to define initial or active filter conditions for grid columns.
      * Each predicate represents a filter rule applied to a specific column, such as `field`, `operator`, and `value`.
      * Used to pre-filter data on grid initialization or to retrieve the current filter state.
      *
@@ -93,7 +93,7 @@ export interface FilterSettings {
 }
 
 /**
- * Represents the event triggered when a filtering operation completes in the Grid component.
+ * Represents the event triggered when a filtering operation completes in the Data Grid component.
  * Provides comprehensive details about the completed filter action and its results.
  * Used to handle post-filtering logic or updates.
  */
@@ -105,7 +105,7 @@ export interface FilterEvent extends GridActionEvent {
      * @type {FilterPredicates}
      * @default -
      */
-    currentFilterObject?: FilterPredicates;
+    currentFilterPredicate?: FilterPredicates;
 
     /**
      * Lists all predicate objects representing the current filter conditions across columns.
@@ -118,14 +118,13 @@ export interface FilterEvent extends GridActionEvent {
     columns?: FilterPredicates[];
 
     /**
-     * Indicates the type of filter action that was completed (e.g., 'filtering', 'clearFiltering').
+     * Indicates the type of filter action that was completed (e.g., `Filtering`, `ClearFiltering`).
      * Describes the operation performed, aiding in post-filter processing.
      * Helps differentiate between various filter-related actions.
      *
-     * @type {string}
      * @default -
      */
-    action?: 'filtering' | 'clearFiltering';
+    action?: string | ActionType;
 
     /**
      * Provides the configuration object for the filtered column.
@@ -150,7 +149,7 @@ export interface FilterEvent extends GridActionEvent {
 }
 
 /**
- * Configures filter predicates for individual columns in the Grid component.
+ * Configures filter predicates for individual columns in the Data Grid component.
  * Defines the criteria, operators, and behavior for filtering data in a specific column.
  * Supports filtering scenarios with logical conditions.
  */
@@ -169,10 +168,11 @@ export interface FilterPredicates {
      * Determines how the filter value is compared to column data.
      *
      * Must align with the column’s data type (e.g., string, number, date) to ensure valid filtering behavior.
+     *
      * Common operators include:
-     * equal, notEqual – for exact matches.
-     * greaterThan, lessThan – for numeric or date comparisons.
-     * contains, startsWith, endsWith – for string-based filtering.
+     * * `equal`, `notEqual` – for exact matches.
+     * * `greaterThan`, `lessThan` – for numeric or date comparisons.
+     * * `contains`, `startsWith`, `endsWith` – for string-based filtering.
      *
      * @type {string}
      * @default -
@@ -184,10 +184,10 @@ export interface FilterPredicates {
      * Supports single value or arrays for strings, numbers, dates, or booleans, depending on the column type.
      * Used to match records against the specified operator.
      *
-     * @type {string | number | Date | boolean | (string | number | Date | boolean)[]}
+     * @type {(ValueType) | Array<ValueType>}
      * @default -
      */
-    value?: string | number | Date | boolean | (string | number | Date | boolean)[];
+    value?: ValueType | ValueType[];
 
     /**
      * Determines whether string filtering is case-sensitive.
@@ -297,9 +297,26 @@ export interface FilterPredicates {
 }
 
 /**
+ * Defines the props passed to a custom filter template component in the Data Grid.
+ * Used to customize the filter UI for individual columns by providing column-specific metadata.
+ * Enables dynamic rendering of filter controls based on `column` configuration.
+ */
+export interface FilterTemplateProps {
+    /**
+     * Provides the `column` configuration associated with the filter template.
+     * Includes metadata such as `field`, `headerText`, and filter settings used to render the custom filter UI.
+     *
+     * @type {ColumnProps}
+     * @default -
+     */
+    column: ColumnProps;
+}
+
+/**
  * Manages internal properties for the Grid’s Filter module.
  * Handles filter state, operations, and configuration for filtering logic.
  * Used internally to control filter behavior and performance.
+ *
  * @private
  */
 export interface FilterProperties {
@@ -378,10 +395,10 @@ export interface FilterProperties {
      * Supports strings, numbers, dates, or booleans, depending on the column type.
      * Used to match records against the specified operator.
      *
-     * @type {string | number | Date | boolean}
+     * @type {ValueType}
      * @default -
      */
-    value: string | number | Date | boolean;
+    value: ValueType;
 
     /**
      * Indicates whether filtering is performed via method calls (e.g., filterByColumn).
@@ -408,7 +425,7 @@ export interface FilterProperties {
      * Maps each column field to an array of predicate objects for filtering.
      * Used internally to manage and apply multiple filter conditions.
      *
-     * @type {{ [key: string]: FilterPredicates[] }}
+     * @type {Record<string, FilterPredicates[]>}
      * @default {}
      */
     actualPredicate: { [key: string]: FilterPredicates[] };
@@ -505,7 +522,7 @@ export interface FilterProperties {
 }
 
 /**
- * Defines string constants for filter operators used in the Grid.
+ * Defines string constants for filter operators used in the Data Grid.
  * Provides a set of operator names for various filtering operations.
  * Used internally to map operators to filter logic.
  *
@@ -644,7 +661,7 @@ export interface IFilterOperator {
 }
 
 /**
- * Defines the API for managing filtering operations in the Grid.
+ * Defines the API for managing filtering operations in the Data Grid.
  * Provides methods and properties to control filter behavior, state, and events.
  * Used internally to handle filter interactions and updates.
  *
@@ -658,14 +675,14 @@ export interface FilterAPI {
      *
      * @param {string} fieldName - The column field to filter.
      * @param {string} filterOperator - The operator for filtering (e.g., 'equal', 'contains').
-     * @param {string | number | Date | boolean | number[] | string[] | Date[] | boolean[]} filterValue - The value(s) to filter against.
+     * @param {ValueType | Array<ValueType>} filterValue - The value(s) to filter against.
      * @param {string} [predicate] - Logical operator ('and'/'or') for combining filters.
      * @param {boolean} [caseSensitive] - Enables case-sensitive string filtering.
      * @param {boolean} [ignoreAccent] - Enables accent-insensitive string filtering.
      * @returns {void}
      */
     filterByColumn(fieldName: string, filterOperator: string,
-        filterValue: string | number | Date | boolean | number[] | string[] | Date[] | boolean[],
+        filterValue: ValueType | ValueType[],
         predicate?: string, caseSensitive?: boolean, ignoreAccent?: boolean): void;
 
     /**
@@ -731,7 +748,7 @@ export interface FilterAPI {
 }
 
 /**
- * Represents the FilterAPI interface for filter operations in the Grid.
+ * Represents the FilterAPI interface for filter operations in the Data Grid.
  * Defines the contract for the Filter module’s functionality and state management.
  * Used internally to encapsulate filtering logic.
  *

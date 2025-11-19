@@ -1,6 +1,6 @@
 import { useCallback, RefObject, useEffect, useState } from 'react';
-import { SortDirection } from '../types';
-import { SortSettings, SortDescriptorModel, SortEvent, SortAPI } from '../types/sort.interfaces';
+import { ActionType, SortDirection } from '../types';
+import { SortSettings, SortDescriptor, SortEvent, SortAPI } from '../types/sort.interfaces';
 import { ColumnProps } from '../types/column.interfaces';
 import { closest, isNullOrUndefined} from '@syncfusion/react-base';
 import { getActualPropFromColl } from '../utils';
@@ -22,7 +22,7 @@ export const useSort: (gridRef?: RefObject<GridRef>, sortSetting?: SortSettings,
 
     const [sortSettings, setSortSettings] = useState<SortSettings>(sortSetting);
     const getSortProperties: SortProperties = {
-        currentTarget: null,
+        currentEvent: null,
         isMultiSort: false,
         sortSettings: { columns: [] },
         contentRefresh: true,
@@ -56,9 +56,9 @@ export const useSort: (gridRef?: RefObject<GridRef>, sortSetting?: SortSettings,
      */
     const handleGridClick: (event: React.MouseEvent) => void  = useCallback((event: React.MouseEvent): void => {
         if (!gridRef.current?.sortSettings?.enabled) { return; }
-        const target: Element = closest(event.target as Element, '.sf-headercell');
+        const target: Element = closest(event.target as Element, '.sf-grid-header-row .sf-cell');
         if (target && !(event.target as Element).classList.contains('sf-grptogglebtn')) {
-            const colObj: ColumnProps = gridRef.current.columns.find((col: ColumnProps) => col.uid === target.querySelector('.sf-headercelldiv').getAttribute('data-mappinguid'));
+            const colObj: ColumnProps = gridRef.current.columns.find((col: ColumnProps) => col.uid === target.querySelector('.sf-grid-header-cell').getAttribute('data-mappinguid'));
             if (colObj.type !== 'checkbox') {
                 initiateSort(target, event, colObj);
             }
@@ -71,11 +71,11 @@ export const useSort: (gridRef?: RefObject<GridRef>, sortSetting?: SortSettings,
     const keyUpHandler: (e: React.KeyboardEvent) => void = useCallback((e: React.KeyboardEvent): void => {
         const ele: Element = e.target as Element;
         if (((e.keyCode === 13 && e.ctrlKey) || (e.keyCode === 13 && e.shiftKey) || e.keyCode === 13)
-            && closest(ele as Element, '.sf-headercell')) {
+            && closest(ele as Element, '.sf-grid-header-row .sf-cell')) {
             const target: Element = ele;
-            if (isNullOrUndefined(target) || !target.classList.contains('sf-headercell')
-                || !target.querySelector('.sf-headercelldiv')) { return; }
-            const colObj: ColumnProps = gridRef.current.columns.find((col: ColumnProps) => col.uid === target.querySelector('.sf-headercelldiv').getAttribute('data-mappinguid'));
+            if (isNullOrUndefined(target) || !target.classList.contains('sf-cell')
+                || !target.querySelector('.sf-grid-header-cell')) { return; }
+            const colObj: ColumnProps = gridRef.current.columns.find((col: ColumnProps) => col.uid === target.querySelector('.sf-grid-header-cell').getAttribute('data-mappinguid'));
             initiateSort(target, e, colObj);
         }
     }, [gridRef]);
@@ -89,11 +89,12 @@ export const useSort: (gridRef?: RefObject<GridRef>, sortSetting?: SortSettings,
      * @returns {void}
      */
     const removeSortColumn: (field: string) => void = async(field: string): Promise<void> => {
-        const cols: SortDescriptorModel[] = getSortProperties.sortSettings?.columns;
+        const cols: SortDescriptor[] = getSortProperties.sortSettings?.columns;
         if (cols.length === 0 && getSortProperties.sortedColumns.indexOf(field) < 0) {
             return; }
-        const args: SortEvent = { cancel: false, requestType: 'clearSorting', target: getSortProperties.currentTarget };
-        args.type = 'sorting';
+        const args: SortEvent = { cancel: false, requestType: ActionType.ClearSorting, event: getSortProperties.currentEvent,
+            columns: getSortProperties.sortSettings.columns, field: field, action: ActionType.ClearSorting };
+        args.type = ActionType.Sorting;
         const confirmResult: boolean = await gridRef.current?.editModule?.checkUnsavedChanges?.();
         if (!isNullOrUndefined(confirmResult) && !confirmResult) {
             return;
@@ -119,11 +120,11 @@ export const useSort: (gridRef?: RefObject<GridRef>, sortSetting?: SortSettings,
         target: Element, e:  React.MouseEvent | React.KeyboardEvent, column: ColumnProps): void => {
         if (column.allowSort === false) { return; }
         const field: string = column.field;
-        getSortProperties.currentTarget = e.target as Element;
+        getSortProperties.currentEvent = e;
         const direction: SortDirection | string = !target.getElementsByClassName('sf-ascending').length ? 'Ascending' :
             'Descending';
         getSortProperties.isMultiSort = e.ctrlKey;
-        if (!(gridRef.current?.sortSettings?.mode === 'multiple')) {
+        if (!(gridRef.current?.sortSettings?.mode === 'Multiple')) {
             getSortProperties.isMultiSort = false;
         }
         if (e.shiftKey || (gridRef.current.sortSettings?.allowUnsort && target.getElementsByClassName('sf-descending').length)) {
@@ -147,16 +148,16 @@ export const useSort: (gridRef?: RefObject<GridRef>, sortSetting?: SortSettings,
         field: string, direction: SortDirection | string, isMultiSort: boolean): Promise<void> => {
         const column: ColumnProps = gridRef.current.columns.find((col: ColumnProps) => col.field === field );
         if (column.allowSort === false || gridRef.current?.sortSettings?.enabled === false) { return; }
-        const sortedColumn: SortDescriptorModel = { field: field, direction: direction };
+        const sortedColumn: SortDescriptor = { field: field, direction: direction };
         let index: number;
         if (gridRef.current.sortSettings?.columns?.length) {
             getSortProperties.sortSettings.columns = gridRef.current.sortSettings?.columns;
         }
         const args: SortEvent = {
-            cancel: false, field: field, direction: direction, requestType: 'sorting',
-            target: getSortProperties.currentTarget };
+            cancel: false, field: field, direction: direction, requestType: ActionType.Sorting, action: ActionType.Sorting,
+            event: getSortProperties.currentEvent, columns: getSortProperties.sortSettings.columns };
         if (getSortProperties.contentRefresh) {
-            args.type = 'sorting';
+            args.type = ActionType.Sorting;
             const confirmResult: boolean = await gridRef.current?.editModule?.checkUnsavedChanges?.();
             if (!isNullOrUndefined(confirmResult) && !confirmResult) {
                 return;
@@ -207,9 +208,9 @@ export const useSort: (gridRef?: RefObject<GridRef>, sortSetting?: SortSettings,
         }
     };
 
-    const getSortedColsIndexByField: (field: string, sortedColumns?: SortDescriptorModel[]) => number = useCallback(
-        (field: string, sortedColumns?: SortDescriptorModel[]): number => {
-            const cols: SortDescriptorModel[] = sortedColumns ? sortedColumns : gridRef.current.sortSettings?.columns;
+    const getSortedColsIndexByField: (field: string, sortedColumns?: SortDescriptor[]) => number = useCallback(
+        (field: string, sortedColumns?: SortDescriptor[]): number => {
+            const cols: SortDescriptor[] = sortedColumns ? sortedColumns : gridRef.current.sortSettings?.columns;
             for (let i: number = 0, len: number = cols.length; i < len; i++) {
                 if (cols[parseInt(i.toString(), 10)].field === field) {
                     return i;
@@ -223,10 +224,18 @@ export const useSort: (gridRef?: RefObject<GridRef>, sortSetting?: SortSettings,
      *
      * @returns {void}
      */
-    const clearSort: () => void = useCallback((): void => {
-        const cols: SortDescriptorModel[] = getActualPropFromColl(gridRef.current.sortSettings?.columns);
+    const clearSort: (fields?: string[]) => void = useCallback((fields?: string[]): void => {
+        const cols: SortDescriptor[] = getActualPropFromColl(gridRef.current.sortSettings?.columns);
         for (let i: number = 0, len: number = cols.length; i < len; i++) {
-            removeSortColumn(cols[parseInt(i.toString(), 10)].field);
+            if (isNullOrUndefined(fields) || !fields.length) {
+                removeSortColumn(cols[parseInt(i.toString(), 10)].field);
+            } else {
+                fields.forEach((field: string) => {
+                    if (cols[parseInt(i.toString(), 10)].field === field) {
+                        removeSortColumn(field);
+                    }
+                });
+            }
         }
     }, []);
 

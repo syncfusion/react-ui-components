@@ -10,10 +10,10 @@ import { MutableGridSetter, UseScrollResult, ScrollElements, ScrollCss } from '.
  * @private
  * @returns {UseScrollResult} Scroll-related APIs and functions
  */
-export const useScroll: () => UseScrollResult = (): UseScrollResult => {
-    const grid: Partial<IGrid> & Partial<MutableGridSetter> = useGridComputedProvider();
+export const useScroll: <T>() => UseScrollResult<T> = <T, >(): UseScrollResult<T> => {
+    const grid: Partial<IGrid<T>> & Partial<MutableGridSetter<T>> = useGridComputedProvider<T>();
     const { height, enableRtl, enableStickyHeader } = grid;
-    const { getParentElement } = useGridMutableProvider();
+    const { getParentElement } = useGridMutableProvider<T>();
     const [scrollStyles, setScrollStyles] = useState<{ headerPadding: CSSProperties; headerContentBorder: CSSProperties; }>({
         headerPadding: {},
         headerContentBorder: {}
@@ -288,9 +288,9 @@ export const useScroll: () => UseScrollResult = (): UseScrollResult => {
     }, []);
 
     // Memoize API objects to prevent unnecessary re-renders
-    const publicScrollAPI: Partial<IGrid> = useMemo(() => ({ ...grid }), [grid]);
+    const publicScrollAPI: Partial<IGrid<T>> = useMemo(() => ({ ...grid }), [grid]);
 
-    const privateScrollAPI: UseScrollResult['privateScrollAPI'] = useMemo(() => ({
+    const privateScrollAPI: UseScrollResult<T>['privateScrollAPI'] = useMemo(() => ({
         getCssProperties,
         headerContentBorder: scrollStyles.headerContentBorder,
         headerPadding: scrollStyles.headerPadding,
@@ -299,7 +299,7 @@ export const useScroll: () => UseScrollResult = (): UseScrollResult => {
         onFooterScroll
     }), [getCssProperties, scrollStyles.headerContentBorder, scrollStyles.headerPadding, onContentScroll, onHeaderScroll, onFooterScroll]);
 
-    const protectedScrollAPI: UseScrollResult['protectedScrollAPI'] = useMemo(() => ({
+    const protectedScrollAPI: UseScrollResult<T>['protectedScrollAPI'] = useMemo(() => ({
         setPadding
     }), [setPadding]);
 

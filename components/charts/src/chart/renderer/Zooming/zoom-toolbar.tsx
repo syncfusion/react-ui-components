@@ -533,6 +533,7 @@ function renderToolbarItemGroup(
         // Then process the normal click event
         handleToolbarClick(item, chart, zoom)(e);
     };
+    const opacity: number = item === 'ZoomIn' ? 1 : zoom.isZoomed ? 1 : 0.2;
 
     return (
         <g
@@ -546,7 +547,7 @@ function renderToolbarItemGroup(
             role="button"
             aria-label={getZoomTooltipText(item, chart.locale)}
             cursor="pointer"
-            opacity={1}
+            opacity={opacity}
             style={{ outline: 'none' }}
         >
             {renderToolbarItemIcon(item, chart, zoom, refs)}

@@ -1,7 +1,8 @@
 import { IToolbar } from '@syncfusion/react-navigations';
+import { ComponentType, ReactElement } from 'react';
 
 /**
- * Defines the event arguments triggered by toolbar click actions in the Grid component. Includes details about the clicked item, the originating event, and support for preventing default behavior. Used to process user interactions with toolbar commands and apply custom logic before execution.
+ * Defines the event arguments triggered by toolbar click actions in the Data Grid component. Includes details about the clicked item, the originating event, and support for preventing default behavior. Used to process user interactions with toolbar commands and apply custom logic before execution.
  */
 export interface ToolbarClickEvent {
     /**
@@ -11,25 +12,7 @@ export interface ToolbarClickEvent {
      *
      * @default null
      */
-    item?: {
-        /**
-         * Specifies the unique identifier of the clicked toolbar item.
-         * Used to distinguish the item within the toolbar for processing or conditional logic.
-         * Matches the ID defined in the toolbar item configuration.
-         *
-         * @default -
-         */
-        id?: string;
-
-        /**
-         * Specifies the display text of the clicked toolbar item.
-         * Reflects the visible label or text shown on the toolbar button or control.
-         * Useful for identifying the item’s purpose or for UI feedback.
-         *
-         * @default -
-         */
-        text?: string;
-    };
+    item?: ToolbarItemProps;
 
     /**
      * Contains the original browser event that triggered the toolbar click.
@@ -41,13 +24,13 @@ export interface ToolbarClickEvent {
     event?: Event;
 
     /**
-     * Indicates whether the default toolbar action should be canceled. When props.cancel is set to true, the associated command is immediately prevented from executing.
+     * Indicates whether the default toolbar action should be cancelled. When props.cancel is set to true, the associated command is immediately prevented from executing.
      */
     cancel?: boolean;
 }
 
 /**
- * Defines methods and properties for managing toolbar behavior in the Grid.
+ * Defines methods and properties for managing toolbar behavior in the Data Grid.
  * Provides functionality to control toolbar rendering, item states, and click handling.
  * Used internally to encapsulate toolbar operations and state management.
  *
@@ -88,10 +71,10 @@ export interface ToolbarAPI {
      * Handles user interactions with the toolbar, passing event details for custom logic.
      * Updates the grid or toolbar state based on the clicked item.
      *
-     * @param {ToolbarClickEvent} args - Click event arguments.
+     * @param {ToolbarClickEvent} event - Click event arguments.
      * @returns {void}
      */
-    handleToolbarClick: (args: ToolbarClickEvent) => void;
+    handleToolbarClick: (event: ToolbarClickEvent) => void;
 
     /**
      * Indicates whether the toolbar has been rendered in the grid.
@@ -135,7 +118,7 @@ export interface ToolbarAPI {
  * Defines properties for buttons or controls, such as ID, text, and behavior.
  * Used to customize the appearance and functionality of toolbar items.
  */
-export interface ToolbarItemConfig {
+export interface ToolbarItemProps {
     /**
      * Specifies a unique identifier for the toolbar item.
      * Used to distinguish the item within the toolbar for event handling or state management.
@@ -152,7 +135,7 @@ export interface ToolbarItemConfig {
      *
      * @default -
      */
-    text: string;
+    text?: string;
 
     /**
      * Defines an icon for the toolbar item, typically an SVG element for optimal rendering.
@@ -192,7 +175,7 @@ export interface ToolbarItemConfig {
 }
 
 /**
- * Configures the entire toolbar component for the Grid.
+ * Configures the entire toolbar component for the Data Grid.
  * Defines settings for toolbar items, event handling, and styling.
  * Used internally to manage the toolbar’s setup and behavior.
  *
@@ -206,7 +189,7 @@ export interface ToolbarConfig {
      *
      * @default []
      */
-    toolbar?: (string | ToolbarItemConfig)[];
+    toolbar?: (string | ToolbarItemProps)[];
 
     /**
      * Specifies a unique identifier for the grid to generate unique toolbar item IDs.
@@ -224,7 +207,7 @@ export interface ToolbarConfig {
      *
      * @default null
      */
-    onToolbarItemClick?: (args: ToolbarClickEvent) => void;
+    onToolbarItemClick?: (event: ToolbarClickEvent) => void;
 
     /**
      * References the ToolbarAPI instance for managing toolbar operations.
@@ -246,7 +229,7 @@ export interface ToolbarConfig {
 }
 
 /**
- * Defines the internal configuration for toolbar items in the Grid.
+ * Defines the internal configuration for toolbar items in the Data Grid.
  * Specifies detailed properties for rendering and managing toolbar buttons or controls.
  * Used internally to handle advanced toolbar item settings.
  *
@@ -314,7 +297,7 @@ export interface ToolbarItem {
      *
      * @default null
      */
-    template?: string | Function;
+    template?: ComponentType | ReactElement | string;
 
     /**
      * Specifies the tooltip text displayed when hovering over the toolbar item.

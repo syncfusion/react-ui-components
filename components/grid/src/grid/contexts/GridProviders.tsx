@@ -1,4 +1,4 @@
-import { Context, createContext, FC, JSX, ReactElement, ReactNode, useContext } from 'react';
+import { Context, createContext, JSX, ReactElement, ReactNode, useContext } from 'react';
 import { MutableGridBase } from '../types';
 import { GridRef, IGrid } from '../types/grid.interfaces';
 import { MutableGridSetter } from '../types/interfaces';
@@ -7,7 +7,6 @@ import { MutableGridSetter } from '../types/interfaces';
  */
 const GridComputedContext: Context<Partial<IGrid> & Partial<MutableGridSetter>> =
     createContext<Partial<IGrid> & Partial<MutableGridSetter>>(null);
-
 /**
  * Provider component for computed grid properties
  *
@@ -16,10 +15,12 @@ const GridComputedContext: Context<Partial<IGrid> & Partial<MutableGridSetter>> 
  * @param {Object} props.children - Child components
  * @returns {Object} Provider component with children
  */
-export const GridComputedProvider: FC<{
-    grid: Partial<GridRef> & Partial<MutableGridSetter>;
+export const GridComputedProvider: <T>(props: {
+    grid: Partial<GridRef<T>> & Partial<MutableGridSetter<T>>;
     children: ReactElement | ReactNode;
-}> = ({ grid, children }: { grid: Partial<GridRef> & Partial<MutableGridSetter>; children: ReactElement | ReactNode; }): JSX.Element => {
+}) => ReactElement = <T, >({ grid, children }: {
+    grid: Partial<GridRef<T>> & Partial<MutableGridSetter<T>>; children: ReactElement | ReactNode;
+}): JSX.Element => {
     return (
         <GridComputedContext.Provider value={grid}>
             {children}
@@ -32,9 +33,9 @@ export const GridComputedProvider: FC<{
  *
  * @returns {Object} Grid computed context
  */
-export const useGridComputedProvider: () => Partial<GridRef> & Partial<MutableGridSetter> =
-    (): Partial<GridRef> & Partial<MutableGridSetter> => {
-        return useContext(GridComputedContext);
+export const useGridComputedProvider: <T, >() => Partial<GridRef<T>> & Partial<MutableGridSetter<T>> =
+    <T, >(): Partial<GridRef<T>> & Partial<MutableGridSetter<T>> => {
+        return useContext<Partial<GridRef<T>> & Partial<MutableGridSetter<T>>>(GridComputedContext);
     };
 
 /**
@@ -50,10 +51,10 @@ const GridMutableContext: Context<Partial<MutableGridBase>> = createContext<Muta
  * @param {ReactElement | ReactNode} props.children - Child components
  * @returns {JSX.Element} Provider component with children
  */
-export const GridMutableProvider: FC<{
-    grid: Partial<MutableGridBase>;
+export const GridMutableProvider: <T>(props: {
+    grid: Partial<MutableGridBase<T>>;
     children: ReactElement | ReactNode;
-}> = ({ grid, children }: { grid: Partial<MutableGridBase>; children: ReactElement | ReactNode; }): JSX.Element => {
+}) => JSX.Element = <T, >({ grid, children }: { grid: Partial<MutableGridBase<T>>; children: ReactElement | ReactNode; }): JSX.Element => {
     return (
         <GridMutableContext.Provider value={grid}>
             {children}
@@ -66,6 +67,6 @@ export const GridMutableProvider: FC<{
  *
  * @returns {MutableGridBase} Grid mutable context
  */
-export const useGridMutableProvider: () => MutableGridBase = (): MutableGridBase => {
-    return useContext(GridMutableContext);
+export const useGridMutableProvider: <T, >() => MutableGridBase<T> = <T, >(): MutableGridBase<T> => {
+    return useContext<MutableGridBase<T>>(GridMutableContext);
 };

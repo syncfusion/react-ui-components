@@ -1,5 +1,5 @@
-import { forwardRef, useImperativeHandle, useRef, RefObject, useCallback, JSX, isValidElement, memo } from 'react';
-import { EditType, ValueType } from '../../types';
+import { forwardRef, useImperativeHandle, useRef, RefObject, useCallback, JSX, isValidElement, memo, ReactElement, RefAttributes, createElement } from 'react';
+import { ActionType, EditType, ValueType } from '../../types';
 import { MutableGridSetter } from '../../types/interfaces';
 import { GridRef } from '../../types/grid.interfaces';
 import { EditParams, EditCellProps, EditCellRef, EditCellInputRef } from '../../types/edit.interfaces';
@@ -20,11 +20,11 @@ import { getNumberPattern } from '@syncfusion/react-base';
  * @param ref - Forward ref for imperative methods
  * @returns EditCell component
  */
-export const EditCell: React.ForwardRefExoticComponent<EditCellProps & React.RefAttributes<EditCellRef>> =
-    memo(forwardRef<EditCellRef, EditCellProps>(({
+export const EditCell: <T>(props: EditCellProps<T> & RefAttributes<EditCellRef>) => ReactElement =
+    memo(forwardRef<EditCellRef, EditCellProps>(<T, >({
         column,
         value,
-        rowData,
+        data,
         error,
         onChange,
         onBlur,
@@ -32,14 +32,14 @@ export const EditCell: React.ForwardRefExoticComponent<EditCellProps & React.Ref
         isAdd,
         disabled,
         formState
-    }: EditCellProps, ref: React.ForwardedRef<EditCellRef>) => {
+    }: EditCellProps<T>, ref: React.ForwardedRef<EditCellRef>) => {
         // Type for component refs that can be either native HTML elements or Syncfusion components
         const inputRef: RefObject<EditCellInputRef> = useRef<EditCellInputRef>(null);
 
         // Access grid context to get complete dataSource for dropdown
-        const gridContext: Partial<GridRef> & Partial<MutableGridSetter> = useGridComputedProvider();
+        const gridContext: Partial<GridRef<T>> & Partial<MutableGridSetter<T>> = useGridComputedProvider<T>();
         const { cssClass } = useGridMutableProvider();
-        const dataSource: Object[] | DataManager | DataResult = gridContext.dataSource;
+        const dataSource: T[] | DataManager | DataResult = gridContext.dataSource;
 
         /**
          * Focuses the input element (works with both native inputs and Syncfusion components)
@@ -82,16 +82,16 @@ export const EditCell: React.ForwardRefExoticComponent<EditCellProps & React.Ref
         /**
          * Gets the current value
          *
-         * @returns {ValueType | null} The current value of the edit cell
+         * @returns {ValueType | Object | null} The current value of the edit cell
          */
-        const getValue: () => ValueType | null = (): ValueType | null => {
+        const getValue: () => ValueType | Object | null = (): ValueType | Object | null => {
             return value;
         };
 
         /**
          * Sets the value
          */
-        const setValue: (newValue: ValueType | null) => void = useCallback((newValue: ValueType | null) => {
+        const setValue: (newValue: ValueType | Object | null) => void = useCallback((newValue: ValueType | Object | null) => {
             onChange?.(newValue);
         }, [onChange, value]);
 
@@ -106,8 +106,8 @@ export const EditCell: React.ForwardRefExoticComponent<EditCellProps & React.Ref
          * Handle Syncfusion component change events
          * Prevents input values from clearing during typing
          */
-        const handleSyncfusionChange: (newValue: string | number | boolean | Date | null | Object) => void =
-            useCallback((newValue: string | number | boolean | Date | null) => {
+        const handleSyncfusionChange: (newValue: ValueType | null | Object) => void =
+            useCallback((newValue: ValueType | null) => {
                 // Call onChange immediately for form validator state real-time updates
                 onChange?.(newValue);
             }, [onChange]);
@@ -253,7 +253,11 @@ export const EditCell: React.ForwardRefExoticComponent<EditCellProps & React.Ref
                                 'result' in dataSource ? dataSource.result : new DataManager(dataSource as Object[])) as
                                 DataManager | string[] | { [key: string]: object; }[] | number[] | boolean[]}
                             fields={{ value: column.field }}
-                            query={new Query().where(new Predicate(column.field, 'notequal', null, true, false)).select([column.field])}
+                            query={new Query().where(new Predicate(column.field, 'notequal', null, true, false)).select(
+                                editorProps.fields
+                                    ? [editorProps.fields.value, editorProps.fields.text].filter(Boolean)
+                                    : [column.field])
+                            }
                             actionComplete={(e: { result: Object[] }) => {
                                 e.result = DataUtil.distinct(e.result, column.field, true);
                             }}
@@ -305,12 +309,12 @@ export const EditCell: React.ForwardRefExoticComponent<EditCellProps & React.Ref
             if (typeof column.editTemplate === 'string' || isValidElement(column.editTemplate)) {
                 return column.editTemplate;
             } else {
-                return column.editTemplate({
+                return createElement(column.editTemplate, {
                     defaultValue: value,
                     column,
-                    rowData,
+                    data,
                     error,
-                    action: isAdd ? 'Add' : 'Edit',
+                    action: isAdd ? 'Add' : ActionType.Edit,
                     onChange
                 });
             }
@@ -360,6 +364,6 @@ export const EditCell: React.ForwardRefExoticComponent<EditCellProps & React.Ref
                 {editorComponent}
             </>
         );
-    }));
+    })) as <T>(props: EditCellProps<T> & RefAttributes<EditCellRef>) => ReactElement;
 
-EditCell.displayName = 'EditCell';
+(EditCell as React.ForwardRefExoticComponent<EditCellProps & React.RefAttributes<EditCellRef>>).displayName = 'EditCell';

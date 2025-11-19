@@ -26,7 +26,7 @@ import {
     preRender
 } from '@syncfusion/react-base';
 import { useValueFormatter, createServiceLocator } from '../services';
-import { Query, DataManager, DataResult, DataOptions, QueryOptions, ReturnType as DataReturnType } from '@syncfusion/react-data';
+import { Query, DataManager, DataResult, QueryOptions, ReturnType as DataReturnType } from '@syncfusion/react-data';
 import {
     MutableGridBase,
     IValueFormatter,
@@ -36,13 +36,14 @@ import {
     ClipMode,
     DataChangeRequestEvent,
     PendingState,
-    FilterPredicates
+    FilterPredicates,
+    ValueType
 } from '../types';
 import { selectionModule, SelectionSettings } from '../types/selection.interfaces';
-import { SortDescriptorModel, SortSettings, SortModule } from '../types/sort.interfaces';
-import { GridRef, TextWrapSettings, RowInfo, IGrid, IGridBase } from '../types/grid.interfaces';
+import { SortDescriptor, SortSettings, SortModule } from '../types/sort.interfaces';
+import { GridRef, TextWrapSettings, RowInfo, IGrid, IGridBase, RecordDoubleClickEvent } from '../types/grid.interfaces';
 import { filterModule, FilterSettings } from '../types/filter.interfaces';
-import { editModule } from '../types/edit.interfaces';
+import { editModule, EditSettings } from '../types/edit.interfaces';
 import { ColumnProps } from '../types/column.interfaces';
 import { AggregateRowProps } from '../types/aggregate.interfaces';
 import { CellFocusEvent, FocusedCellInfo, IFocusMatrix } from '../types/focus.interfaces';
@@ -87,10 +88,10 @@ const CSS_CLASS_NAMES: Record<string, string> = {
     CONTROL: 'sf-control',
     GRID: 'sf-grid',
     RTL: 'sf-rtl',
-    GRID_HOVER: 'sf-gridhover',
+    GRID_HOVER: 'sf-row-hover',
     MAC_SAFARI: 'sf-mac-safari',
-    MIN_HEIGHT: 'sf-grid-min-height',
-    HIDE_LINES: 'sf-hidelines'
+    MIN_HEIGHT: 'sf-row-min-height',
+    HIDE_LINES: 'sf-hide-lines'
 };
 
 const KEY_CODES: Record<string, number> = {
@@ -108,12 +109,12 @@ const KEY_CODES: Record<string, number> = {
  * @param {RefObject<ITooltip>} ellipsisTooltipRef - Tooltip reference
  * @returns {GridResult} An object containing various grid-related state and API
  */
-export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObject<GridRef>,
-    ellipsisTooltipRef?: RefObject<ITooltip>) => GridResult = (
-    props: Partial<IGridBase>,
-    gridRef?: RefObject<GridRef>,
+export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?: RefObject<GridRef<T>>,
+    ellipsisTooltipRef?: RefObject<ITooltip>) => GridResult<T> = <T, >(
+    props: Partial<IGridBase<T>>,
+    gridRef?: RefObject<GridRef<T>>,
     ellipsisTooltipRef?: RefObject<ITooltip>
-): GridResult => {
+): GridResult<T> => {
     const baseProvider: {
         locale: string;
         dir: string;
@@ -157,12 +158,12 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
     const [isInitialLoad, setInitialLoad] = useState(true);
     const isInitialBeforePaint: RefObject<boolean> = useRef(true);
     const tooltipContent: RefObject<string> = useRef('');
-    const aggregates: AggregateRowProps[] = useAggregates(props, gridRef);
+    const aggregates: AggregateRowProps[] = useAggregates<T>(props, gridRef);
 
     const dataState: RefObject<PendingState> = useRef({isPending: false, resolver: undefined, isEdit: false});
 
     const { columns: preparedColumns, children, headerRowDepth, colElements, uiColumns } =
-        useColumns({ ...props }, gridRef, dataState, isInitialBeforePaint);
+        useColumns<T>({ ...props }, gridRef, dataState, isInitialBeforePaint);
 
     // Initialize search settings based on props or use default values
     const defaultSearchSettings: SearchSettings = {
@@ -197,7 +198,7 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
     }, [props.filterSettings?.enabled, props.filterSettings]);
 
     const sortSettings: SortSettings = useMemo(() => {
-        const combinedSortColumn: SortDescriptorModel[] = [];
+        const combinedSortColumn: SortDescriptor[] = [];
         if (props.sortSettings?.columns) {
             if (props?.sortSettings?.enabled) {
                 for (let i: number = 0; i < props.sortSettings?.columns?.length; i++) {
@@ -208,7 +209,7 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
         // Initialize sort settings based on props or use default values
         const defaultSortSettings: SortSettings = {
             enabled: props.sortSettings?.enabled || false,
-            mode: props?.sortSettings?.mode !== 'single' || isNullOrUndefined(props?.sortSettings?.mode) ? 'multiple' : 'single',
+            mode: props?.sortSettings?.mode !== 'Single' || isNullOrUndefined(props?.sortSettings?.mode) ? 'Multiple' : 'Single',
             columns: combinedSortColumn || [],
             allowUnsort: props.sortSettings?.allowUnsort !== false
         };
@@ -241,12 +242,12 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
         template: props.pageSettings?.template || null,
         totalRecordsCount: totalRecordsCount
     };
-    const stableRest: RefObject<Partial<IGridBase>> = useRef(props);
+    const stableRest: RefObject<Partial<IGridBase<T>>> = useRef(props);
     const generatedId: string = useId().replace(/:/g, '');
     const id: string = useMemo(() => props.id || `grid_${generatedId}`, [props.id, generatedId]);
 
-    const columns: ColumnProps[] = useMemo(() =>
-        preparedColumns, [preparedColumns]);
+    const columns: ColumnProps<T>[] = useMemo(() =>
+        preparedColumns as ColumnProps<T>[], [preparedColumns]);
 
     const clipMode: ClipMode | string = useMemo(() => {
         return props.clipMode;
@@ -266,7 +267,7 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
         props.allowKeyboard !== false, [props.allowKeyboard]);
     const selectionSettings: SelectionSettings = useMemo(() =>
         ({
-            ... { enabled: true, mode: 'Single', type: 'Row', enableToggle: true },
+            ... { enabled: true, mode: 'Single', type: 'Row', enableToggle: false },
             ...(props.selectionSettings || {})
         }), [props.selectionSettings]);
     const pageSettings: PageSettings = useMemo(() =>
@@ -290,7 +291,7 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
     const rowTemplate: string | Function | ReactElement = useMemo(() =>
         props.rowTemplate || null, [props.rowTemplate]);
 
-    const [currentViewData, setCurrentViewData] = useState<Object[]>([]);
+    const [currentViewData, setCurrentViewData] = useState<T[]>([]);
 
     const [responseData, setResponseData] = useState<Object>({});
 
@@ -318,7 +319,7 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
         }
 
         if (gridLines !== 'Default' && gridLines !== 'None') {
-            baseClasses.push(`sf-${gridLines.toLowerCase()}lines`);
+            baseClasses.push(`sf-${gridLines.toLowerCase()}-lines`);
         } else if (gridLines === 'None') {
             baseClasses.push(CSS_CLASS_NAMES.HIDE_LINES);
         }
@@ -358,8 +359,8 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
      *
      * @returns {ColumnProps} Returns the column
      */
-    const getColumnByField: (field: string) => ColumnProps = useCallback((field: string): ColumnProps => {
-        return iterateArrayOrObject<ColumnProps, ColumnProps>(columns, (item: ColumnProps) => {
+    const getColumnByField: (field: string) => ColumnProps<T> = useCallback((field: string): ColumnProps<T> => {
+        return iterateArrayOrObject<ColumnProps<T>, ColumnProps<T>>(columns, (item: ColumnProps<T>) => {
             if (item.field === field) {
                 return item;
             }
@@ -394,7 +395,7 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
             }
             if (dataSource && dataModule.isRemote() && dataSource instanceof DataManager) {
                 // Especially usefull for edit update whole data based aggregate
-                return dataOperations?.getData?.(dataSource as DataOptions, query) as Promise<DataReturnType>;
+                return dataOperations?.getData?.({}, query) as Promise<DataReturnType>;
             } else {
                 if (dataSource instanceof DataManager) {
                     return (dataSource as DataManager).executeLocal(query);
@@ -416,14 +417,14 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
      * gridRef.current.getHiddenColumns();
      * ```
      */
-    const getHiddenColumns: () => ColumnProps[] = useCallback((): ColumnProps[] => {
-        const cols: ColumnProps[] = [];
+    const getHiddenColumns: () => ColumnProps<T>[] = useCallback((): ColumnProps<T>[] => {
+        const cols: ColumnProps<T>[] = [];
         for (const col of (columns)) {
             if (col.visible === false) {
                 cols.push(col);
             }
         }
-        return cols as ColumnProps[];
+        return cols as ColumnProps<T>[];
     }, [columns]);
 
     /**
@@ -440,37 +441,37 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
      * gridRef.current.getRowInfo(event.target);
      * ```
      */
-    const getRowInfo: (target: Element | EventTarget) => RowInfo = useCallback((target: Element | EventTarget): RowInfo => {
+    const getRowInfo: (target: Element | EventTarget) => RowInfo<T> = useCallback((target: Element | EventTarget): RowInfo<T> => {
         const ele: Element = target as Element;
         let args: Object = { target: target };
         if (!isNullOrUndefined(target)) {
-            const cell: Element = closest(ele, '.sf-rowcell');
+            const cell: Element = closest(ele, '.sf-grid-content-row .sf-cell');
             if (!cell) {
-                const row: Element = closest(ele, '.sf-row');
-                if (!isNullOrUndefined(row) && !row.classList.contains('sf-addedrow')) {
-                    const rowObj: IRow<ColumnProps> = gridRef.current.getRowObjectFromUID(row.getAttribute('data-uid'));
+                const row: Element = closest(ele, '.sf-grid-content-row');
+                if (!isNullOrUndefined(row) && !row.classList.contains('sf-grid-add-row')) {
+                    const rowObj: IRow<ColumnProps<T>> = gridRef.current.getRowObjectFromUID(row.getAttribute('data-uid'));
                     const rowIndex: number = parseInt(row.getAttribute('aria-rowindex'), 10) - 1;
-                    args = { row: row, rowData: rowObj.data, rowIndex: rowIndex };
+                    args = { row: row, data: rowObj.data, rowIndex: rowIndex };
                 }
                 return args;
             }
             const cellIndex: number = parseInt(cell.getAttribute('aria-colindex'), 10) - 1;
-            const row: Element = closest(cell, '.sf-row');
+            const row: Element = closest(cell, '.sf-grid-content-row');
             if (!isNullOrUndefined(cell) && !isNaN(cellIndex) && !isNullOrUndefined(row)) {
                 const rowIndex: number = parseInt(row.getAttribute('aria-rowindex'), 10) - 1;
                 const rows: Element[] = Array.from(gridRef?.current.getRows() || []);
                 const index: number = cellIndex;
                 const rowsObject: Element[] = rows.filter((r: Element) => r.getAttribute('data-uid') === row.getAttribute('data-uid'));
-                let rowData: Object = {};
-                let column: ColumnProps;
+                let data: T = {} as T;
+                let column: ColumnProps<T>;
                 if (Object.keys(rowsObject).length) {
-                    const rowObject: IRow<ColumnProps> = gridRef?.current.getRowObjectFromUID(rowsObject[0].getAttribute('data-uid'));
-                    rowData = rowObject.data;
-                    column = rowObject.cells[parseInt(index.toString(), 10)].column as ColumnProps;
+                    const rowObject: IRow<ColumnProps<T>> = gridRef?.current.getRowObjectFromUID(rowsObject[0].getAttribute('data-uid'));
+                    data = rowObject.data;
+                    column = rowObject.cells[parseInt(index.toString(), 10)].column as ColumnProps<T>;
                 }
                 args = {
                     cell: cell, cellIndex: cellIndex, columnIndex: cellIndex, row: row, rowIndex: rowIndex,
-                    rowData: rowData, column: column, target: target
+                    data: data, column: column, target: target
                 };
             }
         }
@@ -496,9 +497,9 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
     /**
      * @returns {ColumnProps[]} returns array of column models
      */
-    const getVisibleColumns: () => ColumnProps[] = useCallback((): ColumnProps[] => {
-        const cols: ColumnProps[] = [];
-        const gridCols: ColumnProps[] = uiColumns ?? columns;
+    const getVisibleColumns: () => ColumnProps<T>[] = useCallback((): ColumnProps<T>[] => {
+        const cols: ColumnProps<T>[] = [];
+        const gridCols: ColumnProps<T>[] = uiColumns ?? columns;
         for (const col of gridCols) {
             if (col.visible) {
                 cols.push(col);
@@ -514,8 +515,8 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
      *
      * @returns {ColumnProps} Returns the column
      */
-    const getColumnByUid: (uid: string) => ColumnProps = useCallback((uid: string): ColumnProps => {
-        const gridCols: ColumnProps[] = uiColumns ?? columns;
+    const getColumnByUid: (uid: string) => ColumnProps<T> = useCallback((uid: string): ColumnProps<T> => {
+        const gridCols: ColumnProps<T>[] = uiColumns ?? columns;
         for (const col of gridCols) {
             if (col.uid === uid) {
                 return col;
@@ -536,16 +537,16 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
      * Primary key column must be specified using columns.isPrimaryKey property.
      *
      * @param {string| number} key - Specifies the PrimaryKey value of dataSource.
-     * @param {Object} rowData - To update new data for the particular row.
+     * @param {Object} data - To update new data for the particular row.
      *
      * @returns {void}
      */
-    const setRowData: (key: string | number, rowData?: Object, isDataSourceChangeRequired?: boolean) => void =
-        useCallback(async(key: string | number, rowData?: Object, isDataSourceChangeRequired: boolean = false): Promise<void> => {
+    const setRowData: (key: string | number, data?: T, isDataSourceChangeRequired?: boolean) => void =
+        useCallback(async(key: string | number, data?: T, isDataSourceChangeRequired: boolean = false): Promise<void> => {
             const rowuID: string = 'uid';
             const pkName: string = gridRef.current?.getPrimaryKeyFieldNames()[0];
-            const selectedRow: IRow<ColumnProps> = gridRef.current?.getRowsObject().filter((r: IRow<{}>) =>
-                getValue(pkName, r.data) === key)[0] as IRow<ColumnProps>;
+            const selectedRow: IRow<ColumnProps<T>> = gridRef.current?.getRowsObject().filter((r: IRow<{}>) =>
+                getValue(pkName, r.data) === key)[0] as IRow<ColumnProps<T>>;
             if (selectedRow === undefined || selectedRow === null) {
                 return;
             }
@@ -555,11 +556,11 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
                 if (isDataSourceChangeRequired) {
                     await dataOperations.getData({
                         requestType: 'update',
-                        data: rowData
+                        data: data
                     });
                 }
                 if (!isNullOrUndefined(selectedRow) && selectRowEle.length) {
-                    const rowObjectData: Object = {...selectedRow.data, ...rowData};
+                    const rowObjectData: T = {...selectedRow.data, ...data};
                     selectedRow.setRowObject({...selectedRow, data: rowObjectData});
                 } else {
                     return; // if updated cell not inside the current view
@@ -567,9 +568,7 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
             } catch (error) {
                 // Trigger actionFailure event on error
                 // This provides consistent error handling similar to other grid operations
-                gridRef.current?.onError({
-                    error: error as Error
-                });
+                gridRef.current?.onError(error as Error);
                 return;
             }
         }, [gridRef.current]);
@@ -580,24 +579,24 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
      *
      * @param {string| number} key - Specifies the PrimaryKey value of dataSource.
      * @param {string } field - Specifies the field name which you want to update.
-     * @param {string | number | boolean | Date} value - To update new value for the particular cell.
+     * @param {ValueType} value - To update new value for the particular cell.
      *
      * @returns {void}
      */
-    const setCellValue: (key: string | number, field: string, value: string | number | boolean | Date | null,
+    const setCellValue: (key: string | number, field: string, value: ValueType | null,
         isDataSourceChangeRequired?: boolean) => void =
-        useCallback(async (key: string | number, field: string, value: string | number | boolean | Date | null,
+        useCallback(async (key: string | number, field: string, value: ValueType | null,
                            isDataSourceChangeRequired?: boolean) => {
             const rowuID: string = 'uid';
             const pkName: string = gridRef.current?.getPrimaryKeyFieldNames()[0];
-            const selectedRow: IRow<ColumnProps> = gridRef.current?.getRowsObject().filter((r: IRow<{}>) =>
-                getValue(pkName, r.data) === key)[0] as IRow<ColumnProps>;
+            const selectedRow: IRow<ColumnProps<T>> = gridRef.current?.getRowsObject().filter((r: IRow<{}>) =>
+                getValue(pkName, r.data) === key)[0] as IRow<ColumnProps<T>>;
             if (selectedRow === undefined || selectedRow === null) {
                 return;
             }
             const selectRowEle: Element[] = selectedRow ? [].slice.call(
                 gridRef.current?.element.querySelectorAll('[data-uid=' + selectedRow[`${rowuID}`] + ']')) : undefined;
-            const changedRowData: Object = { ...selectedRow.data, [field]: value };
+            const changedRowData: T = { ...selectedRow.data, [field]: value };
             try {
                 if (isDataSourceChangeRequired) {
                     await dataOperations.getData({
@@ -606,7 +605,7 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
                     });
                 }
                 if (!isNullOrUndefined(selectedRow) && selectRowEle.length) {
-                    const rowObjectData: Object = { ...selectedRow.data, ...changedRowData };
+                    const rowObjectData: T = { ...selectedRow.data, ...changedRowData };
                     selectedRow.setRowObject({ ...selectedRow, data: rowObjectData });
                 } else {
                     return; // if updated cell not inside the current view
@@ -614,9 +613,7 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
             } catch (error) {
                 // Trigger actionFailure event on error
                 // This provides consistent error handling similar to other grid operations
-                gridRef.current?.onError({
-                    error: error as Error
-                });
+                gridRef.current?.onError(error as Error);
                 return;
             }
         }, [gridRef.current]);
@@ -637,15 +634,21 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
 
     const searchModule: searchModule = useSearch(gridRef, searchSettings, setGridAction);
 
-    const selectionModule: selectionModule = useSelection(gridRef);
+    const selectionModule: selectionModule<T> = useSelection<T>(gridRef);
+
+    useMemo(() => {
+        if (!selectionSettings.enabled) {
+            selectionModule.clearSelection();
+        }
+    }, [selectionSettings.enabled]);
 
     const sortModule: SortModule = useSort(gridRef, sortSettings, setGridAction);
 
     useMemo(() => {
-        const sortedColumns: SortDescriptorModel[] = sortModule.sortSettings.columns;
+        const sortedColumns: SortDescriptor[] = sortModule.sortSettings.columns;
         if (sortedColumns.length) {
-            const validColumns: SortDescriptorModel[] = sortedColumns.filter((sortedColumn: SortDescriptorModel) => {
-                const column: ColumnProps = columns.find((col: ColumnProps) => col.field === sortedColumn.field);
+            const validColumns: SortDescriptor[] = sortedColumns.filter((sortedColumn: SortDescriptor) => {
+                const column: ColumnProps<T> = columns.find((col: ColumnProps<T>) => col.field === sortedColumn.field);
                 return column?.allowSort;
             });
             if (sortedColumns.length !== validColumns.length) {
@@ -656,7 +659,7 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
         const filteredColumns: FilterPredicates[] = filterModule.filterSettings.columns;
         if (filteredColumns.length) {
             const validColumns: FilterPredicates[] = filteredColumns.filter((filteredColumn: FilterPredicates) => {
-                const column: ColumnProps = columns.find((col: ColumnProps) => col.field === filteredColumn.field);
+                const column: ColumnProps<T> = columns.find((col: ColumnProps<T>) => col.field === filteredColumn.field);
                 return column?.allowFilter;
             });
             if (filteredColumns.length !== validColumns.length) {
@@ -673,32 +676,32 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
         uiColumns ?? columns,
         gridRef,
         {
-            onCellFocus: (args: CellFocusEvent) => {
+            onCellFocus: (args: CellFocusEvent<T>) => {
                 if (props.onCellFocus) {
-                    const eventArgs: CellFocusEvent = {
+                    const eventArgs: CellFocusEvent<T> = {
                         column: args.column,
                         columnIndex: args.columnIndex,
                         event: args.event,
-                        rowData: args.rowData,
+                        data: args.data,
                         rowIndex: args.rowIndex
                     };
                     props.onCellFocus(eventArgs);
                 }
                 protectedAPI.selectionModule.onCellFocus(args);
             },
-            onCellClick: (args: CellFocusEvent) => {
+            onCellClick: (args: CellFocusEvent<T>) => {
                 if (props.onCellClick) {
-                    const eventArgs: CellFocusEvent = {
+                    const eventArgs: CellFocusEvent<T> = {
                         column: args.column,
                         columnIndex: args.columnIndex,
                         event: args.event,
-                        rowData: args.rowData,
+                        data: args.data,
                         rowIndex: args.rowIndex
                     };
                     props.onCellClick(eventArgs);
                 }
             },
-            beforeCellFocus: (args: CellFocusEvent) => {
+            beforeCellFocus: (args: CellFocusEvent<T>) => {
                 if (props.onCellFocusStart) {
                     props.onCellFocusStart(args);
                 }
@@ -719,7 +722,7 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
             }
             if (e.keyCode === KEY_CODES.ALT_W) {
                 // First ensure we're in content mode
-                focusModule.setActiveMatrix('content');
+                focusModule.setActiveMatrix('Content');
 
                 // Focus the content area
                 focusModule.focusContent();
@@ -740,7 +743,7 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
     const gridInstance: {
         dataSource: DataManager | DataResult;
         query: Query;
-        columns: ColumnProps[];
+        columns: ColumnProps<T>[];
         aggregates: AggregateRowProps[];
         sortSettings: SortSettings;
         filterSettings: FilterSettings;
@@ -748,7 +751,7 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
         pageSettings: PageSettings;
         getPrimaryKeyFieldNames: () => string[];
         onDataRequest: (args: DataRequestEvent) => void;
-        onDataChangeRequest: (args: DataChangeRequestEvent) => void;
+        onDataChangeRequest: (args: DataChangeRequestEvent<T>) => void;
     } = useMemo(() => ({
         dataSource,
         query,
@@ -766,17 +769,18 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
         pageSettings?.enabled, sortModule?.sortSettings, searchModule?.searchSettings?.enabled, uiColumns,
         columns, filterModule?.filterSettings, searchModule?.searchSettings, pageSettings, currentPage]);
 
-    const dataOperations: UseDataResult = useData(gridInstance, gridAction, dataState);
-    const dataModule: UseDataResult = dataOperations;
+    const dataOperations: UseDataResult<T> = useData<T>(gridInstance, gridAction, dataState);
+    const dataModule: UseDataResult<T> = dataOperations;
 
-    const editModule: editModule = useEdit(
+    const editModule: editModule<T> = useEdit<T>(
         gridRef,
         serviceLocator,
         uiColumns ?? columns,
         currentViewData,
         dataModule,
         focusModule,
-        props.editSettings,
+        selectionModule,
+        props.editSettings as EditSettings<T>,
         setGridAction,
         setCurrentPage,
         setResponseData
@@ -858,20 +862,20 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
             return;
         }
         editModule?.handleGridDoubleClick(e);
-        const rowInfo: RowInfo = gridRef.current?.getRowInfo(clickedCell);
+        const rowInfo: RowInfo<T> = gridRef.current?.getRowInfo(clickedCell);
         props.onRowDoubleClick?.({
-            target: target,
+            event: e,
             cell: rowInfo.cell,
             columnIndex: rowInfo.columnIndex,
             row: rowInfo.row,
             rowIndex: rowInfo.rowIndex,
-            rowData: rowInfo.rowData,
+            data: rowInfo.data,
             column: rowInfo.column
-        });
+        } as RecordDoubleClickEvent<T>);
     }, [editModule, isInitialLoad, gridRef, currentViewData, props.editSettings]);
 
     const isEllipsisTooltip: boolean = useMemo((): boolean => {
-        const col: ColumnProps[] = uiColumns ?? columns;
+        const col: ColumnProps<T>[] = uiColumns ?? columns;
         if (clipMode === 'EllipsisWithTooltip') {
             return true;
         }
@@ -902,8 +906,11 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
             const myTable: HTMLTableElement = createElement('table') as HTMLTableElement;
             myTable.className = table.className;
             myTable.style.cssText = 'table-layout: auto;width: auto';
-            const ele: string = (type === 'header') ? 'th' : 'td';
-            const myTr: HTMLTableRowElement = createElement('tr', { attrs: { role: 'row' } }) as HTMLTableRowElement;
+            const ele: string = (type === 'Header') ? 'th' : 'td';
+            const myTr: HTMLTableRowElement = createElement('tr', {
+                attrs: { role: 'row' },
+                className: type === 'Header' ? 'sf-grid-header-row' : 'sf-grid-content-row'
+            }) as HTMLTableRowElement;
             const mytd: HTMLElement = createElement(ele) as HTMLElement;
             myTr.appendChild(mytd);
             myTable.appendChild(myTr);
@@ -922,13 +929,16 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
         let ctable: HTMLDivElement;
         const create: () => void = () => {
             const headerTable: Element = gridRef.current?.getHeaderTable?.() ??
-                gridRef.current?.element?.querySelector('.sf-gridheader table');
-            const headerDivTag: string = 'sf-gridheader';
+                gridRef.current?.element?.querySelector('.sf-grid-header-container table');
+            const headerDivTag: string = 'sf-grid-header-container';
+            const contentTable: Element = gridRef.current?.getContentTable?.() ??
+                gridRef.current?.element?.querySelector('.sf-grid-content-container table');
+            const contentDivTag: string = 'sf-grid-content-container';
             if (headerTable && !ellipsisTooltipEvaluateInfo?.htable) {
-                ellipsisTooltipEvaluateInfo.htable = createTable(headerTable, headerDivTag, 'header');
+                ellipsisTooltipEvaluateInfo.htable = createTable(headerTable, headerDivTag, 'Header');
             }
-            if (headerTable && !ellipsisTooltipEvaluateInfo?.ctable) {
-                ellipsisTooltipEvaluateInfo.ctable = createTable(headerTable, headerDivTag, 'content');
+            if (contentTable && !ellipsisTooltipEvaluateInfo?.ctable) {
+                ellipsisTooltipEvaluateInfo.ctable = createTable(contentTable, contentDivTag, 'Content');
             }
         };
         const destroy: () => void = () => {
@@ -956,13 +966,14 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
             if (!ellipsisTooltipEvaluateInfo.htable) {
                 ellipsisTooltipEvaluateInfo.create();
             }
-            const table: HTMLDivElement = element?.classList?.contains?.('sf-headercell') ? ellipsisTooltipEvaluateInfo.htable :
+            const header: boolean = element?.parentElement?.classList?.contains?.('sf-grid-header-row');
+            const table: HTMLDivElement = header ? ellipsisTooltipEvaluateInfo.htable :
                 ellipsisTooltipEvaluateInfo.ctable;
             if (!table) {
                 return false;
             }
-            const ele: string = element?.classList?.contains?.('sf-headercell') ? 'th' : 'tr';
-            table.querySelector(ele).className = element?.className + 'ellipsis-tooltip-overflow-ensure';
+            const ele: string = header ? 'th' : 'td';
+            table.querySelector(ele).className = element?.className;
             const targetElement: HTMLElement = table.querySelector(ele);
             targetElement.innerHTML = '';
             Array.from(element?.childNodes).forEach((child: ChildNode) => {
@@ -993,8 +1004,8 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
             const tagName: string = (e.target as Element).tagName;
             const elemNames: string[] = ['A', 'BUTTON', 'INPUT'];
             if (element && e.type !== 'mouseout' && !(Browser.isDevice && elemNames.indexOf(tagName) !== -1)) {
-                if (element?.getElementsByClassName?.('sf-headertext')?.length) {
-                    const innerElement: HTMLElement = element.getElementsByClassName('sf-headertext')[0] as HTMLElement;
+                if (element?.getElementsByClassName?.('sf-grid-header-text')?.length) {
+                    const innerElement: HTMLElement = element.getElementsByClassName('sf-grid-header-text')[0] as HTMLElement;
                     tooltipContent.current = SanitizeHtmlHelper.sanitize(innerElement.innerText);
                 } else {
                     tooltipContent.current = SanitizeHtmlHelper.sanitize(element?.innerText);
@@ -1002,7 +1013,7 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
                 if (element !== ellipsisTooltipRef.current?.target?.current) {
                     ellipsisTooltipRef.current?.openTooltip?.(element);
                     requestAnimationFrame(() => {
-                        const tooltipPopup: HTMLElement = document.body.querySelector('.sf-gridellipsis-tooltip.sf-popup-close');
+                        const tooltipPopup: HTMLElement = document.body.querySelector('.sf-ellipsis-tooltip.sf-popup-close');
                         if (tooltipPopup) {
                             tooltipPopup.classList.remove('sf-popup-close'); // seems tooltip maintain class on rapid hover due to our element childNode text length detection delay.
                             tooltipPopup.classList.add('sf-popup-open');
@@ -1028,7 +1039,7 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
         props?.onMouseDown?.(e);
         if (isStopPropagationPreventDefault(e)) { return; }
         focusModule.focusByClick = true;
-        if ((e.target as Element).closest('.sf-gridcontent,.sf-gridheader') && (e.shiftKey || e.ctrlKey)) {
+        if ((e.target as Element).closest('.sf-grid-content-container,.sf-grid-header-container') && (e.shiftKey || e.ctrlKey)) {
             e.preventDefault();
         }
         filterModule?.mouseDownHandler?.(e);
@@ -1093,7 +1104,7 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
             const focusedCell: FocusedCellInfo = getFocusedCell();
             if (focusedCell.rowIndex === -1 && focusedCell.colIndex === -1 && gridRef.current.allowKeyboard) {
                 if (!isForwardTabbing) {
-                    focusModule.setActiveMatrix(aggregates?.length ? 'aggregate' : 'content');
+                    focusModule.setActiveMatrix(aggregates?.length ? 'Aggregate' : 'Content');
                     const matrix: IFocusMatrix = focusModule.getActiveMatrix();
                     let lastCell: number[] = [matrix.rows, matrix.columns];
                     if (matrix.matrix[lastCell[0]][lastCell[1]] === 0) {
@@ -1113,7 +1124,7 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
                         });
                     } else {
                         // No header, focus first content cell
-                        focusModule.setActiveMatrix('content');
+                        focusModule.setActiveMatrix('Content');
                         requestAnimationFrame(() => {
                             focusModule.focus();
                         });
@@ -1187,7 +1198,7 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
         // Check for cancellation or specific dropdown open condition
         const target: Element = e.target as Element;
         const isDropdownOpenCondition: boolean = editModule?.isEdit &&
-                                      target?.closest('.sf-gridform') &&
+                                      target?.closest('.sf-grid-edit-form') &&
                                       (target?.closest('.sf-ddl') || target?.closest('.sf-datepicker')) &&
                                       e.altKey &&
                                       e.code === 'ArrowDown';
@@ -1197,7 +1208,7 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
             return; // Early return to prevent further processing
         }
         sortModule?.keyUpHandler?.(e as React.KeyboardEvent);
-        if (sortModule && e.keyCode === 13 && closest(e.target as Element, '.sf-headercell')) {
+        if (sortModule && e.keyCode === 13 && closest(e.target as Element, '.sf-grid-header-row .sf-cell')) {
             return;
         }
         const pageAction: boolean = pageSettings?.enabled && (e.target as HTMLElement)?.closest('.sf-pager')
@@ -1210,7 +1221,7 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
         // This implements comprehensive keyboard actions including Insert and Delete keys
         const isMacLike: boolean = /(Mac)/i.test(navigator.platform);
 
-        const editForm: HTMLElement | null = (e.target as HTMLElement)?.closest('.sf-gridform');
+        const editForm: HTMLElement | null = (e.target as HTMLElement)?.closest('.sf-grid-edit-form');
         // Handle edit-specific keyboard events first
         if (props.editSettings?.allowEdit || props.editSettings?.allowAdd || props.editSettings?.allowDelete) {
 
@@ -1239,7 +1250,7 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
             // F2 key to start editing
             if (e.key === 'F2' && !editModule?.isEdit) {
                 e.preventDefault();
-                editModule?.editRow?.();
+                editModule?.editRecord?.();
                 return;
             }
 
@@ -1248,10 +1259,10 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
                 const target: HTMLElement = e.target as HTMLElement;
                 // Only handle if not in input field or specific grid context
                 if (!target.closest('.sf-unboundcelldiv') &&
-                    (target.closest('.sf-gridcontent') || target.closest('.sf-headerContent')) && editForm) {
+                    (target.closest('.sf-grid-content-container') || target.closest('.sf-grid-header-content')) && editForm) {
                     e.preventDefault();
                     editModule.escEnterIndex.current = parseInt((e.target as HTMLElement)?.closest('td')?.getAttribute('aria-colindex'), 10) - 1;
-                    (editModule?.saveChanges as Function)?.(undefined, undefined, 'Key');
+                    (editModule?.saveDataChanges as Function)?.(undefined, undefined, 'Key');
                     return;
                 }
             }
@@ -1260,7 +1271,7 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
             if (e.key === 'Escape' && editModule?.isEdit && editForm) {
                 e.preventDefault();
                 editModule.escEnterIndex.current = parseInt((e.target as HTMLElement)?.closest('td')?.getAttribute('aria-colindex'), 10) - 1;
-                (editModule?.cancelChanges as Function)?.('Key');
+                (editModule?.cancelDataChanges as Function)?.('Key');
                 return;
             }
         }
@@ -1356,7 +1367,7 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
     /**
      * Private API for internal grid operations
      */
-    const privateAPI: GridResult['privateAPI'] = useMemo(() => ({
+    const privateAPI: GridResult<T>['privateAPI'] = useMemo(() => ({
         styles,
         isEllipsisTooltip,
         setCurrentViewData,
@@ -1384,7 +1395,7 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
      * These are for readonly purpose - if a property needs to be updated,
      * it should not be included here but in the protected API
      */
-    const publicAPI: IGrid = useMemo(() => ({
+    const publicAPI: IGrid<T> = useMemo(() => ({
         ...stableRest.current,
         getVisibleColumns,
         getColumnByUid,
@@ -1424,7 +1435,7 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
         aggregates,
         editSettings: props.editSettings,
         allowKeyboard
-    } as IGrid), [
+    } as IGrid<T>), [
         getVisibleColumns,
         getColumnByUid,
         getColumnByField,
@@ -1468,7 +1479,7 @@ export const useGridComputedProps: (props: Partial<IGridBase>, gridRef?: RefObje
     /**
      * Protected API for internal grid components
      */
-    const protectedAPI: Partial<MutableGridBase> = useMemo(() => ({
+    const protectedAPI: Partial<MutableGridBase<T>> = useMemo(() => ({
         currentViewData,
         columnsDirective,
         headerRowDepth,

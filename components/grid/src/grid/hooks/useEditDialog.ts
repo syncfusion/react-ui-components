@@ -35,7 +35,7 @@ export const useConfirmDialog: (serviceLocator: ServiceLocator) => UseConfirmDia
                         config: {
                             confirmText: localization?.getConstant('okButtonLabel'),
                             cancelText: localization?.getConstant('cancelButtonLabel'),
-                            type: 'confirm',
+                            type: 'Confirm',
                             ...config
                         },
                         onConfirm: () => {
@@ -64,7 +64,7 @@ export const useConfirmDialog: (serviceLocator: ServiceLocator) => UseConfirmDia
                     message,
                     confirmText: localization?.getConstant('okButtonLabel'),
                     cancelText: localization?.getConstant('cancelButtonLabel'),
-                    type: 'delete'
+                    type: 'Delete'
                 });
             }, [confirmOnEdit, localization]);
 

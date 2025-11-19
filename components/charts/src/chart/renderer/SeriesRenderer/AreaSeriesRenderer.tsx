@@ -424,7 +424,7 @@ const AreaSeriesRenderer: AreaSeriesRendererType = {
             finalDirection = direction;
 
             // Return to baseline
-            finalDirection += `L ${lastPointLoc.x} ${firstPointY} `;
+            finalDirection += `L ${lastPointLoc.x} ${lastPointLoc.y} `;
 
             // Close the path by returning to the first point
             finalDirection += `L ${firstPointX} ${firstPointY} `;

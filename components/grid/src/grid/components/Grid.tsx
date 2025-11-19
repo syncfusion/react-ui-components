@@ -13,7 +13,7 @@ import {
     useEffect
 } from 'react';
 import { ITooltip, Tooltip } from '@syncfusion/react-popups';
-import { SortDirection, RenderRef, ValueType } from '../types';
+import { SortDirection, RenderRef, ValueType, ActionType } from '../types';
 import { GridProps, GridRef, IGridBase } from '../types/grid.interfaces';
 import { PagerArgsInfo } from '../types/page.interfaces';
 import { useGridComputedProps } from '../hooks';
@@ -41,10 +41,10 @@ import { GridComputedProvider, GridMutableProvider } from '../contexts';
  * </Grid>
  * ```
  */
-const GridBase: ForwardRefExoticComponent<Partial<IGridBase> & RefAttributes<GridRef>> = forwardRef<GridRef, Partial<IGridBase>>(
-    (props: Partial<IGridBase>, ref: Ref<GridRef>) => {
-        const gridRef: RefObject<GridRef> = useRef<GridRef>(null);
-        const renderExposedRef: RefObject<RenderRef> = useRef<RenderRef>(null);
+const GridBase: <T, >(props: Partial<IGridBase<T>> & RefAttributes<GridRef<T>>) => ReactElement =
+    forwardRef<GridRef, Partial<IGridBase<unknown>>>(<T, >(props: Partial<IGridBase<T>>, ref: Ref<GridRef<T>>) => {
+        const gridRef: RefObject<GridRef<T>> = useRef<GridRef<T>>(null);
+        const renderExposedRef: RefObject<RenderRef<T>> = useRef<RenderRef<T>>(null);
         const ellipsisTooltipRef: RefObject<ITooltip> = useRef<ITooltip>(null);
         // Update gridRef with render properties when they become available
         useEffect(() => {
@@ -65,14 +65,14 @@ const GridBase: ForwardRefExoticComponent<Partial<IGridBase> & RefAttributes<Gri
             gridRef.current = {
                 // Grid specific properties
                 element: null,
-                getColumns: () => (protectedAPI?.uiColumns ?? columns).map((col: ColumnProps) => ({...col})),
+                getColumns: () => (protectedAPI?.uiColumns ?? columns).map((col: ColumnProps<T>) => ({...col})),
                 currentViewData: [],
                 focusModule: protectedAPI.focusModule,
                 selectionModule: protectedAPI.selectionModule,
                 pageSettings: publicAPI.pageSettings,
                 // Filter method
                 filterByColumn: (fieldName: string, filterOperator: string,
-                                 filterValue: string | number | Date | boolean| number[]| string[]| Date[]| boolean[],
+                                 filterValue: ValueType| number[]| string[]| Date[]| boolean[],
                                  predicate?: string, caseSensitive?: boolean,
                                  ignoreAccent?: boolean) => {
                     protectedAPI.filterModule?.filterByColumn?.(fieldName, filterOperator, filterValue, predicate,
@@ -97,14 +97,14 @@ const GridBase: ForwardRefExoticComponent<Partial<IGridBase> & RefAttributes<Gri
                 removeSortColumn: (columnName: string) => {
                     protectedAPI.sortModule?.removeSortColumn?.(columnName);
                 },
-                clearSort: () => {
-                    protectedAPI.sortModule?.clearSort?.();
+                clearSort: (fields?: string[]) => {
+                    protectedAPI.sortModule?.clearSort?.(fields);
                 },
 
                 //page Method
                 goToPage: async(pageNo: number) => {
                     const args: PagerArgsInfo = { cancel: false, currentPage: pageNo,
-                        previousPage: publicAPI.pageSettings.currentPage, requestType: 'paging'
+                        previousPage: publicAPI.pageSettings.currentPage, requestType: ActionType.Paging
                     };
                     args.type = 'pageChanging';
                     const confirmResult: boolean = await protectedAPI?.editModule?.checkUnsavedChanges?.();
@@ -118,17 +118,17 @@ const GridBase: ForwardRefExoticComponent<Partial<IGridBase> & RefAttributes<Gri
                     setCurrentPage(pageNo);
                     setGridAction(args);
                 },
-                updatePagerMessage: (message: string) => {
+                setPagerMessage: (message: string) => {
                     renderExposedRef.current.pagerModule?.updateExternalMessage(message);
                 },
                 get selectedRowIndexes(): number[] {
                     return protectedAPI.selectionModule.selectedRowIndexes;
                 },
                 getSelectedRows: () => {
-                    return protectedAPI.selectionModule.selectedRecords as Object[];
+                    return protectedAPI.selectionModule.selectedRows as HTMLTableRowElement[];
                 },
                 getSelectedRecords: () => {
-                    return protectedAPI.selectionModule.getSelectedRecords() as Object[];
+                    return protectedAPI.selectionModule.getSelectedRecords() as T[];
                 },
                 getSelectedRowIndexes: () =>  {
                     return protectedAPI.selectionModule.getSelectedRowIndexes() as number[];
@@ -153,15 +153,15 @@ const GridBase: ForwardRefExoticComponent<Partial<IGridBase> & RefAttributes<Gri
                 isEdit: protectedAPI.editModule?.isEdit || false,
                 editSettings: protectedAPI.editModule?.editSettings || {},
                 editRowIndex: protectedAPI.editModule?.editRowIndex || -1,
-                editData: (protectedAPI.editModule?.editData as Record<string, ValueType | null> | null) ||
+                editData: (protectedAPI.editModule?.editData as T | null) ||
                     null,
-                editRow: protectedAPI.editModule?.editRow,
-                saveChanges: protectedAPI.editModule?.saveChanges,
-                cancelChanges: protectedAPI.editModule?.cancelChanges,
+                editRecord: protectedAPI.editModule?.editRecord,
+                saveDataChanges: protectedAPI.editModule?.saveDataChanges,
+                cancelDataChanges: protectedAPI.editModule?.cancelDataChanges,
                 addRecord: protectedAPI.editModule?.addRecord,
                 deleteRecord: protectedAPI.editModule?.deleteRecord,
                 setRowData: publicAPI.setRowData,
-                updateRow: protectedAPI.editModule?.updateRow,
+                updateRecord: protectedAPI.editModule?.updateRecord,
                 setCellValue: publicAPI.setCellValue,
                 validateEditForm: protectedAPI.editModule?.validateEditForm,
                 validateField: protectedAPI.editModule?.validateField,
@@ -176,15 +176,15 @@ const GridBase: ForwardRefExoticComponent<Partial<IGridBase> & RefAttributes<Gri
         useEffect(() => {
             gridRef.current = {
                 ...gridRef.current,
-                columns: (protectedAPI?.uiColumns ?? columns).map((col: ColumnProps) => ({...col})),
-                getColumns: () => (protectedAPI?.uiColumns ?? columns).map((col: ColumnProps) => ({...col})),
-                currentViewData: protectedAPI?.currentViewData,
+                columns: (protectedAPI?.uiColumns ?? columns).map((col: ColumnProps<T>) => ({...col})),
+                getColumns: () => (protectedAPI?.uiColumns ?? columns).map((col: ColumnProps<T>) => ({...col})),
+                currentViewData: protectedAPI?.currentViewData as T[],
                 editModule: protectedAPI.editModule,
                 // Update edit methods directly on gridRef
                 isEdit: protectedAPI.editModule?.isEdit,
                 editSettings: protectedAPI.editModule?.editSettings,
                 editRowIndex: protectedAPI.editModule?.editRowIndex,
-                editData: protectedAPI.editModule?.editData as Record<string, ValueType | null> | null
+                editData: protectedAPI.editModule?.editData as T | null
             };
             gridRef.current.pageSettings.currentPage = protectedAPI.currentPage;
             gridRef.current.pageSettings.totalRecordsCount = protectedAPI.totalRecordsCount;
@@ -197,17 +197,17 @@ const GridBase: ForwardRefExoticComponent<Partial<IGridBase> & RefAttributes<Gri
             getHeaderContent: () => renderExposedRef.current.headerPanelRef,
             getContent: () => renderExposedRef.current.contentPanelRef,
             isEdit: protectedAPI.editModule?.isEdit,
-            editRow: protectedAPI.editModule?.editRow,
-            saveChanges: protectedAPI.editModule?.saveChanges,
-            cancelChanges: protectedAPI.editModule?.cancelChanges,
+            editRecord: protectedAPI.editModule?.editRecord,
+            saveDataChanges: protectedAPI.editModule?.saveDataChanges,
+            cancelDataChanges: protectedAPI.editModule?.cancelDataChanges,
             addRecord: protectedAPI.editModule?.addRecord,
             deleteRecord: protectedAPI.editModule?.deleteRecord,
             setRowData: publicAPI.setRowData,
-            updateRow: protectedAPI.editModule?.updateRow,
+            updateRecord: protectedAPI.editModule?.updateRecord,
             setCellValue: publicAPI.setCellValue,
             validateEditForm: protectedAPI.editModule?.validateEditForm,
             validateField: protectedAPI.editModule?.validateField,
-            getCurrentViewRecords: () => protectedAPI?.currentViewData,
+            getCurrentViewRecords: () => protectedAPI?.currentViewData as T[],
             get selectedRowIndexes(): number[] {
                 return protectedAPI.selectionModule.selectedRowIndexes;
             }
@@ -228,7 +228,7 @@ const GridBase: ForwardRefExoticComponent<Partial<IGridBase> & RefAttributes<Gri
                     key={id + '_EllipsisTooltip'}
                     ref={ellipsisTooltipRef}
                     opensOn={'Custom'}
-                    className={`sf-gridellipsis-tooltip ${protectedAPI.cssClass}`}
+                    className={`sf-ellipsis-tooltip ${protectedAPI.cssClass}`}
                     target={undefined}
                     content={() => <div>{privateAPI.getEllipsisTooltipContent()}</div>}
                 />
@@ -238,7 +238,7 @@ const GridBase: ForwardRefExoticComponent<Partial<IGridBase> & RefAttributes<Gri
         // Memoize render component to prevent unnecessary re-renders
         const renderComponent: JSX.Element = useMemo(() => {
             return (
-                <RenderBase
+                <RenderBase<T>
                     ref={renderExposedRef}
                     children={((columnsDirective).props as { children: ReactElement }).children}
                 />
@@ -246,12 +246,12 @@ const GridBase: ForwardRefExoticComponent<Partial<IGridBase> & RefAttributes<Gri
         }, [columnsDirective]);
 
         return (
-            <GridComputedProvider grid={useMemo(() => ({
+            <GridComputedProvider<T> grid={useMemo(() => ({
                 ...gridRef.current, ...publicAPI, setCurrentViewData, setCurrentPage,
                 setTotalRecordsCount, setGridAction, setInitialLoad
             }), [publicAPI, setCurrentViewData, setCurrentPage,
                 setTotalRecordsCount, setGridAction, setInitialLoad])}>
-                <GridMutableProvider grid={protectedAPI}>
+                <GridMutableProvider<T> grid={protectedAPI}>
                     <div
                         ref={(el: HTMLDivElement) => {
                             gridRef.current.element = el;
@@ -290,7 +290,7 @@ const GridBase: ForwardRefExoticComponent<Partial<IGridBase> & RefAttributes<Gri
             </GridComputedProvider>
         );
     }
-);
+    ) as <T, >(props: Partial<IGridBase<T>> & RefAttributes<GridRef<T>>) => ReactElement;
 
 /**
  * Grid component that provides a data grid with sorting, filtering, and other features.
@@ -300,14 +300,15 @@ const GridBase: ForwardRefExoticComponent<Partial<IGridBase> & RefAttributes<Gri
  * @param {RefObject<GridRef>} ref - Forwarded ref that exposes imperative methods
  * @returns {JSX.Element} The rendered grid component
  */
-export const Grid: ForwardRefExoticComponent<Partial<GridProps> & RefAttributes<GridRef>> = forwardRef<GridRef, Partial<GridProps>>(
-    (props: Partial<GridProps>, ref: Ref<GridRef>) => {
-        return (
-            <GridBase ref={ref} {...props} />
-        );
-    });
+export const Grid: <T>(props: Partial<GridProps<T>> & RefAttributes<GridRef<T>>) => ReactElement | null =
+    forwardRef<GridRef, Partial<GridProps>>(
+        <T, >(props: Partial<GridProps<T>>, ref: Ref<GridRef<T>>) => {
+            return (
+                <GridBase<T> ref={ref} {...props} />
+            );
+        }) as <T>(props: Partial<GridProps<T>> & RefAttributes<GridRef<T>>) => ReactElement | null;
 
 export { GridBase };
 
-Grid.displayName = 'Grid';
-GridBase.displayName = 'GridBase';
+(Grid as ForwardRefExoticComponent<Partial<GridProps> & RefAttributes<GridRef>>).displayName = 'Grid';
+(GridBase as ForwardRefExoticComponent<Partial<IGridBase<unknown>> & RefAttributes<GridRef>>).displayName = 'GridBase';

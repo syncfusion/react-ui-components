@@ -47,43 +47,15 @@ export enum TextAlign {
  *
  * @private
  */
-export enum CellType {
+export enum CellTypes {
     /**  Defines CellType as Data */
     Data,
     /**  Defines CellType as Header */
     Header,
     /**  Defines CellType as Summary */
     Summary,
-    /**  Defines CellType as GroupSummary */
-    GroupSummary,
-    /**  Defines CellType as CaptionSummary */
-    CaptionSummary,
     /**  Defines CellType as Filter */
-    Filter,
-    /**  Defines CellType as Indent */
-    Indent,
-    /**  Defines CellType as GroupCaption */
-    GroupCaption,
-    /**  Defines CellType as GroupCaptionEmpty */
-    GroupCaptionEmpty,
-    /**  Defines CellType as Expand */
-    Expand,
-    /**  Defines CellType as HeaderIndent */
-    HeaderIndent,
-    /**  Defines CellType as StackedHeader */
-    StackedHeader,
-    /**  Defines CellType as DetailHeader */
-    DetailHeader,
-    /**  Defines CellType as DetailExpand */
-    DetailExpand,
-    /**  Defines CellType as CommandColumn */
-    CommandColumn,
-    /**  Defines CellType as DetailFooterIntent */
-    DetailFooterIntent,
-    /**  Defines CellType as RowDrag */
-    RowDragIcon,
-    /**  Defines CellType as RowDragHeader */
-    RowDragHIcon
+    Filter
 }
 
 /**
@@ -229,21 +201,21 @@ export enum SortDirection {
 
 /**
  * Defines types of Filter.
- *
- * @private
  * ```props
  * * FilterBar :- Specifies the filter type as filter bar.
  * ```
+ *
+ * @private
  */
 export type FilterType =
     'FilterBar';
 
 /**
- * Enumerates the filter bar types supported by Grid component for column-level filtering.
+ * Enumerates the filter bar types supported by Data Grid component for column-level filtering.
  * Defines the type of filter UI and logic applied to a column, such as string, numeric, or date-based filtering.
  * Used to configure the filtering behavior and user interface for specific columns in the grid.
  *
- * @default TextBox
+ * @default FilterBarType.TextBox
  * @example
  * ```tsx
  * <Column field="Price" filter={{ filterBarType: FilterBarType.NumericTextBox}} />
@@ -254,25 +226,25 @@ export enum FilterBarType {
      * Applies a string-based filter using a text input.
      * Suitable for filtering textual data.
      *
-     * @default 'stringFilter'
+     * @default 'StringFilter'
      */
-    TextBox = 'stringFilter',
+    TextBox = 'StringFilter',
 
     /**
      * Applies a numeric filter using a number input.
      * Ideal for filtering numeric fields such as price, quantity, etc.
      *
-     * @default 'numericFilter'
+     * @default 'NumericFilter'
      */
-    NumericTextBox = 'numericFilter',
+    NumericTextBox = 'NumericFilter',
 
     /**
      * Applies a date-based filter using a date picker.
      * Useful for filtering columns with date values.
      *
-     * @default 'datePickerFilter'
+     * @default 'DatePickerFilter'
      */
-    DatePicker = 'datePickerFilter'
+    DatePicker = 'DatePickerFilter'
 }
 
 /**
@@ -301,6 +273,262 @@ export enum FilterBarMode {
      * @default 'Immediate'
      */
     Immediate = 'Immediate'
+}
+
+/**
+ * Specifies the sorting behavior supported by the Data Grid component.
+ * Determines whether sorting is limited to a single column or can be applied to multiple columns simultaneously.
+ * This enum is used internally to configure sorting logic and user interactions.
+ *
+ * @default SortMode.Single
+ * @example
+ * ```tsx
+ * <Grid sortSettings={{ mode: SortMode.Multiple }} />
+ * ```
+ */
+export enum SortMode {
+    /**
+     * Allows sorting by only one column at a time.
+     * Selecting a new column will clear the previous sort.
+     *
+     * @default 'Single'
+     */
+    Single = 'Single',
+
+    /**
+     * Enables multi-column sorting.
+     * Users can sort by multiple columns in sequence, typically using the Ctrl key.
+     *
+     * @default 'Multiple'
+     */
+    Multiple = 'Multiple'
+}
+
+/**
+ * Specifies the selection behavior supported by the Data Grid component.
+ * Determines whether selection is limited to a `Single` row or can be applied to `Multiple` row simultaneously.
+ * This enum is used internally to configure selection logic and user interactions.
+ *
+ * @default SelectionMode.Single
+ * @example
+ * ```tsx
+ * <Grid selectionSettings={{ mode: SelectionMode.Multiple }} />
+ * ```
+ */
+export enum SelectionMode {
+    /**
+     * Allows selection by only one row at a time.
+     * Selecting a new row will clear the previous row selection.
+     *
+     * @default 'Single'
+     */
+    Single = 'Single',
+
+    /**
+     * Enables multi-row selection.
+     * Users can select by multiple row in sequence, typically using the Ctrl or Shift key.
+     *
+     * @default 'Multiple'
+     */
+    Multiple = 'Multiple'
+}
+
+/**
+ * Defines the structural category of a layout element.
+ * Used to distinguish between header, content, and aggregate sections for styling and behavior customization.
+ * Applicable to row-level configurations in React Data Grid component.
+ *
+ * @default -
+ * @example
+ * ```tsx
+ * <Grid rowClass={(props) => props.rowType === RowType.Header ? 'Header-row' : ''} />
+ * ```
+ */
+export enum RowType {
+    /**
+     * Represents the header section of a layout.
+     * Commonly used for column titles, labels, or control elements.
+     *
+     * @default 'Header'
+     */
+    Header = 'Header',
+
+    /**
+     * Represents the main content section of a layout.
+     * Typically used for displaying primary data or interactive elements.
+     *
+     * @default 'Content'
+     */
+    Content = 'Content',
+
+    /**
+     * Represents the aggregate or summary section of a layout.
+     * Typically used for totals, summaries, or computed values.
+     *
+     * @default 'Aggregate'
+     */
+    Aggregate = 'Aggregate'
+}
+
+/**
+ * Defines the structural category of a layout element.
+ * Used to distinguish between header, content, and aggregate sections for styling and behavior customization.
+ * Applicable to cell-level configurations in React Data Grid component.
+ *
+ * @default -
+ * @example
+ * ```tsx
+ * <Grid cellClass={(props) => props.cellType === CellType.Header ? 'Header-row' : ''} />
+ * ```
+ */
+export enum CellType {
+    /**
+     * Represents the header section of a layout.
+     * Commonly used for column titles, labels, or control elements.
+     *
+     * @default 'Header'
+     */
+    Header = 'Header',
+
+    /**
+     * Represents the main content section of a layout.
+     * Typically used for displaying primary data or interactive elements.
+     *
+     * @default 'Content'
+     */
+    Content = 'Content',
+
+    /**
+     * Represents the aggregate or summary section of a layout.
+     * Typically used for totals, summaries, or computed values.
+     *
+     * @default 'Aggregate'
+     */
+    Aggregate = 'Aggregate'
+}
+
+/**
+ * Defines the set of supported actions triggered during component interactions or programmatic operations.
+ * Used across event interfaces to identify the type of operation performed, such as sorting, filtering, or editing.
+ * Enables consistent handling and conditional logic based on action context.
+ *
+ * @default -
+ * @example
+ * ```tsx
+ * if (props.action === ActionType.ClearFiltering) {
+ *   logAction('Filters cleared');
+ * }
+ * ```
+ */
+export enum ActionType {
+    /**
+     * Represents a sorting operation applied to one or more fields.
+     * Commonly triggered by interaction with column headers or programmatic sort logic.
+     *
+     * @default 'Sorting'
+     */
+    Sorting = 'Sorting',
+
+    /**
+     * Represents the removal of an existing sort configuration.
+     * Typically used to reset sorting state.
+     *
+     * @default 'ClearSorting'
+     */
+    ClearSorting = 'ClearSorting',
+
+    /**
+     * Represents a filtering operation applied to one or more fields.
+     * Typically triggered by input changes or programmatic filter logic.
+     *
+     * @default 'Filtering'
+     */
+    Filtering = 'Filtering',
+
+    /**
+     * Represents a searching operation applied to fields.
+     * Typically triggered by toolbar search input changes or programmatic search logic.
+     *
+     * @default 'Searching'
+     */
+    Searching = 'Searching',
+
+    /**
+     * Represents the removal of all active filters.
+     * Typically used to reset filtering state.
+     *
+     * @default 'ClearFiltering'
+     */
+    ClearFiltering = 'ClearFiltering',
+
+    /**
+     * Represents the initiation of a new record creation process.
+     * Used to distinguish between create and update operations.
+     *
+     * @default 'Add'
+     */
+    Add = 'Add',
+
+    /**
+     * Represents before modification of an existing record.
+     * Used to dynamically modify update logic or validations.
+     *
+     * @default 'BeginEdit'
+     */
+    BeginEdit = 'BeginEdit',
+
+    /**
+     * Represents the modification of an existing record.
+     * Used to apply update logic or validations.
+     *
+     * @default 'Edit'
+     */
+    Edit = 'Edit',
+
+    /**
+     * Represents the deletion of an existing record.
+     * Used to distinguish between delete operations.
+     *
+     * @default 'Delete'
+     */
+    Delete = 'Delete',
+
+    /**
+     * Represents a pagination operation applied to grid component.
+     * Commonly triggered by interaction with pager component items or programmatic pagination logic.
+     *
+     * @default 'Paging'
+     */
+    Paging = 'Paging',
+}
+
+/**
+ * Defines the available positions for inserting a new row within a data grid.
+ * Used to control where the newly added record appears in the grid layout.
+ * This enum is referenced by the `newRowPosition` property in `EditSettings`.
+ *
+ * @default NewRowPosition.Top
+ * @example
+ * ```tsx
+ * <Grid editSettings={{ allowAdd: true, newRowPosition: NewRowPosition.Bottom }} />
+ * ```
+ */
+export enum NewRowPosition {
+    /**
+     * Inserts the new row at the beginning of the grid.
+     * Useful for prioritizing newly added records or maintaining top-down workflows.
+     *
+     * @default 'Top'
+     */
+    Top = 'Top',
+
+    /**
+     * Inserts the new row at the end of the grid.
+     * Suitable for chronological data entry or bottom-up workflows.
+     *
+     * @default 'Bottom'
+     */
+    Bottom = 'Bottom'
 }
 
 /**
@@ -372,12 +600,12 @@ export enum ClipMode {
 }
 
 /**
- * Defines Actions of the Grid.
+ * Defines Actions of the Data Grid.
  * ```props
  * * filtering :- Defines current action as filtering.
  * * clearFiltering :- Defines current action as clear filtering.
  * * sorting :- Defines current action as sorting.
- * * clearSorting :- Defines current action as clear sorting.
+ * * ClearSorting :- Defines current action as clear sorting.
  * * searching :- Defines current action as searching.
  * * paging :-  Defines current action as paging.
  * ```
@@ -385,18 +613,18 @@ export enum ClipMode {
  * @private
  */
 export type Action =
-    'filtering' |
-    'clearFiltering' |
-    'sorting' |
-    'clearSorting' |
-    'searching' |
-    'paging' |
-    'delete' |
-    'edit' |
-    'add' |
-    'refresh';
+    'Filtering' |
+    'ClearFiltering' |
+    'Sorting' |
+    'ClearSorting' |
+    'Searching' |
+    'Paging' |
+    'Delete' |
+    'Edit' |
+    'Add' |
+    'Refresh';
 /**
- * Enumerates the types of aggregate calculations supported by the Grid component.
+ * Enumerates the types of aggregate calculations supported by the Data Grid component.
  * Defines the available aggregation methods for summarizing data in the grid’s footer sections.
  * Used to configure how data is aggregated for display in aggregate rows or columns.
  * ```props
@@ -455,41 +683,41 @@ export enum EditType {
      * Defines a default standard text input for editing string values.
      * Suitable for general-purpose text fields.
      *
-     * @default 'stringEdit'
+     * @default 'StringEdit'
      */
-    TextBox = 'stringEdit',
+    TextBox = 'StringEdit',
 
     /**
      * Defines a dropdown list for selecting string values.
      * Useful for predefined options or lookup fields.
      *
-     * @default 'dropDownEdit'
+     * @default 'DropDownEdit'
      */
-    DropDownList = 'dropDownEdit',
+    DropDownList = 'DropDownEdit',
 
     /**
      * Defines a date picker for editing date values.
      * Ideal for scheduling, timestamps, or calendar-based inputs.
      *
-     * @default 'datePickerEdit'
+     * @default 'DatePickerEdit'
      */
-    DatePicker = 'datePickerEdit',
+    DatePicker = 'DatePickerEdit',
 
     /**
      * Defines a checkbox for editing boolean values.
      * Used for true/false or yes/no type fields.
      *
-     * @default 'booleanEdit'
+     * @default 'BooleanEdit'
      */
-    CheckBox = 'booleanEdit',
+    CheckBox = 'BooleanEdit',
 
     /**
      * Defines a numeric input for editing number values.
      * Supports validation and formatting for numeric fields.
      *
-     * @default 'numericEdit'
+     * @default 'NumericEdit'
      */
-    NumericTextBox = 'numericEdit'
+    NumericTextBox = 'NumericEdit'
 }
 
 /**

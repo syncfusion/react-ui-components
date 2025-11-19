@@ -1,91 +1,77 @@
-@mixin bgcolor-color-styles($bgcolor, $color) {
-  background: $bgcolor;
-  color: $color;
-}
-
 @include export-module('grid-theme') {
 
-  #{&}.sf-grid{
+  .sf-grid {
     border-color: $grid-border-color;
-
-    .sf-content:not(.sf-tooltip-content) {
-      background-color: $grid-row-bg-color;
-    }
-
-    .sf-table {
-      background-color: $grid-header-bg-color;
-    }
-
+    
     .sf-focused {
       box-shadow: $grid-cell-focus-shadow;
     }
 
-    .sf-gridheader {
-      @include bgcolor-color-styles($grid-header-bg-color,  $grid-header-text-color);
-      border-bottom-color: $grid-border-color;
-      border-top-color: $grid-border-color;
-    }
-
-    .sf-gridcontent tr:first-child td {
-      border-top-color: transparent;
-    }
-
-    .sf-verticallines th,
-    .sf-filterbarcell,
-    .sf-headercell,
-    .sf-summarycell,
-    .sf-headercontent,
-    .sf-rowcell,
-    &.sf-rtl .sf-default.sf-verticallines th:last-child,
-    .sf-emptyrow.sf-show-added-row .sf-lastrowcell {
-      border-color: $grid-border-color;
-    }
-
-    .sf-headercontent.sf-headerborder {
-      border-right-color: transparent;
-    }
-
-    &.sf-rtl .sf-headercontent.sf-headerborder {
-      border-left-color: transparent;
-    }
-
-    .sf-gridfooter {
-      background: $grid-summary-row-bg;
-    }
-
-    .sf-rowcell,
-    .sf-summarycell,
-    .sf-emptyrow {
-      color: $grid-text-color;
-    }
-
-    &.sf-gridhover .sf-row:not(.sf-editedrow):hover {
-      .sf-rowcell:not(.sf-active) {
-         @include bgcolor-color-styles($grid-hover-bg-color, $grid-hover-content-text-color);
-      }
-
-      .sf-rowcell {
-        @include bgcolor-color-styles($grid-row-selection-hover-bg-color, $grid-text-color);
-      }
-    }
-
-    .sf-sortnumber {
-      @include bgcolor-color-styles($grid-sort-number-bg, $grid-sort-number-text-color);
-    }
-
-    td.sf-active {
-      @include bgcolor-color-styles($grid-row-selection-bg-color, $grid-text-color);
-    }
-
-    .sf-gridcontent table tbody .sf-normaledit .sf-rowcell {
-      border-top-color: $grid-border-color;
+    .sf-grid-pager {
+      border-bottom: transparent;
+      border-left: transparent;
+      border-right: transparent;
     }
   }
 
-  .sf-tooltip-wrap.sf-griderror {
+  .sf-grid-content {
+    background-color: $grid-row-bg-color;
+  }
+
+  .sf-grid-table {
+    background-color: $grid-header-bg-color;
+  }
+
+  .sf-grid-header-container {
+    @include bgcolor-color-styles($grid-header-bg-color, $grid-header-text-color);
+    border-bottom-color: $grid-border-color;
+    border-top-color: $grid-border-color;
+  }
+
+  .sf-cell,
+  .sf-grid-header-content {
+    border-color: $grid-border-color;
+  }
+
+  .sf-grid-header-border {
+    border-inline-end-color: transparent;
+  }
+
+  .sf-grid-footer-container {
+    background: $grid-summary-row-bg;
+  }
+
+  .sf-grid-content-row .sf-cell,
+  .sf-grid-summary-row .sf-cell {
+    color: $grid-text-color;
+  }
+
+  .sf-row-hover .sf-grid-content-row:not(.sf-grid-edit-row):hover {
+    .sf-cell:not(.sf-active) {
+        @include bgcolor-color-styles($grid-hover-bg-color, $grid-hover-content-text-color);
+    }
+
+    .sf-cell {
+      @include bgcolor-color-styles($grid-row-selection-hover-bg-color, $grid-text-color);
+    }
+  }
+
+  .sf-grid-sort-order {
+    @include bgcolor-color-styles($grid-sort-order-bg, $grid-sort-order-text-color);
+  }
+
+  td.sf-active {
+    @include bgcolor-color-styles($grid-row-selection-bg-color, $grid-text-color);
+  }
+
+  .sf-grid-edit-row .sf-cell {
+    border-top-color: $grid-border-color;
+  }
+
+  .sf-tooltip-wrap.sf-grid-error {
     background-color: $grid-validation-error-bg-color;
     border-color: $grid-validation-error-bg-color;
-    .sf-tooltip-arrow-outer-top, .sf-tooltip-arrow-outer-left, .sf-tooltip-arrow-outer-bottom, .sf-tooltip-arrow-outer-right {
+    [class^="sf-tooltip-arrow-outer"] {
       border-bottom-color: $grid-validation-error-bg-color;
     }
   }

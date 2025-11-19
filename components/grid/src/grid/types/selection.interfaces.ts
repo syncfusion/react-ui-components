@@ -1,8 +1,9 @@
 import { useSelection } from '../hooks';
+import { SelectionMode } from './enum';
 import { CellFocusEvent } from './focus.interfaces';
 
 /**
- * Configures selection behavior in the Grid component.
+ * Configures selection behavior in the Data Grid component.
  * Defines settings for enabling selection, specifying selection mode, and controlling selection type.
  * Manages how to interact with row selection in the grid.
  */
@@ -18,9 +19,9 @@ export interface SelectionSettings {
 
     /**
      * Specifies whether selection toggling is permitted for a selected row.
-     * When set to false, a selected row cannot be deselected through interaction.
+     * When set to true, a selected row can be deselected through interaction.
      *
-     * @default true
+     * @default false
      */
     enableToggle?: boolean;
 
@@ -28,9 +29,9 @@ export interface SelectionSettings {
      * Specifies the selection mode for the grid, controlling how many rows can be selected.
      * Supports `Single` for selecting one row at a time or `Multiple` for selecting multiple rows using CTRL or SHIFT keys.
      *
-     * @default 'Single'
+     * @default 'Single' | SelectionMode.Single
      */
-    mode?: string;
+    mode?: string | SelectionMode;
 
     /**
      * Defines the type of selection, such as `Row`, to specify the selection target.
@@ -43,13 +44,13 @@ export interface SelectionSettings {
 }
 
 /**
- * Defines methods and properties for managing row selection state and behavior in the Grid.
+ * Defines methods and properties for managing row selection state and behavior in the Data Grid.
  * Provides functionality for selecting, deselecting, and retrieving selected rows and their data.
  * Used internally to encapsulate selection logic and state management.
  *
  * @private
  */
-export interface SelectionModel {
+export interface SelectionModel<T = unknown> {
     /**
      * Clears all currently selected rows in the grid.
      * Resets the selection state, removing any highlighted rows and updating the grid’s UI.
@@ -94,9 +95,9 @@ export interface SelectionModel {
      * Returns the record(s) associated with the selected rows or null if no rows are selected.
      * Enables access to selected data for further processing or display.
      *
-     * @returns {object | null} The selected row data.
+     * @returns {Object[] | null} The selected row data.
      */
-    getSelectedRecords: () => object | null;
+    getSelectedRecords: () => T[] | null;
 
     /**
      * Processes grid click events to handle row selection.
@@ -155,7 +156,7 @@ export interface SelectionModel {
      *
      * @default []
      */
-    selectedRecords: Object[];
+    selectedRows: HTMLTableRowElement[];
 
     /**
      * References the currently active target element involved in selection.
@@ -175,23 +176,34 @@ export interface SelectionModel {
      * @returns {void}
      */
     onCellFocus: (e: CellFocusEvent) => void;
+
+    /**
+     * Adds or removes selection styling classes from the given row element.
+     * Reflects the DOM manipulation implemented in `useSelection.ts` by toggling the `sf-active`
+     * class and the `aria-selected` attribute on each cell when a row is selected or deselected.
+     *
+     * @param {Element} row - The grid row element whose child cells require selection class updates.
+     * @param {boolean} isAdd - Set to true to apply selection classes, or false to remove them.
+     * @returns {void}
+     */
+    addRemoveSelectionClasses: (row: Element, isAdd: boolean) => void;
 }
 
 /**
- * Defines the type for the selection module hook return value in the Grid.
+ * Defines the type for the selection module hook return value in the Data Grid.
  * Represents the return type of the useSelection hook for managing selection operations.
  * Used internally to encapsulate selection functionality.
  *
  * @private
  */
-export type selectionModule = ReturnType<typeof useSelection>;
+export type selectionModule<T> = ReturnType<typeof useSelection<T>>;
 
 /**
- * Represents event arguments for row selection events in the Grid component.
+ * Represents event arguments for row selection events in the Data Grid component.
  * Provides detailed context about selected rows, including data and DOM elements.
  * Used to handle post-selection logic or UI updates in the row.
  */
-export interface RowSelectEvent {
+export interface RowSelectEvent<T = unknown> {
     /**
      * Contains the data object associated with the selected row.
      * Provides access to the record data for single or multiple selected rows for processing or display.
@@ -199,7 +211,7 @@ export interface RowSelectEvent {
      *
      * @default -
      */
-    data?: object | object[];
+    data: T | T[];
 
     /**
      * Specifies the zero-based index of the selected row in the grid.
@@ -208,7 +220,16 @@ export interface RowSelectEvent {
      *
      * @default -
      */
-    rowIndex?: number;
+    selectedRowIndex?: number;
+
+    /**
+     * Specifies the zero-based index of the deselected row in the grid.
+     * Identifies the position of the deselected row within the data source for reference or manipulation.
+     * Used in single selection mode or to track the primary deselected row.
+     *
+     * @default -
+     */
+    deSelectedRowIndex?: number;
 
     /**
      * Contains an array of zero-based indexes for all selected rows.
@@ -217,7 +238,25 @@ export interface RowSelectEvent {
      *
      * @default []
      */
-    rowIndexes?: number[];
+    selectedRowIndexes?: number[];
+
+    /**
+     * Contains zero-based indexes of rows newly selected during the current interaction.
+     * Excludes rows that were already selected before the event.
+     * Used in multiple selection mode to track incremental selection changes.
+     *
+     * @default []
+     */
+    selectedCurrentRowIndexes?: number[];
+
+    /**
+     * Contains zero-based indexes of rows newly deselected during the current interaction.
+     * Excludes rows that were already unselected before the event.
+     * Used in multiple selection mode to track incremental deselection changes.
+     *
+     * @default []
+     */
+    deSelectedCurrentRowIndexes?: number[];
 
     /**
      * References the DOM elements of the selected rows.
@@ -226,34 +265,18 @@ export interface RowSelectEvent {
      *
      * @default null
      */
-    row?: Element | Element[];
+    row: Element | Element[];
 
     /**
-     * References the DOM element that triggered the row selection event.
-     * Typically a cell or other element clicked by the user to initiate selection.
-     * Used to identify the source of the selection action.
+     * The React event that triggered the row selection.
+     *
+     * Can be a mouse or keyboard event, depending on the user's interaction.
+     * Provides access to event metadata such as target element, key pressed,
+     * or mouse coordinates, enabling contextual handling of selection logic.
      *
      * @default null
      */
-    target?: Element;
-
-    /**
-     * Specifies the zero-based index of the previously selected row, if any.
-     * Tracks the prior selection state to monitor changes or transitions in selection.
-     * Useful for comparing current and previous selections.
-     *
-     * @default -
-     */
-    previousRowIndex?: number;
-
-    /**
-     * References the DOM element of the previously selected row, if any.
-     * Provides access to the prior row’s DOM properties for manipulation or comparison.
-     * Used to handle transitions between selections.
-     *
-     * @default null
-     */
-    previousRow?: Element;
+    event: React.MouseEvent | React.KeyboardEvent;
 }
 
 /**
@@ -263,7 +286,7 @@ export interface RowSelectEvent {
  *
  * @private
  */
-export interface RowSelectingEvent extends RowSelectEvent {
+export interface RowSelectingEvent<T = unknown> extends RowSelectEvent<T> {
     /**
      * Indicates whether the CTRL key was pressed during the selection event.
      * When true, enables additive selection in multiple selection mode, allowing users to select multiple rows.
@@ -283,7 +306,7 @@ export interface RowSelectingEvent extends RowSelectEvent {
     isShiftPressed?: boolean;
 
     /**
-     * Determines whether the selection event should be canceled.
+     * Determines whether the selection event should be cancelled.
      * When set to true, prevents the row(s) from being selected, allowing validation or conditional logic.
      * Used in event handlers to control selection outcomes.
      */

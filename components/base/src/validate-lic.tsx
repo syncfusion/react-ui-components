@@ -10,6 +10,7 @@ export const wordEditorSDKComponents: string[] = ['grid', 'chart', 'maps', 'sche
 const bypassKey: number[] = [115, 121, 110, 99, 102, 117, 115, 105, 111, 110, 46,
     105, 115, 76, 105, 99, 86, 97, 108, 105, 100, 97, 116, 101, 100];
 let accountURL: string;
+let banner: boolean = true;
 
 export type ILicenseValidator = {
     isLicensed: boolean,
@@ -197,11 +198,9 @@ export function LicenseValidator(key: string = ''): ILicenseValidator {
                 }
             }
             if (validateMsg && typeof document !== 'undefined' && !isNullOrUndefined(document)) {
-                const existingErrorDiv: HTMLElement | null = document.querySelector('div.syncfusion-react-license-error');
-                if (!existingErrorDiv) {
+                if (banner) {
                     accountURL = (validateURL && validateURL !== '') ? validateURL : 'https://www.syncfusion.com/account/claim-license-key?pl=SmF2YVNjcmlwdA==&vs=Mjc=&utm_source=es_license_validation_banner&utm_medium=listing&utm_campaign=license-information';
                     const errorDiv: HTMLElement = createElement('div', {
-                        className: 'syncfusion-react-license-error',
                         innerHTML: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="position: absolute; left: 16px; width: 24px; height: 24px;">
                     <g clip-path="url(#clip0_199_4)">
                         <path d="M12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21Z" stroke="#737373" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -230,6 +229,7 @@ export function LicenseValidator(key: string = ''): ILicenseValidator {
                   border-radius: 8px;
                   font-family: Helvetica Neue, Helvetica, Arial;`);
                     document.body.appendChild(errorDiv);
+                    banner = false;
                 }
                 isLicensed = false;
             }

@@ -37,8 +37,8 @@ export const AggregateRow: (props: Partial<AggregateRowProps>) => JSX.Element = 
  * @param {Partial<AggregateColumnProps>} _props - Aggregate column configuration properties
  * @returns {JSX.Element} Aggregate column component with the provided properties
  */
-export const AggregateColumn: (props: Partial<AggregateColumnProps>) => JSX.Element =
+export const AggregateColumn: <T>(props: Partial<AggregateColumnProps<T>>) => JSX.Element =
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    (_props: Partial<AggregateColumnProps>): JSX.Element => {
+    <T, >(_props: Partial<AggregateColumnProps<T>>): JSX.Element => {
         return null;
     };

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useLayoutEffect, useImperativeHandle, forwardRef, JSX, useMemo, useReducer } from 'react';
+import { useEffect, useState, useRef, useLayoutEffect, useImperativeHandle, forwardRef, useMemo, useReducer, useCallback, JSX } from 'react';
 import {
     measureText,
     findDirection,
@@ -94,6 +94,7 @@ type TooltipAction =
     | { type: 'SET_TOOLTIP_POSITION'; payload: { x: number, y: number } }
     | { type: 'SET_TOOLTIP_OPACITY'; payload: number }
     | { type: 'SET_INITIAL_APPEARANCE'; payload: boolean };
+
 /**
  * Reducer function to manage tooltip state with grouped state updates.
  * Handles various tooltip state transitions through a centralized dispatch.
@@ -105,6 +106,11 @@ type TooltipAction =
 function tooltipReducer(state: TooltipState, action: TooltipAction): TooltipState {
     switch (action.type) {
     case 'UPDATE_SIZE':
+        // Prevent unnecessary updates if size is the same
+        if (state.elementSize.width === action.payload.width &&
+                state.elementSize.height === action.payload.height) {
+            return state;
+        }
         return { ...state, elementSize: action.payload };
     case 'UPDATE_TEXT_DATA':
         return { ...state, textData: { ...state.textData, ...action.payload } };
@@ -113,31 +119,60 @@ function tooltipReducer(state: TooltipState, action: TooltipAction): TooltipStat
     case 'UPDATE_FILTER_DATA':
         return { ...state, filterData: { ...state.filterData, ...action.payload } };
     case 'SET_TOOLTIP_POSITION':
+        // Prevent unnecessary updates if position is the same
+        if (state.tooltipPosition.x === action.payload.x &&
+                state.tooltipPosition.y === action.payload.y) {
+            return state;
+        }
         return { ...state, tooltipPosition: action.payload };
     case 'SET_TOOLTIP_OPACITY':
+        if (state.tooltipOpacity === action.payload) {
+            return state;
+        }
         return { ...state, tooltipOpacity: action.payload };
     case 'SET_INITIAL_APPEARANCE':
+        if (state.isInitialAppearance === action.payload) {
+            return state;
+        }
         return { ...state, isInitialAppearance: action.payload };
     default:
         return state;
     }
 }
+
 export const Tooltip: React.ForwardRefExoticComponent<TooltipProps & React.RefAttributes<TooltipRefHandle>> =
 forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.ForwardedRef<TooltipRefHandle>) => {
-    const mergedProps: TooltipProps = { ...defaultProps, ...props };
+    const mergedProps: TooltipProps = useMemo(() => ({ ...defaultProps, ...props }), [props]);
     const tooltipId: string = 'tooltip';
+
     // Still need separate state for theme as it's used in other calculations
     const [themeStyle, setThemeStyle] = useState<ITooltipThemeStyle>(
         getTooltipThemeColor(mergedProps.theme || 'Material3')
     );
+
     // Use refs for values that don't trigger re-renders
     const elementSizeRef: React.RefObject<Size> = useRef<Size>({ width: 100, height: 50 });
     const formattedTextRef: React.RefObject<string[]> = useRef<string[]>([]);
-    const fadeTimeoutRef: React.RefObject<NodeJS.Timeout | null> = useRef<NodeJS.Timeout | null>(null);
+    const fadeTimeoutRef: React.RefObject<NodeJS.Timeout> = useRef<NodeJS.Timeout | null>(null);
     const arrowLocationRef: React.RefObject<TooltipLocation> = useRef<TooltipLocation>(createTooltipLocation(0, 0));
     const tipLocationRef: React.RefObject<TooltipLocation> = useRef<TooltipLocation>(createTooltipLocation(0, 0));
-    const templateRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
+    const templateRef: React.RefObject<HTMLDivElement> = useRef<HTMLDivElement | null>(null);
     const outOfBoundRef: React.RefObject<boolean> = useRef(false);
+    const processingRef: React.RefObject<boolean> = useRef(false); // Prevent recursive processing
+    const lastUpdateRef: React.RefObject<{
+        content: string; header: string;
+        location: {
+            x: number;
+            y: number;
+        };
+        shared: boolean;
+    }> = useRef({
+        content: '',
+        header: '',
+        location: { x: 0, y: 0 },
+        shared: false
+    });
+
     // Constants
     let padding: number = 5;
     const highlightPadding: number = 3;
@@ -147,8 +182,9 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
     const marginY: number = mergedProps.marginY || 5;
     const rx: number = mergedProps.rx || 4;
     const ry: number = mergedProps.ry || 4;
-    // Computed base values
-    const baseX: number = useMemo(() => (marginX) * 2, [marginX]);
+
+    // Computed base values with proper memoization
+    const baseX: number = useMemo(() => marginX * 2, [marginX]);
     const baseY: number = useMemo(() => {
         const fontSize: string = '12px';
         const font: TextStyle = { ...(mergedProps.textStyle || {}) };
@@ -156,11 +192,10 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
         if (mergedProps.controlName === 'Chart' && parseFloat(fontSize) < parseFloat(font.size || themeStyle.textStyle.headerTextSize as string)) {
             textHeight = (parseFloat(font.size || themeStyle.textStyle.size as string) - parseFloat(fontSize));
         }
-        return (textHeight + (marginY) * 2 + padding * 2 +
-            ((marginY) === 2 ? 3 : 0));
+        return (textHeight + marginY * 2 + padding * 2 + (marginY === 2 ? 3 : 0));
     }, [marginY, padding, mergedProps.controlName, mergedProps.textStyle, themeStyle]);
     // Initialize state using useReducer for grouped state
-    const initialState: TooltipState = {
+    const initialState: TooltipState = useMemo(() => ({
         elementSize: { width: 100, height: 50 },
         textData: {
             textSpans: [],
@@ -185,54 +220,394 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
         },
         tooltipOpacity: 0,
         isInitialAppearance: true
-    };
+    }), []); // Empty dependency array since this should only run once
+
     const [state, dispatch] = useReducer(tooltipReducer, initialState);
-    // Add after your other useEffects
+
+    // Memoized content check to prevent unnecessary processing
+    const contentKey: string = useMemo(() => {
+        const content: string = Array.isArray(mergedProps.content) ? mergedProps.content.join('|') : '';
+        const header: string = mergedProps.header || '';
+        const location: string = `${mergedProps.location?.x || 0},${mergedProps.location?.y || 0}`;
+        return `${content}_${header}_${location}_${mergedProps.shared}`;
+    }, [mergedProps.content, mergedProps.header, mergedProps.location, mergedProps.shared]);
+
+    // Template handling with useLayoutEffect
     useLayoutEffect(() => {
-        if (mergedProps.template && templateRef.current) {
-            // Get template dimensions after render
-            const rect: DOMRect = templateRef.current.getBoundingClientRect();
-            // Update element size with template dimensions
-            const newSize: Size = { width: rect.width, height: rect.height };
-            elementSizeRef.current = newSize;
-            dispatch({ type: 'UPDATE_SIZE', payload: { ...elementSizeRef.current } });
-            arrowLocationRef.current = createTooltipLocation(0, 0);
-            tipLocationRef.current = createTooltipLocation(0, 0);
-            padding = 0;
-            // Get tooltip position and dimensions
-            const tooltipRect: Rect = calculateTooltipPosition(
-                mergedProps.areaBounds as Rect,
-                mergedProps.location as TooltipLocation,
-                arrowLocationRef.current,
-                tipLocationRef.current
-            );
-            // Set tooltip position
-            dispatch({ type: 'SET_TOOLTIP_POSITION', payload: { x: tooltipRect.x, y: tooltipRect.y } });
+        if (mergedProps.template && templateRef.current && !processingRef.current) {
+            try {
+                processingRef.current = true;
+
+                const rect: DOMRect = templateRef.current.getBoundingClientRect();
+                const newSize: Size = { width: rect.width, height: rect.height };
+
+                if (newSize.width > 0 && newSize.height > 0) {
+                    elementSizeRef.current = newSize;
+                    dispatch({ type: 'UPDATE_SIZE', payload: newSize });
+
+                    arrowLocationRef.current = createTooltipLocation(0, 0);
+                    tipLocationRef.current = createTooltipLocation(0, 0);
+                    padding = 0;
+
+                    if (mergedProps.areaBounds && mergedProps.location) {
+                        const tooltipRect: Rect = calculateTooltipPosition(
+                            mergedProps.areaBounds as Rect,
+                            mergedProps.location as TooltipLocation,
+                            arrowLocationRef.current,
+                            tipLocationRef.current
+                        );
+                        dispatch({ type: 'SET_TOOLTIP_POSITION', payload: { x: tooltipRect.x, y: tooltipRect.y } });
+                    }
+                }
+            } finally {
+                processingRef.current = false;
+            }
         }
-    }, [mergedProps.template,
-        mergedProps.data, mergedProps.location]);
-    // Initialize when component mounts
+    }, [mergedProps.template, mergedProps.data, contentKey]);
+
+    // Initialize theme when component mounts
     useEffect(() => {
         setThemeStyle(getTooltipThemeColor(mergedProps.theme || 'Material3'));
-    }, []);
-    // Process tooltip text and calculate size - Using useLayoutEffect for DOM measurements
+    }, [mergedProps.theme]);
+
+    // Process tooltip text - memoized to prevent excessive calls
+    const processTooltipText: () => string[] = useCallback((): string[] => {
+        if (processingRef.current) {
+            return formattedTextRef.current;
+        }
+
+        try {
+            processingRef.current = true;
+
+            // Format text
+            const newFormattedText: string[] = [];
+            if (mergedProps.header && mergedProps.header.replace(/<b>/g, '').replace(/<\/b>/g, '').trim() !== '') {
+                newFormattedText.push(mergedProps.header);
+            }
+            const allText: string[] = [...newFormattedText, ...(mergedProps.content || [])];
+            formattedTextRef.current = allText;
+
+            if (allText.length === 0) {
+                const emptyState: Partial<TextData> = {
+                    textSpans: [],
+                    markerPoints: []
+                };
+                dispatch({ type: 'UPDATE_TEXT_DATA', payload: emptyState });
+                dispatch({ type: 'UPDATE_SIZE', payload: { width: 0, height: 0 } });
+                elementSizeRef.current = { width: 0, height: 0 };
+                return allText;
+            }
+
+            // Begin text processing
+            let height: number = 0;
+            let width: number = 0;
+            let subWidth: number = 0;
+
+            // Get font style
+            const font: TextStyle = { ...(mergedProps.textStyle || {}) };
+            const leftSpace: number = (mergedProps.areaBounds?.x ?? 0) + (mergedProps.location?.x ?? 0);
+            const rightSpace: number = ((mergedProps.areaBounds?.x ?? 0) + (mergedProps.areaBounds?.width ?? 0)) -
+                    (mergedProps.areaBounds?.x ?? 0 + (mergedProps.location?.x ?? 0));
+            const headerContent: string = mergedProps.header ? mergedProps.header.replace(/<b>/g, '').replace(/<\/b>/g, '').trim() : '';
+            const isBoldTag: boolean = mergedProps.header ? (mergedProps.header.indexOf('<b>') > -1 && mergedProps.header.indexOf('</b>') > -1) : false;
+
+            // Calculate header width
+            const headerWidth: number = allText.length > 0 ?
+                measureText(allText[0], font, themeStyle.textStyle).width +
+                    (2 * marginX) + arrowPadding : 0;
+
+            const isLeftSpace: boolean = ((mergedProps.location?.x ?? 0) - headerWidth) < (mergedProps.location?.x ?? 0);
+            const isRightSpace: boolean = ((mergedProps.areaBounds?.x ?? 0) + (mergedProps.areaBounds?.width ?? 0)) <
+                    ((mergedProps.location?.x ?? 0) + headerWidth);
+
+            let headerSpace: number = 0;
+            let isRow: boolean = true;
+            let isColumn: boolean = true;
+            const newMarkerPoint: number[] = [];
+            const markerSize: number = (mergedProps.shapes?.length ?? 0) > 0 ? (mergedProps.markerSize || 10) : 0;
+            const markerPadding: number = (mergedProps.shapes?.length ?? 0) > 0 ? 5 : 0;
+            const spaceWidth: number = 4;
+            const fontSize: string = '12px';
+            let fontWeight: string = '400';
+            const dy: number = (22 / parseFloat(fontSize)) * (parseFloat(font.size || themeStyle.textStyle.size as string));
+            const contentWidth: number[] = [];
+            let textHeight: number = 0;
+
+            if (mergedProps.controlName === 'Chart' && parseFloat(fontSize) < parseFloat(font.size || themeStyle.textStyle.headerTextSize as string)) {
+                textHeight = (parseFloat(font.size || themeStyle.textStyle.size as string) - parseFloat(fontSize));
+            }
+
+            const withoutHeader: boolean = allText.length === 1 && allText[0].indexOf(' : <b>') > -1;
+            const isHeader: boolean = mergedProps.header !== '';
+            const size: number = isHeader && isBoldTag ? 16 : 13;
+            const newTextSpans: TextSpanElement[] = [];
+            let isWrapVal: boolean = false;
+            let wrappedTextVal: string = '';
+
+            // Process each text element
+            for (let k: number = 0; k < allText.length; k++) {
+                let textCollection: string[] = allText[k as number].replace(/<(b|strong)>/g, '<b>')
+                    .replace(/<\/(b|strong)>/g, '</b>')
+                    .split(/<br.*?>/g);
+
+                // Handle text wrapping
+                if (mergedProps.isTextWrap && mergedProps.header !== allText[k as number] && allText[k as number].indexOf('<br') === -1) {
+                    const subStringLength: number = Math.round(leftSpace > rightSpace ? (leftSpace / size) : (rightSpace / size));
+                    textCollection = splitTextIntoChunks(allText[k as number], subStringLength);
+                }
+
+                // Handle header wrapping
+                if (k === 0 && !withoutHeader && mergedProps.isTextWrap &&
+                        (leftSpace < headerWidth || isLeftSpace) &&
+                        (rightSpace < headerWidth || isRightSpace)) {
+                    const subStringLength: number = Math.round(leftSpace > rightSpace ? (leftSpace / size) : (rightSpace / size));
+                    const header: string = headerContent !== '' ? headerContent : allText[k as number];
+                    textCollection = splitTextIntoChunks(header, subStringLength);
+                    wrappedTextVal = isBoldTag ? `<b>${textCollection.join('<br>')}</b>` : textCollection.join('<br>');
+                    isWrapVal = textCollection.length > 1;
+                }
+
+                // Skip empty collections
+                if (textCollection[0] === '') {
+                    continue;
+                }
+
+                // Add marker point for non-header elements
+                if ((k !== 0) || (headerContent === '')) {
+                    newMarkerPoint.push(
+                        baseY + height -
+                            (textHeight !== 0 ? ((textHeight / (mergedProps.markerSize || 10)) *
+                                (parseFloat(font.size || themeStyle.textStyle.headerTextSize as string) /
+                                 (mergedProps.markerSize || 10))) : 0)
+                    );
+                }
+
+                // Process each line in text collection
+                for (let i: number = 0; i < textCollection.length; i++) {
+                    let lines: string[] = textCollection[i as number]
+                        .replace(/<b>/g, '<br><b>')
+                        .replace(/<\/b>/g, '</b><br>')
+                        .replace(/:/g, mergedProps.enableRTL ? ': \u200E' : '<br>\u200E:<br>')
+                        .split('<br>');
+
+                    // Handle RTL text
+                    if (mergedProps.enableRTL && lines.length > 0 && textCollection[i as number].includes(':')) {
+                        const colonIndex: number = textCollection[i as number].indexOf(':');
+                        if (colonIndex > -1) {
+                            const label: string = textCollection[i as number].substring(0, colonIndex).trim();
+                            const value: string = textCollection[i as number].substring(colonIndex + 1).trim();
+                            lines = [`${label}: \u200E${value}`];
+                        }
+                    }
+
+                    subWidth = 0;
+                    isColumn = true;
+                    height += dy;
+
+                    // Process each line segment
+                    for (let j: number = 0; j < lines.length; j++) {
+                        let line: string = lines[j as number];
+
+                        // Handle RTL text
+                        if (mergedProps.enableRTL && line !== '' && isRTLText(line)) {
+                            line = preserveNumbersInRtl(line);
+                            if (isRTLText(line)) {
+                                line = line.concat('\u200E');
+                            }
+                        }
+
+                        // Handle whitespace
+                        if (!/\S/.test(line) && line !== '') {
+                            line = ' ';  // Trim multiple whitespace to single
+                        }
+
+                        // Process non-empty lines
+                        if ((!isColumn && line === ' ') || (line.replace(/<b>/g, '').replace(/<\/b>/g, '').trim() !== '')) {
+                            subWidth += line !== ' ' ? spaceWidth : 0;
+
+                            // Calculate position for tspan
+                            let x: number | undefined;
+                            let tspanDy: number | undefined;
+
+                            // Set position and style based on layout
+                            if (isColumn && !isRow) {
+                                if (mergedProps.header && mergedProps.header.indexOf('<br') > -1 && k !== 0) {
+                                    headerSpace += mergedProps.header.split(/<br.*?>/g).length;
+                                }
+                                x = (marginX * 2) + (markerSize + markerPadding);
+                                tspanDy = dy + (isColumn ? headerSpace : 0);
+                                headerSpace = 0;
+                            } else {
+                                if (isRow && isColumn) {
+                                    x = (headerContent === '') ?
+                                        ((marginX * 2) + (markerSize + markerPadding)) :
+                                        (marginX * 2) + (isWrapVal ? (markerSize + markerPadding) : 0);
+                                    tspanDy = undefined;
+                                } else {
+                                    x = undefined;
+                                    tspanDy = undefined;
+                                }
+                            }
+                            isColumn = false;
+
+                            // Set font styling
+                            if (line.indexOf('<b>') > -1 || ((isBoldTag && j === 0 && k === 0) && (isHeader || isWrapVal))) {
+                                fontWeight = '600';
+                                font.fontWeight = fontWeight;
+                            } else {
+                                fontWeight = fontWeight === '600' ? fontWeight : 'normal';
+                                font.fontWeight = fontWeight;
+                            }
+
+                            // Reset font weight after bold text
+                            if (line.indexOf('</b>') > -1 || ((isBoldTag && j === lines.length - 1 && k === 0) && (isHeader || isWrapVal))) {
+                                fontWeight = 'normal';
+                            }
+
+                            // Determine final font weight
+                            const finalFontWeight: string = determineElementFontWeight(k, line, font);
+
+                            // Set font size based on content type
+                            const fontSize: string = (mergedProps.header === allText[k as number]) ?
+                                font.size || themeStyle.textStyle.headerTextSize as string :
+                                (line.indexOf('<b>') > -1 || line.indexOf('</b>') > -1) ?
+                                    font.size || themeStyle.textStyle.boldTextSize as string :
+                                    font.size || themeStyle.textStyle.size as string;
+
+                            // Create text span style
+                            const style: React.CSSProperties = {
+                                fontFamily: 'inherit',
+                                fontStyle: 'inherit',
+                                fontSize,
+                                fontWeight: finalFontWeight
+                            };
+
+                            // Process and set text content
+                            const processedLine: string = getTooltipTextContent(line);
+
+                            // Measure text width for positioning
+                            const textMeasure: Size = measureText(processedLine, { ...font, size: fontSize }, themeStyle.textStyle);
+                            subWidth += textMeasure.width;
+
+                            // Create text span element
+                            newTextSpans.push({
+                                id: `${tooltipId}_text_span_${k}_${i}_${j}`,
+                                content: processedLine,
+                                x,
+                                dy: tspanDy,
+                                style
+                            });
+                            isRow = false;
+                        }
+                    }
+                    subWidth -= spaceWidth;
+                    width = Math.max(width, subWidth);
+                    contentWidth.push(subWidth);
+                }
+            }
+
+            // Set calculated size
+            const newSize: Size = {
+                width: width + (width > 0 ? (2 * marginX) : 0) + (markerSize + markerPadding),
+                height: height
+            };
+
+            // Update both state and ref for element size
+            elementSizeRef.current = newSize;
+            dispatch({ type: 'UPDATE_SIZE', payload: newSize });
+
+            // Prepare data for state update
+            const textData: Partial<TextData> = {
+                textSpans: newTextSpans,
+                markerPoints: newMarkerPoint,
+                isWrap: isWrapVal,
+                wrappedText: wrappedTextVal
+            };
+            dispatch({ type: 'UPDATE_TEXT_DATA', payload: textData });
+
+            // Center header text if needed
+            if (mergedProps.showHeaderLine && headerContent !== '' && newTextSpans.length > 0 && !isWrapVal) {
+                const centerX: number = (newSize.width + (2 * padding)) / 2 -
+                        measureText(headerContent, { ...font, fontWeight: '600' }, themeStyle.textStyle, true).width / 2;
+
+                // Update first text span to be centered
+                const updatedSpans: TextSpanElement[] = [...newTextSpans];
+                updatedSpans[0] = {
+                    ...updatedSpans[0],
+                    x: centerX
+                };
+                dispatch({
+                    type: 'UPDATE_TEXT_DATA',
+                    payload: { textSpans: updatedSpans }
+                });
+            }
+
+            // Handle RTL content if needed
+            if (mergedProps.enableRTL) {
+                const idx: number = isHeader ? 1 : 0;
+                const updatedSpans: TextSpanElement[] = [...newTextSpans];
+                for (let i: number = 0; i < updatedSpans.length; i++) {
+                    const span: TextSpanElement = updatedSpans[i as number];
+                    if (span.x !== undefined && ((!isHeader) || i > 0)) {
+                        if (idx >= 0 && idx < contentWidth.length) {
+                            updatedSpans[i as number] = {
+                                ...span,
+                                x: (elementSizeRef.current.width - (markerSize + markerPadding + contentWidth[idx as number]))
+                            };
+                        }
+                    }
+                }
+                dispatch({
+                    type: 'UPDATE_TEXT_DATA',
+                    payload: { textSpans: updatedSpans }
+                });
+            }
+
+            return allText;
+        } catch (error) {
+            return formattedTextRef.current;
+        } finally {
+            processingRef.current = false;
+        }
+    }, [contentKey, themeStyle, baseY, marginX, arrowPadding, mergedProps]);
+
+    // Process tooltip text with memoization and change detection
     useLayoutEffect(() => {
         if (!mergedProps.template) {
-            // Process text first to calculate sizes
-            processTooltipText();
+            const currentKey: string = `${mergedProps.content?.join('|') || ''}_${mergedProps.header || ''}`;
+            const lastKey: string = `${lastUpdateRef.current.content}_${lastUpdateRef.current.header}`;
+
+            if (currentKey !== lastKey) {
+                processTooltipText();
+                lastUpdateRef.current = {
+                    content: mergedProps.content?.join('|') || '',
+                    header: mergedProps.header || '',
+                    location: mergedProps.location || { x: 0, y: 0 },
+                    shared: mergedProps.shared || false
+                };
+            }
         }
-    }, [
-        mergedProps.content,
-        mergedProps.header,
-        mergedProps.theme
-    ]);
-    // Calculate and update tooltip positioning based on the latest size
+    }, [contentKey, mergedProps.template, processTooltipText]);
+
+    // Calculate and update tooltip positioning - with proper dependency management
     useEffect(() => {
-        if (elementSizeRef.current.width > 0 && elementSizeRef.current.height > 0) {
-            if (mergedProps.areaBounds && mergedProps.location && !mergedProps.template) {
+        if (processingRef.current) {
+            return;
+        }
+
+        if (elementSizeRef.current.width > 0 &&
+                elementSizeRef.current.height > 0 &&
+                mergedProps.areaBounds &&
+                mergedProps.location &&
+                !mergedProps.template) {
+
+            try {
+                processingRef.current = true;
+
                 // Reset arrow and tip locations
                 arrowLocationRef.current = createTooltipLocation(0, 0);
                 tipLocationRef.current = createTooltipLocation(0, 0);
+
                 // Get tooltip position and dimensions
                 const tooltipRect: Rect = calculateTooltipPosition(
                     mergedProps.areaBounds as Rect,
@@ -240,12 +615,19 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
                     arrowLocationRef.current,
                     tipLocationRef.current
                 );
-                // Set tooltip position
-                dispatch({ type: 'SET_TOOLTIP_POSITION', payload: { x: tooltipRect.x, y: tooltipRect.y } });
+
+                // Only update position if it has changed significantly
+                const threshold: number = 1; // 1 pixel threshold
+                if (Math.abs(state.tooltipPosition.x - tooltipRect.x) > threshold ||
+                        Math.abs(state.tooltipPosition.y - tooltipRect.y) > threshold) {
+                    dispatch({ type: 'SET_TOOLTIP_POSITION', payload: { x: tooltipRect.x, y: tooltipRect.y } });
+                }
+
                 // Determine tooltip placement
                 let isTop: boolean = false;
                 let isBottom: boolean = false;
                 let isLeft: boolean = false;
+
                 if (mergedProps.tooltipPlacement) {
                     isTop = mergedProps.tooltipPlacement.indexOf('Top') > -1;
                     isBottom = mergedProps.tooltipPlacement.indexOf('Bottom') > -1;
@@ -258,30 +640,34 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
                         isLeft = (tooltipRect.x < (mergedProps.location.x + (mergedProps.clipBounds?.x || 0)));
                     }
                 }
+
                 const isRight: boolean = !isLeft && !isTop && !isBottom;
+
                 // Calculate path for tooltip shape
                 const start: number = (mergedProps.border?.width || 1) / 2;
-                const x: number = mergedProps.inverted ? (isLeft ? 0 : (arrowPadding)) : 0;
-                const y: number = !mergedProps.inverted ? (isTop ? 0 : (arrowPadding)) : 0;
+                const x: number = mergedProps.inverted ? (isLeft ? 0 : arrowPadding) : 0;
+                const y: number = !mergedProps.inverted ? (isTop ? 0 : arrowPadding) : 0;
                 const pointRect: Rect = createRect(
                     start + x,
                     start + y,
                     tooltipRect.width - start,
                     tooltipRect.height - start
                 );
+
                 // Generate path data
                 const path: string = findDirection(
-                    (rx),
-                    (ry),
+                    rx,
+                    ry,
                     pointRect,
                     arrowLocationRef.current,
-                    (arrowPadding),
+                    arrowPadding,
                     isTop,
                     isBottom,
                     isLeft,
                     tipLocationRef.current.x,
                     tipLocationRef.current.y
                 );
+
                 // Set text transform
                 let transform: string = 'translate(0,0)';
                 if (isBottom) {
@@ -290,6 +676,7 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
                 if (isRight) {
                     transform = `translate(${mergedProps.arrowPadding},0)`;
                 }
+
                 // Update shapes data
                 dispatch({
                     type: 'UPDATE_SHAPES_DATA',
@@ -298,14 +685,20 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
                         textTransform: transform
                     }
                 });
+
                 // Generate header line if needed
-                void (mergedProps.header !== '' && mergedProps.showHeaderLine &&
-                    generateHeaderLine(isBottom, isLeft, isTop, tooltipRect));
-                void (mergedProps.shapes && mergedProps.shapes.length > 0 &&
-                        generateMarkerShapes(isBottom, isRight));
+                if (mergedProps.header !== '' && mergedProps.showHeaderLine) {
+                    generateHeaderLine(isBottom, isLeft, isTop, tooltipRect);
+                }
+
+                // Generate marker shapes if needed
+                if (mergedProps.shapes && mergedProps.shapes.length > 0) {
+                    generateMarkerShapes(isBottom, isRight);
+                }
+
+                // Handle shadow filter
                 if (mergedProps.enableShadow) {
                     const id: string = `${tooltipId}_shadow`;
-                    // Define shadow filter
                     let shadow: string = `<filter id="${id}" height="130%"><feGaussianBlur in="SourceAlpha" stdDeviation="3"/>`;
                     shadow += '<feOffset dx="3" dy="3" result="offsetblur"/><feComponentTransfer><feFuncA type="linear" slope="0.5"/>';
                     shadow += '</feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>';
@@ -323,29 +716,37 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
                         payload: { showFilter: false }
                     });
                 }
+            } finally {
+                processingRef.current = false;
             }
         }
     }, [
-        state.elementSize,
-        mergedProps.location,
-        mergedProps.areaBounds,
+        // Only depend on essential props that affect positioning
+        mergedProps.location?.x,
+        mergedProps.location?.y,
+        mergedProps.areaBounds?.x,
+        mergedProps.areaBounds?.y,
+        mergedProps.areaBounds?.width,
+        mergedProps.areaBounds?.height,
+        state.elementSize.width,
+        state.elementSize.height,
         mergedProps.shared,
-        mergedProps.content
+        contentKey
     ]);
-    // Add this useEffect to track when tooltip becomes visible
+
+    // Track tooltip visibility changes
     useEffect(() => {
         if (state.tooltipOpacity === 1) {
-            // After a small delay, set isInitialAppearance to false
             const timer: NodeJS.Timeout = setTimeout(() => {
                 dispatch({ type: 'SET_INITIAL_APPEARANCE', payload: false });
             }, 50);
-            return () => clearTimeout(timer); // Cleanup when tooltipOpacity changes or component unmounts
+            return () => clearTimeout(timer);
         } else {
-            // Reset to initial state when tooltip is hidden
             dispatch({ type: 'SET_INITIAL_APPEARANCE', payload: true });
             return undefined;
         }
     }, [state.tooltipOpacity]);
+
     // Expose methods via ref
     useImperativeHandle(ref, () => ({
         fadeOut: () => {
@@ -355,22 +756,19 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
             dispatch({ type: 'SET_TOOLTIP_OPACITY', payload: 1 });
         }
     }), []);
+
     // Clean up timeouts on unmount
     useEffect(() => {
         return () => {
             if (fadeTimeoutRef.current) {
                 clearTimeout(fadeTimeoutRef.current);
             }
+            processingRef.current = false;
         };
     }, []);
-    /**
-     * Generates SVG marker shapes based on configuration.
-     *
-     * @param {boolean} isBottom - Flag indicating if the tooltip is positioned at the bottom.
-     * @param {boolean} isRight - Flag indicating if the tooltip is aligned to the right.
-     * @returns {void}
-     */
-    function generateMarkerShapes(isBottom: boolean, isRight: boolean): void {
+
+    // Helper functions (memoized where beneficial)
+    const generateMarkerShapes: (isBottom: boolean, isRight: boolean) => void = useCallback((isBottom: boolean, isRight: boolean): void => {
         if (!mergedProps.shapes || mergedProps.shapes.length === 0 || !state.textData.markerPoints.length) {
             dispatch({ type: 'UPDATE_SHAPES_DATA', payload: { markerShapes: [] } });
             return;
@@ -379,22 +777,23 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
         const size: number = mergedProps.markerSize || 10;
         const newShapes: MarkerShape[] = [];
         let count: number = 0;
-        // Calculate marker position
+
         const x: number = (mergedProps.enableRTL ? elementSizeRef.current.width :
-            ((marginX) * 2) + (size / 2)) + (isRight ? (arrowPadding) : 0);
-        // Create markers for each shape
+            (marginX * 2) + (size / 2)) + (isRight ? arrowPadding : 0);
+
         for (const shape of mergedProps.shapes) {
             if (shape !== 'None' && count < state.textData.markerPoints.length) {
-                // Calculate y position
                 const strokedShapes: string[] = ['Cross', 'Plus', 'HorizontalLine', 'VerticalLine'];
                 const isStrokedShape: boolean = strokedShapes.includes(shape);
                 let paddings: number = 0;
+
                 if ((mergedProps.header?.indexOf('<br') || -1) > -1) {
                     paddings = ((mergedProps.header?.split(/<br.*?>/g).length || 0) + count);
                 }
+
                 const y: number = state.textData.markerPoints[count as number] - padding +
-                    (isBottom ? (arrowPadding) : paddings);
-                // Create shape options
+                        (isBottom ? arrowPadding : paddings);
+
                 const shapeOption: PathOption = createPathOption(
                     `${tooltipId}_Trackball_${count}`,
                     mergedProps.palette?.[count as number] || '#000000',
@@ -404,19 +803,14 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
                     1,
                     null
                 );
-                // Calculate shape properties
+
                 const location: TooltipLocation = createTooltipLocation(x, y);
                 const shapeSize: Size = createSize(size, size);
                 const shapeData: {
                     renderOption: RenderOption;
                     functionName: string;
-                } = calculateShapes(
-                    location,
-                    shapeSize,
-                    shape,
-                    shapeOption
-                );
-                // Create appropriate shape based on type
+                } = calculateShapes(location, shapeSize, shape, shapeOption);
+
                 if (shapeData.functionName === 'Ellipse') {
                     newShapes.push({
                         id: `marker_${count}`,
@@ -442,7 +836,6 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
                         strokeWidth: 0
                     });
                 } else {
-                    // Path based shape
                     newShapes.push({
                         id: `marker_${count}`,
                         type: 'path',
@@ -456,297 +849,49 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
             }
         }
         dispatch({ type: 'UPDATE_SHAPES_DATA', payload: { markerShapes: newShapes } });
-    }
-    /**
-     * Generates a line for the tooltip header based on the provided configuration and position.
-     *
-     * @param {boolean} isBottom - Indicates if the header line originates from the bottom.
-     * @param {boolean} isLeft - Indicates if the header line is aligned to the left.
-     * @param {boolean} isTop - Indicates if the header line is originating from the top.
-     * @param {Rect} rect - The bounds within which the header line will be drawn.
-     * @returns {void}
-     */
-    function generateHeaderLine(isBottom: boolean, isLeft: boolean, isTop: boolean, rect: Rect): void {
-        let wrapPadding: number = 2;
-        let padding: number = 0;
-        const wrapHeader: string = state.textData.isWrap ? state.textData.wrappedText : mergedProps.header;
-        if (state.textData.isWrap && typeof (wrapHeader) === 'string' && (wrapHeader.indexOf('<') > -1 || wrapHeader.indexOf('>') > -1)) {
-            const textArray: string[] = wrapHeader.split('<br>');
-            wrapPadding = textArray.length;
-        }
-        if (mergedProps.header && mergedProps.header.indexOf('<br') > -1) {
-            padding = 5 * (mergedProps.header.split(/<br.*?>/g).length - 1);
-        }
-        const font: TextStyle = { ...(mergedProps.textStyle || {}) };
-        const headerSize: number = measureText(
-            state.textData.isWrap ? state.textData.wrappedText : mergedProps.header,
-            font,
-            themeStyle.textStyle
-        ).height + ((marginY) * wrapPadding) +
-            (isBottom ? (arrowPadding) : 0) +
-            (state.textData.isWrap ? 5 : padding);
-        const xLength: number = ((marginX) * 3) +
-            (!isLeft && !isTop && !isBottom ? (arrowPadding) : 0);
-        const lineEnd: number = (rect.width + (!isLeft && !isTop && !isBottom ?
-            (arrowPadding) : 0) - ((marginX) * 2));
-        const direction: string = `M ${xLength} ${headerSize} L ${lineEnd} ${headerSize}`;
-        dispatch({ type: 'UPDATE_SHAPES_DATA', payload: { headerLineData: direction } });
-    }
-    /**
-     * Processes and formats tooltip text content.
-     *
-     * @returns {string[]} The processed and formatted text for the tooltip.
-     */
-    function processTooltipText(): string[] {
-        // Format text
-        const newFormattedText: string[] = [];
-        if (mergedProps.header && mergedProps.header.replace(/<b>/g, '').replace(/<\/b>/g, '').trim() !== '') {
-            newFormattedText.push(mergedProps.header);
-        }
-        const allText: string[] = [...newFormattedText, ...(mergedProps.content || [])];
-        formattedTextRef.current = allText;
-        if (allText.length === 0) {
-            const emptyState: Partial<TextData> = {
-                textSpans: [],
-                markerPoints: []
-            };
-            dispatch({ type: 'UPDATE_TEXT_DATA', payload: emptyState });
-            dispatch({ type: 'UPDATE_SIZE', payload: { width: 0, height: 0 } });
-            elementSizeRef.current = { width: 0, height: 0 };
-            return allText;
-        }
-        // Begin text processing
-        let height: number = 0;
-        let width: number = 0;
-        let subWidth: number = 0;
-        // Get font style
-        const font: TextStyle = { ...(mergedProps.textStyle || {}) };
-        const leftSpace: number = (mergedProps.areaBounds?.x ?? 0) + (mergedProps.location?.x ?? 0);
-        const rightSpace: number = ((mergedProps.areaBounds?.x ?? 0) + (mergedProps.areaBounds?.width ?? 0)) -
-            (mergedProps.areaBounds?.x ?? 0 + (mergedProps.location?.x ?? 0));
-        const headerContent: string = mergedProps.header ? mergedProps.header.replace(/<b>/g, '').replace(/<\/b>/g, '').trim() : '';
-        const isBoldTag: boolean = mergedProps.header ? (mergedProps.header.indexOf('<b>') > -1 && mergedProps.header.indexOf('</b>') > -1) : false;
-        // Calculate header width
-        const headerWidth: number = allText.length > 0 ?
-            measureText(allText[0], font, themeStyle.textStyle).width +
-            (2 * (marginX)) + (arrowPadding) : 0;
-        const isLeftSpace: boolean = ((mergedProps.location?.x ?? 0) - headerWidth) < (mergedProps.location?.x ?? 0);
-        const isRightSpace: boolean = ((mergedProps.areaBounds?.x ?? 0) + (mergedProps.areaBounds?.width ?? 0)) <
-            ((mergedProps.location?.x ?? 0) + headerWidth);
-        let headerSpace: number = 0;
-        let isRow: boolean = true;
-        let isColumn: boolean = true;
-        const newMarkerPoint: number[] = [];
-        const markerSize: number = (mergedProps.shapes?.length ?? 0) > 0 ? (mergedProps.markerSize || 10) : 0;
-        const markerPadding: number = (mergedProps.shapes?.length ?? 0) > 0 ? 5 : 0;
-        const spaceWidth: number = 4;
-        const fontSize: string = '12px';
-        let fontWeight: string = '400';
-        const dy: number = (22 / parseFloat(fontSize)) * (parseFloat(font.size || themeStyle.textStyle.size as string));
-        const contentWidth: number[] = [];
-        let textHeight: number = 0;
-        if (mergedProps.controlName === 'Chart' && parseFloat(fontSize) < parseFloat(font.size || themeStyle.textStyle.headerTextSize as string)) {
-            textHeight = (parseFloat(font.size || themeStyle.textStyle.size as string) - parseFloat(fontSize));
-        }
-        const withoutHeader: boolean = allText.length === 1 && allText[0].indexOf(' : <b>') > -1;
-        const isHeader: boolean = mergedProps.header !== '';
-        const size: number = isHeader && isBoldTag ? 16 : 13;
-        const newTextSpans: TextSpanElement[] = [];
-        let isWrapVal: boolean = false;
-        let wrappedTextVal: string = '';
-        // Process each text element
-        for (let k: number = 0; k < allText.length; k++) {
-            let textCollection: string[] = allText[k as number].replace(/<(b|strong)>/g, '<b>')
-                .replace(/<\/(b|strong)>/g, '</b>')
-                .split(/<br.*?>/g);
-            // Handle text wrapping
-            if (mergedProps.isTextWrap && mergedProps.header !== allText[k as number] && allText[k as number].indexOf('<br') === -1) {
-                const subStringLength: number = Math.round(leftSpace > rightSpace ? (leftSpace / size) : (rightSpace / size));
-                textCollection = splitTextIntoChunks(allText[k as number], subStringLength);
-            }
-            // Handle header wrapping
-            if (k === 0 && !withoutHeader && mergedProps.isTextWrap &&
-                (leftSpace < headerWidth || isLeftSpace) &&
-                (rightSpace < headerWidth || isRightSpace)) {
-                const subStringLength: number = Math.round(leftSpace > rightSpace ? (leftSpace / size) : (rightSpace / size));
-                const header: string = headerContent !== '' ? headerContent : allText[k as number];
-                textCollection = splitTextIntoChunks(header, subStringLength);
-                wrappedTextVal = isBoldTag ? `<b>${textCollection.join('<br>')}</b>` : textCollection.join('<br>');
-                isWrapVal = textCollection.length > 1;
-            }
-            // Skip empty collections
-            if (textCollection[0] === '') {
-                continue;
-            }
-            // Add marker point for non-header elements
-            if ((k !== 0) || (headerContent === '')) {
-                newMarkerPoint.push(
-                    baseY + height -
-                    (textHeight !== 0 ? ((textHeight / (mergedProps.markerSize || 10)) *
-                    (parseFloat(font.size || themeStyle.textStyle.headerTextSize as string) / (mergedProps.markerSize || 10))) : 0)
-                );
-            }
-            // Process each line in text collection
-            for (let i: number = 0; i < textCollection.length; i++) {
-                let lines: string[] = textCollection[i as number]
-                    .replace(/<b>/g, '<br><b>')
-                    .replace(/<\/b>/g, '</b><br>')
-                    .replace(/:/g, mergedProps.enableRTL ? ': \u200E' : '<br>\u200E:<br>')
-                    .split('<br>');
-                // Handle RTL text
-                if (mergedProps.enableRTL && lines.length > 0 && textCollection[i as number].includes(':')) {
-                    const colonIndex: number = textCollection[i as number].indexOf(':');
-                    if (colonIndex > -1) {
-                        const label: string = textCollection[i as number].substring(0, colonIndex).trim();
-                        const value: string = textCollection[i as number].substring(colonIndex + 1).trim();
-                        lines = [`${label}: \u200E${value}`];
-                    }
-                }
-                subWidth = 0;
-                isColumn = true;
-                height += dy;
-                // Process each line segment
-                for (let j: number = 0; j < lines.length; j++) {
-                    let line: string = lines[j as number];
-                    // Handle RTL text
-                    if (mergedProps.enableRTL && line !== '' && isRTLText(line)) {
-                        line = preserveNumbersInRtl(line);
-                        if (isRTLText(line)) {
-                            line = line.concat('\u200E');
-                        }
-                    }
-                    // Handle whitespace
-                    if (!/\S/.test(line) && line !== '') {
-                        line = ' ';  // Trim multiple whitespace to single
-                    }
-                    // Process non-empty lines
-                    if ((!isColumn && line === ' ') || (line.replace(/<b>/g, '').replace(/<\/b>/g, '').trim() !== '')) {
-                        subWidth += line !== ' ' ? spaceWidth : 0;
-                        // Calculate position for tspan
-                        let x: number | undefined;
-                        let tspanDy: number | undefined;
-                        // Set position and style based on layout
-                        if (isColumn && !isRow) {
-                            if (mergedProps.header && mergedProps.header.indexOf('<br') > -1 && k !== 0) {
-                                headerSpace += mergedProps.header.split(/<br.*?>/g).length;
-                            }
-                            x = ((marginX) * 2) + (markerSize + markerPadding);
-                            tspanDy = dy + ((isColumn) ? headerSpace : 0);
-                            headerSpace = 0;
-                        } else {
-                            if (isRow && isColumn) {
-                                x = (headerContent === '') ?
-                                    (((marginX) * 2) + (markerSize + markerPadding)) :
-                                    ((marginX) * 2) + (isWrapVal ? (markerSize + markerPadding) : 0);
-                                tspanDy = undefined;
-                            } else {
-                                x = undefined;
-                                tspanDy = undefined;
-                            }
-                        }
-                        isColumn = false;
-                        // Set font styling
-                        if (line.indexOf('<b>') > -1 || ((isBoldTag && j === 0 && k === 0) && (isHeader || isWrapVal))) {
-                            fontWeight = '600';
-                            font.fontWeight = fontWeight;
-                        } else {
-                            fontWeight = fontWeight === '600' ? fontWeight : 'normal';
-                            font.fontWeight = fontWeight;
-                        }
-                        // Reset font weight after bold text
-                        if (line.indexOf('</b>') > -1 || ((isBoldTag && j === lines.length - 1 && k === 0) && (isHeader || isWrapVal))) {
-                            fontWeight = 'normal';
-                        }
-                        // Determine final font weight
-                        const finalFontWeight: string = determineElementFontWeight(k, line, font);
-                        // Set font size based on content type
-                        const fontSize: string = (mergedProps.header === allText[k as number]) ?
-                            font.size || themeStyle.textStyle.headerTextSize as string :
-                            (line.indexOf('<b>') > -1 || line.indexOf('</b>') > -1) ?
-                                font.size || themeStyle.textStyle.boldTextSize as string :
-                                font.size || themeStyle.textStyle.size as string;
-                        // Create text span style
-                        const style: React.CSSProperties = {
-                            fontFamily: 'inherit',
-                            fontStyle: 'inherit',
-                            fontSize,
-                            fontWeight: finalFontWeight
-                        };
-                        // Process and set text content
-                        const processedLine: string = getTooltipTextContent(line);
-                        // Measure text width for positioning
-                        const textMeasure: Size = measureText(processedLine, { ...font, size: fontSize }, themeStyle.textStyle);
-                        subWidth += textMeasure.width;
-                        // Create text span element
-                        newTextSpans.push({
-                            id: `${tooltipId}_text_span_${k}_${i}_${j}`,
-                            content: processedLine,
-                            x,
-                            dy: tspanDy,
-                            style
-                        });
-                        isRow = false;
-                    }
-                }
-                subWidth -= spaceWidth;
-                width = Math.max(width, subWidth);
-                contentWidth.push(subWidth);
-            }
-        }
-        // Set calculated size
-        const newSize: Size = {
-            width: width + (width > 0 ? (2 * (marginX)) : 0) + (markerSize + markerPadding),
-            height: height
-        };
-        // Update both state and ref for element size
-        elementSizeRef.current = newSize;
-        dispatch({ type: 'UPDATE_SIZE', payload: newSize });
-        // Prepare data for state update
-        const textData: Partial<TextData> = {
-            textSpans: newTextSpans,
-            markerPoints: newMarkerPoint,
-            isWrap: isWrapVal,
-            wrappedText: wrappedTextVal
-        };
-        dispatch({ type: 'UPDATE_TEXT_DATA', payload: textData });
-        // Center header text if needed
-        if (mergedProps.showHeaderLine && headerContent !== '' && newTextSpans.length > 0 && !isWrapVal) {
-            const centerX: number = (newSize.width + (2 * padding)) / 2 -
-                            measureText(headerContent, { ...font, fontWeight: '600' }, themeStyle.textStyle, true).width / 2;
-            // Update first text span to be centered
-            const updatedSpans: TextSpanElement[] = [...newTextSpans];
-            updatedSpans[0] = {
-                ...updatedSpans[0],
-                x: centerX
-            };
-            dispatch({
-                type: 'UPDATE_TEXT_DATA',
-                payload: { textSpans: updatedSpans }
-            });
-        }
-        // Handle RTL content if needed
-        if (mergedProps.enableRTL) {
-            const idx: number = isHeader ? 1 : 0;
-            const updatedSpans: TextSpanElement[] = [...newTextSpans];
-            for (let i: number = 0; i < updatedSpans.length; i++) {
-                const span: TextSpanElement = updatedSpans[i as number];
-                if (span.x !== undefined && ((!isHeader) || i > 0)) {
-                    if (idx >= 0 && idx < contentWidth.length) {
-                        updatedSpans[i as number] = {
-                            ...span,
-                            x: (elementSizeRef.current.width - (markerSize + markerPadding + contentWidth[idx as number]))
-                        };
-                    }
-                }
-            }
-            dispatch({
-                type: 'UPDATE_TEXT_DATA',
-                payload: { textSpans: updatedSpans }
-            });
-        }
-        return allText;
-    }
+    }, [mergedProps.shapes, mergedProps.markerSize, mergedProps.enableRTL, marginX,
+        arrowPadding, state.textData.markerPoints, mergedProps.header, mergedProps.palette, mergedProps.theme, tooltipId, padding]);
 
+    const generateHeaderLine: (isBottom: boolean, isLeft: boolean, isTop: boolean, rect: Rect) => void =
+        useCallback((isBottom: boolean, isLeft: boolean, isTop: boolean, rect: Rect): void => {
+            let wrapPadding: number = 2;
+            let padding: number = 0;
+            const wrapHeader: string = state.textData.isWrap ? state.textData.wrappedText : mergedProps.header;
+
+            if (state.textData.isWrap && typeof (wrapHeader) === 'string' && (wrapHeader.indexOf('<') > -1 || wrapHeader.indexOf('>') > -1)) {
+                const textArray: string[] = wrapHeader.split('<br>');
+                wrapPadding = textArray.length;
+            }
+
+            if (mergedProps.header && mergedProps.header.indexOf('<br') > -1) {
+                padding = 5 * (mergedProps.header.split(/<br.*?>/g).length - 1);
+            }
+
+            const font: TextStyle = { ...(mergedProps.textStyle || {}) };
+            const headerSize: number = measureText(
+                state.textData.isWrap ? state.textData.wrappedText : mergedProps.header,
+                font,
+                themeStyle.textStyle
+            ).height + (marginY * wrapPadding) +
+                (isBottom ? arrowPadding : 0) +
+                (state.textData.isWrap ? 5 : padding);
+
+            const xLength: number = (marginX * 3) + (!isLeft && !isTop && !isBottom ? arrowPadding : 0);
+            const lineEnd: number = (rect.width + (!isLeft && !isTop && !isBottom ? arrowPadding : 0) - (marginX * 2));
+            const direction: string = `M ${xLength} ${headerSize} L ${lineEnd} ${headerSize}`;
+
+            dispatch({ type: 'UPDATE_SHAPES_DATA', payload: { headerLineData: direction } });
+        }, [state.textData.isWrap, state.textData.wrappedText, mergedProps.header,
+            mergedProps.textStyle, themeStyle.textStyle, marginY, marginX, arrowPadding]);
+
+
+    /**
+     * Wraps numeric values in a string with a left-to-right (LTR) span when RTL (right-to-left) layout is enabled.
+     *
+     * @param {string} text - The input string potentially containing numeric values.
+     * @returns {string} The modified string with numeric values wrapped in <span dir="ltr"> tags if RTL is enabled;
+     *          otherwise, returns the original string unchanged.
+     */
     function preserveNumbersInRtl(text: string): string {
         if (!mergedProps.enableRTL) { return text; }
         return text.replace(/(\d+\.\d+|\d+)/g, (match: string) => {
@@ -770,6 +915,7 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
         }
         return chunks.length > 0 ? chunks : [text];
     }
+
     /**
      * Determines the font weight based on content type and theme configuration.
      *
@@ -790,6 +936,7 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
             return mergedProps.textStyle?.fontWeight || font.fontWeight || 'normal';
         }
     }
+
     /**
      * Checks if the provided tooltip content is in a right-to-left (RTL) language.
      *
@@ -799,6 +946,7 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
     function isRTLText(tooltipContent: string): boolean {
         return /[\u0590-\u07FF\u200F\u202B\u202E\uFB1D-\uFDFD\uFE70-\uFEFC]/.test(tooltipContent);
     }
+
     /**
      * Processes text content to remove any HTML tags for display purposes.
      *
@@ -809,9 +957,9 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
         if (!tooltipText) {
             return '';
         }
-        // Simple HTML tag removal for display
         return tooltipText.replace(/<[^>]*>/g, '');
     }
+
     /**
      * Calculates the position of the tooltip based on given bounds and locations,
      * considering inversion and positioning of arrows.
@@ -833,116 +981,127 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
             const height: number = elementSizeRef.current.height + (2 * marginY);
             return createRect(symbolLocation.x, symbolLocation.y, width, height);
         }
+
         if (mergedProps.location) {
             const { x, y } = mergedProps.location;
             if (mergedProps.content && mergedProps.content.length > 1 && mergedProps.shared) {
                 return sharedTooltipLocation(bounds, x, y);
             }
         }
+
         if (mergedProps.tooltipPlacement) {
             const tooltipRect: Rect = getCurrentPosition(bounds, symbolLocation, arrowLocation, tipLocation);
             return tooltipRect;
         }
+
         let location: TooltipLocation = createTooltipLocation(symbolLocation.x, symbolLocation.y);
-        const width: number = elementSizeRef.current.width + (2 * (marginX));
-        const height: number = elementSizeRef.current.height + (2 * (marginY));
+        const width: number = elementSizeRef.current.width + (2 * marginX);
+        const height: number = elementSizeRef.current.height + (2 * marginY);
         const markerHeight: number = mergedProps.offset || 0;
         const clipX: number = mergedProps.clipBounds?.x || 0;
         const clipY: number = mergedProps.clipBounds?.y || 0;
         const boundsX: number = bounds.x;
         const boundsY: number = bounds.y;
         outOfBoundRef.current = false;
+
         // Position based on inverted state
         if (!mergedProps.inverted) {
             // Normal tooltip positioning (above/below point)
             location = createTooltipLocation(
                 location.x + clipX - elementSizeRef.current.width / 2 - padding,
                 location.y + clipY - elementSizeRef.current.height - (2 * (mergedProps.allowHighlight ? highlightPadding : padding)) -
-                                (arrowPadding) - markerHeight
+                    arrowPadding - markerHeight
             );
             arrowLocation.x = tipLocation.x = width / 2;
+
             // Adjust for boundary constraints
-            // Vertical adjustments
             if ((location.y < boundsY || mergedProps.isNegative) && !(mergedProps.controlName === 'Progressbar')) {
                 location.y = (symbolLocation.y < 0 ? 0 : symbolLocation.y) + clipY + markerHeight;
             }
-            if (location.y + height + (arrowPadding) > boundsY + bounds.height) {
+
+            if (location.y + height + arrowPadding > boundsY + bounds.height) {
                 location.y = Math.min(symbolLocation.y, boundsY + bounds.height) + clipY
-                                - elementSizeRef.current.height - (2 * padding) - (arrowPadding) - markerHeight;
+                        - elementSizeRef.current.height - (2 * padding) - arrowPadding - markerHeight;
             }
-            // Special case adjustments
+
             if (((location.x + width > boundsX + bounds.width) && location.y < boundsY || mergedProps.isNegative) &&
-                                !(mergedProps.controlName === 'Progressbar')) {
+                    !(mergedProps.controlName === 'Progressbar')) {
                 location.y = (symbolLocation.y < 0 ? 0 : symbolLocation.y) + clipY + markerHeight;
             }
+
             // Horizontal adjustments
             if (location.x < boundsX && !(mergedProps.controlName === 'Progressbar')) {
                 arrowLocation.x -= (boundsX - location.x);
                 tipLocation.x -= (boundsX - location.x);
                 location.x = boundsX;
             }
+
             if (location.x + width > boundsX + bounds.width && !(mergedProps.controlName === 'Progressbar')) {
                 arrowLocation.x += ((location.x + width) - (boundsX + bounds.width));
                 tipLocation.x += ((location.x + width) - (boundsX + bounds.width));
                 location.x -= ((location.x + width) - (boundsX + bounds.width));
             }
+
             // Arrow position adjustments
-            if (arrowLocation.x + (arrowPadding) > width - (rx)) {
-                arrowLocation.x = width - (rx) - (arrowPadding);
-                tipLocation.x = width - (rx) - (arrowPadding);
+            if (arrowLocation.x + arrowPadding > width - rx) {
+                arrowLocation.x = width - rx - arrowPadding;
+                tipLocation.x = width - rx - arrowPadding;
             }
-            if (arrowLocation.x - (arrowPadding) < (rx)) {
-                arrowLocation.x = tipLocation.x = (rx) + (arrowPadding);
+
+            if (arrowLocation.x - arrowPadding < rx) {
+                arrowLocation.x = tipLocation.x = rx + arrowPadding;
             }
+
             // Chart-specific logic
             if (mergedProps.controlName === 'Chart') {
-                if (((bounds.x + bounds.width) - (location.x + arrowLocation.x)) < areaMargin + (arrowPadding) ||
-                                    (location.x + arrowLocation.x) < areaMargin + (arrowPadding)) {
+                if (((bounds.x + bounds.width) - (location.x + arrowLocation.x)) < areaMargin + arrowPadding ||
+                        (location.x + arrowLocation.x) < areaMargin + arrowPadding) {
                     outOfBoundRef.current = true;
                 }
+
                 if (mergedProps.template && (location.y < 0)) {
                     location.y = symbolLocation.y + clipY + markerHeight;
                 }
+
                 // Switch to inverted mode if out of bounds
                 if (!withInAreaBounds(location.x, location.y, bounds) || outOfBoundRef.current) {
-                    // Direct mutation is necessary here to recalculate in the same execution
-                    // This enables immediate recalculation with the flipped orientation
                     mergedProps.inverted = !mergedProps.inverted;
-                    // Position to the right/left of the point instead
+
                     location = createTooltipLocation(
                         symbolLocation.x + markerHeight + clipX,
                         symbolLocation.y + clipY - elementSizeRef.current.height / 2 - padding
                     );
                     tipLocation.x = arrowLocation.x = 0;
                     tipLocation.y = arrowLocation.y = height / 2;
-                    // Handle right edge
-                    if ((location.x + (arrowPadding) + width > boundsX + bounds.width) || mergedProps.isNegative) {
+
+                    if ((location.x + arrowPadding + width > boundsX + bounds.width) || mergedProps.isNegative) {
                         location.x = (symbolLocation.x > boundsX + bounds.width ? bounds.width : symbolLocation.x)
-                                        + clipX - (markerHeight) - ((arrowPadding) + width);
+                                + clipX - markerHeight - (arrowPadding + width);
                     }
-                    // Handle left edge
+
                     if (location.x < boundsX) {
                         location.x = (symbolLocation.x < 0 ? 0 : symbolLocation.x) + markerHeight + clipX;
                     }
-                    // Handle top edge
+
                     if (location.y <= boundsY) {
                         tipLocation.y -= (boundsY - location.y);
                         arrowLocation.y -= (boundsY - location.y);
                         location.y = boundsY;
                     }
-                    // Handle bottom edge
+
                     if (location.y + height >= bounds.height + boundsY) {
                         arrowLocation.y += ((location.y + height) - (bounds.height + boundsY));
                         tipLocation.y += ((location.y + height) - (bounds.height + boundsY));
                         location.y -= ((location.y + height) - (bounds.height + boundsY));
                     }
-                    // Adjust arrow positions
-                    if ((arrowPadding) + arrowLocation.y > height - (ry)) {
-                        arrowLocation.y = height - (arrowPadding) - (ry);
+
+                    if (arrowPadding + arrowLocation.y > height - ry) {
+                        arrowLocation.y = height - arrowPadding - ry;
                         tipLocation.y = height;
                     }
-                    if (arrowLocation.y - (arrowPadding) < (ry)) {
-                        arrowLocation.y = (arrowPadding) + (ry);
+
+                    if (arrowLocation.y - arrowPadding < ry) {
+                        arrowLocation.y = arrowPadding + ry;
                         tipLocation.y = 0;
                     }
                 }
@@ -954,52 +1113,54 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
                 location.y + clipY - elementSizeRef.current.height / 2 - padding
             );
             arrowLocation.y = tipLocation.y = height / 2;
-            // Handle right edge
-            if ((location.x + width + (arrowPadding) > boundsX + bounds.width) || mergedProps.isNegative) {
+
+            if ((location.x + width + arrowPadding > boundsX + bounds.width) || mergedProps.isNegative) {
                 location.x = (symbolLocation.x > boundsX + bounds.width ? bounds.width : symbolLocation.x)
-                                + clipX - markerHeight - (width + (arrowPadding));
+                        + clipX - markerHeight - (width + arrowPadding);
             }
-            // Handle left edge
+
             if (location.x < boundsX) {
                 location.x = (symbolLocation.x < 0 ? 0 : symbolLocation.x) + clipX + markerHeight;
             }
-            // Second right edge check
-            if (location.x + width + (arrowPadding) > boundsX + bounds.width) {
+
+            if (location.x + width + arrowPadding > boundsX + bounds.width) {
                 location.x = (symbolLocation.x > bounds.width + boundsX ? bounds.width : symbolLocation.x)
-                                + clipX - markerHeight - (width + (arrowPadding));
+                        + clipX - markerHeight - (width + arrowPadding);
             }
-            // Handle top edge
+
             if (location.y <= boundsY) {
                 arrowLocation.y -= (boundsY - location.y);
                 tipLocation.y -= (boundsY - location.y);
                 location.y = boundsY;
             }
-            // Handle bottom edge
+
             if (location.y + height >= boundsY + bounds.height) {
                 arrowLocation.y += ((location.y + height) - (boundsY + bounds.height));
                 tipLocation.y += ((location.y + height) - (boundsY + bounds.height));
                 location.y -= ((location.y + height) - (boundsY + bounds.height));
             }
-            // Adjust arrow positions
-            if (arrowLocation.y + (arrowPadding) > height - (ry)) {
-                arrowLocation.y = height - (ry) - (arrowPadding);
+
+            if (arrowLocation.y + arrowPadding > height - ry) {
+                arrowLocation.y = height - ry - arrowPadding;
                 tipLocation.y = height;
             }
-            if (arrowLocation.y - (arrowPadding) < (ry)) {
-                arrowLocation.y = tipLocation.y = (ry) + (arrowPadding);
+
+            if (arrowLocation.y - arrowPadding < ry) {
+                arrowLocation.y = tipLocation.y = ry + arrowPadding;
             }
+
             // Chart-specific logic for inverted mode
             if (mergedProps.controlName === 'Chart') {
-                if ((location.y + arrowLocation.y) < areaMargin + (arrowPadding) ||
-                                    ((bounds.y + bounds.height) - (location.y + arrowLocation.y)) < areaMargin + (arrowPadding)) {
+                if ((location.y + arrowLocation.y) < areaMargin + arrowPadding ||
+                        ((bounds.y + bounds.height) - (location.y + arrowLocation.y)) < areaMargin + arrowPadding) {
                     outOfBoundRef.current = true;
                 }
+
                 if (!withInAreaBounds(location.x, location.y, bounds) || outOfBoundRef.current) {
-                    // Direct mutation necessary - see comment above
                     mergedProps.inverted = !mergedProps.inverted;
                     location = createTooltipLocation(
                         symbolLocation.x + clipX - padding - elementSizeRef.current.width / 2,
-                        symbolLocation.y + clipY - elementSizeRef.current.height - (2 * padding) - markerHeight - (arrowPadding)
+                        symbolLocation.y + clipY - elementSizeRef.current.height - (2 * padding) - markerHeight - arrowPadding
                     );
                     tipLocation.x = arrowLocation.x = width / 2;
                     tipLocation.y = arrowLocation.y = 0;
@@ -1021,6 +1182,7 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
         }
         return createRect(location.x, location.y, width, height);
     }
+
     /**
      * Calculates the tooltip location for shared tooltips, using the provided bounds and coordinates.
      *
@@ -1030,32 +1192,38 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
      * @returns {Rect} Adjusted rectangle representing the tooltip's position.
      */
     function sharedTooltipLocation(bounds: Rect, x: number, y: number): Rect {
-        const width: number = elementSizeRef.current.width + (2 * (marginX));
-        const height: number = elementSizeRef.current.height + (2 * (marginY));
+        const width: number = elementSizeRef.current.width + (2 * marginX);
+        const height: number = elementSizeRef.current.height + (2 * marginY);
         const tooltipRect: Rect = createRect(
             x + 4 * padding,
             y - height - padding,
             width,
             height
         );
+
         if (tooltipRect.y < bounds.y) {
             tooltipRect.y += (tooltipRect.height + 2 * padding);
         }
+
         if (tooltipRect.y + tooltipRect.height > bounds.y + bounds.height) {
             tooltipRect.y = Math.max(
                 (bounds.y + bounds.height) - (tooltipRect.height + 2 * padding),
                 bounds.y
             );
         }
+
         if (tooltipRect.x + tooltipRect.width > bounds.x + bounds.width) {
             const locationX: number = mergedProps.location?.x ?? 0;
             tooltipRect.x = (bounds.x + locationX) - (tooltipRect.width + 4 * padding);
         }
+
         if (tooltipRect.x < bounds.x) {
             tooltipRect.x = bounds.x;
         }
+
         return tooltipRect;
     }
+
     /**
      * Determines the current tooltip position and adjusts it based on the layout.
      *
@@ -1071,53 +1239,53 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
         const clipX: number = mergedProps.clipBounds?.x || 0;
         const clipY: number = mergedProps.clipBounds?.y || 0;
         const markerHeight: number = mergedProps.offset || 0;
-        const width: number = elementSizeRef.current.width + (2 * (marginX));
-        const height: number = elementSizeRef.current.height + (2 * (marginY));
+        const width: number = elementSizeRef.current.width + (2 * marginX);
+        const height: number = elementSizeRef.current.height + (2 * marginY);
         let location: TooltipLocation = createTooltipLocation(symbolLocation.x, symbolLocation.y);
+
         if (position === 'Top' || position === 'Bottom') {
             location = createTooltipLocation(
                 location.x + clipX - elementSizeRef.current.width / 2 - padding,
-                location.y + clipY - elementSizeRef.current.height - (2 * padding) - (arrowPadding) - markerHeight
+                location.y + clipY - elementSizeRef.current.height - (2 * padding) - arrowPadding - markerHeight
             );
             arrowLocation.x = tipLocation.x = width / 2;
+
             if (position === 'Bottom') {
                 location.y = symbolLocation.y + clipY + markerHeight;
             }
+
             if (bounds.x + bounds.width < location.x + width) {
                 location.x = (bounds.width > width) ? ((bounds.x + bounds.width) - width + 6) : bounds.x;
                 arrowLocation.x = tipLocation.x = (bounds.width > width) ? (bounds.x + symbolLocation.x - location.x) : symbolLocation.x;
-            }
-            else if (bounds.x > location.x) {
+            } else if (bounds.x > location.x) {
                 location.x = bounds.x;
                 arrowLocation.x = tipLocation.x = symbolLocation.x;
             }
-        }
-        else {
+        } else {
             location = createTooltipLocation(
                 location.x + clipX + markerHeight,
-                location.y + clipY - elementSizeRef.current.height / 2 - (padding)
+                location.y + clipY - elementSizeRef.current.height / 2 - padding
             );
             arrowLocation.y = tipLocation.y = height / 2;
+
             if (position === 'Left') {
-                location.x = symbolLocation.x + clipX - markerHeight - (width + (arrowPadding));
+                location.x = symbolLocation.x + clipX - markerHeight - (width + arrowPadding);
             }
+
             if (bounds.y + bounds.height < location.y + height) {
                 location.y = (bounds.height > height) ? ((bounds.y + bounds.height) - height + 6) : bounds.y;
                 arrowLocation.y = tipLocation.y = (bounds.height > height) ? (bounds.y + symbolLocation.y - location.y) : symbolLocation.y;
-            }
-            else if (bounds.y > location.y) {
+            } else if (bounds.y > location.y) {
                 location.y = bounds.y;
                 arrowLocation.y = tipLocation.y = symbolLocation.y;
             }
         }
+
         return createRect(location.x, location.y, width, height);
     }
-    /**
-     * Renders SVG shapes for markers according to the defined shapes in the tooltip configuration.
-     *
-     * @returns {JSX.Element[]} Array of SVG elements for each marker.
-     */
-    function renderMarkers(): JSX.Element[] {
+
+    // Memoized render functions
+    const renderMarkers: () => JSX.Element[] = useCallback((): JSX.Element[] => {
         return state.shapesData.markerShapes.map((shape: MarkerShape) => {
             if (shape.type === 'ellipse') {
                 return (
@@ -1155,13 +1323,9 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
                 );
             }
         });
-    }
-    /**
-     * Renders text spans for the tooltip, applying necessary styles.
-     *
-     * @returns {JSX.Element[]} An array of <tspan> elements for each text span.
-     */
-    function renderTextSpans(): JSX.Element[] {
+    }, [state.shapesData.markerShapes]);
+
+    const renderTextSpans: () => JSX.Element[] = useCallback((): JSX.Element[] => {
         return state.textData.textSpans.map((span: TextSpanElement, index: number) => (
             <tspan
                 key={span.id || index}
@@ -1177,7 +1341,8 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
                 }
             </tspan>
         ));
-    }
+    }, [state.textData.textSpans, mergedProps.textStyle?.color, mergedProps.enableRTL, themeStyle.tooltipLightLabel]);
+
     // Final component render
     return (
         <>
@@ -1210,69 +1375,62 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
                         {mergedProps.template(mergedProps.data)}
                     </div>
                 </div>
-            )
-                : (
-                    <g
-                        id={`${tooltipId}_group`}
-                        transform={`translate(${state.tooltipPosition.x},${state.tooltipPosition.y})`}
-                        className="e-tooltip"
-                        style={{
-                            opacity: state.tooltipOpacity,
-                            transition: (mergedProps.enableAnimation && !state.isInitialAppearance && state.tooltipOpacity === 1)
-                                ? 'transform 300ms ease-out, opacity 300ms ease-out'
-                                : 'opacity 300ms ease-out'
-                        }}
-                    >
-                        {state.filterData.showFilter && (
-                            <defs id={`${tooltipId}SVG_tooltip_definition`}
-                                dangerouslySetInnerHTML={{ __html: state.filterData.filterDef }}
-                            />
-                        )}
-                        <path
-                            id={`${tooltipId}_path`}
-                            d={state.shapesData.pathData}
-                            strokeWidth={
-                                mergedProps.border?.width || 1
-                            }
-                            fill={mergedProps.fill || themeStyle?.tooltipFill}
-                            opacity={
-                                (mergedProps.opacity === 0.75) ? 1 : mergedProps.opacity
-                            }
-                            stroke={
-                                mergedProps.border?.color || ''
-                            }
-                            strokeDasharray={mergedProps.border?.dashArray}
-                            filter={state.filterData.showFilter ? `url(#${state.filterData.shadowId})` : undefined}
+            ) : (
+                <g
+                    id={`${tooltipId}_group`}
+                    transform={`translate(${state.tooltipPosition.x},${state.tooltipPosition.y})`}
+                    className="e-tooltip"
+                    style={{
+                        opacity: state.tooltipOpacity,
+                        transition: (mergedProps.enableAnimation && !state.isInitialAppearance && state.tooltipOpacity === 1)
+                            ? 'transform 300ms ease-out, opacity 300ms ease-out'
+                            : 'opacity 300ms ease-out'
+                    }}
+                >
+                    {state.filterData.showFilter && (
+                        <defs id={`${tooltipId}SVG_tooltip_definition`}
+                            dangerouslySetInnerHTML={{ __html: state.filterData.filterDef }}
                         />
-                        {state.shapesData.headerLineData && (
-                            <path
-                                id={`${tooltipId}_header_path`}
-                                d={state.shapesData.headerLineData}
-                                strokeWidth={1.5}
-                                fill="none"
-                                opacity={0.2}
-                                stroke={themeStyle.tooltipHeaderLine}
-                            />
-                        )}
-                        <text
-                            id={`${tooltipId}_text`}
-                            transform={state.shapesData.textTransform}
-                            x={baseX}
-                            y={baseY}
-                            fontFamily={(mergedProps?.textStyle && mergedProps?.textStyle.fontFamily) || themeStyle?.textStyle.fontFamily}
-                            fontStyle={(mergedProps?.textStyle && mergedProps?.textStyle.fontStyle) || 'Normal'}
-                            fontSize={(mergedProps?.textStyle && mergedProps?.textStyle.size) || themeStyle?.textStyle.size}
-                            opacity={(mergedProps?.textStyle && mergedProps?.textStyle.opacity) || themeStyle?.textStyle.opacity}
-                            fill={(mergedProps?.textStyle && mergedProps?.textStyle.color) || themeStyle?.textStyle.color}
-                            textAnchor={mergedProps?.enableRTL ? 'end' : ''}
-                        >
-                            {renderTextSpans()}
-                        </text>
-                        <g id={`${tooltipId}_trackball_group`}>
-                            {renderMarkers()}
-                        </g>
+                    )}
+                    <path
+                        id={`${tooltipId}_path`}
+                        d={state.shapesData.pathData}
+                        strokeWidth={mergedProps.border?.width || 1}
+                        fill={mergedProps.fill || themeStyle?.tooltipFill}
+                        opacity={(mergedProps.opacity === 0.75) ? 1 : mergedProps.opacity}
+                        stroke={mergedProps.border?.color || ''}
+                        strokeDasharray={mergedProps.border?.dashArray}
+                        filter={state.filterData.showFilter ? `url(#${state.filterData.shadowId})` : undefined}
+                    />
+                    {state.shapesData.headerLineData && (
+                        <path
+                            id={`${tooltipId}_header_path`}
+                            d={state.shapesData.headerLineData}
+                            strokeWidth={1.5}
+                            fill="none"
+                            opacity={0.2}
+                            stroke={themeStyle.tooltipHeaderLine}
+                        />
+                    )}
+                    <text
+                        id={`${tooltipId}_text`}
+                        transform={state.shapesData.textTransform}
+                        x={baseX}
+                        y={baseY}
+                        fontFamily={(mergedProps?.textStyle && mergedProps?.textStyle.fontFamily) || themeStyle?.textStyle.fontFamily}
+                        fontStyle={(mergedProps?.textStyle && mergedProps?.textStyle.fontStyle) || 'Normal'}
+                        fontSize={(mergedProps?.textStyle && mergedProps?.textStyle.size) || themeStyle?.textStyle.size}
+                        opacity={(mergedProps?.textStyle && mergedProps?.textStyle.opacity) || themeStyle?.textStyle.opacity}
+                        fill={(mergedProps?.textStyle && mergedProps?.textStyle.color) || themeStyle?.textStyle.color}
+                        textAnchor={mergedProps?.enableRTL ? 'end' : ''}
+                    >
+                        {renderTextSpans()}
+                    </text>
+                    <g id={`${tooltipId}_trackball_group`}>
+                        {renderMarkers()}
                     </g>
-                )}
+                </g>
+            )}
         </>
     );
 });

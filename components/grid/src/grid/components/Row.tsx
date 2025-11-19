@@ -13,12 +13,14 @@ import {
     RefAttributes,
     NamedExoticComponent,
     useState,
-    isValidElement
+    isValidElement,
+    createElement
 } from 'react';
 import {
     IRowBase,
     RowRef,
-    ICell, CellType, RenderType, IRow
+    ICell, CellTypes, RenderType, IRow,
+    RowType
 } from '../types';
 import { ColumnProps, IColumnBase, CustomAttributes } from '../types/column.interfaces';
 import { AggregateColumnProps, AggregateRowRenderEvent } from '../types/aggregate.interfaces';
@@ -26,21 +28,15 @@ import { RowRenderEvent, ValueType } from '../types/interfaces';
 import { useGridComputedProvider, useGridMutableProvider } from '../contexts';
 import { ColumnBase } from './Column';
 import { FilterBase, InlineEditForm } from '../views';
-import { InlineEditFormRef } from '../types/edit.interfaces';
+import { EditFormTemplate, InlineEditFormRef } from '../types/edit.interfaces';
 import { IL10n, isNullOrUndefined } from '@syncfusion/react-base';
 
 // CSS class constants following enterprise naming convention
-const CSS_HEADER_CELL: string = 'sf-headercell';
-const CSS_FILTER_CELL: string = 'sf-filterbarcell';
-const CSS_SUMMARY_CELL: string = 'sf-summarycell';
-const CSS_SUMMARY_FIRST_CELL: string = 'sf-firstsummarycell';
-const CSS_SUMMARY_LAST_CELL: string = 'sf-lastsummarycell';
-const CSS_LAST_CELL: string = 'sf-lastcell';
-const CSS_ROW_CELL: string = 'sf-rowcell';
+const CSS_CELL: string = 'sf-cell';
 const CSS_DEFAULT_CURSOR: string = ' sf-defaultcursor';
 const CSS_MOUSE_POINTER: string = ' sf-mousepointer';
-const CSS_SORT_ICON: string = ' sf-sorti-con';
-const CSS_CELL_HIDE: string = 'sf-hide';
+const CSS_SORT_ICON: string = ' sf-sort-icon';
+const CSS_CELL_HIDE: string = 'sf-display-none';
 
 /**
  * RowBase component renders a table row with cells based on provided column definitions
@@ -55,8 +51,8 @@ const CSS_CELL_HIDE: string = 'sf-hide';
  * @param {RefObject<RowRef>} ref - Forwarded ref to expose internal elements and methods
  * @returns {JSX.Element} The rendered table row with cells
  */
-const RowBase: NamedExoticComponent<IRowBase & RefAttributes<RowRef>> = memo(forwardRef<RowRef, IRowBase>(
-    (props: IRowBase, ref: RefObject<RowRef>) => {
+const RowBase: <T>(props: IRowBase<T> & RefAttributes<RowRef>) => ReactElement = memo(forwardRef<RowRef, IRowBase>(
+    <T, >(props: IRowBase<T>, ref: RefObject<RowRef>) => {
         const {
             rowType,
             row,
@@ -65,21 +61,21 @@ const RowBase: NamedExoticComponent<IRowBase & RefAttributes<RowRef>> = memo(for
             aggregateRow,
             ...attr
         } = props;
-        const { headerRowDepth, isInitialBeforePaint, editModule, uiColumns, isInitialLoad } = useGridMutableProvider();
+        const { headerRowDepth, isInitialBeforePaint, editModule, uiColumns, isInitialLoad } = useGridMutableProvider<T>();
         const { onRowRender, onAggregateRowRender, serviceLocator, rowClass,
-            sortSettings, rowHeight, editSettings, columns, rowTemplate } = useGridComputedProvider();
+            sortSettings, rowHeight, editSettings, columns, rowTemplate } = useGridComputedProvider<T>();
         const rowRef: RefObject<HTMLTableRowElement> = useRef<HTMLTableRowElement>(null);
-        const cellsRef: RefObject<ICell<ColumnProps>[]> = useRef<ICell<ColumnProps>[]>([]);
+        const cellsRef: RefObject<ICell<ColumnProps<T>>[]> = useRef<ICell<ColumnProps<T>>[]>([]);
         const localization: IL10n = serviceLocator?.getService<IL10n>('localization');
-        const editInlineFormRef: RefObject<InlineEditFormRef> = useRef<InlineEditFormRef>(null);
+        const editInlineFormRef: RefObject<InlineEditFormRef<T>> = useRef<InlineEditFormRef<T>>(null);
         const [syncFormState, setSyncFormState] = useState(editInlineFormRef.current?.formState);
-        const [rowObject, setRowObject] = useState<IRow<ColumnProps>>(row);
+        const [rowObject, setRowObject] = useState<IRow<ColumnProps<T>>>(row);
         /**
          * Returns the cell options objects
          *
          * @returns {ICell<ColumnProps>[]} Array of cell options objects
          */
-        const getCells: () => ICell<ColumnProps>[] = useCallback(() => {
+        const getCells: () => ICell<ColumnProps<T>>[] = useCallback(() => {
             return cellsRef.current;
         }, []);
 
@@ -93,27 +89,27 @@ const RowBase: NamedExoticComponent<IRowBase & RefAttributes<RowRef>> = memo(for
                 return null;
             }
             return (
-                <InlineEditForm
-                    ref={(ref: InlineEditFormRef) => {
+                <InlineEditForm<T>
+                    ref={(ref: InlineEditFormRef<T>) => {
                         editInlineFormRef.current = ref;
                         setSyncFormState(ref?.formState);
                     }}
                     key={`edit-${row?.uid}`}
                     stableKey={`edit-${row?.uid}-${editModule?.editRowIndex}`}
                     isAddOperation={false}
-                    columns={uiColumns ?? columns}
-                    editData={editModule?.editData || {}}
+                    columns={uiColumns ?? columns as ColumnProps<T>[]}
+                    editData={editModule?.editData}
                     validationErrors={editModule?.validationErrors || {}}
                     editRowIndex={row?.index}
                     rowUid={row?.uid}
-                    onFieldChange={(field: string, value: ValueType | null) => {
+                    onFieldChange={(field: string, value: ValueType | Object | null) => {
                         if (editModule?.updateEditData) {
                             editModule?.updateEditData?.(field, value);
                         }
                     }}
-                    onSave={() => editModule?.saveChanges()}
-                    onCancel={editModule?.cancelChanges}
-                    template={editSettings?.template}
+                    onSave={() => editModule?.saveDataChanges()}
+                    onCancel={editModule?.cancelDataChanges}
+                    template={editSettings?.template as React.ComponentType<EditFormTemplate<T>>}
                 />
             );
         }, [
@@ -144,7 +140,7 @@ const RowBase: NamedExoticComponent<IRowBase & RefAttributes<RowRef>> = memo(for
          */
         const handleRowDataBound: () => void = useCallback(() => {
             if (rowType === RenderType.Content && onRowRender && rowRef.current) {
-                const rowArgs: RowRenderEvent = {
+                const rowArgs: RowRenderEvent<T> = {
                     row: rowRef.current,
                     data: row.data,
                     rowHeight: rowHeight,
@@ -179,9 +175,9 @@ const RowBase: NamedExoticComponent<IRowBase & RefAttributes<RowRef>> = memo(for
          */
         const handleAggregateRowDataBound: () => void = useCallback(() => {
             if (rowType === RenderType.Summary && onAggregateRowRender && rowRef.current) {
-                const rowArgs: AggregateRowRenderEvent = {
+                const rowArgs: AggregateRowRenderEvent<T> = {
                     row: rowRef.current,
-                    rowData: row.data,
+                    data: row.data,
                     rowHeight: rowHeight
                 };
                 onAggregateRowRender(rowArgs);
@@ -205,25 +201,25 @@ const RowBase: NamedExoticComponent<IRowBase & RefAttributes<RowRef>> = memo(for
          */
         const processedChildren: JSX.Element[] = useMemo(() => {
 
-            const childrenArray: ReactElement<IColumnBase>[] = Children.toArray(children) as ReactElement<IColumnBase>[];
-            const cellOptions: ICell<IColumnBase>[] = [];
+            const childrenArray: ReactElement<IColumnBase<T>>[] = Children.toArray(children) as ReactElement<IColumnBase<T>>[];
+            const cellOptions: ICell<IColumnBase<T>>[] = [];
             const elements: JSX.Element[] = [];
 
             for (let index: number = 0; index < childrenArray.length; index++) {
-                const child: ReactElement<IColumnBase> = childrenArray[index as number];
+                const child: ReactElement<IColumnBase<T>> = childrenArray[index as number];
 
                 // Determine cell class based on row type and position
                 const cellClassName: string = rowType === RenderType.Header
-                    ? `${CSS_HEADER_CELL}${child.props.allowSort && sortSettings?.enabled ? `${CSS_MOUSE_POINTER}` : `${CSS_DEFAULT_CURSOR}`}${rowHeight && !isNullOrUndefined(child.props.field) ? `${CSS_SORT_ICON}` : ''}${index === childrenArray.length - 1 ? ` ${CSS_LAST_CELL}` : ''}`
-                    : rowType === RenderType.Filter ? CSS_FILTER_CELL : rowType === RenderType.Summary ? `${CSS_SUMMARY_CELL} ${tableScrollerPadding && index === 0 ? CSS_SUMMARY_FIRST_CELL : tableScrollerPadding && index === childrenArray.length - 1 ? CSS_SUMMARY_LAST_CELL : ''}` : CSS_ROW_CELL;
+                    ? `${CSS_CELL}${child.props.allowSort && sortSettings?.enabled ? CSS_MOUSE_POINTER : CSS_DEFAULT_CURSOR}${rowHeight && !isNullOrUndefined(child.props.field) ? CSS_SORT_ICON : ''}`
+                    : CSS_CELL;
 
-                const cellType: CellType = rowType === RenderType.Header ? CellType.Header : rowType === RenderType.Filter ?
-                    CellType.Filter : rowType === RenderType.Summary ? CellType.Summary : CellType.Data;
+                const cellType: CellTypes = rowType === RenderType.Header ? CellTypes.Header : rowType === RenderType.Filter ?
+                    CellTypes.Filter : rowType === RenderType.Summary ? CellTypes.Summary : CellTypes.Data;
 
                 const colSpan: number = !child.props.field && child.props.headerText && (rowType === RenderType.Header &&
                     (child.props.columns && child.props.columns.length) || (child.props.children &&
-                        (child.props as { children: ReactElement<IColumnBase>[] }).children.length)) ? child.props.columns?.length ||
-                (child.props as { children: ReactElement<IColumnBase>[] }).children.length : 1;
+                        (child.props as { children: ReactElement<IColumnBase<T>>[] }).children.length)) ? child.props.columns?.length ||
+                (child.props as { children: ReactElement<IColumnBase<T>>[] }).children.length : 1;
                 const rowSpan: number = rowType !== RenderType.Header || (rowType === RenderType.Header &&
                     ((child.props.columns && child.props.columns.length) || child.props.children)) ? 1 :
                     headerRowDepth - row.index;
@@ -246,7 +242,7 @@ const RowBase: NamedExoticComponent<IRowBase & RefAttributes<RowRef>> = memo(for
                 };
 
                 // Create cell options object for getCells method
-                const cellOption: ICell<IColumnBase> = {
+                const cellOption: ICell<IColumnBase<T>> = {
                     visible: isVisible,
                     isDataCell: rowType !== RenderType.Header && rowType !== RenderType.Filter, // true for data cells
                     isTemplate: rowType === RenderType.Header
@@ -256,7 +252,7 @@ const RowBase: NamedExoticComponent<IRowBase & RefAttributes<RowRef>> = memo(for
                     column: {
                         customAttributes: customAttributesWithSpan,
                         index,
-                        ...child.props as IColumnBase,
+                        ...child.props as IColumnBase<T>,
                         type: uiColumns ? uiColumns?.[index as number]?.type : columns?.[index as number]?.type
                     },
                     cellType,
@@ -267,15 +263,15 @@ const RowBase: NamedExoticComponent<IRowBase & RefAttributes<RowRef>> = memo(for
                     className: row?.uid === 'empty-row-uid' ? '' : `${cellClassName}${!isVisible ? ` ${CSS_CELL_HIDE}` : ''}`
                 };
                 if (rowType === RenderType.Summary) {
-                    const aggregateColumn: AggregateColumnProps = aggregateRow.columns
-                        .find((aggregate: AggregateColumnProps) => aggregate.columnName === child.props.field);
+                    const aggregateColumn: AggregateColumnProps<T> = aggregateRow.columns
+                        .find((aggregate: AggregateColumnProps<T>) => aggregate.columnName === child.props.field);
                     cellOption.isDataCell = aggregateColumn ? true : false;
                     cellOption.isTemplate = aggregateColumn && aggregateColumn.footerTemplate ? true : false;
                     cellOption.aggregateColumn = aggregateColumn || {};
                 }
 
                 // Build column props
-                const columnProps: IColumnBase = {
+                const columnProps: IColumnBase<T> = {
                     row: rowObject,
                     cell: cellOption
                 };
@@ -292,8 +288,8 @@ const RowBase: NamedExoticComponent<IRowBase & RefAttributes<RowRef>> = memo(for
                     );
                 } else {
                     elements.push(
-                        <ColumnBase
-                            key={`${child.props.field || 'col'}-${row?.index || 'header'}`}
+                        <ColumnBase<T>
+                            key={`${child.props.field || 'col'}-${row?.index || 'Header'}`}
                             {...columnProps}
                         />
                     );
@@ -315,7 +311,7 @@ const RowBase: NamedExoticComponent<IRowBase & RefAttributes<RowRef>> = memo(for
                     return rowTemplate;
                 }
                 else {
-                    return rowTemplate(rowObject.data);
+                    return createElement(rowTemplate, {...rowObject.data});
                 }
             }
             return null;
@@ -324,7 +320,7 @@ const RowBase: NamedExoticComponent<IRowBase & RefAttributes<RowRef>> = memo(for
         const customRowClass: string | undefined = useMemo(() => {
             if (rowType === RenderType.Content && rowObject?.uid !== 'empty-row-uid') {
                 return !isNullOrUndefined(rowClass) ? (typeof rowClass === 'function' ?
-                    rowClass({rowType: 'content', rowData: rowObject.data, rowIndex: rowObject.index}) : rowClass) : undefined;
+                    rowClass({rowType: RowType.Content, data: rowObject.data, rowIndex: rowObject.index}) : rowClass) : undefined;
             }
             return undefined;
         }, [rowClass, inlineEditForm, rowObject]);
@@ -332,14 +328,14 @@ const RowBase: NamedExoticComponent<IRowBase & RefAttributes<RowRef>> = memo(for
             if (isInitialBeforePaint.current) { return undefined; }
             if (rowType === RenderType.Content && !isInitialLoad && rowObject?.uid === 'empty-row-uid') {
                 return !isNullOrUndefined(rowClass) ?
-                    (typeof rowClass === 'function' ? rowClass({rowType: 'content', rowIndex: 0}) : rowClass) : undefined;
+                    (typeof rowClass === 'function' ? rowClass({rowType: RowType.Content, rowIndex: 0}) : rowClass) : undefined;
             }
             return undefined;
         }, [rowClass, isInitialLoad, rowObject, isInitialBeforePaint.current]);
         const customAggregateRowClass: string | undefined = useMemo(() => {
             if (isInitialBeforePaint.current) { return undefined; }
             return rowType === RenderType.Summary && !isNullOrUndefined(rowClass) ? (typeof rowClass === 'function' ?
-                rowClass({rowType: 'aggregate', rowData: rowObject.data, rowIndex: rowObject.index}) : rowClass) : undefined;
+                rowClass({rowType: RowType.Aggregate, data: rowObject.data, rowIndex: rowObject.index}) : rowClass) : undefined;
         }, [rowClass, rowObject, isInitialBeforePaint.current]);
         return (
             <>
@@ -362,12 +358,12 @@ const RowBase: NamedExoticComponent<IRowBase & RefAttributes<RowRef>> = memo(for
             </>
         );
     }
-));
+)) as <T>(props: IRowBase<T> & RefAttributes<RowRef>) => ReactElement | null;
 
 /**
  * Set display name for debugging purposes
  */
-RowBase.displayName = 'RowBase';
+(RowBase as NamedExoticComponent<IRowBase<unknown> & RefAttributes<RowRef>>).displayName = 'RowBase';
 
 /**
  * Export the RowBase component for use in other components

@@ -4,7 +4,7 @@ import { HeaderPanelRef, HeaderTableRef, IHeaderPanelBase } from '../types';
 import { useGridComputedProvider } from '../contexts';
 
 // CSS class constants following enterprise naming convention
-const CSS_HEADER_TABLE: string = 'sf-table';
+const CSS_HEADER_TABLE: string = 'sf-grid-table';
 
 /**
  * Default styles for header table to ensure consistent rendering
@@ -33,7 +33,7 @@ const HeaderPanelBase: ForwardRefExoticComponent<Partial<IHeaderPanelBase> & Ref
     memo(forwardRef<HeaderPanelRef, Partial<IHeaderPanelBase>>(
         (props: Partial<IHeaderPanelBase>, ref: RefObject<HeaderPanelRef>) => {
             const { panelAttributes, scrollContentAttributes } = props;
-            const { sortSettings, filterSettings, gridLines } = useGridComputedProvider();
+            const { filterSettings, gridLines } = useGridComputedProvider();
 
             // Refs for DOM elements and child components
             const headerPanelRef: RefObject<HTMLDivElement> = useRef<HTMLDivElement>(null);
@@ -53,16 +53,15 @@ const HeaderPanelBase: ForwardRefExoticComponent<Partial<IHeaderPanelBase> & Ref
                 ...(headerTableRef.current)
             }), [headerPanelRef.current, headerScrollRef.current, headerTableRef.current]);
 
-            const headerTableSort: string = sortSettings?.enabled || filterSettings?.enabled ? 'sf-sortfilter' : '';
-            const headerTableFilter: string = filterSettings?.enabled && gridLines === 'Default' ? 'sf-filterbartable' : '';
-            const headerRightBorder: string = !filterSettings?.enabled || (filterSettings.enabled && (gridLines === 'Vertical' || gridLines === 'None'))  ? ' sf-headerborder' : '';
+            const headerTableFilter: string = filterSettings?.enabled && gridLines === 'Default' ? 'sf-filter-bar-table' : '';
+            const headerRightBorder: string = !filterSettings?.enabled || (filterSettings.enabled && (gridLines === 'Vertical' || gridLines === 'None'))  ? ' sf-grid-header-border' : '';
             /**
              * Memoized header table component to prevent unnecessary re-renders
              */
             const headerTable: JSX.Element = useMemo(() => (
                 <HeaderTableBase
                     ref={headerTableRef}
-                    className={`${CSS_HEADER_TABLE} ${headerTableSort} ${headerTableFilter}`}
+                    className={`${CSS_HEADER_TABLE} ${headerTableFilter}`}
                     role="presentation"
                     style={DEFAULT_TABLE_STYLE}
                 />

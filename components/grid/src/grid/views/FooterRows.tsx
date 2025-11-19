@@ -9,7 +9,8 @@ import {
     memo,
     RefObject,
     JSX,
-    useEffect
+    useEffect,
+    ReactElement
 } from 'react';
 import {
     FooterRowsRef,
@@ -33,7 +34,7 @@ import { DateFormatOptions, extend, isNullOrUndefined, NumberFormatOptions } fro
 import { DataUtil } from '@syncfusion/react-data';
 
 // CSS class constants following enterprise naming convention
-const CSS_SUMMARY_ROW: string = 'sf-summaryrow';
+const CSS_SUMMARY_ROW: string = 'sf-grid-summary-row';
 
 /**
  * FooterRowsBase component renders the footer rows within the table footer section
@@ -44,17 +45,17 @@ const CSS_SUMMARY_ROW: string = 'sf-summaryrow';
  * @param {RefObject<FooterRowsRef>} ref - Forwarded ref to expose internal elements and methods
  * @returns {JSX.Element} The rendered tfoot element with footer rows
  */
-const FooterRowsBase: ForwardRefExoticComponent<Partial<IFooterRowsBase> & RefAttributes<FooterRowsRef>> =
+const FooterRowsBase: (props: Partial<IFooterRowsBase> & RefAttributes<FooterRowsRef>) => ReactElement =
     memo(forwardRef<FooterRowsRef, Partial<IFooterRowsBase>>(
-        (props: Partial<IFooterRowsBase>, ref: RefObject<FooterRowsRef>) => {
+        <T, >(props: Partial<IFooterRowsBase>, ref: RefObject<FooterRowsRef>) => {
             const { tableScrollerPadding, ...rest } = props;
 
-            const { columnsDirective, responseData } = useGridMutableProvider();
-            const { aggregates, rowHeight, serviceLocator } = useGridComputedProvider();
+            const { columnsDirective, responseData } = useGridMutableProvider<T>();
+            const { aggregates, rowHeight, serviceLocator } = useGridComputedProvider<T>();
 
             // Refs for DOM elements and child components
             const footerSectionRef: RefObject<HTMLTableSectionElement> = useRef<HTMLTableSectionElement>(null);
-            const rowsObjectRef: RefObject<IRow<ColumnProps>[]> = useRef<IRow<ColumnProps>[]>([]);
+            const rowsObjectRef: RefObject<IRow<ColumnProps<T>>[]> = useRef<IRow<ColumnProps<T>>[]>([]);
 
             /**
              * Returns the collection of footer row elements
@@ -70,7 +71,7 @@ const FooterRowsBase: ForwardRefExoticComponent<Partial<IFooterRowsBase> & RefAt
              *
              * @returns {IRow<ColumnProps>[]} Array of row options objects with element references
              */
-            const getFooterRowsObject: () => IRow<ColumnProps>[] = useCallback(() => rowsObjectRef.current, [rowsObjectRef.current]);
+            const getFooterRowsObject: () => IRow<ColumnProps<T>>[] = useCallback(() => rowsObjectRef.current, [rowsObjectRef.current]);
 
             /**
              * Expose internal elements and methods through the forwarded ref
@@ -87,18 +88,19 @@ const FooterRowsBase: ForwardRefExoticComponent<Partial<IFooterRowsBase> & RefAt
              * @param {number} index - Row index
              * @param {HTMLTableRowElement} element - Row DOM element
              */
-            const storeRowRef: (index: number, element: HTMLTableRowElement, cellRef: ICell<ColumnProps>[]) => void =
-                useCallback((index: number, element: HTMLTableRowElement, cellRef: ICell<ColumnProps>[]) => {
-                    // Directly update the element reference in the row object
-                    rowsObjectRef.current[index as number].element = element;
-                    rowsObjectRef.current[index as number].cells = cellRef;
+            const storeRowRef: (index: number, element: HTMLTableRowElement, cellRef: ICell<ColumnProps<T>>[]) => void =
+                useCallback((index: number, element: HTMLTableRowElement, cellRef: ICell<ColumnProps<T>>[]) => {
+                    if (rowsObjectRef.current[index as number]) {
+                        rowsObjectRef.current[index as number].element = element;
+                        rowsObjectRef.current[index as number].cells = cellRef;
+                    }
                 }, []);
 
             const getData: () => AggregateRowProps[] = (): AggregateRowProps[] => {
                 const rows: AggregateRowProps[] = [];
                 const row: AggregateRowProps[] = aggregates.slice();
                 for (let i: number = 0; i < row.length; i++) {
-                    const columns: AggregateColumnProps[] = row[parseInt(i.toString(), 10)].columns;
+                    const columns: AggregateColumnProps<T>[] = row[parseInt(i.toString(), 10)].columns;
                     if (columns && columns.length) {
                         rows.push({ columns: columns });
                     }
@@ -106,7 +108,7 @@ const FooterRowsBase: ForwardRefExoticComponent<Partial<IFooterRowsBase> & RefAt
                 return rows;
             };
 
-            const getFormatter: (column: AggregateColumnProps) => Function = (column: AggregateColumnProps): Function => {
+            const getFormatter: (column: AggregateColumnProps<T>) => Function = (column: AggregateColumnProps<T>): Function => {
                 const valueFormatter: IValueFormatter = serviceLocator?.getService<IValueFormatter>('valueFormatter');
                 if (typeof (column.format) === 'object') {
                     return valueFormatter.getFormatFunction(extend({}, column.format as DateFormatOptions));
@@ -116,10 +118,10 @@ const FooterRowsBase: ForwardRefExoticComponent<Partial<IFooterRowsBase> & RefAt
                 return (a: Object) => a;
             };
 
-            const calculateAggregate: (type: AggregateType | string, data: Object, column?: AggregateColumnProps) => Object =
-                (type: AggregateType | string, data: Object, column?: AggregateColumnProps): Object => {
+            const calculateAggregate: (type: AggregateType | string, data: Object, column?: AggregateColumnProps<T>) => Object =
+                (type: AggregateType | string, data: Object, column?: AggregateColumnProps<T>): Object => {
                     if (type === 'Custom') {
-                        const temp: CustomSummaryType = column.customAggregate as CustomSummaryType;
+                        const temp: CustomSummaryType<T> = column.customAggregate as CustomSummaryType<T>;
                         if (typeof temp === 'string') {
                             return temp;
                         }
@@ -128,8 +130,8 @@ const FooterRowsBase: ForwardRefExoticComponent<Partial<IFooterRowsBase> & RefAt
                     return 'result' in data ? DataUtil.aggregates[type.toLowerCase()](data.result, column.field) : null;
                 };
 
-            const setTemplate: (column: AggregateColumnProps, data: Object, single: Object) => Object =
-                (column: AggregateColumnProps, data: Object, single: Object): Object => {
+            const setTemplate: (column: AggregateColumnProps<T>, data: SummaryData, single: T) => T =
+                (column: AggregateColumnProps<T>, data: SummaryData, single: T): T => {
                     let types: AggregateType[] = column.type as AggregateType[];
                     const formatFn: Function = getFormatter(column);
                     const group: Group = data;
@@ -149,12 +151,12 @@ const FooterRowsBase: ForwardRefExoticComponent<Partial<IFooterRowsBase> & RefAt
                     return single;
                 };
 
-            const buildSummaryData: (args: SummaryData) => Object[] = (args: SummaryData): Object[] => {
-                const dummy: Object[] = [];
+            const buildSummaryData: (args: SummaryData) => T[] = (args: SummaryData): T[] => {
+                const dummy: T[] = [];
                 const summaryRows: AggregateRowProps[] = getData();
                 for (let i: number = 0; i < summaryRows.length; i++) {
-                    let single: Object = {};
-                    const column: AggregateColumnProps[] = summaryRows[parseInt(i.toString(), 10)].columns;
+                    let single: T = {} as T;
+                    const column: AggregateColumnProps<T>[] = summaryRows[parseInt(i.toString(), 10)].columns;
                     for (let j: number = 0; j < column.length; j++) {
                         single = setTemplate(column[parseInt(j.toString(), 10)], args, single);
                     }
@@ -168,14 +170,14 @@ const FooterRowsBase: ForwardRefExoticComponent<Partial<IFooterRowsBase> & RefAt
              */
             const footerRowContent: JSX.Element[] | null = useMemo(() => {
                 const rows: JSX.Element[] = [];
-                const rowOptions: IRow<ColumnProps>[] = [];
+                const rowOptions: IRow<ColumnProps<T>>[] = [];
                 const summaries: AggregateRowProps[] = getData();
-                const data: Object[] = buildSummaryData(responseData);
+                const data: T[] = buildSummaryData(responseData);
                 // Generate footer rows based on aggregates
                 for (let rowIndex: number = 0; rowIndex < summaries.length; rowIndex++) {
-                    const options: IRow<ColumnProps> = {};
+                    const options: IRow<ColumnProps<T>> = {};
                     options.uid = getUid('grid-row');
-                    options.data = data[parseInt(rowIndex.toString(), 10)];
+                    options.data = data[parseInt(rowIndex.toString(), 10)] as T;
                     options.index = rowIndex;
                     options.isAggregateRow = true;
 
@@ -183,8 +185,8 @@ const FooterRowsBase: ForwardRefExoticComponent<Partial<IFooterRowsBase> & RefAt
                     // Store the options object for getRowsObject
                     rowOptions.push({ ...options });
                     rows.push(
-                        <RowBase
-                            ref={(element: RowRef) => {
+                        <RowBase<T>
+                            ref={(element: RowRef<T>) => {
                                 if (element?.rowRef?.current) {
                                     storeRowRef(rowIndex, element.rowRef.current, element.getCells());
                                 }
@@ -224,12 +226,12 @@ const FooterRowsBase: ForwardRefExoticComponent<Partial<IFooterRowsBase> & RefAt
                 </tfoot>
             );
         }
-    ));
+    )) as (props: Partial<IFooterRowsBase> & RefAttributes<FooterRowsRef>) => ReactElement;
 
 /**
  * Set display name for debugging purposes
  */
-FooterRowsBase.displayName = 'FooterRowsBase';
+(FooterRowsBase as ForwardRefExoticComponent<Partial<IFooterRowsBase> & RefAttributes<FooterRowsRef>>).displayName = 'FooterRowsBase';
 
 /**
  * Export the FooterRowsBase component for use in other components

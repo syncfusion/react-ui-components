@@ -3,7 +3,7 @@ import { GridActionEvent } from '../types/grid.interfaces';
 import { useSearch } from '../hooks';
 
 /**
- * Configures search functionality for the Grid component.
+ * Configures search functionality for the Data Grid component.
  * Defines settings for enabling search, specifying search fields, and controlling search behavior.
  * Manages how data is filtered based on user search input across grid columns.
  */
@@ -65,7 +65,7 @@ export interface SearchSettings {
 
 
 /**
- * Represents the event triggered when a search operation completes in the Grid.
+ * Represents the event triggered when a search operation completes in the Data Grid.
  * Provides details about the completed search, including the applied search string.
  * Used to handle post-search logic or UI updates.
  */
@@ -91,7 +91,7 @@ export interface SearchEvent extends GridActionEvent {
 }
 
 /**
- * Defines the type for the search strategy module in the Grid.
+ * Defines the type for the search strategy module in the Data Grid.
  * Represents the return type of the useSearch hook for managing search operations.
  * Used internally to encapsulate search functionality.
  *
@@ -100,7 +100,7 @@ export interface SearchEvent extends GridActionEvent {
 export type searchModule = ReturnType<typeof useSearch>;
 
 /**
- * Defines the API for managing search operations in the Grid.
+ * Defines the API for managing search operations in the Data Grid.
  * Provides methods and properties to control search behavior, state, and updates.
  * Used internally to handle search interactions and configuration.
  *

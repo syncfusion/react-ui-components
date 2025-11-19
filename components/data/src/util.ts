@@ -2,7 +2,7 @@
 /* eslint-disable security/detect-object-injection */
 import { isNullOrUndefined } from '@syncfusion/react-base';
 import { DataManager } from './manager';
-import { Query, Predicate } from './query';
+import { Query, Predicate, ValueType } from './query';
 import { ReturnType } from './adaptors';
 const consts: { [key: string]: string } = { GroupGuid: '{271bbba0-1ee7}' };
 
@@ -149,11 +149,11 @@ export class DataUtil {
         if (pattern.indexOf('%') !== -1) {
             if (pattern.charAt(0) === '%' && pattern.lastIndexOf('%') < 2) {
                 pattern = pattern.substring(1, pattern.length);
-                return DataUtil.startsWith(DataUtil.toLowerCase(input), DataUtil.toLowerCase(pattern));
+                return DataUtil.endsWith(DataUtil.toLowerCase(input), DataUtil.toLowerCase(pattern));
             }
             else if (pattern.charAt(pattern.length - 1) === '%' && pattern.indexOf('%') > pattern.length - 3) {
                 pattern = pattern.substring(0, pattern.length - 1);
-                return DataUtil.endsWith(DataUtil.toLowerCase(input), DataUtil.toLowerCase(pattern));
+                return DataUtil.startsWith(DataUtil.toLowerCase(input), DataUtil.toLowerCase(pattern));
             }
             else if (pattern.lastIndexOf('%') !== pattern.indexOf('%') && pattern.lastIndexOf('%') > pattern.indexOf('%') + 1) {
                 pattern = pattern.substring(pattern.indexOf('%') + 1, pattern.lastIndexOf('%'));
@@ -661,7 +661,7 @@ export class DataUtil {
     private static getVal(array: Object[], index: number, field?: string): Object {
         return field ? this.getObject(field, array[index]) : array[index];
     }
-    private static toLowerCase(val: string | number | boolean | Date): string {
+    private static toLowerCase(val: ValueType): string {
         if (isNullOrUndefined(val)) return '';
         if (typeof val === 'string') return val.toLowerCase();
         if (val instanceof Date) return val.toString().toLowerCase();
@@ -2408,7 +2408,7 @@ export class DataUtil {
             const where: Predicate[] = DataUtil.parse.parseJson(dm.where);
             where.filter((pred: Predicate) => {
                 if (isNullOrUndefined(pred.condition)) {
-                    query.where(pred.field, pred.operator, (pred.value as string | number | boolean | Date), pred.ignoreCase,
+                    query.where(pred.field, pred.operator, (pred.value as ValueType), pred.ignoreCase,
                                 pred.ignoreAccent);
                 } else {
                     let predicateList: Predicate[] = [];
@@ -2439,8 +2439,8 @@ export class DataUtil {
             dm.aggregates.filter((e: { type: string, field: string }) => query.aggregate(e.type, e.field));
         }
 
-        if (dm.sorted) {
-            dm.sorted.filter((e: { name: string, direction: string }) => query.sortBy(e.name, e.direction));
+        if (dm.sort) {
+            dm.sort.filter((e: { field: string, direction: string }) => query.sortBy(e.field, e.direction));
         }
         if (dm.skip) {
             query.skip(dm.skip);
@@ -2482,7 +2482,7 @@ export class DataUtil {
 export interface GraphQLParams {
     skip?: number;
     take?: number;
-    sorted?: {name: string, direction: string}[];
+    sort?: {field: string, direction: string}[];
     group?: string[];
     table?: string;
     select?: string[];

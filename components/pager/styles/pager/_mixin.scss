@@ -1,0 +1,16 @@
+@mixin fontsize-padding-styles($fontsize, $padding) {
+  font-size: $fontsize;
+  padding: $padding;
+}
+
+@mixin textalign-width-styles($align, $width) {
+  text-align: $align;
+  width: $width;
+}
+
+@mixin color-styles($color, $background: null) {
+  @if $background {
+    background: $background;
+  }
+  color: $color;
+}

@@ -1,14 +1,86 @@
-import { ReactNode, ReactElement } from 'react';
+import { ReactNode, ReactElement, ComponentType } from 'react';
 import { AggregateType } from './enum';
 import { DateFormatOptions, NumberFormatOptions } from '@syncfusion/react-base';
-import { ColumnProps } from './column.interfaces';
+import { CellClassProps } from './column.interfaces';
+import { Query } from '@syncfusion/react-data';
+
+/**
+ * Represents the structure of aggregate result values returned by the Data Grid component.
+ * Includes raw numeric values for computation and formatted display values for rendering.
+ *
+ * Raw values are keyed by `field - type` (e.g., `Freight - sum` for summation on the "Freight" field).
+ * Formatted values are keyed by `AggregateType` enum members (e.g., `Sum` for rendering summation results).
+ *
+ * Used in `footerTemplate` rendering and custom aggregation logic.
+ *
+ * @template T - Data model used for grid aggregate columns.
+ *
+ * @example
+ * ```ts
+ * {
+ *   "Freight - sum": 1234.56,
+ *   "Salary - max": 98000,
+ *   Sum: "$1,234.56",
+ *   Max: "$98,000"
+ * }
+ * ```
+ */
+export type AggregateData<T = unknown> = {
+    [key in `${Extract<keyof T, string>} - ${Lowercase<AggregateType>}`]?: string | number;
+} & {
+    [type in AggregateType]?: string;
+};
+
+/**
+ * Represents the input structure for the `customAggregate` function used in data grid aggregation.
+ * Supports custom logic for computing aggregate values over a dataset.
+ *
+ * @template T - Data model used for aggregation.
+ *
+ * @example
+ * ```ts
+ * {
+ *   query: { ... },
+ *   count: 25,
+ *   aggregates: {
+ *     "Salary - max": 98000,
+ *     Max: "$98,000"
+ *   },
+ *   result: [{ name: "John", salary: 98000 }, ...]
+ * }
+ * ```
+ */
+export interface CustomAggregateData<T = unknown> {
+    /**
+     * Metadata for the current aggregation context.
+     * Includes filters, sort orders, or other query parameters.
+     */
+    query?: Query;
+
+    /**
+     * Total number of records considered for aggregation.
+     */
+    count?: number;
+
+    /**
+     * Pre-computed aggregated values keyed by `field - type` format.
+     * Structure mirrors `AggregateData<T>`, including raw and formatted results.
+     */
+    aggregates?: AggregateData<T>;
+
+    /**
+     * Subset of records matching the `query` criteria.
+     * Used as input for custom aggregate computation.
+     */
+    result?: T[];
+}
 
 /**
  * Defines the configuration properties for aggregate columns in grid component.
  * Specifies how data calculations are performed and displayed in summary rows.
  * Controls aggregation behavior including calculation types, display formatting, and custom functions.
  */
-export interface AggregateColumnProps {
+export interface AggregateColumnProps<T = unknown> {
     /**
      * Defines the `field` name from the data source for performing aggregate calculations.
      * Specifies which column `field` contains the data to be processed for summary operations.
@@ -67,7 +139,7 @@ export interface AggregateColumnProps {
      * />
      * ```
      */
-    footerTemplate?: string | ReactElement | ((props?: Object) => ReactElement | string);
+    footerTemplate?: ComponentType<AggregateData<T>> | ReactElement | string;
 
     /**
      * Defines the format string applied to calculated aggregate values before display.
@@ -99,70 +171,47 @@ export interface AggregateColumnProps {
      * />
      * ```
      */
-    customAggregate?: string | ((data: Object[] | Object, column: AggregateColumnProps) => Object);
+    customAggregate?: string | ((data: CustomAggregateData<T>[] | CustomAggregateData<T>, column: AggregateColumnProps) => Object);
     /**
-     * Defines the CSS class name  for styling aggregate cells based on data context.
-     * Specifies custom styling rules that are applied to individual aggregate cells during rendering.
-     * Enables conditional styling based on column details, row data, and aggregate values.
+     * Applies a CSS class to individual aggregate cells either globally or conditionally.
+     * Accepts a static class name or a callback function that returns a class name based on cell context.
      *
-     * @param props - Contains column configuration, complete aggregate row data, and row index information.
+     * The callback receives a `CellClassProps` object with the following properties:
+     * * `cellType` – Identifies the structural role of the cell: `Header`, `Content`, or `Aggregate`. Useful for styling header, data, or summary cells.
+     * * `column` – The column configuration object associated with the aggregate cell.
+     * * `data` – The full data object for the aggregate row, enabling conditional styling based on field values.
+     * * `rowIndex` – The zero-based index of the row.
+     *
+     * @param props - Optional event payload containing cell type, column configuration, row data, and row index.
      * @returns A CSS class name string to apply to the aggregate cell.
      *
      * @default -
+     *
      * @example
-     * ```tsx
      * const GridComponent = () => {
-     *   const handleAggregateCellClass = (args: AggregateCellClassEvent) => {
-     *     return args.column.field === 'Total' ? 'total-cell' : '';
+     *   const handleAggregateCellClass = (props?: CellClassProps): string => {
+     *     if (props?.cellType === CellType.Aggregate && props.column.field === 'Total') {
+     *       return 'total-cell';
+     *     }
+     *     return '';
      *   };
      *
      *   return (
      *     <Grid dataSource={data}>
      *       <Aggregates>
      *         <AggregateRow>
-     *           <AggregateColumn field='Total' type={['Sum']} aggregateCellClass={handleAggregateCellClass}/>
+     *           <AggregateColumn
+     *             field="Total"
+     *             type={['Sum']}
+     *             cellClass={handleAggregateCellClass}
+     *           />
      *         </AggregateRow>
      *       </Aggregates>
      *     </Grid>
      *   );
      * };
-     * ```
      */
-    aggregateCellClass?: string | ((props?: AggregateCellClassEvent) => string);
-}
-
-/**
- * Defines the event interface for applying custom CSS classes to aggregate cells.
- * Provides comprehensive context information including column details, row data, and positioning details.
- * Enables conditional styling of aggregate cells based on calculated values and column properties.
- */
-export interface AggregateCellClassEvent {
-    /**
-     * Defines the column configuration object containing properties.
-     * Specifies information about the target aggregate column including field mapping and display settings.
-     * Contains essential details for identifying which column is being processed for styling operations.
-     *
-     * @defaut -
-     */
-    column: ColumnProps;
-
-    /**
-     * Defines the complete data object representing the entire aggregate row being processed.
-     * Contains all calculated aggregate values and summary information for the current row.
-     * Provides access to computed results for implementing conditional styling logic.
-     *
-     * @defaut -
-     */
-    rowData: Object;
-
-    /**
-     * Defines the numeric index indicating the position of the aggregate row within the grid structure.
-     * Specifies whether the row represents a footer summary, group summary, or other aggregate row type.
-     * Enables position-specific styling rules and visual hierarchy implementation.
-     *
-     * @defaut -
-     */
-    rowIndex: number;
+    cellClass?: string | ((props?: CellClassProps<T>) => string);
 }
 
 /**
@@ -185,7 +234,7 @@ export interface AggregateRowProps {
      * Specifies React components or nodes for custom rendering of aggregate row content.
      * Enables advanced customization of how aggregate information is presented within the row.
      *
-     * @defaut -
+     * @default -
      * @private
      */
     children?: ReactNode;
@@ -198,7 +247,7 @@ export interface AggregateRowProps {
  *
  * @private
  */
-export interface AggregateCellRenderEvent {
+export interface AggregateCellRenderEvent<T = unknown> {
     /**
      * Defines the aggregate row data object containing all calculated summary values.
      * Specifies the complete set of aggregated information associated with the current cell.
@@ -206,7 +255,7 @@ export interface AggregateCellRenderEvent {
      *
      * @default {}
      */
-    rowData: Object;
+    data: T;
     /**
      * Defines the DOM element representing the aggregate cell being rendered.
      * Specifies the actual HTML element that will display the aggregate value.
@@ -231,7 +280,7 @@ export interface AggregateCellRenderEvent {
  *
  * @private
  */
-export interface AggregateRowRenderEvent {
+export interface AggregateRowRenderEvent<T = unknown> {
     /**
      * Defines the complete row data object containing all aggregate calculations for the current row.
      * Specifies the full set of summary values and calculated results associated with the row.
@@ -239,7 +288,7 @@ export interface AggregateRowRenderEvent {
      *
      * @default {}
      */
-    rowData: Object;
+    data: T;
     /**
      * Defines the DOM element representing the aggregate row being rendered in the grid.
      * Specifies the actual HTML element that will contain all aggregate cells within the row.
@@ -265,4 +314,4 @@ export interface AggregateRowRenderEvent {
  *
  * @private
  */
-export type CustomSummaryType = (data: Object[] | Object, column: AggregateColumnProps) => Object;
+export type CustomSummaryType<T> = (data: CustomAggregateData<T>[] | CustomAggregateData<T>, column: AggregateColumnProps<T>) => Object;

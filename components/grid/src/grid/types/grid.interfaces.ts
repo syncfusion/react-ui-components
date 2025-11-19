@@ -1,15 +1,15 @@
-import { HTMLAttributes, ReactElement, ReactNode } from 'react';
-import { DataManager, DataResult, Query, ReturnType as DataReturnType } from '@syncfusion/react-data';
+import { ComponentType, HTMLAttributes, ReactElement, ReactNode } from 'react';
+import { DataManager, DataResult, Query, ReturnType as DataReturnType, Aggregates } from '@syncfusion/react-data';
 import { IL10n } from '@syncfusion/react-base';
 import { HeaderCellRenderEvent, CellRenderEvent, RowRenderEvent, ServiceLocator } from '../types/interfaces';
-import { GridLine, SortDirection, WrapMode, Action, ClipMode, ValueType } from './index';
+import { GridLine, SortDirection, WrapMode, Action, ClipMode, ValueType, RowType, ToolbarItems } from './index';
 import { FilterSettings, FilterEvent } from '../types/filter.interfaces';
 import { ColumnProps } from '../types/column.interfaces';
 import { CellFocusEvent } from '../types/focus.interfaces';
 import { EditSettings, FormRenderEvent, RowEditEvent, DeleteEvent,
-    RowAddEvent, SaveEvent, CancelFormEvent } from '../types/edit.interfaces';
+    RowAddEvent, SaveEvent, FormCancelEvent } from '../types/edit.interfaces';
 import { AggregateCellRenderEvent, AggregateRowRenderEvent, AggregateRowProps } from '../types/aggregate.interfaces';
-import { ToolbarClickEvent, ToolbarItemConfig } from '../types/toolbar.interfaces';
+import { ToolbarClickEvent, ToolbarItemProps } from '../types/toolbar.interfaces';
 import { RenderRef, MutableGridBase, DataChangeRequestEvent, DataRequestEvent, IRowBase, IValueFormatter } from '../types/interfaces';
 import { RowSelectEvent, RowSelectingEvent, SelectionSettings } from '../types/selection.interfaces';
 import { PageEvent, PageSettings } from '../types/page.interfaces';
@@ -20,7 +20,7 @@ import { SearchEvent, SearchSettings } from '../types/search.interfaces';
  * Represents information about a specific row and cell in the grid.
  * Used for identifying row/cell context during events and operations.
  */
-export interface RowInfo {
+export interface RowInfo<T = unknown> {
     /**
      * Represents the element of a cell within a grid row.
      *
@@ -64,34 +64,16 @@ export interface RowInfo {
      *
      * @default null
      */
-    rowData?: Object;
+    data?: T;
 
     /**
      * Provides configuration for the column associated with the cell.
      *
-     * Such as column name or formatting rules.
+     * Such as column name, formatting rules and more.
      *
      * @default null
      */
     column?: ColumnProps;
-}
-
-/**
- * Defines the structure of the error event triggered during grid operations.
- *
- * Provides structured error information for handling failures that occur during grid actions,
- * supporting consistent reporting and resolution workflows in component logic.
- */
-export interface GridErrorEvent {
-    /**
-     * Represents the error instance containing details about the failure.
-     *
-     * Includes the error message and metadata required for centralized error handling,
-     * logging, and operational diagnostics within grid-based components.
-     *
-     * @default null
-     */
-    error: Error;
 }
 
 /**
@@ -100,7 +82,7 @@ export interface GridErrorEvent {
  *
  * @private
  */
-export interface GridRef extends Omit<RenderRef, 'refresh'>, IGrid, MutableGridBase {
+export interface GridRef<T = unknown> extends Omit<RenderRef<T>, 'refresh'>, IGrid<T>, MutableGridBase<T> {
     /**
      * Reference to the grid's root DOM element.
      *
@@ -113,7 +95,7 @@ export interface GridRef extends Omit<RenderRef, 'refresh'>, IGrid, MutableGridB
      *
      * @default []
      */
-    currentViewData?: Object[];
+    currentViewData?: T[];
 
     /**
      * Defines the selected row indexes.
@@ -141,18 +123,19 @@ export interface GridRef extends Omit<RenderRef, 'refresh'>, IGrid, MutableGridB
      *
      * @default null
      */
-    editData?: Record<string, ValueType | null>;
+    editData?: T | null;
 }
 
 /**
  * @private
  */
-export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children' | 'onError'> {
+export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivElement>, 'children' | 'onError'> {
     /**
      * Specifies a unique identifier for the grid component.
      * Provides a distinct ID for the grid instance, enabling targeted interactions, styling, or accessibility features.
      * Used to differentiate multiple grid instances within the same application or DOM.
      *
+     * @default React.useId()
      * @example
      * ```tsx
      * <Grid
@@ -196,7 +179,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * };
      * ```
      */
-    dataSource?: Object[] | DataManager | DataResult;
+    dataSource?: T[] | DataManager | DataResult;
 
     /**
      * Defines the columns to be displayed in the grid.
@@ -317,7 +300,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
     enableHover?: boolean;
 
     /**
-     * Controls whether keyboard navigation is enabled for the Grid.
+     * Controls whether keyboard navigation is enabled for the Data Grid.
      *
      * By default, navigation and interaction with grid elements can be performed using keyboard shortcuts and arrow keys.
      * When set to false, the grid's default focus navigation behavior is disable
@@ -346,13 +329,13 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
     clipMode?: ClipMode | string;
 
     /**
-     * Determines whether the sf-altrow CSS class is added to alternate rows in the Grid.
+     * Determines whether the `sf-alt-row` CSS class is added to alternate rows in the Data Grid.
      *
-     * When set to true, the grid adds the sf-altrow class to alternate row elements.
+     * When set to true, the grid adds the `sf-alt-row` class to alternate row elements.
      * This supports alternating row styles, which can improve readability in data-dense layouts.
      * The grid does not apply any default styling for this class. Styling must be defined externally.
      *
-     * When set to false, the grid does not add the sf-altrow class to any row.
+     * When set to false, the grid does not add the `sf-alt-row` class to any row.
      *
      * @default true
      *
@@ -365,7 +348,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * />
      *
      * // External CSS
-     * .sf-altrow {
+     * .sf-alt-row {
      *   background-color: #f5f5f5;
      * }
      * ```
@@ -392,10 +375,10 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
     enableRtl?: boolean;
 
     /**
-     * Configures the grid's selection settings, determines whether single or multiple selections are allowed.
+     * Configures the grid's selection settings, determines whether `Single` or `Multiple` selections are allowed.
      * Used to customize the selection experience for user interactions.
      *
-     * @default { mode: 'Single', enableToggle: true }
+     * @default { enabled: true, mode: 'Single', enableToggle: true }
      *
      * @example
      * ```tsx
@@ -416,7 +399,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * Specifies the sorting configuration for the grid, includes options to enable/disable sorting and controlling how data is ordered.
      * Used to customize sorting behavior for data presentation and user interactions.
      *
-     * @default { columns: [] }
+     * @default { columns: [], allowUnsort: true, enabled: false, mode: 'Multiple' }
      *
      * @example
      * ```tsx
@@ -441,7 +424,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * Includes options to enable/disable filtering, set the filter UI type, define custom operators, and configure case or accent sensitivity.
      * Used to tailor the filtering experience to match application requirements and data types.
      *
-     * @default -
+     * @default { enabled: false, columns: [], type: 'FilterBar', mode: 'Immediate', immediateModeDelay: 1500, ignoreAccent: false, operators: null, caseSensitive: false }
      *
      * @example
      * ```tsx
@@ -464,7 +447,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * Defines settings for enabling the search bar, specifying searchable fields, initial search terms, operators, and case/accent sensitivity.
      * Used to customize the search experience for filtering grid data.
      *
-     * @default { ignoreCase: true, fields: [] }
+     * @default { enabled: false, fields: [], value: undefined, operator: 'contains', caseSensitive: true, ignoreAccent: false }
      *
      * @example
      * ```tsx
@@ -474,7 +457,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      *   searchSettings={{
      *     enabled: true,
      *     fields: ['name', 'role'],
-     *     ignoreCase: true,
+     *     caseSensitive: true,
      *     operator: 'contains',
      *     key: 'dev'
      *   }}
@@ -488,7 +471,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * Includes options to enable/disable pagination, set the number of records per page, define the number of navigation links, and select the initial page.
      * Used to tailor the pagination UI and behavior for efficient data handling.
      *
-     * @default { currentPage: 1, pageSize: 12, pageCount: 8 }
+     * @default { enabled: false, currentPage: 1, pageSize: 12, pageCount: 8 }
      *
      * @example
      * ```tsx
@@ -549,7 +532,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * Defines the wrap mode to determine which grid sections (header, content, or both) apply text wrapping.
      * Used to customize text display for readability and layout optimization.
      *
-     * @default { wrapMode: 'Both' }
+     * @default { enabled: false, wrapMode: 'Both' }
      *
      * @example
      * ```tsx
@@ -632,7 +615,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * Allows you to apply a predefined `Query` object to the data source, which can include filtering, sorting, paging, and other data operations.
      * This is especially useful when working with remote data sources or when you need complex data operations.
      *
-     * @default null
+     * @default new Query()
      *
      * @example
      * ```tsx
@@ -687,7 +670,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * };
      * ```
      */
-    emptyRecordTemplate?: string | ReactElement | Function;
+    emptyRecordTemplate?: ComponentType<void> | ReactElement | string;
 
     /**
      * Specifies a custom template for rendering rows in the grid.
@@ -719,7 +702,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * />
      * ```
      */
-    rowTemplate?: string | ReactElement | Function;
+    rowTemplate?: ComponentType<T> | ReactElement | string;
 
     /**
      * Configures summary rows with aggregate functions.
@@ -757,13 +740,13 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
     aggregates?: AggregateRowProps[];
 
     /**
-     * Configures the editing behavior of the Grid.
+     * Configures the editing behavior of the Data Grid.
      *
      * The editSettings property enables and controls editing functionality.
      * It defines which editing operations are permitted, such as adding, editing, and deleting rows,
      * and specifies the editing mode to be used.
      *
-     * @default null
+     * @default { allowAdd: false, allowEdit: false, allowDelete: false, mode: 'Normal', editOnDoubleClick: true, confirmOnEdit: true, confirmOnDelete: false, newRowPosition: 'Top' }
      *
      * @example
      * ```tsx
@@ -804,14 +787,16 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * />
      * ```
      */
-    toolbar?: (string | ToolbarItemConfig)[];
+    toolbar?: Array<(string | ToolbarItems | ToolbarItemProps)>;
 
     /**
-     * Specifies a CSS class to apply to each grid row during data binding or refresh.
+     * Applies a CSS class to each grid row either globally or conditionally.
+     * Accepts a static class name or a callback function that returns a class name based on row context.
      *
-     * Accepts either a static class name or a callback function that returns a class name
-     * based on the row's type, index, or associated data. This enables dynamic styling
-     * of rows such as headers, aggregates, or data rows.
+     * The callback receives a `RowClassProps` object with the following properties:
+     * * `rowType` – Identifies the structural role of the row: `Header`, `Content`, or `Aggregate`. Useful for styling header, data, or summary rows.
+     * * `rowIndex` – The zero-based index of the row.
+     * * `data` – The full data object for the row, enabling conditional styling based on field values.
      *
      * @param props - Optional event payload containing row type, row index, and complete row data.
      * @returns A CSS class name to apply to the row.
@@ -820,8 +805,10 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      *
      * @example
      * const GridComponent = () => {
-     *   const handleRowClass = (args?: RowClassEvent): string => {
-     *     return args?.rowType === 'aggregate' ? 'summary-row' : '';
+     *   const handleRowClass = (props?: RowClassProps): string => {
+     *     if (props?.rowType === RowType.Header) return 'Header-row';
+     *     if (props?.rowType === RowType.Aggregate) return 'summary-row';
+     *     return '';
      *   };
      *
      *   return (
@@ -832,7 +819,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      *   );
      * };
      */
-    rowClass?: string | ((props?: RowClassEvent) => string);
+    rowClass?: string | ((props?: RowClassProps<T>) => string);
 
     /**
      * Fires at the start of grid initialization before data processing.
@@ -873,7 +860,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @private
      * @event onDataLoadStart
      */
-    onDataLoadStart?: (args: DataLoadStartEvent | DataReturnType) => void;
+    onDataLoadStart?: (event: DataLoadStartEvent | DataReturnType) => void;
 
     /**
      * Fires after data is successfully bound to the grid.
@@ -934,7 +921,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @private
      * @event onHeaderCellRender
      */
-    onHeaderCellRender?: (args: HeaderCellRenderEvent) => void;
+    onHeaderCellRender?: (event: HeaderCellRenderEvent) => void;
 
     /**
      * Fires for each aggregate cell during grid rendering.
@@ -943,7 +930,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @private
      * @event onAggregateCellRender
      */
-    onAggregateCellRender?: (args: AggregateCellRenderEvent) => void;
+    onAggregateCellRender?: (event: AggregateCellRenderEvent<T>) => void;
 
     /**
      * Fires for each data cell during grid rendering.
@@ -952,7 +939,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @private
      * @event onCellRender
      */
-    onCellRender?: (args: CellRenderEvent) => void;
+    onCellRender?: (event: CellRenderEvent<T>) => void;
 
     /**
      * Fires for each row when bound with data.
@@ -961,7 +948,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @private
      * @event onRowRender
      */
-    onRowRender?: (args: RowRenderEvent) => void;
+    onRowRender?: (event: RowRenderEvent<T>) => void;
 
     /**
      * Fires for each aggregate row when bound with data.
@@ -970,7 +957,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @private
      * @event onAggregateRowRender
      */
-    onAggregateRowRender?: (args: AggregateRowRenderEvent) => void;
+    onAggregateRowRender?: (event: AggregateRowRenderEvent<T>) => void;
 
     /**
      * Fires when grid operations like sorting or filtering fail.
@@ -980,7 +967,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @example
      * ```tsx
      * const GridComponent = () => {
-     *   const handleActionFailure = (error: GridErrorEvent) => {
+     *   const handleActionFailure = (event: Error) => {
      *     // handle your action here
      *   };
      *
@@ -993,14 +980,14 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * };
      * ```
      */
-    onError?: (args: GridErrorEvent) => void;
+    onError?: (event: Error) => void;
 
     /**
      * Fires when grid refresh.
      *
      * @private
      */
-    onRefreshStart?: (args: Object) => void;
+    onRefreshStart?: (event: Object) => void;
 
     /**
      * Fired when the grid data is refreshed or updated.
@@ -1033,7 +1020,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * ```tsx
      * const GridComponent = () => {
      *   const [currentState, setCurrentState] = useState({});
-     *   const handleDataStateRequest = (args: DataRequestEvent) => {
+     *   const handleDataStateRequest = (event: DataRequestEvent) => {
      *     // handle your action here
      *   };
      *
@@ -1047,7 +1034,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * };
      * ```
      */
-    onDataRequest?: (args: DataRequestEvent) => void;
+    onDataRequest?: (event: DataRequestEvent) => void;
 
     /**
      * Fires when the grid's data source is changed.
@@ -1058,7 +1045,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * ```tsx
      * const GridComponent = () => {
      *   const [currentData, setCurrentData] = useState([]);
-     *   const handleDataChangeRequest = (args: DataChangeRequestEvent) => {
+     *   const handleDataChangeRequest = (event: DataChangeRequestEvent) => {
      *     // handle your action here
      *   };
      *
@@ -1072,7 +1059,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * };
      * ```
      */
-    onDataChangeRequest?: (args: DataChangeRequestEvent) => void;
+    onDataChangeRequest?: (event: DataChangeRequestEvent<T>) => void;
 
     /**
      * Fires when the grid component is destroyed.
@@ -1089,7 +1076,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @private
      * @event onFilterStart
      */
-    onFilterStart?: (args: FilterEvent) => void;
+    onFilterStart?: (event: FilterEvent) => void;
 
     /**
      * Fires after a filtering operation completes on the grid.
@@ -1099,7 +1086,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @example
      * ```tsx
      * const GridComponent = () => {
-     *   const handleFilterEnd = (args: FilterEvent) => {
+     *   const handleFilterEnd = (event: FilterEvent) => {
      *     // handle your action here
      *   };
      *
@@ -1113,7 +1100,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * };
      * ```
      */
-    onFilter?: (args: FilterEvent) => void;
+    onFilter?: (event: FilterEvent) => void;
 
     /**
      * Fires when a sorting operation begins on the grid.
@@ -1122,7 +1109,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @private
      * @event onSortStart
      */
-    onSortStart?: (args: SortEvent) => void;
+    onSortStart?: (event: SortEvent) => void;
 
     /**
      * Fires after a sorting operation completes on the grid.
@@ -1132,7 +1119,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @example
      * ```tsx
      * const GridComponent = () => {
-     *   const handleSortEnd = (args: SortEvent) => {
+     *   const handleSortEnd = (event: SortEvent) => {
      *     // handle your action here
      *   };
      *
@@ -1146,7 +1133,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * };
      * ```
      */
-    onSort?: (args: SortEvent) => void;
+    onSort?: (event: SortEvent) => void;
 
     /**
      * Fires when a searching operation begins on the grid.
@@ -1155,7 +1142,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @private
      * @event onSearchStart
      */
-    onSearchStart?: (args: SearchEvent) => void;
+    onSearchStart?: (event: SearchEvent) => void;
 
     /**
      * Fires after a searching operation completes on the grid.
@@ -1165,7 +1152,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @example
      * ```tsx
      * const GridComponent = () => {
-     *   const handleSearchEnd = (args: SearchEvent) => {
+     *   const handleSearchEnd = (event: SearchEvent) => {
      *     // handle your action here
      *   };
      *
@@ -1182,7 +1169,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * };
      * ```
      */
-    onSearch?: (args: SearchEvent) => void;
+    onSearch?: (event: SearchEvent) => void;
 
     /**
      * Fires when a grid row is clicked.
@@ -1192,7 +1179,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @example
      * ```tsx
      * const GridComponent = () => {
-     *   const handleRowDoubleClick = (args: RecordDoubleClickEvent) => {
+     *   const handleRowDoubleClick = (event: RecordDoubleClickEvent) => {
      *     // handle your action here
      *   };
      *
@@ -1207,7 +1194,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * };
      * ```
      */
-    onRowDoubleClick?: (args: RecordDoubleClickEvent) => void;
+    onRowDoubleClick?: (event: RecordDoubleClickEvent<T>) => void;
 
     /**
      * Fires when a toolbar item is clicked.
@@ -1217,7 +1204,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @example
      * ```tsx
      * const GridComponent = () => {
-     *   const handleToolbarClick = (args: ClickEventArgs) => {
+     *   const handleToolbarClick = (event: ClickEventArgs) => {
      *     // handle your action here
      *   };
      *
@@ -1233,7 +1220,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * };
      * ```
      */
-    onToolbarItemClick?: (args: ToolbarClickEvent) => void;
+    onToolbarItemClick?: (event: ToolbarClickEvent) => void;
 
     /**
      * Fires when a grid cell gains focus.
@@ -1243,7 +1230,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @example
      * ```tsx
      * const GridComponent = () => {
-     *   const handleCellFocused = (args: CellFocusEvent) => {
+     *   const handleCellFocused = (event: CellFocusEvent) => {
      *     // handle your action here
      *   };
      *
@@ -1256,7 +1243,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * };
      * ```
      */
-    onCellFocus?: (args: CellFocusEvent) => void;
+    onCellFocus?: (event: CellFocusEvent<T>) => void;
 
     /**
      * Fires when a grid cell is clicked.
@@ -1266,7 +1253,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @example
      * ```tsx
      * const GridComponent = () => {
-     *   const handleCellClick = (args: CellFocusEvent) => {
+     *   const handleCellClick = (event: CellFocusEvent) => {
      *     // handle your action here
      *   };
      *
@@ -1281,7 +1268,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * };
      * ```
      */
-    onCellClick?: (args: CellFocusEvent) => void;
+    onCellClick?: (event: CellFocusEvent<T>) => void;
 
     /**
      * Fires before a grid cell gains focus.
@@ -1290,7 +1277,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @private
      * @event onCellFocusStart
      */
-    onCellFocusStart?: (args: CellFocusEvent) => void;
+    onCellFocusStart?: (event: CellFocusEvent<T>) => void;
 
     /**
      * Fires before a row is selected.
@@ -1299,7 +1286,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @private
      * @event onRowSelecting
      */
-    onRowSelecting?: (args: RowSelectingEvent) => void;
+    onRowSelecting?: (event: RowSelectingEvent<T>) => void;
 
     /**
      * Fires after a row is successfully selected.
@@ -1309,7 +1296,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @example
      * ```tsx
      * const GridComponent = () => {
-     *   const handleRowSelected = (args: RowSelectEvent) => {
+     *   const handleRowSelected = (event: RowSelectEvent) => {
      *     // handle your action here
      *   };
      *
@@ -1324,7 +1311,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * };
      * ```
      */
-    onRowSelect?: (args: RowSelectEvent) => void;
+    onRowSelect?: (event: RowSelectEvent<T>) => void;
 
     /**
      * Fires before a row is deselected.
@@ -1333,7 +1320,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @private
      * @event onRowDeselecting
      */
-    onRowDeselecting?: (args: RowSelectingEvent) => void;
+    onRowDeselecting?: (event: RowSelectingEvent<T>) => void;
 
     /**
      * Fires after a row is successfully deselected.
@@ -1343,7 +1330,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @example
      * ```tsx
      * const GridComponent = () => {
-     *   const handleRowDeselected = (args: RowSelectEvent) => {
+     *   const handleRowDeselected = (event: RowSelectEvent) => {
      *     // handle your action here
      *   };
      *
@@ -1358,7 +1345,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * };
      * ```
      */
-    onRowDeselect?: (args: RowSelectEvent) => void;
+    onRowDeselect?: (event: RowSelectEvent<T>) => void;
 
     /**
      * Event triggered before the paging operation start.
@@ -1366,7 +1353,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @private
      * @event onPageChangeStart
      */
-    onPageChangeStart?: (args: PageEvent) => void;
+    onPageChangeStart?: (event: PageEvent) => void;
 
     /**
      * Event triggered after a paging operation is completed on the grid.
@@ -1375,7 +1362,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @example
      * ```tsx
      * const GridComponent = () => {
-     *   const handlePageChangeEnd = (args: PageEvent) => {
+     *   const handlePageChangeEnd = (event: PageEvent) => {
      *     // handle your action here
      *   };
      *
@@ -1390,7 +1377,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * };
      * ```
      */
-    onPageChange?: (args: PageEvent) => void;
+    onPageChange?: (event: PageEvent) => void;
 
     /**
      * Fires when editing begins on a grid record.
@@ -1400,7 +1387,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @example
      * ```tsx
      * const GridComponent = () => {
-     *   const handleRowEdit = (args: EditEventArgs) => {
+     *   const handleRowEdit = (event: EditEventArgs) => {
      *     // handle your action here
      *   };
      *
@@ -1415,7 +1402,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * };
      * ```
      */
-    onRowEditStart?: (args: RowEditEvent) => void;
+    onRowEditStart?: (event: RowEditEvent<T>) => void;
     /**
      * Fires when the process of adding a new row starts.
      *
@@ -1423,7 +1410,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @example
      * ```tsx
      * const GridComponent = () => {
-     *   const handleRowAdd = (args: RowAddEvent) => {
+     *   const handleRowAdd = (event: RowAddEvent) => {
      *     // handle your action here
      *   };
      *
@@ -1438,7 +1425,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * };
      * ```
      */
-    onRowAddStart?: (args: RowAddEvent) => void;
+    onRowAddStart?: (event: RowAddEvent<T>) => void;
     /**
      * Fires when the edit or add form is fully loaded and ready for user input.
      *
@@ -1446,7 +1433,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @example
      * ```tsx
      * const GridComponent = () => {
-     *   const handleFormReady = (args: FormRenderEvent) => {
+     *   const handleFormReady = (event: FormRenderEvent) => {
      *     // handle your action here
      *   };
      *
@@ -1461,7 +1448,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * };
      * ```
      */
-    onFormRender?: (args: FormRenderEvent) => void;
+    onFormRender?: (event: FormRenderEvent<T>) => void;
     /**
      * Fires when a create, update, or delete operation is started.
      *
@@ -1469,7 +1456,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @example
      * ```tsx
      * const GridComponent = () => {
-     *   const handleDataChangeStart = (args: SaveEvent | DeleteEvent) => {
+     *   const handleDataChangeStart = (event: SaveEvent | DeleteEvent) => {
      *     // handle your action here
      *   };
      *
@@ -1484,7 +1471,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * };
      * ```
      */
-    onDataChangeStart?: (args: SaveEvent | DeleteEvent) => void;
+    onDataChangeStart?: (event: SaveEvent<T> | DeleteEvent<T>) => void;
     /**
      * Fires when a create, update, or delete operation is completed.
      *
@@ -1492,7 +1479,7 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * @example
      * ```tsx
      * const GridComponent = () => {
-     *   const handleDataChangeComplete = (args: SaveEvent | DeleteEvent) => {
+     *   const handleDataChangeComplete = (event: SaveEvent | DeleteEvent) => {
      *     // handle your action here
      *   };
      *
@@ -1507,15 +1494,15 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * };
      * ```
      */
-    onDataChangeComplete?: (args: SaveEvent | DeleteEvent) => void;
+    onDataChangeComplete?: (event: SaveEvent<T> | DeleteEvent<T>) => void;
     /**
-     * Fires when a CRUD operation is canceled.
+     * Fires when a CRUD operation is cancelled.
      *
      * @event onDataChangeCancel
      * @example
      * ```tsx
      * const GridComponent = () => {
-     *   const handleDataChangeCancel = (args: CancelFormEvent) => {
+     *   const handleDataChangeCancel = (event: FormCancelEvent) => {
      *     // handle your action here
      *   };
      *
@@ -1530,21 +1517,21 @@ export interface GridProps extends Omit<HTMLAttributes<HTMLDivElement>, 'childre
      * };
      * ```
      */
-    onDataChangeCancel?: (args: CancelFormEvent) => void;
+    onDataChangeCancel?: (event: FormCancelEvent<T>) => void;
 }
 
 /**
  * Provides context for customizing row appearance or behavior.
  * Includes row type, index, and optional complete row data.
  */
-export interface RowClassEvent {
+export interface RowClassProps<T = unknown> {
     /**
-     * Type of the row: 'header', 'content', or 'aggregate'.
+     * Type of the row: `Header`, `Content`, or `Aggregate`.
      * Useful for applying different styles based on row category.
      *
      * @default -
      */
-    rowType: 'header' | 'content' | 'aggregate';
+    rowType: string | RowType;
 
     /**
      * The index of the row in the grid.
@@ -1560,7 +1547,7 @@ export interface RowClassEvent {
      *
      * @default -
      */
-    rowData?: Object;
+    data?: T;
 }
 
 /**
@@ -1569,7 +1556,7 @@ export interface RowClassEvent {
  * Key features include customizable columns, aggregates, row templates, and built-in support for localization.
  * The component offers a robust API with methods for dynamic data manipulation and events for handling user interactions.
  */
-export interface IGrid extends GridProps {
+export interface IGrid<T = unknown> extends GridProps<T> {
     /**
      * Displays a loading spinner overlay on the grid to indicate an ongoing operation.
      * Used to enhance the user experience during asynchronous or time-consuming operations.
@@ -1588,7 +1575,7 @@ export interface IGrid extends GridProps {
 
     /**
      * Refreshes the grid’s data and view to reflect the latest state.
-     * Updates the grid’s display by re-rendering data based on current settings, such as filters, sorting, or pagination.
+     * Updates the grid’s display by re-rendering data based on current settings, such as filters, sorting, pagination or other.
      * Used to synchronize the grid’s UI with changes in the data source or configuration.
      */
     refresh(): void;
@@ -1630,7 +1617,7 @@ export interface IGrid extends GridProps {
      * @param {boolean} requiresCount - Optional. If true, includes the total record count in the response.
      * @returns {Object[] | Promise<Response | DataReturnType>} An array of records or a promise for remote data.
      */
-    getData(skipPage?: boolean, requiresCount?: boolean): Object[] | Promise<Response | DataReturnType>;
+    getData(skipPage?: boolean, requiresCount?: boolean): T[] | Promise<Response | DataReturnType>;
 
     /**
      * Retrieves an array of configuration objects for all currently hidden columns in the grid.
@@ -1648,7 +1635,7 @@ export interface IGrid extends GridProps {
      * @param {Element} target - The cell element or event target used to identify the row.
      * @returns {RowInfo} A RowInfo object containing details about the associated row.
      */
-    getRowInfo(target: Element): RowInfo
+    getRowInfo(target: Element): RowInfo<T>
 
     /**
      * Retrieves the `field` names of the primary key columns defined in the grid.
@@ -1669,7 +1656,7 @@ export interface IGrid extends GridProps {
      * @param {boolean} isDataSourceChangeRequired - Optional. If true, updates the underlying data source.
      * @returns {void}
      */
-    setRowData(key: string | number, data: Object, isDataSourceChangeRequired?: boolean): void;
+    setRowData(key: string | number, data: T, isDataSourceChangeRequired?: boolean): void;
 
     /**
      * Updates a specific cell’s value in a row identified by its primary key.
@@ -1679,11 +1666,11 @@ export interface IGrid extends GridProps {
      *
      * @param {string | number} key - The primary key value of the record containing the cell.
      * @param {string} field - The field name of the column to update.
-     * @param {string | number | boolean | Date | null} value - The new value for the cell.
+     * @param {ValueType | null} value - The new value for the cell.
      * @param {boolean} isDataSourceChangeRequired - Optional. If true, updates the underlying data source.
      * @returns {void}
      */
-    setCellValue(key: string | number, field: string, value: string | number | boolean | Date | null,
+    setCellValue(key: string | number, field: string, value: ValueType | null,
         isDataSourceChangeRequired?: boolean): void;
 
     /**
@@ -1696,12 +1683,13 @@ export interface IGrid extends GridProps {
     getColumns(): ColumnProps[];
 
     /**
-     * Retrieves the data objects of the currently selected rows in the grid.
-     * Used to access selected row data for further processing or display.
+     * Retrieves the table row elements of the currently selected rows in the grid.
+     * Used to access selected row elemnt for further processing or display.
      *
-     * @returns {Object[]} An array of selected row data objects.
+     * @private
+     * @returns {HTMLTableRowElement[]} An array of selected table row elements.
      */
-    getSelectedRows(): Object[];
+    getSelectedRows(): HTMLTableRowElement[];
 
     /**
      * Selects a single row by its index in the grid.
@@ -1749,7 +1737,7 @@ export interface IGrid extends GridProps {
      *
      * @returns {Object[] | null} An array of selected row data objects or null if none are selected.
      */
-    getSelectedRecords(): Object[] | null;
+    getSelectedRecords(): T[] | null;
 
     /**
      * Deselects specific rows by their indexes in the grid.
@@ -1776,7 +1764,7 @@ export interface IGrid extends GridProps {
      * Used to programmatically sort grid data by a column.
      *
      * @param {string} columnName - The name of the column to sort (e.g., field name).
-     * @param {SortDirection | string} direction - The sorting direction ('Ascending' or 'Descending').
+     * @param {SortDirection | string} sortDirection - The sorting direction ('Ascending' or 'Descending').
      * @param {boolean} isMultiSort - Optional. Specifies whether to maintain previously sorted columns.
      * @returns {void}
      */
@@ -1787,7 +1775,6 @@ export interface IGrid extends GridProps {
      * Clears the sorting applied to the column identified by its name, reverting it to an unsorted state.
      * Used to programmatically remove sorting from a specific column.
      *
-     * @private
      * @param {string} columnName - The name of the column to remove sorting from (e.g., field name).
      * @returns {void}
      */
@@ -1798,9 +1785,10 @@ export interface IGrid extends GridProps {
      * Resets the grid to an unsorted state, removing all sorting applied to any columns.
      * Used to programmatically revert the grid to its original data order.
      *
+     * @param {string[]} fields - Optional. An array of field names to clear sorts for. If omitted, clears all sorts.
      * @returns {void}
      */
-    clearSort(): void;
+    clearSort(fields?: string[]): void;
 
 
     /**
@@ -1810,14 +1798,14 @@ export interface IGrid extends GridProps {
      *
      * @param {string} fieldName - The `field` name of the column to filter.
      * @param {string} filterOperator - The operator to apply (e.g., 'contains', 'equal').
-     * @param {string | number | Date | boolean | number[] | string[] | Date[] | boolean[]} filterValue - The value to filter against.
+     * @param {ValueType | Array<ValueType>} filterValue - The value to filter against.
      * @param {string} predicate - Optional. The relationship between filter queries ('AND' or 'OR').
      * @param {boolean} caseSensitive - Optional. If true, performs case-sensitive filtering. If false, ignores case.
      * @param {boolean} ignoreAccent - Optional. If true, ignores diacritic characters during filtering.
      * @returns {void}
      */
     filterByColumn(fieldName: string, filterOperator: string,
-        filterValue: string | number | Date | boolean| number[]| string[]| Date[]| boolean[],
+        filterValue: ValueType| ValueType[],
         predicate?: string, caseSensitive?: boolean,
         ignoreAccent?: boolean): void;
 
@@ -1869,12 +1857,13 @@ export interface IGrid extends GridProps {
      * @param {string} message - Optional. The message text to display.
      * @returns {void}
      */
-    updatePagerMessage(message?: string): void;
+    setPagerMessage(message?: string): void;
 
     /**
      * Retrieves the DOM element containing the grid’s header content.
      * Used for programmatic access or manipulation of the grid’s header area.
      *
+     * @private
      * @returns {HTMLDivElement} The header content element.
      */
     getHeaderContent(): HTMLDivElement;
@@ -1883,6 +1872,7 @@ export interface IGrid extends GridProps {
      * Retrieves the DOM element containing the grid’s content area.
      * Used for programmatic access or manipulation of the grid’s content area.
      *
+     * @private
      * @returns {HTMLDivElement} The content area element.
      */
     getContent(): HTMLDivElement;
@@ -1894,23 +1884,42 @@ export interface IGrid extends GridProps {
      * @param {HTMLTableRowElement} rowElement - Optional. The row element to edit. If omitted, edits the selected row.
      * @returns {void}
      */
-    editRow(rowElement?: HTMLTableRowElement): void;
+    editRecord(rowElement?: HTMLTableRowElement): void;
 
     /**
-     * Completes the editing process and saves changes to the grid’s data source.
-     * Returns a promise indicating whether the save operation was successful.
+     * Commits the edited or newly added row to the data source after validating inputs and triggering lifecycle events such as `onDataChangeStart` and `onDataChangeComplete`.
      *
-     * @returns {Promise<boolean>} A promise resolving to true if the save was successful, false otherwise.
+     * Typically invoked via the Update toolbar action or Enter key during editing.
+     *
+     * @returns {Promise<boolean>} Resolves to true if the operation succeeds. returns false if validation fails or the action is cancelled.
+     *
+     * @example
+     * ```tsx
+     * const handleSave = async () => {
+     *   const success = await gridRef.current?.saveDataChanges();
+     *   if (success) {
+     *     console.log('Changes saved successfully');
+     *   } else {
+     *     console.log('Save failed or was cancelled');
+     *   }
+     * };
+     * ```
      */
-    saveChanges(): Promise<boolean>;
+    saveDataChanges(): Promise<boolean>;
 
     /**
-     * Closes the editing mode and reverts any modifications made to the row.
-     * Used to programmatically discard edits and restore the original data.
+     * Aborts the active CRUD operation, exits edit mode, and restores the original row state.
+     *
+     * Typically invoked via the Cancel toolbar action or Escape key during editing.
      *
      * @returns {void}
+     *
+     * @example
+     * ```tsx
+     * gridRef.current?.cancelDataChanges();
+     * ```
      */
-    cancelChanges(): void;
+    cancelDataChanges(): void;
 
     /**
      * Adds a new record to the grid’s data source.
@@ -1920,7 +1929,7 @@ export interface IGrid extends GridProps {
      * @param {number} index - Optional. The index at which to insert the new record.
      * @returns {void}
      */
-    addRecord(data?: Object, index?: number): void;
+    addRecord(data?: T, index?: number): void;
 
     /**
      * Deletes a record from the grid’s data source based on specified criteria or the selected row.
@@ -1928,10 +1937,10 @@ export interface IGrid extends GridProps {
      * Used to programmatically remove records, updating the grid’s display and data source accordingly.
      *
      * @param {string} fieldName - Optional. The field name to match for identifying the record to delete.
-     * @param {Record<string, string | number | boolean | Date | null> | Object[]} data - Optional. The data object or array of objects to match for deletion.
+     * @param {Object | Object[]} data - Optional. The data object or array of objects to match for deletion.
      * @returns {void}
      */
-    deleteRecord(fieldName?: string, data?: Record<string, string | number | boolean | Date | null> | Object[]): void;
+    deleteRecord(fieldName?: string, data?: T): void;
 
     /**
      * Updates a specific row in the grid with new data.
@@ -1942,7 +1951,7 @@ export interface IGrid extends GridProps {
      * @param {Object} data - The new data object for the row.
      * @returns {void}
      */
-    updateRow(index: number, data: Object): void;
+    updateRecord(index: number, data: T): void;
 
     /**
      * Validates all fields in the current edit or add form against their defined rules.
@@ -1969,7 +1978,7 @@ export interface IGrid extends GridProps {
  *
  * @private
  */
-export type IGridBase = MutableGridBase & IGrid;
+export type IGridBase<T = unknown> = MutableGridBase<T> & IGrid<T>;
 
 /**
  * Defines the structure of the event arguments triggered when a row is double-clicked in the grid.
@@ -1977,16 +1986,16 @@ export type IGridBase = MutableGridBase & IGrid;
  * Provides contextual information about the target element, cell, row, and associated data,
  * enabling precise handling of double-click interactions within grid components.
  */
-export interface RecordDoubleClickEvent {
+export interface RecordDoubleClickEvent<T = unknown> {
     /**
-     * The DOM element that was the target of the double-click event.
+     * The mouse event triggered by the double-click action.
      *
-     * Represents the specific HTML element that received the double-click,
-     * allowing access to its attributes and structural context.
+     * Provides access to event metadata such as cursor position, button state,
+     * and the target element, allowing detailed interaction handling.
      *
      * @default -
      */
-    target?: Element;
+    event?: React.MouseEvent<HTMLDivElement>;
 
     /**
      * The cell element within the row where the double-click occurred.
@@ -2047,7 +2056,7 @@ export interface RecordDoubleClickEvent {
      *
      * @default -
      */
-    rowData?: Object;
+    data?: T;
 
     /**
      * The zero-based index of the clicked row within the grid.
@@ -2080,7 +2089,7 @@ export interface DataLoadStartEvent {
      */
     cancel?: boolean;
     /** An array of aggregate values (e.g., sum, average) calculated for the data, if aggregates are defined. */
-    aggregates?: Object[];
+    aggregates?: Aggregates[];
     /**
      * The action arguments providing context for the data binding operation, such as filters or sorting criteria.
      *

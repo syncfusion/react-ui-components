@@ -7,7 +7,8 @@ import {
     useMemo,
     memo,
     JSX,
-    RefObject
+    RefObject,
+    ReactElement
 } from 'react';
 import { ContentRowsBase } from './index';
 import {
@@ -34,17 +35,17 @@ import {
  * @param {RefObject<ContentTableRef>} ref - Forwarded ref to expose internal elements and methods
  * @returns {JSX.Element} The rendered content table component
  */
-const ContentTableBase: ForwardRefExoticComponent<Partial<IContentTableBase> & RefAttributes<ContentTableRef>> =
+const ContentTableBase: <T>(props: Partial<IContentTableBase> & RefAttributes<ContentTableRef<T>>) => ReactElement =
     memo(forwardRef<ContentTableRef, Partial<IContentTableBase>>(
-        (props: Partial<IContentTableBase>, ref: RefObject<ContentTableRef>) => {
+        <T, >(props: Partial<IContentTableBase>, ref: RefObject<ContentTableRef<T>>) => {
             // Access grid context providers
-            const { colElements: ColElements } = useGridMutableProvider();
-            const grid: Partial<IGrid> & Partial<MutableGridSetter> = useGridComputedProvider();
+            const { colElements: ColElements } = useGridMutableProvider<T>();
+            const grid: Partial<IGrid> & Partial<MutableGridSetter> = useGridComputedProvider<T>();
             const { id } = grid;
 
             // Refs for DOM elements and child components
             const contentTableRef: RefObject<HTMLTableElement | null>  = useRef<HTMLTableElement>(null);
-            const rowSectionRef: RefObject<ContentRowsRef | null> = useRef<ContentRowsRef>(null);
+            const rowSectionRef: RefObject<ContentRowsRef<T> | null> = useRef<ContentRowsRef<T>>(null);
 
             /**
              * Memoized colgroup element to prevent unnecessary re-renders
@@ -75,7 +76,7 @@ const ContentTableBase: ForwardRefExoticComponent<Partial<IContentTableBase> & R
              * Memoized content rows component to prevent unnecessary re-renders
              */
             const contentRows: JSX.Element = useMemo(() => (
-                <ContentRowsBase
+                <ContentRowsBase<T>
                     ref={rowSectionRef}
                     role="rowgroup"
                 />
@@ -91,12 +92,12 @@ const ContentTableBase: ForwardRefExoticComponent<Partial<IContentTableBase> & R
                 </table>
             );
         }
-    ));
+    )) as <T>(props: Partial<IContentTableBase> & RefAttributes<ContentTableRef<T>>) => ReactElement;
 
 /**
  * Set display name for debugging purposes
  */
-ContentTableBase.displayName = 'ContentTableBase';
+(ContentTableBase as ForwardRefExoticComponent<Partial<IContentTableBase> & RefAttributes<ContentTableRef>>).displayName = 'ContentTableBase';
 
 /**
  * Export the ContentTableBase component for use in other components

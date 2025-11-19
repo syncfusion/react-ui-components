@@ -1,6 +1,6 @@
 import { FormState } from '@syncfusion/react-inputs';
 import { EditCellRef, ValidationTooltipsProps } from '../../types/edit.interfaces';
-import { RefObject, useEffect, useState } from 'react';
+import { RefObject, useEffect, useState, Fragment } from 'react';
 import { Tooltip } from '@syncfusion/react-popups';
 import { useGridComputedProvider, useGridMutableProvider } from '../../contexts';
 import { GridRef } from '../../types/grid.interfaces';
@@ -33,13 +33,13 @@ export const ValidationTooltips: React.FC<ValidationTooltipsProps> = ({ formStat
 
             // First, try to find the input element
             const inputElement: HTMLElement = editModule?.isShowAddNewRowActive && editModule?.isShowAddNewRowDisabled ?
-                grid.element?.querySelector(`.sf-editedrow [id="grid-edit-${field}"]`) as HTMLElement :
+                grid.element?.querySelector(`.sf-grid-edit-row [id="grid-edit-${field}"]`) as HTMLElement :
                 grid.element?.querySelector(`[id="grid-edit-${field}"]`) as HTMLElement;
 
             // Once we have the input element, find its containing table cell (td)
             // This ensures the tooltip arrow targets the cell, not the input itself
             // Find the closest table cell (td) that contains this input
-            targetElement = inputElement?.closest('td.sf-rowcell, td.sf-edit-cell') as HTMLElement;
+            targetElement = inputElement?.closest('.sf-grid-content-row td.sf-cell, td.sf-grid-edit-cell') as HTMLElement;
 
             const targetElementRef: React.RefObject<HTMLElement> = { current: targetElement } as React.RefObject<HTMLElement>;
             newTargets[field as string] = targetElementRef;
@@ -77,7 +77,7 @@ export const ValidationTooltips: React.FC<ValidationTooltipsProps> = ({ formStat
                 }
 
                 return (
-                    <>
+                    <Fragment key={field}>
                         <div ref={containerRef} style={{
                             position: 'relative'
                         }}></div>
@@ -93,10 +93,10 @@ export const ValidationTooltips: React.FC<ValidationTooltipsProps> = ({ formStat
                             position="BottomCenter"
                             opensOn="Custom"
                             open={true}
-                            className={`sf-griderror sf-validation-error-${field}`}
+                            className={`sf-grid-error sf-validation-error-${field}`}
                             windowCollision={true}
                         />
-                    </>
+                    </Fragment>
                 );
             })}
         </>
