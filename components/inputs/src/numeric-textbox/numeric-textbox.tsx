@@ -1,16 +1,17 @@
-import { useRef, useState, useCallback, useEffect, forwardRef, Ref, useImperativeHandle, useMemo } from 'react';
-import { InputBase, renderFloatLabelElement, renderClearButton, LabelMode, CLASS_NAMES } from '../common/inputbase';
+import { useRef, useState, useCallback, useEffect, forwardRef, Ref, useImperativeHandle, useMemo, useId } from 'react';
+import { InputBase, renderFloatLabelElement, renderClearButton, LabelMode, CLASS_NAMES, inputBaseProps } from '../common/inputbase';
 import { IL10n, isNullOrUndefined, L10n, preRender, RippleEffect, SvgIcon, useProviderContext, useRippleEffect } from '@syncfusion/react-base';
 import { formatUnit } from '@syncfusion/react-base';
 import { getNumberFormat, getNumberParser } from '@syncfusion/react-base';
-import { getUniqueID, getValue, getNumericObject } from '@syncfusion/react-base';
-import { Size } from '../textbox/textbox';
-export { LabelMode };
+import { getValue, getNumericObject, Variant, Size } from '@syncfusion/react-base';
+export { LabelMode, Variant, Size };
 
 const ROOT: string = 'sf-numeric';
-const SPINICON: string = 'sf-input-group-icon';
+const SPINICON: string = 'sf-input-icon sf-spin-icon';
 const SPINUP: string = 'sf-spin-up';
 const SPINDOWN: string = 'sf-spin-down';
+const SPINUP_PATH: string = 'M20.7929 17H3.20712C2.76167 17 2.53858 16.4615 2.85356 16.1465L11.6465 7.3536C11.8417 7.15834 12.1583 7.15834 12.3536 7.3536L21.1465 16.1465C21.4614 16.4615 21.2384 17 20.7929 17Z';
+const SPINDOWN_PATH: string = 'M20.7929 7H3.20712C2.76167 7 2.53858 7.53857 2.85356 7.85355L11.6465 16.6464C11.8417 16.8417 12.1583 16.8417 12.3536 16.6464L21.1465 7.85355C21.4614 7.53857 21.2384 7 20.7929 7Z';
 
 export interface NumericChangeEvent {
     /**
@@ -24,7 +25,7 @@ export interface NumericChangeEvent {
     value?: number | null;
 }
 
-export interface NumericTextBoxProps {
+export interface NumericTextBoxProps extends inputBaseProps {
 
     /**
      * Specifies the value of the NumericTextBox. When provided, component becomes controlled.
@@ -143,13 +144,6 @@ export interface NumericTextBoxProps {
      * @event onChange
      */
     onChange?: (event: NumericChangeEvent) => void;
-
-    /**
-     * Specifies the size configuration of the component.
-     *
-     * @default Size.Medium
-     */
-    size?: Size;
 }
 
 export interface INumericTextBox extends NumericTextBoxProps {
@@ -164,6 +158,10 @@ export interface INumericTextBox extends NumericTextBoxProps {
 }
 
 type INumericTextBoxProps = NumericTextBoxProps & Omit<React.InputHTMLAttributes<HTMLInputElement>, keyof NumericTextBoxProps>;
+
+const classNames: (...classes: string[]) => string = (...classes: string[]) => {
+    return classes.filter(Boolean).join(' ');
+};
 
 /**
  * NumericTextBox component that provides a specialized input for numeric values with validation,
@@ -183,7 +181,7 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
         step = 1,
         value,
         defaultValue = null,
-        id = getUniqueID('numeric_'),
+        id = `numeric_${useId()}`,
         placeholder = '',
         spinButton = true,
         clearButton = false,
@@ -199,6 +197,7 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
         className = '',
         autoComplete = 'off',
         size = Size.Medium,
+        variant,
         onChange,
         onFocus,
         onBlur,
@@ -209,11 +208,8 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
     const isControlled: boolean = value !== undefined;
     const uniqueId: string = useRef(id).current;
     const currentValueRef: React.RefObject<number | null> = useRef<number | null>(defaultValue);
-    const [inputValue, setInputValue] = useState<number | null>(
-        isControlled ? (value ?? null) : (defaultValue ?? null)
-    );
+
     const [isFocused, setIsFocused] = useState(false);
-    const [previousValue, setPreviousValue] = useState<number | null>(isControlled ? (value ?? null) : (defaultValue ?? null));
     const [inputString, setInputString] = useState<string>('');
     const [arrowKeyPressed, setIsArrowKeyPressed] = useState<boolean>(false);
 
@@ -221,6 +217,8 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
     const rippleRef1: RippleEffect = useRippleEffect(ripple, { duration: 500, isCenterRipple: true });
     const rippleRef2: RippleEffect = useRippleEffect(ripple, { duration: 500, isCenterRipple: true });
     const inputRef: React.RefObject<HTMLInputElement | null> = useRef<HTMLInputElement>(null);
+
+    const decimalSeparator: string = useMemo(() => getValue('decimal', getNumericObject(locale)), [locale]);
 
     const publicAPI: Partial<INumericTextBoxProps> = {
         min,
@@ -235,9 +233,29 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
         disabled,
         readOnly
     };
-    const spinUp: string = 'M20.7929 17H3.20712C2.76167 17 2.53858 16.4615 2.85356 16.1465L11.6465 7.3536C11.8417 7.15834 12.1583 7.15834 12.3536 7.3536L21.1465 16.1465C21.4614 16.4615 21.2384 17 20.7929 17Z';
-    const spinDown: string = 'M20.7929 7H3.20712C2.76167 7 2.53858 7.53857 2.85356 7.85355L11.6465 16.6464C11.8417 16.8417 12.1583 16.8417 12.3536 16.6464L21.1465 7.85355C21.4614 7.53857 21.2384 7 20.7929 7Z';
-    const getContainerClassNames: () => string = () => {
+
+    const { effectiveMin, effectiveMax } = useMemo(() => {
+        const low: number = Math.min(min, max);
+        const high: number = Math.max(min, max);
+        return { effectiveMin: low, effectiveMax: high };
+    }, [min, max]);
+
+    const getInitialValue: (initialValue: number | null | undefined) => number | null =
+    useCallback((initialValue: number | null | undefined): number | null => {
+        if (initialValue === null || initialValue === undefined) {
+            return null;
+        }
+        return strictMode ? Math.min(Math.max(initialValue, effectiveMin), effectiveMax) : initialValue;
+    }, [strictMode, effectiveMin, effectiveMax]);
+
+    const [inputValue, setInputValue] = useState<number | null>(() => {
+        const initial: number | null | undefined = isControlled ? value : defaultValue;
+        const clampedValue: number | null = getInitialValue(initial);
+        currentValueRef.current = clampedValue;
+        return clampedValue;
+    });
+
+    const containerClassNames: string = useMemo(() => {
         return classNames(
             ROOT,
             CLASS_NAMES.INPUTGROUP,
@@ -248,11 +266,19 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
             disabled ? CLASS_NAMES.DISABLE : '',
             isFocused ? CLASS_NAMES.TEXTBOX_FOCUS : '',
             (!isNullOrUndefined(currentValueRef.current) && labelMode !== 'Always') ? CLASS_NAMES.VALIDINPUT : '',
-            size && size.toLowerCase() !== 'small' ? `sf-${size.toLowerCase()}` : ''
+            size && size.toLowerCase() !== 'small' ? `sf-${size.toLowerCase()}` : '',
+            'sf-control',
+            variant && variant.toLowerCase() !== 'standard'  ? variant.toLowerCase() === 'outlined' ? 'sf-outline' : `sf-${variant.toLowerCase()}` : ''
         );
-    };
-
-    const spinSize: string = size?.toLocaleLowerCase() === 'small' ? '12' : '14';
+    }, [
+        labelMode,
+        className,
+        dir,
+        disabled,
+        isFocused,
+        currentValueRef.current,
+        size
+    ]);
 
     const { incrementText, decrementText } = useMemo(() => {
         const l10n: IL10n = L10n('numericTextbox', {
@@ -265,17 +291,48 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
         };
     }, [locale]);
 
+    const formatValue: (value: number) => string = ( value: number): string => {
+        const numberOfDecimals: number = getNumberOfDecimals(value);
+        const formattedValue: string = getNumberFormat({
+            locale,
+            format,
+            maximumFractionDigits: numberOfDecimals,
+            minimumFractionDigits: numberOfDecimals,
+            useGrouping: format?.toLowerCase().includes('n'),
+            currency: currency
+        })(value);
+        return formattedValue;
+    };
+
     useEffect(() => {
         preRender('numerictextbox');
     }, []);
 
     useEffect(() => {
         if (isControlled) {
+            const clampedValue: number | null = getInitialValue(value);
             setInputValue(value as number | null);
-            setPreviousValue(inputValue);
-            currentValueRef.current = value as number | null;
+            currentValueRef.current = clampedValue as number | null;
+
+            if (!isFocused) {
+                if (clampedValue) {
+                    const formattedValue: string = formatValue(clampedValue);
+                    setInputString(formattedValue);
+                } else {
+                    setInputString('');
+                }
+            }
         }
-    }, [value, isControlled, inputValue]);
+    }, [value, isControlled, isFocused, getInitialValue]);
+
+    useEffect(() => {
+        if (strictMode && currentValueRef.current !== null) {
+            const clampedValue: number = trimValue(currentValueRef.current);
+            if (clampedValue !== currentValueRef.current) {
+                updateValue(clampedValue);
+            }
+        }
+    }, [effectiveMin, effectiveMax, strictMode]);
 
     useEffect(() => {
         if (!isControlled && defaultValue !== null) {
@@ -289,101 +346,83 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
     }), [publicAPI]);
 
     const trimValue: (value: number) => number = useCallback((value: number): number => {
-        if (value > max) {
-            return max;
-        }
-        if (value < min) {
-            return min;
-        }
-        return value;
-    }, [min, max]);
+        return Math.min(Math.max(value, effectiveMin), effectiveMax);
+    }, [effectiveMin, effectiveMax]);
 
     const roundNumber: (value: number, precision: number) => number = useCallback((value: number, precision: number): number => {
+        if (precision < 0) { return value; }
         const multiplier: number = Math.pow(10, precision || 0);
         return Math.round(value * multiplier) / multiplier;
     }, []);
 
-    const classNames: (...classes: string[]) => string = (...classes: string[]) => {
-        return classes.filter(Boolean).join(' ');
-    };
-
-    const containerClassNames: string = getContainerClassNames();
-
     const getNumberOfDecimals: (value: number) => number = useCallback((value: number): number => {
         if (decimals !== null) {
-            return decimals;
+            return decimals > 0 ? decimals : 0;
         }
-        let numberOfDecimals: number;
-        const EXPREGEXP: RegExp = new RegExp('[eE][\\-+]?([0-9]+)');
-        let valueString: string = value.toString();
-        if (EXPREGEXP.test(valueString)) {
-            const result: RegExpExecArray | null = EXPREGEXP.exec(valueString);
-            if (result) {
-                valueString = value.toFixed(Math.min(parseInt(result[1], 10), 20));
-            }
+        if (format) {
+            const match: RegExpMatchArray | null = format && typeof format === 'string' ? format.match(/\D(\d+)/) : null;
+            const formatDecimals: number | null = match ? Number(match[1]) : null;
+            if (formatDecimals !== null) { return formatDecimals; }
         }
+        const valueString: string = value.toString();
         const decimalPart: string | undefined = valueString.split('.')[1];
-        numberOfDecimals = !decimalPart || !decimalPart.length ? 0 : decimalPart.length;
-        if (decimals !== null) {
-            numberOfDecimals = Math.min(numberOfDecimals, decimals);
-        }
-        return Math.min(numberOfDecimals, 20);
-    }, [decimals]);
+        return decimalPart ? Math.min(decimalPart.length, 20) : 0;
+    }, [decimals, format]);
 
     const formatNumber: (value: number | null) => string = useCallback((value: number | null): string => {
         if (value === null || value === undefined) {
-            if (isFocused) {
-                return inputString || '';
-            }
-            return '';
+            return isFocused ? inputString || '' : '';
+        }
+        if (inputString.endsWith(decimalSeparator)) {
+            return inputString;
         }
         try {
-            if (isFocused && format && format.toLowerCase().includes('p')) {
-                const percentValue: number = Math.round((value * 100) * 1e12) / 1e12;
-                const numberOfDecimals: number = getNumberOfDecimals(percentValue);
-                return percentValue.toFixed(numberOfDecimals);
-            }
-            else if (isFocused) {
-                if (arrowKeyPressed) {
-                    if (typeof value === 'number') {
-                        if (Number.isInteger(value)) {
-                            if (value.toString() !== inputString) {
-                                setInputString(value.toString());
-                            }
-                            return value.toString();
-                        }
-                        const strValue: string = value.toString();
-                        return strValue.replace(/\.?0+$/, '');
-                    }
-                    return String(value);
+            if (isFocused) {
+                if (format && format.toLowerCase().includes('p')) {
+                    return inputString.replace('%', '');
                 }
-                return inputString;
+                else {
+                    const numberOfDecimals: number = getNumberOfDecimals(value);
+                    const roundedValue: number = roundNumber(value, numberOfDecimals);
+                    const rounded: string = numberOfDecimals > 0 ? roundedValue.toFixed(numberOfDecimals) : roundedValue.toString();
+                    if (arrowKeyPressed) {
+                        if (rounded !== inputString) {
+                            setInputString(rounded);
+                        }
+                        return rounded;
+                    }
+                    else {
+                        const hasDecimal: boolean = inputString.includes(decimalSeparator);
+                        if (hasDecimal && validateOnType) {
+                            const parts: string[] = inputString.split(decimalSeparator);
+                            if (parts[1].length > numberOfDecimals) {
+                                const validInput: string = inputString.slice(
+                                    0, inputString.indexOf(decimalSeparator) + numberOfDecimals + 1
+                                );
+                                setInputString(validInput);
+                                return validInput;
+                            }
+                        }
+                        return inputString === '' || inputString === 'NaN' ? rounded : inputString;
+                    }
+                }
             }
-
-            const numberOfDecimals: number = getNumberOfDecimals(value);
-            const formattedValue: string = getNumberFormat({
-                locale: locale,
-                format: format,
-                maximumFractionDigits: numberOfDecimals,
-                minimumFractionDigits: numberOfDecimals,
-                useGrouping: format ? format.toLowerCase().includes('n') : false,
-                currency: currency
-            })(value);
+            const formattedValue: string = formatValue(value);
             if (inputString === '' && !isFocused) { setInputString(formattedValue); }
             return formattedValue;
         } catch (error) {
             return value.toFixed(2);
         }
-    }, [format, currency, isFocused, inputString, arrowKeyPressed, getNumberOfDecimals]);
+    }, [format, currency, isFocused, inputString, arrowKeyPressed, getNumberOfDecimals, locale, decimalSeparator]);
 
     const updateValue: (newValue: number | null, e?: React.ChangeEvent<HTMLInputElement> | Event) => void =
      useCallback((newValue: number | null, e?: React.ChangeEvent<HTMLInputElement> | Event) => {
-         currentValueRef.current = newValue;
+         if (newValue === null || isNaN(newValue)) {
+             currentValueRef.current = null;
+             newValue = null;
+         } else { currentValueRef.current = newValue; }
          if (!isControlled) {
              setInputValue(newValue);
-         }
-         if (previousValue !== newValue) {
-             setPreviousValue(inputValue);
          }
 
          if (onChange) {
@@ -392,28 +431,75 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
 
      }, [inputValue, onChange, isControlled, formatNumber]);
 
+    const parseNumericInput: (text: string) => number = useCallback((text: string): number => {
+        let str: string = text;
+        if (format && format.toLowerCase().includes('p') && text && !text.includes('%')) {
+            str = `${text}%`;
+        }
+        return getNumberParser({ locale: locale, format: format })(str);
+    }, [locale, format]);
+
     const handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void =
     useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         let rawStringValue: string = e.target.value;
         if (rawStringValue !== null) {
+            if (rawStringValue.includes('e') || rawStringValue.includes('E')) {
+                const parsedValue: number = parseNumericInput(rawStringValue);
+                updateValue(parsedValue, e);
+                setInputString(parsedValue.toString());
+                return;
+            }
             const minusCount: number = (rawStringValue.match(/-/g) || []).length;
             if (minusCount > 1) {
                 rawStringValue = rawStringValue.replace(/-/g, '');
             } else if (minusCount === 1) {
                 rawStringValue = '-' + rawStringValue.replace(/-/g, '');
             }
+
+            if (validateOnType && decimals !== null) {
+                const decimalIndex: number = rawStringValue.indexOf(decimalSeparator);
+                if (decimalIndex !== -1) {
+                    const decimalPart: string = rawStringValue.substring(decimalIndex + 1);
+                    if (decimalPart.length > decimals) {
+                        rawStringValue = rawStringValue.substring(0, decimalIndex + 1 + decimals);
+                    }
+                }
+            }
             setInputString(rawStringValue);
         }
-        const parsedValue: number | null = getNumberParser({ locale: locale, format: format })(rawStringValue);
-        let newValue: number | null | undefined = Number.isNaN(parsedValue) ? null : parsedValue;
-        if (strictMode && newValue !== null) {
-            newValue = trimValue(newValue as number);
+
+        if (rawStringValue === '') {
+            updateValue(null, e);
+            return;
         }
-        if (validateOnType && decimals !== null && newValue !== null) {
-            newValue = roundNumber(newValue as number, decimals);
+        if (rawStringValue.startsWith(decimalSeparator) && rawStringValue.length > 1) {
+            rawStringValue = '0' + rawStringValue;
+            setInputString(rawStringValue);
+        }
+        if (rawStringValue.startsWith(`-${decimalSeparator}`) && rawStringValue.length > 2) {
+            rawStringValue = `-0${decimalSeparator}` + rawStringValue.substring(2);
+            setInputString(rawStringValue);
+        }
+        if (rawStringValue.endsWith(decimalSeparator) || rawStringValue === '-') {
+            return;
+        }
+
+        let newValue: number | null = null;
+        if (rawStringValue !== '' && rawStringValue.trim() !== '') {
+            newValue = parseNumericInput(rawStringValue);
+            if (newValue !== null && isFinite(newValue)) {
+                if (strictMode) {
+                    newValue = trimValue(newValue);
+                }
+                if (validateOnType && decimals !== null) {
+                    newValue = roundNumber(newValue, decimals);
+                }
+            }
+            setInputString(rawStringValue);
         }
         updateValue(newValue as number, e);
-    }, [strictMode, validateOnType, decimals, format, trimValue, roundNumber, inputValue, updateValue]);
+    }, [strictMode, validateOnType, decimals, format, trimValue, roundNumber, inputValue, updateValue, decimalSeparator,
+        parseNumericInput]);
 
     const handleSpinClick: (increments: boolean) => void = (increments: boolean) => {
         if (disabled || readOnly) {
@@ -441,7 +527,7 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
         if (e.currentTarget.value === '') {
             newValue = null;
         } else {
-            newValue = getNumberParser({ locale: locale, format: format })(e.currentTarget.value);
+            newValue = parseNumericInput(e.currentTarget.value);
             if (isNaN(newValue as number)) {
                 newValue = currentValueRef.current;
             }
@@ -454,14 +540,15 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
         }
         const updatedValue: number = isControlled ? value as number : newValue as number;
         if (updatedValue) {
-            setInputString(updatedValue.toString());
+            const formattedValue: string = formatValue(updatedValue);
+            setInputString(formattedValue);
         } else { setInputString(''); }
         updateValue(updatedValue, e);
 
         if (onBlur) {
             onBlur(e);
         }
-    }, [format, decimals, validateOnType, strictMode, roundNumber, updateValue, onBlur]);
+    }, [format, decimals, validateOnType, strictMode, roundNumber, updateValue, onBlur, parseNumericInput]);
 
     const adjustValue: (isIncrement: boolean) => void = useCallback((isIncrement: boolean) => {
         const adjustment: number = isIncrement ? step : -step;
@@ -482,15 +569,17 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
         }
         newValue = parseFloat(newValue.toFixed(precision));
         if (strictMode) {
-            if (isIncrement) {
-                newValue = Math.min(newValue, max);
-                newValue = newValue > min ? newValue : min;
-            } else {
-                newValue = Math.max(newValue, min);
-            }
+            newValue = trimValue(newValue);
         }
-        updateValue(newValue);
-    }, [step, max, min, strictMode, updateValue, format]);
+        if (newValue) {
+            const formattedValue: string = formatValue(newValue);
+            setInputString(formattedValue);
+        }
+        if (currentValueRef.current !== newValue) {
+            updateValue(newValue);
+        }
+
+    }, [step, effectiveMax, effectiveMin, strictMode, updateValue, trimValue, format]);
 
     const increment: () => void = useCallback(() => {
         adjustValue(true);
@@ -500,16 +589,14 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
         adjustValue(false);
     }, [adjustValue]);
 
-    const countDecimalSeparators: (value: string) => number = useCallback((value: string): number => {
-        const decimalSeparator: string = getValue('decimal', getNumericObject(locale));
-        // eslint-disable-next-line security/detect-non-literal-regexp
-        const regex: RegExp = new RegExp(`\\${decimalSeparator}`, 'g');
-        const matches: RegExpMatchArray | null = value.match(regex);
-        return matches ? matches.length : 0;
-    }, [value]);
-
     const handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
         if (!readOnly) {
+            const hasModifierKey: boolean = e.ctrlKey || e.altKey || e.metaKey;
+            if (hasModifierKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+                setIsArrowKeyPressed(false);
+                if (onKeyDown) { onKeyDown(e); }
+                return;
+            }
             switch (e.key) {
             case 'ArrowUp':
                 setIsArrowKeyPressed(true);
@@ -523,7 +610,7 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
                 break;
             case 'Enter': {
                 e.preventDefault();
-                const parsedValue: number = getNumberParser({ locale: locale, format: format })(e.currentTarget.value);
+                const parsedValue: number = parseNumericInput(e.currentTarget.value);
                 let newValue: number | null = Number.isNaN(parsedValue) ? currentValueRef.current : parsedValue;
                 if (strictMode && newValue !== null) {
                     newValue = trimValue(newValue);
@@ -532,24 +619,50 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
             }
                 break;
             default: {
-                const hasModifierKey: boolean = e.ctrlKey || e.altKey || e.metaKey;
-                const isRestrictedLetter: boolean = /^[a-zA-Z!@#$%^&*()_=[\]{}|;:'"<>?/~`\\+]$/.test(e.key);
-                if ((isRestrictedLetter && !hasModifierKey) || hasModifierKey) {
-                    if (isRestrictedLetter && !hasModifierKey) {
-                        e.preventDefault();
-                    }
+                const isNavigationKey: boolean = [
+                    'Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'Home',
+                    'End', 'ArrowLeft', 'ArrowRight'
+                ].includes(e.key);
+                if (hasModifierKey || isNavigationKey) {
+                    setIsArrowKeyPressed(false);
                     return;
                 }
+                if (validateOnType && decimals !== null && /^\d$/.test(e.key)) {
+                    const currentValue: string = e.currentTarget.value;
+                    const selectionStart: number = e.currentTarget.selectionStart || 0;
+                    const decimalIndex: number = currentValue.indexOf(decimalSeparator);
+                    if (decimalIndex !== -1 && selectionStart > decimalIndex) {
+                        const currentDecimalPlaces: number = currentValue.length - decimalIndex - 1;
+                        if (currentDecimalPlaces >= decimals) {
+                            e.preventDefault();
+                            return;
+                        }
+                    }
+                }
+                const allowedChars: RegExp = /^[0-9.\-+eE]$/;
+                if (!allowedChars.test(e.key) && e.key !== decimalSeparator) {
+                    e.preventDefault();
+                    return;
+                }
+
                 setIsArrowKeyPressed(false);
                 let currentChar: string = e.currentTarget.value;
-                const decimalSeparator: string = getValue('decimal', getNumericObject(locale));
                 const isAlterNumPadDecimalChar: boolean = e.code === 'NumpadDecimal' && e.key !== decimalSeparator;
                 if (isAlterNumPadDecimalChar) {
                     currentChar = decimalSeparator;
                 }
-                if (e.key === decimalSeparator && countDecimalSeparators(currentChar) >= 1) {
+
+                if (e.key === decimalSeparator && currentChar.split(decimalSeparator).length > 1) {
                     e.preventDefault();
                     return;
+                }
+
+                if (e.key === '-') {
+                    const selectionStart: number = e.currentTarget.selectionStart || 0;
+                    if (selectionStart !== 0 || currentChar.includes('-')) {
+                        e.preventDefault();
+                        return;
+                    }
                 }
             } break;
             }
@@ -557,16 +670,24 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
         if (onKeyDown) {
             onKeyDown(e);
         }
-    }, [increment, decrement, strictMode, trimValue, updateValue, readOnly, format, onKeyDown]);
+    }, [increment, decrement, strictMode, trimValue, updateValue, readOnly, format, onKeyDown, parseNumericInput]);
 
     const clearValue: () => void = useCallback(() => {
         updateValue(null);
         setInputString('');
     }, [updateValue]);
 
-    const displayValue: string = formatNumber(
-        isControlled ? value as number : inputValue
-    );
+    const displayValue: string = useMemo(() => {
+        return formatNumber(isControlled ? value as number : inputValue);
+    }, [
+        isControlled,
+        value,
+        inputValue,
+        formatNumber,
+        isFocused,
+        inputString,
+        arrowKeyPressed
+    ]);
 
     return (
         <span className={containerClassNames} style={{ width: width ? formatUnit(width) : undefined }}>
@@ -574,7 +695,7 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
                 id={uniqueId}
                 type="text"
                 ref={inputRef as React.RefObject<HTMLInputElement>}
-                className={'sf-control sf-numerictextbox sf-lib sf-input'}
+                className={'sf-numerictextbox sf-lib sf-input'}
                 onChange={handleChange}
                 onFocus={handleFocus}
                 onBlur={handleBlur}
@@ -583,8 +704,8 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
                 onKeyDown={handleKeyDown}
                 floatLabelType={labelMode}
                 placeholder={placeholder}
-                aria-valuemin={min}
-                aria-valuemax={max}
+                aria-valuemin={effectiveMin}
+                aria-valuemax={effectiveMax}
                 value={displayValue}
                 aria-valuenow={currentValueRef.current || undefined}
                 autoComplete={autoComplete}
@@ -600,35 +721,41 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
                 uniqueId
             )}
             {clearButton && renderClearButton(
-                currentValueRef.current ? currentValueRef.current.toString() : '',
+                currentValueRef.current && isFocused ? currentValueRef.current.toString() : '',
                 clearValue, clearButton, 'numericTextbox', locale
             )}
             {spinButton && (
                 <>
-                    <span
+                    <button
                         className={`${SPINICON} ${SPINDOWN}`}
                         onMouseDown={(e: React.MouseEvent<HTMLSpanElement>) => {
                             rippleRef1.rippleMouseDown(e);
                             e.preventDefault();
                         }}
+                        type='button'
+                        aria-label={decrementText}
                         onClick={() => handleSpinClick(false)}
                         title={decrementText}
+                        tabIndex={-1}
                     >
-                        <SvgIcon height={spinSize} width={spinSize} d={spinDown}></SvgIcon>
+                        <SvgIcon d={SPINDOWN_PATH}></SvgIcon>
                         {ripple && <rippleRef1.Ripple />}
-                    </span>
-                    <span
+                    </button>
+                    <button
                         className={`${SPINICON} ${SPINUP}`}
                         onMouseDown={(e: React.MouseEvent<HTMLSpanElement>) => {
                             rippleRef2.rippleMouseDown(e);
                             e.preventDefault();
                         }}
+                        type='button'
+                        aria-label={incrementText}
                         onClick={() => handleSpinClick(true)}
                         title={incrementText}
+                        tabIndex={-1}
                     >
-                        <SvgIcon height={spinSize} width={spinSize} d={spinUp}></SvgIcon>
+                        <SvgIcon d={SPINUP_PATH}></SvgIcon>
                         {ripple && <rippleRef2.Ripple />}
-                    </span>
+                    </button>
                 </>
             )}
         </span>

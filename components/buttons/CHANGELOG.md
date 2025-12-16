@@ -124,7 +124,6 @@ Explore the demo <a href="https://react.syncfusion.com/floating-action-button" t
 
 - **Toggle Functionality:** Activate toggle `behavior` for the FAB to allow it to switch states on each user interaction, which can be useful for certain UI scenarios.
 
-
 ### Radio Button
 
 The `RadioButton` component enables users to select a single option from a group, offering a clear circular interface for making selections. It is a simple and efficient way to present mutually exclusive choices to users.

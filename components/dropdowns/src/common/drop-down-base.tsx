@@ -1,243 +1,38 @@
 import * as React from 'react';
-import { useState, useEffect, useRef, useImperativeHandle, forwardRef, useMemo, useCallback, Ref } from 'react';
-import { DataManager, Query, DataOptions } from '@syncfusion/react-data';
-import { EmitType, getUniqueID, getValue, IL10n, isNullOrUndefined, L10n, useProviderContext } from '@syncfusion/react-base';
-import { generateUL, ListItem, ListBaseOptions, groupDataSource, defaultListBaseOptions, getDataSource, addSorting, SortOrder }
-    from '@syncfusion/react-lists';
-import { TooltipAnimationOptions, IPopup } from '@syncfusion/react-popups';
+import { useState, useEffect, useRef, useImperativeHandle, forwardRef, useMemo, useCallback, Ref, JSX } from 'react';
+import { DataManager, Query, DataOptions, QueryOptions } from '@syncfusion/react-data';
+import { getValue, IL10n, isNullOrUndefined, L10n, Size, useProviderContext } from '@syncfusion/react-base';
+import { ListItems, SelectEvent, DataSource, GetItemPropsOptions } from '@syncfusion/react-lists';
 import { InputBase, renderClearButton } from '@syncfusion/react-inputs';
+import { useFilter } from '../drop-down-list/hooks/useFilter';
+import { DropDownBaseClassList, DropDownBaseProps, IDropDownBase } from './types';
+import Header from './header';
+import Footer from './footer';
+import NoRecords from './no-records';
+import ErrorMessage from './error-message';
+import { FieldSettingsModel, SortOrder } from '../drop-down-list/types';
+import { normalizeOperator, processDataResult } from '../drop-down-list/hooks/useDropDownList';
+import { Spinner } from '@syncfusion/react-popups';
 
-export const dropDownBaseClasses: DropDownBaseClassList = {
-    root: 'sf-dropdownbase',
+const defaultMappedFields: FieldSettingsModel = {
+    text: 'text',
+    value: 'value',
+    disabled: 'disabled',
+    groupBy: undefined,
+    htmlAttributes: 'htmlAttributes'
+};
+
+const dropDownBaseClasses: DropDownBaseClassList = {
+    root: 'sf-dd-base',
     content: 'sf-content',
     selected: 'sf-active',
     focus: 'sf-item-focus',
     li: 'sf-list-item',
     disabled: 'sf-disabled',
     grouping: 'sf-dd-group',
-    hover: 'sf-hover'
+    hover: 'sf-hover',
+    noData: 'sf-dd-nodata'
 };
-
-export interface DropDownBaseClassList {
-    root: string;
-    content: string;
-    selected: string;
-    focus: string;
-    li: string;
-    disabled: string;
-    grouping: string;
-    hover: string;
-}
-
-export interface FieldSettingsModel {
-    text?: string;
-    value?: string;
-    groupBy?: string;
-    disabled?: string;
-    htmlAttributes?: string;
-    icon?: string;
-}
-
-export interface DataEventArgs {
-    cancel?: boolean;
-    data: { [key: string]: object }[] | DataManager | string[] | number[] | boolean[];
-    query?: Query;
-}
-
-export interface PopupEventArgs {
-    animation?: TooltipAnimationOptions;
-    event?: React.MouseEvent<Element> | React.KeyboardEvent<Element> | React.TouchEvent<Element> | object;
-    popup: IPopup;
-}
-
-export interface FocusEventArgs {
-    event?: React.MouseEvent<Element> | React.FocusEvent<Element> | React.TouchEvent<Element> | React.KeyboardEvent<Element>;
-}
-
-export interface SelectEventArgs {
-    item: HTMLLIElement;
-    itemData: FieldSettingsModel;
-    e: React.MouseEvent<Element> | React.KeyboardEvent<Element> | React.TouchEvent<Element>;
-}
-
-export const defaultMappedFields: FieldSettingsModel = {
-    text: 'text',
-    value: 'value',
-    disabled: 'disabled',
-    groupBy: 'undefined',
-    htmlAttributes: 'htmlAttributes',
-    icon: 'icon'
-};
-
-export interface FilteringEventArgs {
-    preventDefaultAction: boolean;
-    baseEventArgs: object;
-    text: string;
-    updateData: (dataSource: DataManager | string[] | number[] | boolean[], query?: Query, fields?: FieldSettingsModel) => void;
-}
-
-export type FilterType = 'StartsWith' | 'EndsWith' | 'Contains';
-
-export interface DropDownBaseProps {
-    /**
-     * Specifies the data source for the dropdown items
-     */
-    dataSource: { [key: string]: object }[] | DataManager | string[] | number[] | boolean[];
-
-    /**
-     * Defines mapping fields for the data items
-     */
-    fields: FieldSettingsModel;
-
-    /**
-     * Specifies the selected value
-     */
-    value?: number | string | boolean | object | null;
-
-    /**
-     * Defines the query to retrieve specific data from the data source
-     */
-    query?: Query;
-
-    /**
-     * Specifies the sort order for the data items
-     */
-    sortOrder?: SortOrder;
-
-    /**
-     * Specifies whether to ignore case while filtering or selecting items.
-     *
-     * @default true
-     */
-    ignoreCase?: boolean;
-
-    /**
-     * Specifies whether to ignore diacritics while filtering or selecting items.
-     *
-     * @default false
-     */
-    ignoreAccent?: boolean;
-
-    /**
-     * Specifies whether filtering is enabled in the dropdown base.
-     * When enabled, a search box appears at the top of the popup that allows users to filter items.
-     *
-     * @default false
-     * @private
-     */
-    isDropdownFiltering?: boolean;
-
-    /**
-     * Specifies the placeholder text for the filter input field.
-     * This is displayed when the filter input is empty.
-     *
-     * @default ''
-     */
-    filterPlaceholder?: string;
-
-    /**
-     * Defines the filtering type to apply when searching for items.
-     * Possible values are 'StartsWith', 'EndsWith', and 'Contains'.
-     *
-     * @default 'StartsWith'
-     */
-    filterType?: FilterType;
-
-    /**
-     * Defines template for rendering individual items
-     */
-    itemTemplate?: Function | React.ReactNode;
-
-    /**
-     * Defines template for rendering group headers
-     */
-    groupTemplate?: Function | React.ReactNode;
-
-    /**
-     * Defines template for header section
-     */
-    headerTemplate?: Function | React.ReactNode;
-
-    /**
-     * Defines template for footer section
-     */
-    footerTemplate?: Function | React.ReactNode;
-
-    /**
-     * Defines template when no data is available
-     */
-    noRecordsTemplate?: Function | React.ReactNode;
-
-    /**
-     * Specifies the height of the popup
-     */
-    popupHeight?: string | number;
-
-    /**
-     * Triggers when data fetching fails
-     */
-    actionFailure?: (e: object) => void;
-
-    /**
-     * Triggers when an item is clicked
-     */
-    onItemClick?: (e: React.MouseEvent<HTMLLIElement>, index: number) => void;
-
-    /**
-     * Handles keyboard actions
-     */
-    keyActionHandler?: (e: React.KeyboardEvent<HTMLElement>) => void;
-
-    /**
-     * Triggers on typing a character in the filter bar when the filtering is enabled.
-     */
-    onFilterChange?: EmitType<FilteringEventArgs>;
-
-    /**
-     * Callback that triggers when remote data loading completes
-     *
-     * @private
-     */
-    onDataLoaded?: () => void;
-
-    /**
-     * Triggers after data is fetched successfully from the remote server.
-     */
-    actionComplete?: EmitType<object>;
-}
-
-export interface IDropDownBase {
-    /**
-     * Gets formatted value based on type
-     */
-    getFormattedValue(value: string | number | boolean): string | number | boolean | [];
-
-    /**
-     * Gets data object by value
-     */
-    getDataByValue(value: string | number | boolean): { [key: string]: object } | string | number | boolean | undefined;
-
-    /**
-     * Gets index by value
-     */
-    getIndexByValue(value: string | number | boolean): number;
-
-    /**
-     * Gets text by value
-     */
-    getTextByValue(value: string | number | boolean): string;
-
-    /**
-     * Gets all list items
-     */
-    getListItems(): HTMLLIElement[];
-
-    /**
-     * To filter the data from given data source by using query
-     */
-    filter(dataSource: { [key: string]: Object }[] | DataManager | string[] | number[] | boolean[],
-        query?: Query, fields?: FieldSettingsModel): void;
-}
 
 type IDropDownBaseProps = DropDownBaseProps & Omit<React.HTMLAttributes<HTMLDivElement>, keyof DropDownBaseProps>;
 
@@ -256,48 +51,221 @@ export const DropDownBase: React.ForwardRefExoticComponent<IDropDownBaseProps & 
             ignoreCase,
             ignoreAccent,
             filterType = 'StartsWith',
+            size = Size.Medium,
             itemTemplate,
             groupTemplate,
             headerTemplate,
             footerTemplate,
             sortOrder = SortOrder.None,
             noRecordsTemplate,
-            popupHeight,
-            id = getUniqueID('dropdownlist'),
-            actionFailure,
+            onErrorTemplate,
+            allowObjectBinding = false,
+            activeIndex,
+            id,
+            debounceDelay = 0,
+            remoteCacheRef,
+            itemData,
+            onError,
             onItemClick,
-            onFilterChange,
-            onDataLoaded,
-            actionComplete
+            onFilter,
+            onRemoteDataLoaded,
+            onDataRequest,
+            onDataLoad,
+            getOptionId,
+            endRemoteRequest
         } = props;
 
+        const { locale } = useProviderContext();
+        const localeStrings: Record<string, string> = {
+            noRecordsMessage: 'No Records Found',
+            errorMessage: 'Request Failed'
+        };
+        const l10nInstance: IL10n = L10n('dropdownList', localeStrings, locale || 'en-US');
+        const baseQuery: Query = query.clone();
         const [listData, setListDatas] = useState<{ [key: string]: object }[] | boolean[] | string[] | number[]>([]);
         const [isRequesting, setIsRequesting] = useState<boolean>(false);
         const [isDataInitialized, setIsDataInitialized] = useState<boolean>(false);
-        const [, setListBaseOptions] = useState<ListBaseOptions>(defaultListBaseOptions);
-        const { locale } = useProviderContext();
-        const localeStrings: Record<string, string> = { noRecordsTemplate: 'No Records Found' };
-        const l10nInstance: IL10n = L10n('drop-down-list', localeStrings, locale || 'en-US');
         const [selectedItemIndex, setSelectedItemIndex] = useState<number | null>(null);
         const [focusedItemIndex, setFocusedItemIndex] = useState<number | null>(null);
+        const [typedString, setTypedString] = useState<string>('');
+        const [isActionFailed, setIsActionFailed] = useState<boolean>(false);
+
         const listItemsRef: React.RefObject<(HTMLLIElement | null)[]> = useRef<(HTMLLIElement | null)[]>([]);
         const filterInputElementRef: React.RefObject<HTMLInputElement | null> = useRef<HTMLInputElement>(null);
-        const [typedString, setTypedString] = useState<string>('');
-        const [, setIsDataFetched] = useState<boolean>(false);
-        const [isCustomFilter, setIsCustomFilter] = useState<boolean>(false);
         const typedStringRef: React.RefObject<string> = useRef(typedString);
         const containerRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
+        const filterTimerRef: React.RefObject<number | null> = React.useRef<number | null>(null);
+
+        const getQuery: (newQuery?: Query) => Query = useCallback((newQuery?: Query): Query => {
+            let filterQuery: Query;
+            if (isDropdownFiltering) {
+                filterQuery = (newQuery as Query).clone();
+                const currentText: string = typedStringRef.current ?? '';
+                if (currentText !== '') {
+                    const filteringType: 'startsWith' | 'endsWith' | 'contains' = normalizeOperator(filterType);
+                    const dataType: string | null =
+                    typeOfData(dataSource as (string | number | boolean | { [key: string]: object })[]).typeof;
+                    const isPrimitive: boolean = !(dataSource instanceof DataManager) && (dataType === 'string' || dataType === 'number' || dataType === 'boolean');
+                    if (isPrimitive) {
+                        filterQuery.where('', filteringType, currentText, ignoreCase, ignoreAccent);
+                    } else {
+                        const field: string = (fields?.text) ? fields.text : 'text';
+                        filterQuery.where(field, filteringType, currentText, ignoreCase, ignoreAccent);
+                    }
+                }
+            } else {
+                filterQuery = (newQuery as Query).clone();
+            }
+            return filterQuery.clone();
+        }, [query, isDropdownFiltering, filterType, ignoreCase, ignoreAccent, fields]);
+
+        const processAndSetData: (result: (string | number | boolean | {[key: string]: object; })[]) => void =
+        useCallback((result: Array<{ [key: string]: object } | string | number | boolean>): void => {
+            if (!isDataInitialized) {
+                setIsDataInitialized(true);
+            }
+            const processed: (string | number | boolean | {[key: string]: Object; })[] =
+            processDataResult(result, fields, sortOrder, query);
+            setListDatas(processed as {[key: string]: Object; }[]);
+        }, [fields, sortOrder, query, isDataInitialized]);
+
+        const ensureValueInDatasource: (selected: string | number | boolean | {[key: string]: unknown; }) => void =
+        useCallback((selected: { [key: string]: unknown } | string | number | boolean): void => {
+            if (dataSource instanceof DataManager !== true || !remoteCacheRef?.current || !selected) { return; }
+            const cache: (string | number | boolean | {[key: string]: unknown; })[] = Array.from(remoteCacheRef?.current) ;
+            const isPrimitive: boolean = typeof selected === 'string' || typeof selected === 'number' || typeof selected === 'boolean';
+            const selectedValue: string = String(isPrimitive ? selected as string | number | boolean :
+                getValue(fields.value as string, selected as { [key: string]: unknown })) ;
+            const exists: boolean = cache.some((data: string | number | boolean | {[key: string]: unknown; }) => String(isPrimitive ?
+                typeof data !== 'object' && data : typeof data === 'object' && getValue(fields.value as string, data)) === selectedValue);
+            if (!exists) {
+                cache.push(selected as { [key: string]: unknown } | string | number | boolean);
+                remoteCacheRef.current = cache as Array<{ [key: string]: unknown } | string | number | boolean>;
+            }
+        }, [fields, remoteCacheRef]);
+
+        const setListData: (dataSource: { [key: string]: unknown }[] | string[] | number[] | DataManager | boolean[],
+            query?: Query, fromFilter?: boolean, typedText?: string) => void = useCallback((  dataSource: { [key: string]: unknown }[] |
+        string[] | number[] | DataManager | boolean[], query?: Query, fromFilter?: boolean, typedText?: string ): void => {
+            let filteredDataSource: typeof dataSource;
+            if (Array.isArray(dataSource)) {
+                filteredDataSource = dataSource.filter((item: string | number | boolean | { [key: string]: unknown }) =>
+                    item !== null && item !== undefined) as typeof dataSource;
+            } else {
+                filteredDataSource = dataSource;
+            }
+            typedStringRef.current = typedText ?? '';
+            const eventArgs: { data: { [key: string]: unknown }[] | DataManager | string[] | number[] | boolean[],
+                query: Query | undefined} = { data: filteredDataSource, query: query };
+
+            if (filteredDataSource instanceof DataManager) {
+                const data: DataManager = filteredDataSource as DataManager;
+
+                if (isDropdownFiltering && !fromFilter){
+                    ensureValueInDatasource(itemData as { [key: string]: unknown } | string | number | boolean);
+                }
+                if (remoteCacheRef?.current && !fromFilter) {
+                    const cached: (string | number | boolean | {[key: string]: unknown; })[] = remoteCacheRef.current;
+                    const localData: DataManager = new DataManager(cached as DataOptions | JSON[]);
+                    const localQuery: Query = eventArgs.query ? eventArgs.query : getQuery(new Query());
+                    if (localQuery.queries.some((q: QueryOptions) => q.fn === 'onTake')) {
+                        localQuery.queries = localQuery?.queries?.filter((item: QueryOptions) => item.fn !== 'onTake');
+                        localQuery.take(cached.length);
+                    }
+                    const listItems: {[key: string]: object; }[] = localQuery.executeLocal(localData) as { [key: string]: object }[];
+                    const args: {data: {[key: string]: object; }[]; } = { data: listItems };
+                    onDataLoad?.(args);
+                    processAndSetData(args.data);
+                    return;
+                }
+
+                if (!isRequesting) {
+                    onDataRequest?.({ data: eventArgs.data, query: query ? eventArgs.query as Query : getQuery(new Query()) });
+                    setIsRequesting(true);
+                    setIsActionFailed(false);
+                    data.executeQuery(eventArgs.query ? eventArgs.query : getQuery(new Query()))
+                        .then((e: unknown) => {
+                            const fullResult: { [key: string]: object; }[]  = (e && Array.isArray((e as {result: unknown}).result) ?
+                                (e as {result: unknown}).result : []) as { [key: string]: object; }[];
+                            if (remoteCacheRef && !fromFilter) {
+                                remoteCacheRef.current = fullResult;
+                            }
+
+                            if (!(e as {cancel: boolean}).cancel) {
+                                const args: {data: {[key: string]: object; }[]; } = {
+                                    data: (e as {result: unknown}).result as { [key: string]: object; }[]};
+                                if (!fromFilter) {
+                                    onDataLoad?.(args);
+                                }
+                                processAndSetData(args.data);
+                            }
+                            setIsRequesting(false);
+                            setIsActionFailed(false);
+                            onRemoteDataLoaded?.();
+                        })
+                        .catch((error: object) => {
+                            setIsRequesting(false);
+                            setIsActionFailed(true);
+                            setIsDataInitialized(false);
+                            onError?.(error as Error);
+                            endRemoteRequest?.();
+                        });
+                }
+            } else {
+                const dataManager: DataManager = new DataManager(eventArgs.data as DataOptions | JSON[]);
+                const listItems: { [key: string]: object }[] =
+                    getQuery(eventArgs.query || new Query()).executeLocal(dataManager) as { [key: string]: object }[];
+                const args: {data: {[key: string]: object; }[]; } = {data: listItems};
+                onDataLoad?.(args);
+                processAndSetData(args.data);
+                setIsRequesting(false);
+                setIsActionFailed(false);
+            }
+        }, [isRequesting, getQuery, sortOrder, onError, onErrorTemplate, onRemoteDataLoaded, onDataRequest, onDataLoad, processAndSetData,
+            ensureValueInDatasource]);
+
+        const {onFilterUp, handleInputChange, clearText, filter} = useFilter({
+            isDropdownFiltering,
+            ignoreCase,
+            ignoreAccent,
+            filterType,
+            fields,
+            dataSource,
+            baseQuery,
+            onFilter: onFilter,
+            setListData,
+            externalTypedString: typedString,
+            setExternalTypedString: setTypedString,
+            externalFilterInputRef: filterInputElementRef
+        });
+
+        const listbaseClasses: string = useMemo(() => {
+            const isPrimitiveArray: boolean = Array.isArray(listData) && listData.length > 0 &&
+            (typeof listData[0] === 'string' || typeof listData[0] === 'number' || typeof listData[0] === 'boolean');
+            return [
+                dropDownBaseClasses.content,
+                dropDownBaseClasses.root,
+                (!isPrimitiveArray && fields.groupBy) ? dropDownBaseClasses.grouping : '',
+                listData.length === 0 ? 'sf-dd-nodata' : ''
+            ].filter(Boolean).join(' ');
+        }, [fields.groupBy, listData]);
+
+        const renderNoRecords: JSX.Element = (
+            <NoRecords noRecordsTemplate={noRecordsTemplate} defaultText={l10nInstance.getConstant('noRecordsMessage')} />
+        );
+
+        const renderError: JSX.Element = (
+            <ErrorMessage errorTemplate={onErrorTemplate}defaultText={l10nInstance.getConstant('errorMessage')} />
+        );
 
         useEffect(() => {
             if (value != null && listData.length > 0) {
-                const itemIndex: number = listData.findIndex((item: string | number | boolean | {[key: string]: object}) => {
-                    if (typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean') {
-                        return String(item) === String(value);
-                    } else {
-                        return String(getValue(fields.value ?? '', item)) === String(value);
-                    }
+                const valueMap: Map<string, number> = new Map();
+                listData.forEach((item: string | number | boolean | { [key: string]: object }, index: number) => {
+                    const key: string = typeof item === 'object' ? String(getValue(fields.value ?? '', item)) : String(item);
+                    valueMap.set(key, index);
                 });
-
+                const itemIndex: number = valueMap.get(String(value)) ?? -1;
                 if (itemIndex !== -1) {
                     setSelectedItemIndex(itemIndex);
                 }
@@ -305,25 +273,76 @@ export const DropDownBase: React.ForwardRefExoticComponent<IDropDownBaseProps & 
         }, [value, listData, fields]);
 
         useEffect(() => {
-            if (typedString !== null) {
-                typedStringRef.current = typedString;
-                setListData(dataSource, query);
-            }
-        }, [typedString]);
-
-        useEffect(() => {
             if (isDropdownFiltering && filterInputElementRef.current) {
-                filterInputElementRef.current.focus();
+                filterInputElementRef.current.focus({preventScroll: true});
             }
         }, [isDropdownFiltering, filterInputElementRef.current]);
+
+        useEffect(() => {
+            if (!isDataInitialized) {
+                setListData(dataSource, query);
+            }
+        }, [dataSource, query, isDataInitialized, setListData]);
+
+        useEffect(() => {
+            if (listData.length > 0) {
+                if (activeIndex) {
+                    setFocusedItemIndex(activeIndex);
+                } else {
+                    setFocusedItemIndex(0);
+                }
+            } else {
+                setFocusedItemIndex(null);
+            }
+        }, [listData, activeIndex]);
+
+        useEffect(() => {
+            return () => {
+                if (filterTimerRef.current) {
+                    clearTimeout(filterTimerRef.current as unknown as number);
+                    filterTimerRef.current = null;
+                }
+            };
+        }, []);
+
+        const scrollItemIntoViewWithin: (container: HTMLElement, el: HTMLElement) => void =
+        useCallback((container: HTMLElement, el: HTMLElement) => {
+            const popupElement: HTMLElement = containerRef?.current?.parentElement as HTMLElement;
+            const originalDisplay: string = popupElement.style.display;
+            popupElement.style.visibility = 'hidden';
+            popupElement.style.display = 'block';
+            const itemTop: number = el.offsetTop;
+            const itemBottom: number = itemTop + el.offsetHeight;
+            const viewTop: number = container.scrollTop;
+            const viewBottom: number = container.scrollTop + container.clientHeight;
+            if (itemBottom > viewBottom) {
+                container.scrollTop = itemBottom - container.clientHeight;
+            } else if (itemTop < viewTop) {
+                container.scrollTop = Math.max(0, itemTop);
+            }
+            popupElement.style.visibility = '';
+            popupElement.style.display = originalDisplay;
+        }, [containerRef]);
+
+        useEffect(() => {
+            if (!isDataInitialized || isNullOrUndefined(itemData)) { return; }
+            const currValue: string | number | boolean | null = typeof itemData === 'object' && itemData !== null
+                ? (getValue(fields?.value ?? 'value', itemData) as string | number | boolean | null) : (itemData as string | number | boolean | null);
+            if (isNullOrUndefined(currValue)) { return; }
+            const listItems: HTMLLIElement[] | undefined = getListItems();
+            const activeItem: HTMLLIElement | undefined =
+            listItems?.find((item: HTMLElement) => item?.dataset?.value === String(currValue));
+            const container: HTMLElement | null = getScrollContainer();
+            if (activeItem && container) {
+                scrollItemIntoViewWithin(container, activeItem);
+            }
+        }, [isDataInitialized]);
 
         const typeOfData: (items: (string | number | boolean | { [key: string]: object })[]) =>
         { typeof: string | null, item: string | number | boolean | { [key: string]: object } | null } =
             useCallback((items: (string | number | boolean | { [key: string]: object })[]) => {
-                let item: {
-                    typeof: string | null;
-                    item: string | number | boolean | { [key: string]: object } | null;
-                } = { typeof: null, item: null };
+                let item: {typeof: string | null; item: string | number | boolean | { [key: string]: object } | null; }
+                = { typeof: null, item: null };
                 if (!Array.isArray(items) || items.length === 0) {
                     return item;
                 }
@@ -341,8 +360,8 @@ export const DropDownBase: React.ForwardRefExoticComponent<IDropDownBaseProps & 
                 return item;
             }, [fields]);
 
-        const getFormattedValue: (value: string | number | boolean | []) => string | number | boolean =
-            useCallback((value: string | number | boolean | []): string | number | boolean => {
+        const getFormattedValue: (value: string | number | boolean) => string | number | boolean =
+            useCallback((value: string | number | boolean): string | number | boolean => {
                 if (listData && listData.length) {
                     const item: { [key: string]: object } &
                     { typeof?: string; item?: string | number | boolean | { [key: string]: object } | null } =
@@ -385,55 +404,28 @@ export const DropDownBase: React.ForwardRefExoticComponent<IDropDownBaseProps & 
         return undefined;
     }, [listData, fields, typeOfData]);
 
-        const checkIgnoreCase: (item: string, text: string) => boolean = useCallback((item: string, text: string): boolean => {
+        const checkIgnoreCase: (item: string, text: string, ignoreCase: boolean) => boolean =
+        useCallback((item: string, text: string, ignoreCase: boolean): boolean => {
             if (isNullOrUndefined(item)) {
                 return false;
+            }
+            if (!ignoreCase) {
+                return String(item) === text?.toString();
             }
             return String(item).toLowerCase() === text?.toString().toLowerCase();
         }, []);
 
-        const checkValueCase: (
-            text: string,
-            ignoreCase: boolean,
-            isTextByValue?: boolean
-        ) => string | number | null = useCallback((
-            text: string,
-            ignoreCase: boolean,
-            isTextByValue?: boolean
-        ): string | number | null => {
-            let value: string | number | null = null;
-            if (isTextByValue) {
-                value = text;
-            }
+        const checkValueCase: (text: string, ignoreCase: boolean) => string | number | null =
+        useCallback((text: string, ignoreCase: boolean ): string | number | null => {
             if (!isNullOrUndefined(listData)) {
                 const dataSource: { [key: string]: object }[] = listData as { [key: string]: object }[];
-                if (ignoreCase) {
-                    dataSource.filter((item: { [key: string]: object }) => {
-                        const itemValue: string | number = getValue(fields.value as string, item);
-                        if (!isNullOrUndefined(itemValue) &&
-                            checkIgnoreCase(getValue(fields.text || fields.value || '', item).toString(), text)) {
-                            value = getValue(fields.value as string, item) as string;
-                        }
-                    });
-                } else {
-                    if (isTextByValue) {
-                        const compareValue: string | number | null = value;
-                        dataSource.filter((item: { [key: string]: object }) => {
-                            const itemValue: string | number = getValue(fields.value as string, item);
-                            if (!isNullOrUndefined(itemValue) && !isNullOrUndefined(value) &&
-                                compareValue != null && itemValue.toString() === compareValue.toString()) {
-                                value = getValue(fields.text as string, item) as string;
-                            }
-                        });
-                    }
-                }
+                const match: {[key: string]: object; } | undefined =
+                dataSource.find((item: {[key: string]: object; }) => !isNullOrUndefined(getValue(fields.value as string, item)) &&
+                checkIgnoreCase(String(getValue(fields.value || '', item)), text, ignoreCase) );
+                return match ? (getValue((fields.text || fields.value) as string, match) as string) : null;
             }
-            return value;
-        }, [
-            listData,
-            fields,
-            typeOfData
-        ]);
+            return null;
+        }, [listData, fields, typeOfData]);
 
         const getTextByValue: (value: string | number | boolean) => string = useCallback((value: string | number | boolean): string => {
             const dataType: string = typeOfData(dataSource as (string | number | boolean | { [key: string]: object })[]).typeof as string;
@@ -441,30 +433,13 @@ export const DropDownBase: React.ForwardRefExoticComponent<IDropDownBaseProps & 
                 return value.toString();
             }
 
-            return checkValueCase(value as string, ignoreCase ? true : false, true) as string || '';
+            return checkValueCase(value as string, ignoreCase ? true : false) as string || '';
         }, [checkValueCase, typeOfData, dataSource]);
 
-        const getQuery: (newQuery?: Query) => Query = useCallback((newQuery?: Query): Query => {
-            let filterQuery: Query;
-            if (!isCustomFilter && isDropdownFiltering && ((typedStringRef.current) || filterInputElementRef.current)) {
-                filterQuery = (newQuery as Query).clone();
-                const filteringType: string = typedStringRef.current === '' ? 'contains' : filterType;
-                const dataType: string | null = typeOfData(dataSource as (string | number | boolean | { [key: string]: object })[]).typeof;
-                if (!(dataSource instanceof DataManager) && (dataType === 'string' || dataType === 'number')) {
-                    filterQuery.where('', filteringType, typedStringRef.current, ignoreCase, ignoreAccent);
-                } else if ((isDropdownFiltering && typedStringRef.current !== '')) {
-                    const field: string = (fields?.text) ? fields.text : '';
-                    filterQuery.where(field, filteringType, typedStringRef.current, ignoreCase, ignoreAccent);
-                }
-            } else {
-                filterQuery = (newQuery as Query).clone();
-            }
-            return filterQuery.clone();
-        }, [query, isCustomFilter, isDropdownFiltering, filterType, ignoreCase, ignoreAccent, fields]);
-
-        const handleItemClick: (e: React.MouseEvent<HTMLLIElement>, index: number) => void =
-            useCallback((e: React.MouseEvent<HTMLLIElement>, index: number): void => {
-                const value: string | null = e.currentTarget.getAttribute('data-value');
+        const handleItemClick: (e: SelectEvent) => void =
+            useCallback((e: SelectEvent): void => {
+                const value: string | null = ((e.event as React.MouseEvent<HTMLLIElement, MouseEvent>).currentTarget).dataset?.value
+                ?? null;
                 if (value) {
                     let itemData: { [key: string]: Object } | string | number | boolean | null | undefined;
                     const dataType: string = typeOfData(dataSource as (string | number | boolean | { [key: string]: object })[])
@@ -478,248 +453,84 @@ export const DropDownBase: React.ForwardRefExoticComponent<IDropDownBaseProps & 
                         getTextByValue(value);
                     }
                 }
-                setSelectedItemIndex(index);
+                setSelectedItemIndex(e.index as number);
                 setFocusedItemIndex(null);
-                onItemClick?.(e, index);
+                onItemClick?.(e.event as React.MouseEvent<HTMLLIElement, MouseEvent>, e.index as number);
             }, [getDataByValue, getFormattedValue, getTextByValue, onItemClick, typeOfData, dataSource]);
 
-        const setItemFocus: () => void = useCallback((): void => {
-            if (listData.length > 0) {
-                let isSelectedItem: boolean = false;
+        const getItemProps: (args: GetItemPropsOptions) => React.HTMLAttributes<HTMLElement> = useCallback((args: GetItemPropsOptions):
+        React.HTMLAttributes<HTMLElement> & React.RefAttributes<HTMLElement> => {
 
-                if (value != null) {
-                    const itemIndex: number = listData.findIndex((item: string | number | boolean | {
-                        [key: string]: object
-                    }) =>
-                        getValue(fields.value ?? '', item) === value);
-                    if (itemIndex !== -1) {
-                        setSelectedItemIndex(itemIndex);
-                        isSelectedItem = true;
-                        setFocusedItemIndex(null);
-                    }
-                }
-
-                if (!isSelectedItem) {
-                    const firstEnabledIndex: number = listData.findIndex((item: string | number | boolean | {
-                        [key: string]: object
-                    }) =>
-                        !getValue(fields.disabled ?? '', item));
-                    if (firstEnabledIndex !== -1) {
-                        setFocusedItemIndex(firstEnabledIndex);
-                    }
-                }
-            }
-        }, [value, fields, listData]);
-
-        const setListData: (
-            dataSource: { [key: string]: object }[] | string[] | number[] | DataManager | boolean[],
-            query?: Query
-        ) => void = useCallback((
-            dataSource: { [key: string]: object }[] | string[] | number[] | DataManager | boolean[],
-            query?: Query
-        ): void => {
-            let filteredDataSource: typeof dataSource;
-            if (Array.isArray(dataSource)) {
-                filteredDataSource = dataSource.filter((item: string | number | boolean | {[key: string]: object}) =>
-                    item !== null && item !== undefined) as typeof dataSource;
-            } else {
-                filteredDataSource = dataSource;
-            }
-            const eventArgs: DataEventArgs = { cancel: false, data: filteredDataSource, query: query };
-            if (!isRequesting && !eventArgs.cancel) {
-                setIsRequesting(true);
-                if (dataSource instanceof DataManager) {
-                    (eventArgs.data as DataManager).executeQuery(getQuery(eventArgs.query || new Query()))
-                        .then((e: Record<string, any>) => {
-                            if (!e.cancel) {
-                                const completeEventArgs: { result: Array<{ [key: string]: object } | string | number | boolean>;
-                                    query: Query } = {
-                                    result: e.result,
-                                    query: getQuery(eventArgs.query || new Query())
-                                };
-                                actionComplete?.(completeEventArgs);
-                                processDataResult(completeEventArgs.result);
-                            }
-                            setIsRequesting(false);
-                            onDataLoaded?.();
-                        })
-                        .catch((e: object) => {
-                            setIsRequesting(false);
-                            actionFailure?.(e);
-                        });
+            let itemValue: string = '';
+            let textValue: string = '';
+            let isSelectedByValue: boolean = false;
+            if (value !== null) {
+                if (typeof args.item === 'string' || typeof args.item === 'number' || typeof args.item === 'boolean') {
+                    itemValue = textValue = String(args.item);
+                    isSelectedByValue = String(args.item) === String(value);
                 } else {
-                    const dataManager: DataManager = new DataManager(eventArgs.data as DataOptions | JSON[]);
-                    const listItems: { [key: string]: object }[] =
-                        getQuery(eventArgs.query || new Query()).executeLocal(dataManager) as { [key: string]: object }[];
-                    actionComplete?.({ result: listItems, query: getQuery(eventArgs.query || new Query()) });
-                    processDataResult(listItems);
-                    setIsRequesting(false);
+                    itemValue = String(getValue(fields.value || '', args.item));
+                    textValue = String(getValue(fields.text || fields.value || '', args.item));
+                    if (allowObjectBinding) {
+                        const key: string | undefined = (fields as FieldSettingsModel | undefined)?.value;
+                        const objectValue: unknown =
+                                    key && typeof value === 'object' && value !== null ? (value as Record<string, unknown>)[key as string] : undefined;
+                        isSelectedByValue = itemValue === String(objectValue ?? '');
+                    } else {
+                        isSelectedByValue = itemValue === String(value);
+                    }
                 }
             }
-        }, [
-            isRequesting,
-            getQuery,
-            sortOrder,
-            actionFailure,
-            onDataLoaded,
-            actionComplete
-        ]);
+            let isActive: boolean = selectedItemIndex !== null ? (args.index === selectedItemIndex) : isSelectedByValue;
+            try {
+                const curr: string | number | boolean | {[key: string]: unknown; } | null =
+                itemData as (string | number | boolean | { [key: string]: unknown } | null);
+                if (curr !== undefined && curr !== null) {
+                    const currVal: string = typeof curr === 'object' ? String(getValue(fields.value || 'value', curr)) : String(curr);
+                    const currText: string = typeof curr === 'object' ? String(getValue(fields.text || fields.value || '', curr)) : String(curr);
+                    isActive = String(itemValue) === currVal && String(textValue) === currText;
+                }
+            } catch {
+                isActive = false;
+            }
+            const isFocused: boolean = itemData ? false : ( (listData?.[0] as { [key: string]: object }).isHeader ?
+                args.index === 1 : args.index === 0 );
+            const isDisabled: string | boolean | undefined = fields.disabled && typeof args.item === 'object' && getValue(fields.disabled, args.item) === true;
 
-        const listbaseClasses: string = useMemo(() => {
-            const isPrimitiveArray: boolean = Array.isArray(listData) && listData.length > 0 &&
-            (typeof listData[0] === 'string' ||
-            typeof listData[0] === 'number' ||
-            typeof listData[0] === 'boolean');
-            return [
-                dropDownBaseClasses.content,
-                dropDownBaseClasses.root,
-                (!isPrimitiveArray && fields.groupBy) ? dropDownBaseClasses.grouping : '',
-                listData.length === 0 ? 'sf-nodata' : ''
+            const itemClassName: string = [
+                isActive ? dropDownBaseClasses.selected : '',
+                isFocused ? dropDownBaseClasses.focus : '',
+                isDisabled ? dropDownBaseClasses.disabled : ''
             ].filter(Boolean).join(' ');
-        }, [fields.groupBy, listData]);
 
-        useEffect(() => {
-            const updatedOptions: ListBaseOptions = {
-                fields: fields,
-                parentClass: listbaseClasses,
-                hoverIndex: -1,
-                itemTemplate: itemTemplate,
-                groupTemplate: groupTemplate,
-                ariaAttributes: {
-                    itemRole: 'listitem',
-                    listRole: 'list',
+            const fallbackId: string = `${id}-option-${args.index}`;
+
+            return {
+                className: itemClassName,
+                id: getOptionId ? getOptionId(args.index) : fallbackId,
+                'aria-selected': isActive ? 'true' : 'false',
+                'aria-disabled': isDisabled ? 'true' : 'false',
+                ref: (el: HTMLLIElement | null) => { listItemsRef.current[args.index as number] = el; }
+            };
+        }, [listData, selectedItemIndex, listbaseClasses, value, fields, dropDownBaseClasses, focusedItemIndex, itemData]);
+
+        const ulListContainer: React.ReactElement = useMemo(() => {
+            return <ListItems
+                getItemProps={getItemProps}
+                items={listData as DataSource[]}
+                parentClass={listbaseClasses}
+                itemTemplate={itemTemplate}
+                groupTemplate={groupTemplate}
+                fields={fields}
+                ariaAttributes={{
+                    itemRole: 'option',
+                    listRole: 'listbox',
                     itemText: '',
                     groupItemRole: 'presentation',
                     wrapperRole: 'presentation'
-                }
-            };
-            setListBaseOptions(updatedOptions);
-        }, [fields, itemTemplate, groupTemplate, sortOrder, listbaseClasses]);
-
-        useEffect(() => {
-            if (!isDataInitialized) {
-                setListData(dataSource, query);
-            }
-        }, [dataSource, fields, query, isDataInitialized]);
-
-        useEffect(() => {
-            setItemFocus();
-        }, [setItemFocus]);
-
-        const processDataResult: (result: Array<{ [key: string]: object } | string | number | boolean>) =>
-        void = useCallback((result: Array<{ [key: string]: object } | string | number | boolean>): void => {
-            if (!isDataInitialized) {
-                setIsDataInitialized(true);
-            }
-            const isPrimitiveArray: boolean = result.length > 0 &&
-    (typeof result[0] === 'string' || typeof result[0] === 'number' || typeof result[0] === 'boolean');
-            if (isPrimitiveArray || !fields.groupBy) {
-                if (isPrimitiveArray && sortOrder !== SortOrder.None) {
-                    const sortedResult:  (string | number | boolean | {[key: string]: object})[] = [...result];
-                    if (sortOrder === SortOrder.Ascending) {
-                        sortedResult.sort((a: string | number | boolean | { [key: string]: object },
-                                           b: string | number | boolean | { [key: string]: object }) =>
-                            String(a).localeCompare(String(b))
-                        );
-                    } else if (sortOrder === SortOrder.Descending) {
-                        sortedResult.sort((a: string | number | boolean | { [key: string]: object },
-                                           b: string | number | boolean | { [key: string]: object }) =>
-                            String(b).localeCompare(String(a))
-                        );
-                    }
-                    setListDatas(sortedResult as typeof listData);
-                } else {
-                    const sortQuery: Query = addSorting(sortOrder, fields?.text || 'text', query);
-                    setListDatas(getDataSource(result as { [key: string]: object }[], sortQuery));
-                }
-            } else {
-                setListDatas(groupDataSource(result as { [key: string]: object }[], fields, sortOrder));
-            }
-        }, [sortOrder, fields, isDataInitialized, setIsDataInitialized, query]);
-
-        const listBaseOptions: ListBaseOptions = useMemo(() => ({
-            fields: fields,
-            parentClass: listbaseClasses,
-            hoverIndex: -1,
-            itemTemplate: itemTemplate,
-            groupTemplate: groupTemplate,
-            itemClick: handleItemClick,
-            sortOrder: sortOrder,
-            ariaAttributes: {
-                itemRole: 'option',
-                listRole: 'listbox',
-                itemText: '',
-                groupItemRole: 'presentation',
-                wrapperRole: 'presentation'
-            }
-        }), [fields, listbaseClasses, itemTemplate, groupTemplate, handleItemClick, sortOrder]);
-
-
-        const listItems: React.ReactElement[] = useMemo(() => {
-            listItemsRef.current = new Array(listData.length).fill(null);
-            const activeValues: Set<unknown> = new Set();
-            return (listData as ({ [key: string]: object } | string | number)[]).map(
-                (item: { [key: string]: object } | string | number, index: number) => {
-                    const actualIndex: number = index;
-                    let isSelected: boolean = false;
-                    let itemValue: string = '';
-                    if (value !== null) {
-                        if (typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean') {
-                            itemValue = String(item);
-                            isSelected = String(item) === String(value);
-                        } else {
-                            itemValue = String(getValue(fields.value || '', item));
-                            isSelected = itemValue === String(value);
-                        }
-                        if (isSelected && activeValues.has(itemValue)) {
-                            isSelected = false;
-                        }
-
-                        if (isSelected) {
-                            activeValues.add(itemValue);
-                        }
-                    }
-                    const isActive: boolean = isSelected || index === selectedItemIndex;
-                    const isFocused: boolean = index === focusedItemIndex && index !== selectedItemIndex;
-                    const isDisabled: string | boolean | undefined = fields.disabled &&
-                        typeof item === 'object' &&
-                        getValue(fields.disabled, item) === true;
-
-                    const itemClassName: string = [
-                        isActive ? dropDownBaseClasses.selected : '',
-                        isFocused ? dropDownBaseClasses.focus : '',
-                        isDisabled ? dropDownBaseClasses.disabled : ''
-                    ].filter(Boolean).join(' ');
-
-                    return (
-                        <ListItem
-                            key={`list-item-${index}`}
-                            item={item}
-                            itemClassName={itemClassName}
-                            fields={listBaseOptions.fields || defaultMappedFields}
-                            index={actualIndex}
-                            options={listBaseOptions}
-                            onClick={(e: React.MouseEvent<HTMLLIElement>) => listBaseOptions.itemClick?.(e, index)}
-                            onKeyDown={(e: React.KeyboardEvent<HTMLLIElement>) =>
-                                listBaseOptions.itemKeyDown?.(e, index)}
-                            aria-selected={isActive ? 'true' : 'false'}
-                            aria-disabled={isDisabled ? 'true' : 'false'}
-                            data-id={getUniqueID()}
-                            listItemRef={(el: HTMLLIElement | null) => { listItemsRef.current[index as number] = el;
-                            }}
-                        />
-                    );
-                }
-            );
-        }, [
-            listData,
-            listBaseOptions,
-            selectedItemIndex,
-            focusedItemIndex,
-            value,
-            fields,
-            dropDownBaseClasses
-        ]);
+                }}
+                onSelect={handleItemClick} />;
+        }, [ listbaseClasses, itemTemplate, groupTemplate, listData, handleItemClick, getItemProps, fields, itemData]);
 
         const getListItems: () => HTMLLIElement[] = useCallback((): HTMLLIElement[] => {
             if ((fields.groupBy || itemTemplate) && containerRef.current) {
@@ -728,13 +539,25 @@ export const DropDownBase: React.ForwardRefExoticComponent<IDropDownBaseProps & 
             return listItemsRef.current.filter(Boolean) as HTMLLIElement[];
         }, [fields.groupBy, itemTemplate, dropDownBaseClasses.li]);
 
+        const getScrollContainer: () => HTMLElement | null = useCallback((): HTMLElement | null => {
+            const root: HTMLElement | null = containerRef.current as HTMLElement | null;
+            if (!root) { return null; }
+            const specific: HTMLElement | null = root.querySelector('.sf-ul') as HTMLElement | null;
+            if (specific) { return specific; }
+            return null;
+        }, []);
+
+        const getFilteredListData: () => {[key: string]: object; } [] | boolean[] | string[] | number[] =
+        useCallback((): {[key: string]: object; } [] | boolean[] | string[] | number[] => {
+            return listData;
+        }, [listData, setListData]);
+
         const getIndexByValue: (value: string | number | boolean) => number = useCallback((value: string | number | boolean): number => {
             let index: number = -1;
             const listItems: HTMLLIElement[] = getListItems();
             for (let i: number = 0; i < listItems.length; i++) {
-                const itemValue: string | null = listItems[i as number].getAttribute('data-value');
-                if (!isNullOrUndefined(value) && !isNullOrUndefined(itemValue) &&
-        String(itemValue) === String(value)) {
+                const itemValue: string | null = (listItems[i as number]).dataset?.value ?? null;
+                if (!isNullOrUndefined(value) && !isNullOrUndefined(itemValue) && String(itemValue) === String(value)) {
                     index = i;
                     break;
                 }
@@ -742,204 +565,121 @@ export const DropDownBase: React.ForwardRefExoticComponent<IDropDownBaseProps & 
             return index;
         }, [getListItems]);
 
-        const ulListContainer: React.ReactElement = useMemo(() => {
-            return generateUL(listItems, listBaseOptions);
-        }, [listItems, listBaseOptions]);
-
-        const renderHeader: React.ReactNode = useMemo(() => {
-            if (React.isValidElement(headerTemplate)) {
-                return headerTemplate;
-            }
-            if (typeof headerTemplate === 'function') {
-                return (headerTemplate as () => React.ReactNode)();
-            }
-            return null;
-        }, [headerTemplate]);
-
-        const renderFooter: React.ReactNode = useMemo(() => {
-            if (React.isValidElement(footerTemplate)) {
-                return footerTemplate;
-            }
-            if (typeof footerTemplate === 'function') {
-                return (footerTemplate as () => React.ReactNode)();
-            }
-            return null;
-        }, [footerTemplate]);
-
-        const renderNoRecords: React.ReactNode = useMemo(() => {
-            if (noRecordsTemplate === null) {
-                return null;
-            }
-            if (React.isValidElement(noRecordsTemplate)) {
-                return noRecordsTemplate;
-            }
-            if (typeof noRecordsTemplate === 'function') {
-                return (noRecordsTemplate as () => React.ReactNode)();
-            }
-            return (
-                <div className="sf-content sf-dropdownbase sf-nodata">
-                    {l10nInstance.getConstant('noRecordsTemplate')}
-                </div>
-            );
-        }, [noRecordsTemplate, l10nInstance]);
-
         useImperativeHandle(ref, () => ({
             getFormattedValue,
             getDataByValue,
             getIndexByValue,
             getTextByValue,
+            getScrollContainer,
             getListItems,
+            getFilteredListData,
             filterType,
             filter
-        } as IDropDownBase), [
-            getFormattedValue,
-            getDataByValue,
-            getIndexByValue,
-            getTextByValue,
-            getListItems,
-            listData
-        ]);
+        } as IDropDownBase), [ getFormattedValue, getDataByValue, getIndexByValue, getTextByValue, getListItems, listData,
+            getScrollContainer ]);
 
-        const filterInputAttributes: { [key: string]: string } = {
-            autoComplete: 'off',
-            autoCapitalize: 'off',
-            spellCheck: 'false',
-            'aria-expanded': 'false',
-            'aria-disabled': 'false',
-            role: 'combobox'
-        };
+        const isNavigationKey: (key: string) => key is 'ArrowUp'
+        | 'ArrowDown' | 'Home' | 'End' | 'PageUp'
+        | 'PageDown' = (key: string) =>
+            key === 'ArrowUp' ||
+            key === 'ArrowDown' ||
+            key === 'Home' ||
+            key === 'End' ||
+            key === 'PageUp' ||
+            key === 'PageDown';
 
-        const onFilterUp: (e: React.KeyboardEvent<HTMLInputElement>) =>
-        void = (e: React.KeyboardEvent<HTMLInputElement>) => {
-            if (props.keyActionHandler) {props.keyActionHandler(e); }
-        };
-
-        const filter: (
-            dataSource: { [key: string]: Object }[] | DataManager | string[] | number[] | boolean[],
-            query?: Query,
-            fields?: FieldSettingsModel
-        ) => void = (
-            dataSource: { [key: string]: Object }[] | DataManager | string[] | number[] | boolean[],
-            query?: Query,
-            fields?: FieldSettingsModel
-        ): void => {
-            setIsCustomFilter(true);
-            const currentValue: string = filterInputElementRef.current?.value || typedString;
-            if (currentValue) {
-                const filterQuery: Query = query || new Query();
-                if (!query) {
-                    filterQuery.where(
-                        fields?.text || 'text',
-                        'contains',
-                        currentValue,
-                        ignoreCase
-                    );
+        const handleFilterChange: (e: React.ChangeEvent<HTMLInputElement>) => void =
+        useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+            if (debounceDelay && debounceDelay > 0) {
+                const value: string = filterInputElementRef.current?.value as string;
+                if (filterTimerRef.current) {
+                    clearTimeout(filterTimerRef.current as unknown as number);
+                    filterTimerRef.current = null;
                 }
-                filteringAction(dataSource, filterQuery);
+                setTypedString(value);
+                filterTimerRef.current = window.setTimeout(() => {
+                    handleInputChange(e);
+                    clearTimeout(filterTimerRef.current as unknown as number);
+                    filterTimerRef.current = null;
+                }, debounceDelay);
             } else {
-                filteringAction(dataSource, query);
+                handleInputChange(e);
             }
-        };
+        }, [debounceDelay, handleInputChange, filterInputElementRef, filterTimerRef, setTypedString]);
 
-
-        const filteringAction: (
-            dataSource: { [key: string]: Object }[] | DataManager | string[] | number[] | boolean[],
-            query?: Query | null
-        ) => void = (
-            dataSource: { [key: string]: Object }[] | DataManager | string[] | number[] | boolean[],
-            query?: Query | null
-        ): void => {
-            if (filterInputElementRef.current != null && filterInputElementRef.current.value.trim() !== '') {
-                const filterQuery: Query = query || new Query();
-                if (!query) {
-                    const isPrimitive: boolean = Array.isArray(dataSource) && dataSource.length > 0 &&
-                (typeof dataSource[0] === 'string' || typeof dataSource[0] === 'number' || typeof dataSource[0] === 'boolean');
-                    if (isPrimitive) {
-                        filterQuery.where('', filterType, filterInputElementRef.current.value, ignoreCase, ignoreAccent);
-                    } else {
-                        filterQuery.where(
-                            fields.text || 'text',
-                            filterType,
-                            filterInputElementRef.current.value,
-                            ignoreCase,
-                            ignoreAccent
-                        );
-                    }
-                }
-                setListData(dataSource, filterQuery);
-            } else {
-                setListData(dataSource, query || new Query());
+        const handleFilterKeyUp: (e: React.KeyboardEvent<HTMLInputElement>) => void =
+        useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+            if (e.key !== 'Enter' && !isNavigationKey(e.key)) {
+                onFilterUp(e, props.keyActionHandler);
             }
-        };
+        }, [onFilterUp, props.keyActionHandler]);
 
-        const searchLists: (e: KeyboardEvent | MouseEvent, filterValue?: string) => void =
-        (e: KeyboardEvent | MouseEvent, filterValue?: string): void => {
-            setIsDataFetched(false);
-            if (isDropdownFiltering && (filterInputElementRef.current != null)) {
-                setIsRequesting(false);
-                const eventArgs: FilteringEventArgs = {
-                    preventDefaultAction: false,
-                    text: filterValue as string,
-                    updateData: (dataSource: DataManager | string[] | number[] | boolean[], query?: Query) => {
-                        setIsCustomFilter(true);
-                        filteringAction(dataSource, query);
-                    },
-                    baseEventArgs: e
-                };
-                if (onFilterChange) {
-                    onFilterChange(eventArgs);
-                }
-                if (!isCustomFilter && !eventArgs.preventDefaultAction) {
-                    filteringAction(dataSource, null);
-                }
+        const handleFilterKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void =
+        useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+            if (e.key === 'Enter') {
+                e.stopPropagation();
+                onFilterUp(e, props.keyActionHandler);
+                return;
             }
-        };
-
-        const clearText: () => void = (): void => {
-            setTypedString('');
-        };
+            if (isNavigationKey(e.key)) {
+                e.preventDefault();
+                e.stopPropagation();
+                props.keyActionHandler?.(e as unknown as React.KeyboardEvent<HTMLElement>);
+                return;
+            }
+        }, [onFilterUp, props.keyActionHandler]);
 
         return (
             <>
-                {isDropdownFiltering && !isRequesting && (
-                    <span className={'sf-filter-parent'}>
-                        <span className='sf-input-group sf-control-wrapper sf-input-focus'>
-                            <InputBase
-                                ref={filterInputElementRef as React.RefObject<HTMLInputElement>}
-                                type='text'
-                                value={typedString}
-                                className={'sf-input-filter'}
-                                placeholder={filterPlaceholder}
-                                aria-controls={`${id}_filter`}
-                                aria-autocomplete="list"
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                    setTypedString(e.target.value);
-                                    searchLists(e as unknown as KeyboardEvent, e.target.value);
-                                }}
-                                onKeyUp={(e: React.KeyboardEvent<HTMLInputElement>) => onFilterUp(e)}
-                                {...filterInputAttributes}
-                            />
-                            {renderClearButton(typedString, () => clearText())}
-                        </span>
-                    </span>
-                )}
-                {!isRequesting && (
+                { isDataInitialized ? (
                     <div
+                        className={size === Size.Small ? 'sf-small' : size === Size.Large ? 'sf-large' : 'sf-medium'}
                         ref={containerRef}
-                        tabIndex={-1}
-                        style={popupHeight ? {
-                            maxHeight: typeof popupHeight === 'number' ? `${popupHeight}px` : popupHeight,
-                            overflow: 'auto'
-                        } : undefined}
                     >
-                        <div className="sf-ddl-header">
-                            {renderHeader}
-                        </div>
-                        {(listData.length === 0 && !(dataSource instanceof DataManager)) ? renderNoRecords : ulListContainer}
-                        <div className="sf-ddl-footer">
-                            {renderFooter}
-                        </div>
+                        {isDropdownFiltering && (
+                            <span className={'sf-ddl-filter-parent'}>
+                                <span
+                                    className={`sf-input-group sf-control sf-input-focus ${
+                                        size === Size.Small ? 'sf-small' : size === Size.Large ? 'sf-large' : 'sf-medium'
+                                    }`}
+                                >
+                                    <InputBase
+                                        name={id + '_filter'}
+                                        ref={filterInputElementRef as React.RefObject<HTMLInputElement>}
+                                        type='text'
+                                        value={typedString}
+                                        className={'sf-input-filter'}
+                                        placeholder={filterPlaceholder}
+                                        title='Filter'
+                                        onChange={handleFilterChange}
+                                        onKeyUp={handleFilterKeyUp}
+                                        onKeyDown={handleFilterKeyDown}
+                                    />
+                                    {isRequesting ? (<Spinner
+                                        size={size === Size.Small ? '16px' : '20px'}
+                                        visible={true}
+                                    />) : renderClearButton(typedString, clearText) }
+                                </span>
+                            </span>
+                        )}
+                        {headerTemplate &&  (
+                            <div className="sf-dd-header">
+                                <Header headerTemplate={headerTemplate} />
+                            </div>
+                        )}
+                        {(listData.length === 0 ? renderNoRecords : ulListContainer)}
+                        {footerTemplate &&  (
+                            <div className="sf-dd-footer">
+                                <Footer footerTemplate={footerTemplate} />
+                            </div>
+                        )}
                     </div>
+                ) : (
+                    isActionFailed && (
+                        <div className={dropDownBaseClasses.root + ' ' + dropDownBaseClasses.content + ' ' + dropDownBaseClasses.noData}>
+                            {renderError}
+                        </div>
+                    )
                 )}
             </>
         );

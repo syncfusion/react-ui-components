@@ -1,3 +1,5 @@
+@use '../mixins/all' as *;
+
 @include export-module('base-animation') {
 
   @keyframes SlideLeftOut {

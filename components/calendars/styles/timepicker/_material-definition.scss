@@ -1,0 +1,50 @@
+@use '../../../base/styles/themes/variables' as *;
+
+$timepicker-popup-width: calc(var(--sf-spacing) * 18.75) !default;
+$timepicker-default-text-indent: $spacing-16 !default;
+$timepicker-list-normal-line-height: $spacing-40 !default;
+$timepicker-list-normal-font-size: $spacing-16 !default;
+$timepicker-font-weight-style: calc(var(--sf-spacing) * 31.25) !default;
+
+$timepicker-popup-height-sm: calc(var(--sf-spacing) * 10.5) !default;
+$timepicker-popup-height-me: calc(var(--sf-spacing) * 13) !default;
+$timepicker-popup-height-la: calc(var(--sf-spacing) * 15.5) !default;
+
+$timepicker-font-size-sm: $font-size-sm !default;
+$timepicker-font-size-me: $font-size-base !default;
+$timepicker-font-size-la: $font-size-base !default;
+
+$timepicker-item-height-sm: $spacing-32 !default;
+$timepicker-item-height-me: $spacing-40 !default;
+$timepicker-item-height-la: calc(var(--sf-spacing) * 3) !default;
+
+$timepicker-popup-border-radius: $spacing-4 !default;
+$timepicker-popup-shadow: $shadow-md !default;
+
+$timepicker-list-default-font-color: rgba($flyout-text-color) !default;
+$timepicker-list-default-border-style: none !default;
+$timepicker-list-border: 1px solid rgb($flyout-border) !default;
+
+$timepicker-list-bg-color: $flyout-bg-color !default;
+$timepicker-list-hover-bg-color: $flyout-bg-color-hover !default;
+$timepicker-list-hover-border-color: none !default;
+$timepicker-list-hover-font-color: rgba($flyout-text-color-hover) !default;
+
+$timepicker-list-active-bg-color: rgba($primary) !default;
+$timepicker-list-active-font-color: rgba($primary-text-color) !default;
+$timepicker-list-active-hover-bg-color: rgba($primary) !default;
+$timepicker-list-active-hover-font-color: rgba($primary-text-color) !default;
+
+$timepicker-list-active-icon-color: rgba($icon-color) !default;
+$timepicker-list-popup-icon-active-color: rgba($icon-color) !default;
+
+$timepicker-icon-active-border: $spacing-1 !default;
+$timepicker-icon-active-border-radius: $spacing-20;
+$timepicker-icon-active-bg-color: rgba($content-text-color, .12) !default;
+
+$timepicker-mobile-bg-color: rgba($content-bg-color, 1);
+$timepicker-mobile-header-spacing: $spacing-8 !default;
+$timepicker-mobile-header-color: $content-bg-color-alt1 !default;
+$timepicker-mobile-text-color: $content-text-color-alt1 !default;
+$timepicker-modal-list-item-padding: $spacing-16 $spacing-0 $spacing-16 $spacing-12;
+$timepicker-modal-list-line-height: calc(var(--sf-spacing) * 3) !default;

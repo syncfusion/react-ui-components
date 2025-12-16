@@ -49,6 +49,7 @@ export const StripLineBeforeRenderer: React.FC<StripLineRendererProps> = ({ axes
     },
               [
                   ...axes?.flatMap((axis: AxisModel) => (axis.stripLines?.flatMap((stripLine: ChartStripLineProps) => [
+                      stripLine.visible,
                       stripLine.range?.start,
                       stripLine.range?.end,
                       stripLine.style?.zIndex,
@@ -154,6 +155,7 @@ export const StripLineAfterRenderer: React.FC<StripLineRendererProps> = ({ axes 
     },
               [
                   ...axes?.flatMap((axis: AxisModel) => (axis.stripLines?.flatMap((stripLine: ChartStripLineProps) => [
+                      stripLine.visible,
                       stripLine.range?.start,
                       stripLine.range?.end,
                       stripLine.style?.zIndex,

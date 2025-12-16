@@ -42,8 +42,8 @@ export default function App() {
 
 **Resources**
 
-- [SplitButton Demo/Docs](https://react.syncfusion.com/split-button)
-- [SplitButton API](https://react-api.syncfusion.com/split-button/overview)
+- [SplitButton Demo/Docs](https://react.syncfusion.com/react-ui/split-button)
+- [SplitButton API](https://react.syncfusion.com/api/split-button/overview)
 
 ## React Dropdown Button
 
@@ -77,8 +77,8 @@ export default function App() {
 
 **Resources**
 
-- [Dropdown Button Demo/Docs](https://react.syncfusion.com/dropdown-button)
-- [Dropdown Button API](https://react-api.syncfusion.com/dropdown-button/overview)
+- [Dropdown Button Demo/Docs](https://react.syncfusion.com/react-ui/dropdown-button)
+- [Dropdown Button API](https://react.syncfusion.com/api/dropdown-button/overview)
 
 <p align="center">
 Trusted by the world's leading companies
@@ -106,4 +106,4 @@ Check the changelog [here](https://github.com/syncfusion/react-ui-components/blo
 
 See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campaign=notification) for more info.
 
-&copy; Copyright 2025 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential Studio® license and copyright applies to this distribution.
+&copy; Copyright 2026 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential Studio® license and copyright applies to this distribution.

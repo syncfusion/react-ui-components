@@ -32,7 +32,7 @@ import {
 import { defaultColumnProps } from '../hooks';
 import { Columns, RenderBase, Aggregates } from '../views';
 import { addLastRowBorder, compareSelectedProperties, getObject, setFormatter } from '../utils';
-import { ActionType, FilterEvent, PageEvent, SearchEvent, SortEvent } from '../types';
+import { ActionType, ColumnType, FilterEvent, PageEvent, SearchEvent, SortEvent } from '../types';
 
 /**
  * CSS class names used in the component
@@ -53,7 +53,7 @@ export const useRender: <T>() => UseRenderResult<T> = <T, >(): UseRenderResult<T
     const { setCurrentViewData, setInitialLoad, setTotalRecordsCount, aggregates, pageSettings,
         height, contentPanelRef, contentTableRef, sortSettings } = grid;
     const { currentViewData, currentPage, gridAction, uiColumns, isInitialLoad,
-        setResponseData, dataModule, totalRecordsCount } = useGridMutableProvider<T>();
+        setResponseData, dataModule, totalRecordsCount, selectionModule } = useGridMutableProvider<T>();
 
     const [isLayoutRendered, setIsLayoutRendered] = useState<boolean>(false);
     const [isContentBusy, setIsContentBusy] = useState<boolean>(true);
@@ -76,6 +76,9 @@ export const useRender: <T>() => UseRenderResult<T> = <T, >(): UseRenderResult<T
     const updateColumnTypes: (data: Object) => void = useCallback((data: Object) => {
         let value: string | number | boolean | Object;
         (uiColumns ?? grid.columns).map((newColumn: Partial<IColumnBase<T>>) => {
+            if (!isNullOrUndefined(newColumn.getCommandItems)) {
+                newColumn.type = ColumnType.Command;
+            }
             if (isNullOrUndefined(newColumn.field)) {
                 return newColumn;
             }
@@ -150,14 +153,16 @@ export const useRender: <T>() => UseRenderResult<T> = <T, >(): UseRenderResult<T
         }
         if (grid.pageSettings?.enabled) {
             grid.pagerModule?.goToPage(currentPage);
-            setTotalRecordsCount(data.count);
         }
+        setTotalRecordsCount(data.count);
         setResponseData(data);
 
         if (grid.onDataLoadStart) {
             grid.onDataLoadStart(data);
         }
-        grid.clearSelection();
+        if (!grid.selectionSettings?.persistSelection) {
+            grid.clearSelection();
+        }
         setCurrentViewData(data.result as T[]);
         if (!isColTypeDef.current && data.result.length > 0) {
             updateColumnTypes(data.result[0]);
@@ -194,11 +199,13 @@ export const useRender: <T>() => UseRenderResult<T> = <T, >(): UseRenderResult<T
         setIsContentBusy(true);
         showSpinner();
         if (dataModule.dataState.current.isPending) {
-            dataModule.dataState.current.resolver(dataManager);
-            if (dataModule.dataState.current.isEdit) {
-                dataManagerSuccess(dataManager as ReturnType);
-            }
-            dataModule.dataState.current = { isPending: false, resolver: undefined, isEdit: false };
+            setTimeout(() => {
+                dataModule.dataState.current.resolver?.(dataManager);
+                if (isNullOrUndefined(dataModule.dataState.current.resolver) || dataModule.dataState.current.isEdit) {
+                    dataManagerSuccess(dataManager as ReturnType);
+                }
+                dataModule.dataState.current = { isPending: false, resolver: undefined, isEdit: false };
+            }, 0);
         } else {
             const dataManagerPromise: Promise<Object> = dataModule.getData(gridAction, generateQuery().requiresCount());
             dataManagerPromise.then(dataManagerSuccess).catch(dataManagerFailure);
@@ -219,6 +226,7 @@ export const useRender: <T>() => UseRenderResult<T> = <T, >(): UseRenderResult<T
     // Handle layout rendered state
     useEffect(() => {
         if (isLayoutRendered) {
+            selectionModule?.updateHeaderSelectionState?.();
             hideSpinner();
             if (grid.onDataLoad) {
                 grid.onDataLoad();
@@ -352,7 +360,7 @@ function getUIColumnCompareKeys(): ColumnCompareKeys {
     return [
         'textAlign', 'headerTextAlign', 'disableHtmlEncode', 'clipMode', 'customAttributes', 'format', 'displayAsCheckBox', 'allowEdit',
         'templateSettings', 'edit', 'width', 'visible', 'headerText', 'template', 'headerTemplate', 'editTemplate',
-        'valueAccessor'
+        'valueAccessor', 'headerCheckbox'
     ];
 }
 
@@ -382,29 +390,18 @@ const prepareColumns: <T>(
     parentDepth?: number,
     parentIndex?: string,
     prevColumns?: ColumnProps<T>[]
-) => {
-    columns: ColumnProps<T>[];
-    depth: number;
-    children: ReactNode;
-    colGroup: JSX.Element[];
-    isColumnChanged: boolean;
-    isUIColumnpropertiesChanged: boolean;
-} = <T, >(
+) =>
+PrepareColumns<T>
+= <T, >(
     children: ReactNode | (ColumnProps<T> | ReactElement)[],
     parentDepth: number = 0,
     parentIndex: string = '',
     prevColumns?: ColumnProps<T>[]
-): {
-    columns: ColumnProps<T>[];
-    depth: number;
-    children: ReactNode;
-    colGroup: JSX.Element[];
-    isColumnChanged: boolean;
-    isUIColumnpropertiesChanged: boolean;
-} => {
+): PrepareColumns<T> => {
     let maxDepth: number = parentDepth;
     let isColumnChanged: boolean = false; // currently used/handled always column state changed manner even unrelated state change props.children changed.
     let isUIColumnpropertiesChanged: boolean = false;
+    let isCheckBoxColumn: boolean = false;
     const columns: ColumnProps<T>[] = [];
     const adjustedChildren: ReactNode[] = [];
     const colGroup: JSX.Element[] = [];
@@ -429,14 +426,7 @@ const prepareColumns: <T>(
             if (child.type === ColumnBase || child.type === Column) {
                 // Check for and process nested columns
                 if ((child.props as { children: ReactNode })?.children) {
-                    const childContents: {
-                        columns: ColumnProps<T>[];
-                        depth: number;
-                        children: ReactNode;
-                        colGroup: JSX.Element[];
-                        isColumnChanged: boolean;
-                        isUIColumnpropertiesChanged: boolean;
-                    } = prepareColumns<T>(
+                    const childContents: PrepareColumns<T> = prepareColumns<T>(
                         (child.props as { children: ReactElement })?.children,
                         parentDepth + 1,
                         currentIndex,
@@ -444,6 +434,7 @@ const prepareColumns: <T>(
                     );
                     isColumnChanged = childContents.isColumnChanged;
                     isUIColumnpropertiesChanged = childContents.isUIColumnpropertiesChanged;
+                    isCheckBoxColumn = childContents.isCheckBoxColumn;
                     columns.push({ ...columnProps, columns: childContents.columns }); // Nest child columns
                     colGroup.push(...childContents.colGroup); // Gather col elements from child columns
                     maxDepth = Math.max(maxDepth, childContents.depth);
@@ -465,6 +456,9 @@ const prepareColumns: <T>(
                         isUIColumnpropertiesChanged = isUIColumnpropertiesChanged || hasUIChanged;
                     }
                     columns.push(columnProps);
+                    if (columnProps.type === ColumnType.Checkbox) {
+                        isCheckBoxColumn = true;
+                    }
 
                     // Only create col elements for leaf columns
                     colGroup.push(
@@ -492,7 +486,8 @@ const prepareColumns: <T>(
                     colGroup: childColGroup,
                     children,
                     isColumnChanged: isChildrenColumnsChanged,
-                    isUIColumnpropertiesChanged: isChildrenColumnsUIChanged
+                    isUIColumnpropertiesChanged: isChildrenColumnsUIChanged,
+                    isCheckBoxColumn: isChildCheckboxColumn
                 } = prepareColumns<T>(
                     (child.props as { children: ReactElement })?.children,
                     parentDepth,
@@ -501,6 +496,7 @@ const prepareColumns: <T>(
                 );
                 isColumnChanged = isChildrenColumnsChanged;
                 isUIColumnpropertiesChanged = isChildrenColumnsUIChanged;
+                isCheckBoxColumn = isChildCheckboxColumn;
                 columns.push(...childColumns);
                 colGroup.push(...childColGroup);
                 adjustedChildren.push(
@@ -529,6 +525,9 @@ const prepareColumns: <T>(
                 isUIColumnpropertiesChanged = isUIColumnpropertiesChanged || hasUIChanged;
             }
             columns.push(columnObject);
+            if (columnObject.type === ColumnType.Checkbox) {
+                isCheckBoxColumn = true;
+            }
             adjustedChildren.push(<ColumnBase<T> key={columnKey} {...columnObject} />);
 
             // Generate col element for object definitions
@@ -556,7 +555,8 @@ const prepareColumns: <T>(
         children: <RenderBase<T> key={'Columns'}>{adjustedChildren}</RenderBase>,
         colGroup,
         isColumnChanged,
-        isUIColumnpropertiesChanged
+        isUIColumnpropertiesChanged,
+        isCheckBoxColumn
     };
 };
 
@@ -594,16 +594,16 @@ function isColumnObject(child: ColumnProps | ReactNode): child is ColumnProps {
  */
 export const useColumns: <T>(props: Partial<IGridBase<T>>, gridRef: RefObject<GridRef<T>>, dataState?: RefObject<PendingState>,
     isInitialBeforePaint?: RefObject<boolean>) =>
-Partial<IGridBase<T>> & { uiColumns: ColumnProps<T>[] } =
+Partial<IGridBase<T>> & { uiColumns: ColumnProps<T>[], isCheckBoxColumn: boolean } =
     <T, >(props: Partial<IGridBase<T>>, gridRef: RefObject<GridRef<T>>, dataState?: RefObject<PendingState>,
-        isInitialBeforePaint?: RefObject<boolean>): Partial<IGridBase<T>> & { uiColumns: ColumnProps<T>[] } => {
+        isInitialBeforePaint?: RefObject<boolean>): Partial<IGridBase<T>> & { uiColumns: ColumnProps<T>[], isCheckBoxColumn: boolean } => {
         const prevPrepareColumns: RefObject<PrepareColumns<T>> = useRef({} as PrepareColumns<T>);
         const isNoColumnRemoteData: boolean = useMemo(() => {
             return !props.columns && !props.children && props.dataSource instanceof DataManager && props.dataSource.dataSource.url
                 && Array.isArray(gridRef.current?.currentViewData) && gridRef.current?.currentViewData?.length > 0;
         }, [props.children, props.columns, props.dataSource, gridRef.current?.currentViewData]);
-        const { children, depth: headerRowDepth, columns, colGroup, uiColumns } = useMemo(() => {
-            if (dataState.current.isPending) {
+        const { children, depth: headerRowDepth, columns, colGroup, uiColumns, isCheckBoxColumn } = useMemo(() => {
+            if (dataState.current.isPending && prevPrepareColumns.current.columns) {
                 return prevPrepareColumns.current;
             }
             const result: PrepareColumns<T> = prepareColumns<T>(
@@ -646,7 +646,8 @@ Partial<IGridBase<T>> & { uiColumns: ColumnProps<T>[] } =
             uiColumns,
             headerRowDepth,
             children,
-            colElements: colGroup
+            colElements: colGroup,
+            isCheckBoxColumn
         }), [columns, uiColumns, headerRowDepth]);
     };
 

@@ -14,7 +14,8 @@ import {
     NamedExoticComponent,
     useState,
     isValidElement,
-    createElement
+    createElement,
+    HTMLAttributes
 } from 'react';
 import {
     IRowBase,
@@ -61,15 +62,20 @@ const RowBase: <T>(props: IRowBase<T> & RefAttributes<RowRef>) => ReactElement =
             aggregateRow,
             ...attr
         } = props;
-        const { headerRowDepth, isInitialBeforePaint, editModule, uiColumns, isInitialLoad } = useGridMutableProvider<T>();
+        const { headerRowDepth, isInitialBeforePaint, editModule, uiColumns, isInitialLoad, commandColumnModule, dataModule,
+            focusModule } = useGridMutableProvider<T>();
+        const { commandEdit, commandEditRef } = commandColumnModule;
         const { onRowRender, onAggregateRowRender, serviceLocator, rowClass,
-            sortSettings, rowHeight, editSettings, columns, rowTemplate } = useGridComputedProvider<T>();
+            sortSettings, rowHeight, editSettings, columns, rowTemplate, selectionSettings } = useGridComputedProvider<T>();
         const rowRef: RefObject<HTMLTableRowElement> = useRef<HTMLTableRowElement>(null);
         const cellsRef: RefObject<ICell<ColumnProps<T>>[]> = useRef<ICell<ColumnProps<T>>[]>([]);
         const localization: IL10n = serviceLocator?.getService<IL10n>('localization');
         const editInlineFormRef: RefObject<InlineEditFormRef<T>> = useRef<InlineEditFormRef<T>>(null);
         const [syncFormState, setSyncFormState] = useState(editInlineFormRef.current?.formState);
         const [rowObject, setRowObject] = useState<IRow<ColumnProps<T>>>(row);
+        if (dataModule?.dataManager && 'result' in dataModule?.dataManager && rowObject?.data) {
+            rowObject.data = row.data;
+        }
         /**
          * Returns the cell options objects
          *
@@ -79,13 +85,18 @@ const RowBase: <T>(props: IRowBase<T> & RefAttributes<RowRef>) => ReactElement =
             return cellsRef.current;
         }, []);
 
+        const setAriaSelected: HTMLAttributes<HTMLTableRowElement> = useMemo(() => (selectionSettings.enabled ? {
+            'aria-selected': rowObject?.isSelected
+        } : {}), [rowObject?.isSelected, selectionSettings.enabled]);
+
         const inlineEditForm: JSX.Element = useMemo(() => {
             // Properly check for edit permissions and active edit state
             // This ensures double-click properly triggers edit mode on data rows
             if (rowType === RenderType.Content &&
                 (!editModule?.editSettings?.allowEdit ||
                  !(editModule?.isEdit && editModule?.editRowIndex >= 0 && editModule?.editRowIndex === row.index) ||
-                 isNullOrUndefined(editModule?.originalData))) {
+                 isNullOrUndefined(editModule?.originalData)) &&
+                 !(editModule?.editSettings?.allowEdit && commandEdit.current && commandEditRef.current[rowObject.uid])) {
                 return null;
             }
             return (
@@ -99,6 +110,7 @@ const RowBase: <T>(props: IRowBase<T> & RefAttributes<RowRef>) => ReactElement =
                     isAddOperation={false}
                     columns={uiColumns ?? columns as ColumnProps<T>[]}
                     editData={editModule?.editData}
+                    rowObject={rowObject}
                     validationErrors={editModule?.validationErrors || {}}
                     editRowIndex={row?.index}
                     rowUid={row?.uid}
@@ -122,7 +134,8 @@ const RowBase: <T>(props: IRowBase<T> & RefAttributes<RowRef>) => ReactElement =
             editModule?.showAddNewRowData,
             editModule?.editSettings?.showAddNewRow,
             editModule?.editSettings?.newRowPosition,
-            editSettings?.template
+            editSettings?.template,
+            Object.keys(commandEditRef?.current).length
         ]);
 
         /**
@@ -195,6 +208,14 @@ const RowBase: <T>(props: IRowBase<T> & RefAttributes<RowRef>) => ReactElement =
             handleAggregateRowDataBound();
         }, [handleAggregateRowDataBound, rowObject, isInitialBeforePaint.current]);
 
+        useEffect(() => {
+            if (isInitialLoad) { return; }
+            if (attr['aria-rowindex'] - 1 === focusModule?.focusedCell.current?.rowIndex &&
+                focusModule?.focusedCell.current?.colIndex !== -1 &&
+                !focusModule?.focusedCell.current?.element?.querySelector('input[aria-expanded="true"]')) {
+                focusModule?.addFocus?.(focusModule?.focusedCell.current);
+            }
+        }, [rowObject?.isSelected]);
 
         /**
          * Process children to create column elements with proper props
@@ -233,12 +254,13 @@ const RowBase: <T>(props: IRowBase<T> & RefAttributes<RowRef>) => ReactElement =
                 const customAttributesWithSpan: CustomAttributes = {
                     ...cellAttributes,
                     ...(child.props?.template && child.props?.templateSettings?.ariaLabel?.length > 0 ? { 'aria-label': child.props?.templateSettings?.ariaLabel } : {}),
-                    className: `${cellClassName}${!isVisible ? ` ${CSS_CELL_HIDE}` : ''}`,
+                    className: `${cellClassName}${!isVisible ? ` ${CSS_CELL_HIDE}` : ''} ${rowType === RenderType.Content && rowObject.isSelected ? 'sf-active' : ''}`,
                     title: rowType === RenderType.Filter ? (child.props.headerText || child.props.field) + localization?.getConstant('filterBarTooltip') : undefined,
                     role: rowType === RenderType.Header || rowType === RenderType.Filter ? 'columnheader' : 'gridcell',
                     tabIndex: -1,
                     'aria-colindex': index ? index + 1 : 1,
-                    ...(colSpan > 1 ? { 'aria-colspan': colSpan } : {})
+                    ...(colSpan > 1 ? { 'aria-colspan': colSpan } : {}),
+                    ...(selectionSettings.enabled && rowType === RenderType.Content ? { 'aria-selected': rowObject.isSelected } : {})
                 };
 
                 // Create cell options object for getCells method
@@ -253,7 +275,7 @@ const RowBase: <T>(props: IRowBase<T> & RefAttributes<RowRef>) => ReactElement =
                         customAttributes: customAttributesWithSpan,
                         index,
                         ...child.props as IColumnBase<T>,
-                        type: uiColumns ? uiColumns?.[index as number]?.type : columns?.[index as number]?.type
+                        type: row?.uid === 'empty-row-uid' ? 'string' : (uiColumns ? uiColumns?.[index as number]?.type : columns?.[index as number]?.type)
                     },
                     cellType,
                     colSpan: colSpan,
@@ -282,14 +304,15 @@ const RowBase: <T>(props: IRowBase<T> & RefAttributes<RowRef>) => ReactElement =
                 if (rowType === RenderType.Filter) {
                     elements.push(
                         <FilterBase
-                            key={`${child.props.field || 'col'}-${row?.index + 1 || 'filter'}`}
+                            key={`${child.props.field || 'col'}-${rowObject?.index + '-' + cellOption.index + '-' + 1 + '-' + 'filter'}`}
                             {...columnProps}
                         />
                     );
                 } else {
                     elements.push(
                         <ColumnBase<T>
-                            key={`${child.props.field || 'col'}-${row?.index || 'Header'}`}
+                            key={`${child.props.field || 'col'}-${rowObject?.index + '-' + cellOption.index + '-' +
+                                (rowType === RenderType.Header ? 'Header' : 'Content')}`}
                             {...columnProps}
                         />
                     );
@@ -300,7 +323,7 @@ const RowBase: <T>(props: IRowBase<T> & RefAttributes<RowRef>) => ReactElement =
             cellsRef.current = cellOptions;
 
             return elements;
-        }, [children, rowObject, rowType]);
+        }, [children, rowObject, rowType, (editModule?.editSettings.mode === 'Popup' || editModule?.editSettings.mode === 'PopupTemplate') && rowObject?.editInlineRowFormRef]);
 
         /**
          * Row template
@@ -340,8 +363,9 @@ const RowBase: <T>(props: IRowBase<T> & RefAttributes<RowRef>) => ReactElement =
         return (
             <>
                 { renderRowTemplate ? renderRowTemplate :
-                    rowType === RenderType.Content && editModule?.editSettings?.allowEdit && editModule?.isEdit &&
+                    rowType === RenderType.Content && editModule?.editSettings?.allowEdit && editModule.editSettings.mode === 'Normal' && ((editModule?.isEdit &&
                     editModule?.editRowIndex >= 0 && editModule?.editRowIndex === row.index && !isNullOrUndefined(editModule?.originalData)
+                    && !commandEdit.current) || (commandEdit.current && commandEditRef.current[rowObject.uid]))
                         ? inlineEditForm
                         : (<tr
                             ref={rowRef}
@@ -351,6 +375,7 @@ const RowBase: <T>(props: IRowBase<T> & RefAttributes<RowRef>) => ReactElement =
                                     ? ' ' + (customRowClass || customNoRecordRowClass || customAggregateRowClass)
                                     : '')
                             }
+                            {...setAriaSelected}
                         >
                             {processedChildren}
                         </tr>)

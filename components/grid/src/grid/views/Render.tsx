@@ -13,14 +13,15 @@ import {
     useEffect,
     ReactElement
 } from 'react';
-import { HeaderPanelBase, ContentPanelBase, PagerPanelBase, GridToolbar } from './index';
-import { RenderRef, IRenderBase, HeaderPanelRef, ContentPanelRef, FooterPanelRef, WrapMode } from '../types';
+import { HeaderPanelBase, ContentPanelBase, PagerPanelBase, GridToolbar, PopupEditForm } from './index';
+import { RenderRef, IRenderBase, HeaderPanelRef, ContentPanelRef, FooterPanelRef, WrapMode, InlineEditFormRef, ColumnProps, IRow } from '../types';
 import { useGridComputedProvider, useGridMutableProvider } from '../contexts';
 import { useRender, useScroll } from '../hooks';
 import { ToolbarItemProps, ToolbarAPI } from '../types/toolbar.interfaces';
 import { PagerRef } from '@syncfusion/react-pager';
 import { FooterPanelBase } from './FooterPanel';
 import { Spinner } from '@syncfusion/react-popups';
+import { isNullOrUndefined } from '@syncfusion/react-base';
 
 /**
  * CSS class names used in the Render component
@@ -95,6 +96,7 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
         const contentPanelRef: RefObject<ContentPanelRef<T>> = useRef<ContentPanelRef<T>>(null);
         const footerPanelRef: RefObject<FooterPanelRef> = useRef<FooterPanelRef>(null);
         const pagerObjectRef:  RefObject<PagerRef> = useRef<PagerRef>(null);
+        const popupEditFormRef: RefObject<InlineEditFormRef<T>> = useRef<InlineEditFormRef<T>>(null);
 
         const { privateRenderAPI, protectedRenderAPI } = useRender<T>();
         const { privateScrollAPI, protectedScrollAPI, setHeaderScrollElement, setContentScrollElement, setFooterScrollElement } =
@@ -126,13 +128,17 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
             ...(headerPanelRef.current as HeaderPanelRef),
             ...(contentPanelRef.current as ContentPanelRef<T>),
             ...(footerPanelRef.current as FooterPanelRef),
-            pagerModule: pagerObjectRef.current
+            pagerModule: pagerObjectRef.current,
+            ...(editModule.editSettings.mode === 'Popup' && editModule.isEdit ?
+                isNullOrUndefined(editModule.originalData) ? { addInlineRowFormRef: popupEditFormRef }
+                    : { editInlineRowFormRef: popupEditFormRef } : {})
         }), [
             protectedRenderAPI.refresh,
             headerPanelRef.current,
             contentPanelRef.current,
             footerPanelRef.current,
-            pagerObjectRef.current
+            pagerObjectRef.current,
+            popupEditFormRef.current
         ]);
 
         const pagerPanel: JSX.Element = useMemo(() => (
@@ -199,6 +205,26 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
             />);
         }, [headerPadding, getCssProperties, columnsDirective, currentViewData, onFooterScroll]);
 
+        const popupEditPanel: JSX.Element = useMemo(() => {
+            if ((editModule.editSettings.mode === 'Popup' || editModule.editSettings.mode === 'PopupTemplate') && editModule.isEdit) {
+                return (
+                    <PopupEditForm<T>
+                        ref={(ref: InlineEditFormRef<T>) => {
+                            if (ref?.formRef?.current) {
+                                popupEditFormRef.current = ref;
+                                editModule.popupEditFormRef.current = ref;
+                            }
+                            if (ref && !isNullOrUndefined(editModule.originalData)) {
+                                editModule.rowObject.setRowObject((prev: IRow<ColumnProps<T>>) =>
+                                    ({ ...prev, editInlineRowFormRef: { current: ref } }));
+                            }
+                        }}
+                    />
+                );
+            }
+            return null;
+        }, [editModule]);
+
         useEffect(() => {
             if (!privateRenderAPI.isContentBusy && editModule?.isShowAddNewRowActive && !editModule?.isShowAddNewRowDisabled) {
                 contentPanelRef?.current?.addInlineRowFormRef?.current?.focusFirstField();
@@ -207,7 +233,7 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
 
         return (
             <>
-                <Spinner visible={privateRenderAPI.isContentBusy} className={cssClass}/>
+                <Spinner visible={privateRenderAPI.isContentBusy} className={cssClass} overlay={true} />
                 {toolbarModule && toolbar?.length > 0 && (
                     <GridToolbar
                         key={id + '_grid_toolbar'}
@@ -221,6 +247,7 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
                 {contentPanel}
                 {aggregates?.length ? footerPanel : null}
                 {pageSettings?.enabled && pagerPanel}
+                {popupEditPanel}
             </>
         );
     })

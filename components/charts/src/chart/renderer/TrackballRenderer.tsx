@@ -1,4 +1,4 @@
-import { forwardRef, JSX, useEffect, useRef, useState } from 'react';
+import { forwardRef, Fragment, JSX, useEffect, useRef, useState } from 'react';
 import { useLayout } from '../layout/LayoutContext';
 import { ChartTooltipProps, ChartMarkerProps, ChartBorderProps, ChartLocationProps } from '../base/interfaces';
 import { drawSymbol, withInBounds } from '../utils/helper';
@@ -13,6 +13,8 @@ import { ChartMarkerShape } from '../base/enum';
 interface TrackballMarker {
     /** Index of the series this marker belongs to */
     seriesIndex: number;
+    /** Index of the symbol location within the point. Added to support multi-location series. */
+    symbolIndex: number;
     /** X coordinate of the marker */
     x: number;
     /** Y coordinate of the marker */
@@ -110,29 +112,35 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
                 // Create a single marker for this series
                 if (seriesMarker?.highlightable) {
                     const baseRadius: number = (seriesMarker?.width || 8) + 3;
-                    initialMarkers.push({
-                        seriesIndex: series.index || 0,
-                        x: 0, // Will be updated when showing
-                        y: 0, // Will be updated when showing
-                        fill: seriesMarker?.fill || series.interior,
-                        border: {
-                            width: seriesMarker?.border?.width || 1,
-                            color: seriesMarker?.border?.color || series.interior
-                        },
-                        size: {
-                            width: (seriesMarker?.width || 8) + 3,
-                            height: (seriesMarker?.height as number) + 3
-                        },
-                        visible: false, // Initially hidden
-                        shape: seriesMarker?.shape || 'Circle',
-                        imageUrl: seriesMarker?.imageUrl,
-                        currentPointIndex: -1,
-                        stroke: '',
-                        markerShadow: '',
-                        animationState: 'visible',
-                        currentRadius: 0,
-                        targetRadius: baseRadius
-                    });
+                    const isMultiMarker: boolean = (series.type === 'RangeArea' || series.type === 'RangeColumn' || series.type === 'SplineRangeArea' );
+                    const markerCount: number = isMultiMarker ? 2 : 1;
+
+                    for (let i: number = 0; i < markerCount; i++) {
+                        initialMarkers.push({
+                            seriesIndex: series.index || 0,
+                            symbolIndex: i,
+                            x: 0, // Will be updated when showing
+                            y: 0, // Will be updated when showing
+                            fill: seriesMarker?.fill || series.interior,
+                            border: {
+                                width: seriesMarker?.border?.width || 1,
+                                color: seriesMarker?.border?.color || series.interior
+                            },
+                            size: {
+                                width: (seriesMarker?.width || 8) + 3,
+                                height: (seriesMarker?.height as number) + 3
+                            },
+                            visible: false, // Initially hidden
+                            shape: seriesMarker?.shape || 'Circle',
+                            imageUrl: seriesMarker?.imageUrl,
+                            currentPointIndex: -1,
+                            stroke: '',
+                            markerShadow: '',
+                            animationState: 'visible',
+                            currentRadius: 0,
+                            targetRadius: baseRadius
+                        });
+                    }
                 }
             }
             setTrackballMarkers(initialMarkers);
@@ -175,7 +183,8 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
             }
 
             /**
-             * Handle touch movement events for trackball updates
+             * Handle touch movement events for trackball updates.
+             *
              * @param {Event} event - The touch event that initiates the trackball interaction
              * @param {Chart} chart - The chart object
              * @returns {void}
@@ -309,7 +318,7 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
                             if (marker.animationState === 'appearing') {
                                 return {
                                     ...marker,
-                                    currentRadius: marker.targetRadius,
+                                    currentRadius: Math.max(0, marker.targetRadius),
                                     animationState: 'visible' as const
                                 };
                             } else {
@@ -332,10 +341,11 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
                 return updatedMarkers;
             });
         };
-        const startMarkerAnimation: (seriesIndex: number, appearing: boolean) => void = (seriesIndex: number, appearing: boolean) => {
+        const startMarkerAnimation: (seriesIndex: number, symbolIndex: number, appearing: boolean) => void
+        = (seriesIndex: number, symbolIndex: number, appearing: boolean) => {
             setTrackballMarkers((currentMarkers: TrackballMarker[]) =>
                 currentMarkers.map((marker: TrackballMarker) => {
-                    if (marker.seriesIndex === seriesIndex) {
+                    if (marker.seriesIndex === seriesIndex && marker.symbolIndex === symbolIndex) {
                         const chart: Chart = layoutRef.current.chart as Chart;
                         const series: SeriesProperties = chart?.visibleSeries[marker.seriesIndex];
                         const isBubbleSeries: boolean = series?.type === 'Bubble';
@@ -646,68 +656,70 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
                 return;
             }
 
-            if (result.point.symbolLocations && result.point.symbolLocations[0] && result.series.clipRect) {
-                const symbolX: number = result.series.clipRect.x + result.point.symbolLocations[0].x;
-                const symbolY: number = result.series.clipRect.y + result.point.symbolLocations[0].y;
-                if (!withInBounds(symbolX, symbolY, chart.chartAxislayout.seriesClipRect)) {
-                    hideAllMarkers();
-                    return;
-                }
-            }
+            const point: Points = result.point as Points;
+            const series: SeriesProperties = result.series as SeriesProperties;
 
             // Check if it's the same point as before
-            const isSamePoint: boolean = previousPointRef.current?.seriesIndex === result.series.index &&
-                previousPointRef.current?.pointIndex === result.point.index;
-            if (isSamePoint) {
+            const isSamePoint: boolean = previousPointRef.current?.seriesIndex === series.index &&
+                previousPointRef.current?.pointIndex === point.index;
+            if (isSamePoint && !isTouchModeRef.current) {
                 return;
             }
 
             // Update current point for reference
             previousPointRef.current = {
-                seriesIndex: result.series.index,
-                pointIndex: result.point.index
+                seriesIndex: series.index,
+                pointIndex: point.index
             };
 
             // Update the position of the marker for this series
             setTrackballMarkers((currentMarkers: TrackballMarker[]) =>
                 currentMarkers.map((marker: TrackballMarker) => {
-                    if (marker.seriesIndex === result.series?.index) {
-                        const point: Points = result.point!;
-                        const location: ChartLocationProps | null = point.symbolLocations && point.symbolLocations[0];
-                        if (!location) { return marker; }
-                        const size: ChartSizeProps = { height: point.marker?.height as number, width: point.marker?.width as number };
-                        const series: SeriesProperties = result.series!;
-                        const border: ChartBorderProps = (point.marker.border || series.border) as ChartBorderProps;
-                        const explodeSeries: boolean = (series.type === 'Bubble' || series.type === 'Scatter');
-                        const borderColor: string = (border.color && border.color !== 'transparent') ? border.color :
-                            point.marker.fill || point.interior || (explodeSeries ? point.color : series.interior);
-                        const colorValue: ColorValue = convertHexToColor(colorNameToHex(borderColor));
-                        const markerShadow: string = series.chart.themeStyle.markerShadow ||
-                            'rgba(' + colorValue.r + ',' + colorValue.g + ',' + colorValue.b + ',0.2)';
-                        const markerShape: ChartMarkerShape = series?.marker?.shape === 'None' ? 'None' : point.marker?.shape || marker.shape || 'Circle';
-                        const markerRadius: number = series.type === 'Bubble' ? ((point.marker?.width as number + (point.marker?.height as number)) / 4) - 5 : // 5px padding for bubble animation.
-                            ((series.marker?.width as number) + (series.marker?.height as number)) / 4;
-                        const updatedMarker: TrackballMarker = {
-                            ...marker,
-                            size: (result.series.type === 'Bubble' ? size : marker.size),
-                            shape: markerShape,
-                            x: location.x + (result.series?.clipRect?.x || 0),
-                            y: location.y + (result.series?.clipRect?.y || 0),
-                            visible: true,
-                            currentPointIndex: point.index || 0,
-                            fill: (point.marker.fill || point.color || (explodeSeries ? series.interior : '#ffffff')),
-                            stroke: borderColor,
-                            markerShadow: markerShadow,
-                            currentRadius: markerRadius,
-                            animationState: 'appearing' as const
-                        };
+                    if (marker.seriesIndex === series.index) {
+                        const location: ChartLocationProps | null = point.symbolLocations?.[marker.symbolIndex] as ChartLocationProps;
 
-                        setTimeout(() => startMarkerAnimation(marker.seriesIndex, true), 0);
+                        if (location && withInBounds(location.x + (series.clipRect?.x || 0),
+                                                     location.y + (series.clipRect?.y || 0), chart.chartAxislayout.seriesClipRect)) {
+                            const size: ChartSizeProps = { height: point.marker?.height as number, width: point.marker?.width as number };
+                            const border: ChartBorderProps = (point.marker.border || series.border) as ChartBorderProps;
+                            const explodeSeries: boolean = (series.type === 'Bubble' || series.type === 'Scatter');
+                            const borderColor: string = (border.color && border.color !== 'transparent') ? border.color :
+                                point.marker.fill || point.interior || (explodeSeries ? point.color : series.interior);
+                            const colorValue: ColorValue = convertHexToColor(colorNameToHex(borderColor));
+                            const markerShadow: string = series.chart.themeStyle.markerShadow ||
+                                'rgba(' + colorValue.r + ',' + colorValue.g + ',' + colorValue.b + ',0.2)';
+                            const markerShape: ChartMarkerShape = series?.marker?.shape === 'None' ? 'None' : point.marker?.shape || marker.shape || 'Circle';
+                            const rawRadius: number = series.type === 'Bubble'
+                                ? ((point.marker?.width as number + (point.marker?.height as number)) / 4) - 5
+                                : ((series.marker?.width as number) + (series.marker?.height as number)) / 4;
+                            const markerRadius: number = Number.isFinite(rawRadius) ? Math.max(0, rawRadius) : 0;
+                            const updatedMarker: TrackballMarker = {
+                                ...marker,
+                                size: (result.series!.type === 'Bubble' ? size : marker.size),
+                                shape: markerShape,
+                                x: location.x + (result.series!.clipRect?.x || 0),
+                                y: location.y + (result.series!.clipRect?.y || 0),
+                                visible: true,
+                                currentPointIndex: point.index || 0,
+                                fill: (point.marker.fill || point.color || (explodeSeries ? series.interior : '#ffffff')),
+                                stroke: borderColor,
+                                markerShadow: markerShadow,
+                                currentRadius: markerRadius,
+                                animationState: 'appearing' as const
+                            };
 
-                        return updatedMarker;
+                            setTimeout(() => startMarkerAnimation(marker.seriesIndex, marker.symbolIndex, true), 0);
+                            return updatedMarker;
+                        }
+
+                        if (marker.visible) {
+                            setTimeout(() => startMarkerAnimation(marker.seriesIndex, marker.symbolIndex, false), 0);
+                        }
+                        return { ...marker, visible: false };
+
                     }
                     if (marker.visible) {
-                        setTimeout(() => startMarkerAnimation(marker.seriesIndex, false), 0);
+                        setTimeout(() => startMarkerAnimation(marker.seriesIndex, marker.symbolIndex, false), 0);
                     }
                     return { ...marker, visible: false };
                 })
@@ -742,7 +754,7 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
                 return;
             }
             // Check if same X value as before
-            if (commonXValueRef.current === xValue) {
+            if (commonXValueRef.current === xValue && !isTouchModeRef.current) {
                 return;
             }
             commonXValueRef.current = xValue;
@@ -755,7 +767,9 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
                     }
                     // Find the point in this series that matches the X value
                     const matchingPoint: Points | undefined = series.visiblePoints?.find((p: Points) => p.xValue === xValue);
-                    if (matchingPoint && matchingPoint.symbolLocations && matchingPoint.symbolLocations[0]) {
+                    const location: ChartLocationProps | null = matchingPoint?.symbolLocations?.[marker.symbolIndex] as ChartLocationProps;
+
+                    if (matchingPoint && location) {
                         const size: ChartSizeProps = {
                             height: matchingPoint.marker?.height as number,
                             width: matchingPoint.marker?.width as number
@@ -768,12 +782,14 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
                         const markerShadow: string = series.chart.themeStyle.markerShadow ||
                             'rgba(' + colorValue.r + ',' + colorValue.g + ',' + colorValue.b + ',0.2)';
                         const markerShape: ChartMarkerShape = series?.marker?.shape === 'None' ? 'None' : matchingPoint.marker?.shape || marker.shape || 'Circle';
-                        const markerRadius: number = series.type === 'Bubble' ? (matchingPoint.marker?.width as number + (matchingPoint.marker?.height as number)) / 4 - 5 : // 5px padding for bubble animation.
-                            ((series.marker?.width as number) + (series.marker?.height as number)) / 4;
+                        const rawRadius: number = series.type === 'Bubble'
+                            ? (matchingPoint.marker?.width as number + (matchingPoint.marker?.height as number)) / 4 - 5
+                            : ((series.marker?.width as number) + (series.marker?.height as number)) / 4;
+                        const markerRadius: number = Number.isFinite(rawRadius) ? Math.max(0, rawRadius) : 0;
                         const updatedMarker: TrackballMarker = {
                             ...marker,
-                            x: matchingPoint.symbolLocations[0].x + (series.clipRect?.x as number),
-                            y: matchingPoint.symbolLocations[0].y + (series.clipRect?.y as number),
+                            x: location.x + (series.clipRect?.x as number),
+                            y: location.y + (series.clipRect?.y as number),
                             size: (series.type === 'Bubble' ? size : marker.size),
                             shape: markerShape,
                             visible: true,
@@ -785,12 +801,12 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
                             currentRadius: markerRadius,
                             animationState: 'appearing' as const
                         };
-                        setTimeout(() => startMarkerAnimation(marker.seriesIndex, true), 0);
+                        setTimeout(() => startMarkerAnimation(marker.seriesIndex, marker.symbolIndex, true), 0);
 
                         return updatedMarker;
                     }
                     if (marker.visible) {
-                        setTimeout(() => startMarkerAnimation(marker.seriesIndex, false), 0);
+                        setTimeout(() => startMarkerAnimation(marker.seriesIndex, marker.symbolIndex, false), 0);
                     }
                     return { ...marker, visible: false };
                 })
@@ -828,13 +844,15 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
             const chart: Chart = layoutRef.current.chart as Chart;
             const series: SeriesProperties = chart?.visibleSeries[marker.seriesIndex];
             const isBubbleSeries: boolean = series?.type === 'Bubble';
+            const symbolId: string = chart.element.id + '_Series_' + series.index + '_Point_' + marker.symbolIndex + '_Trackball';
             if (marker.shape === 'Circle' || !marker.shape) {
                 return (
                     <g
-                        key={`trackball-${marker.seriesIndex}`}
+                        key={`trackball-${marker.seriesIndex}-${marker.symbolIndex}`}
                         style={{ display: marker.visible ? 'block' : 'none' }}
                     >
                         <circle
+                            id = {symbolId}
                             cx={marker.x}
                             cy={marker.y}
                             r={radius + 4}
@@ -842,10 +860,11 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
                             stroke={marker.markerShadow}
                             strokeWidth={marker.border.width + 4}
                             opacity={opacity}
-                            className={`trackball-shadow-${marker.seriesIndex}`}
+                            className={`trackball-shadow-${marker.seriesIndex}-${marker.symbolIndex}`}
                         />
 
                         <circle
+                            id = {symbolId}
                             cx={marker.x}
                             cy={marker.y}
                             r={radius}
@@ -853,7 +872,7 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
                             stroke={marker.stroke}
                             strokeWidth={marker.border.width}
                             opacity={opacity}
-                            className={`trackball-marker-${marker.seriesIndex}`}
+                            className={`trackball-marker-${marker.seriesIndex}-${marker.symbolIndex}`}
                         />
                     </g>
                 );
@@ -872,7 +891,7 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
                     strokeDasharray: string;
                     d: string;
                 } = {
-                    id: `trackball-marker-${marker.seriesIndex}`,
+                    id: `trackball-marker-${marker.seriesIndex}-${marker.symbolIndex}`,
                     fill: marker.fill,
                     strokeWidth: marker.border.width,
                     stroke: marker.stroke,
@@ -899,7 +918,7 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
                     strokeDasharray: string;
                     d: string;
                 } = {
-                    id: `trackball-shadow-${marker.seriesIndex}`,
+                    id: `trackball-shadow-${marker.seriesIndex}-${marker.symbolIndex}`,
                     fill: 'transparent',
                     strokeWidth: marker.border.width + 6,
                     stroke: marker.markerShadow,
@@ -928,26 +947,28 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
                 const options: PathOptions = markerOptions as PathOptions;
                 return (
                     <g
-                        key={`trackball-${marker.seriesIndex}`}
+                        key={`trackball-${marker.seriesIndex}-${marker.symbolIndex}`}
                         style={{ display: marker.visible ? 'block' : 'none' }}
                     >
                         <path
+                            id = {symbolId}
                             d={shadowPath.d}
                             fill="transparent"
                             stroke={marker.markerShadow}
                             strokeWidth={marker.border.width + 6}
                             opacity={opacity}
-                            className={`trackball-shadow-${marker.seriesIndex}`}
+                            className={`trackball-shadow-${marker.seriesIndex}-${marker.symbolIndex}`}
                         />
 
                         {/* Main marker with animated size */}
                         <path
+                            id = {symbolId}
                             d={options.d}
                             fill={marker.fill}
                             stroke={marker.stroke}
                             strokeWidth={marker.border.width}
                             opacity={opacity}
-                            className={`trackball-marker-${marker.seriesIndex}`}
+                            className={`trackball-marker-${marker.seriesIndex}-${marker.symbolIndex}`}
                         />
                     </g>
                 );
@@ -955,8 +976,13 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
         }
         return (
             <g id="trackballGroup" ref={ref}>
-                {trackballMarkers.map((marker: TrackballMarker) => renderAnimatedMarker(marker))}
+                {trackballMarkers.map((marker: TrackballMarker, i: number) => (
+                    <Fragment key={`trackball-${i}`}>
+                        {renderAnimatedMarker(marker)}
+                    </Fragment>
+                ))}
             </g>
         );
+
     });
 export default TrackballRenderer;

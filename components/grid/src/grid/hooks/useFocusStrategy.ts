@@ -1,11 +1,12 @@
 import {
     useCallback, useRef, useState, useEffect, RefObject,
-    MouseEvent, KeyboardEvent,
+    MouseEvent, KeyboardEvent, FocusEvent,
     useMemo
 } from 'react';
 import {
     IRow,
-    ICell
+    ICell,
+    UseCommandColumnResult
 } from '../types';
 import { GridRef } from '../types/grid.interfaces';
 import { ColumnProps } from '../types/column.interfaces';
@@ -93,7 +94,7 @@ export const createMatrix: () => IFocusMatrix = (): IFocusMatrix => {
         }
 
         // Otherwise, recursively find the next valid cell
-        const nextIndex: number = (['upArrow', 'downArrow', 'shiftUp', 'shiftDown', 'enter', 'shiftEnter'].indexOf(action) !== -1) ?
+        const nextIndex: number = (['upArrow', 'downArrow', 'shiftUp', 'shiftDown'].indexOf(action) !== -1) ?
             (moveTo ? 0 : ++index) : index + navigator[1];
 
         return first(vector, nextIndex, navigator, false, action);
@@ -197,8 +198,8 @@ export const createMatrix: () => IFocusMatrix = (): IFocusMatrix => {
         columnIndex = firstIndex === null ? tmp : firstIndex;
         const val: number = matrix[rowIndex as number]?.[columnIndex as number];
 
-        // Special handling for down arrow or enter at the last row
-        if (rowIndex === rows && (action === 'downArrow' || action === 'enter')) {
+        // Special handling for down arrow at the last row
+        if (rowIndex === rows && action === 'downArrow') {
             navigator[0] = -1;
         }
 
@@ -299,6 +300,7 @@ export const createMatrix: () => IFocusMatrix = (): IFocusMatrix => {
  * @param {ColumnProps} columns - columns state
  * @param {RefObject<GridRef>} gridRef - Reference to the grid
  * @param {FocusStrategyCallbacks} callbacks - Optional callbacks for focus events
+ * @param {UseCommandColumnResult} commandColumnModule - Reference to the command column module
  * @returns {FocusStrategyResult} Focus strategy methods and state
  */
 export const useFocusStrategy: (
@@ -307,14 +309,16 @@ export const useFocusStrategy: (
     aggregateRowCount: number,
     columns: ColumnProps[],
     gridRef: RefObject<GridRef>,
-    callbacks?: FocusStrategyCallbacks
+    callbacks?: FocusStrategyCallbacks,
+    commandColumnModule?: UseCommandColumnResult
 ) => FocusStrategyResult = (
     headerRowCount: number,
     contentRowCount: number,
     aggregateRowCount: number,
     columns: ColumnProps[],
     gridRef: RefObject<GridRef>,
-    callbacks?: FocusStrategyCallbacks
+    callbacks?: FocusStrategyCallbacks,
+    commandColumnModule?: UseCommandColumnResult
 ) => {
     // Create content, header, and aggregate matrices
     const contentMatrix: RefObject<IFocusMatrix> = useRef(createMatrix());
@@ -333,6 +337,7 @@ export const useFocusStrategy: (
     // State for tracking grid focus
     const [isGridFocused, setIsGridFocused] = useState<boolean>(false);
     const focusByClick: boolean = useRef<boolean>(false).current;
+    const { commandEdit, commandEditInlineFormRef, commandAddRef, commandAddInlineFormRef } = commandColumnModule;
 
     // Ref for swap info
     const swapInfo: RefObject<SwapInfo> = useRef<SwapInfo>({
@@ -360,9 +365,7 @@ export const useFocusStrategy: (
         'shiftUp': [-1, 0],
         'shiftDown': [1, 0],
         'shiftRight': [0, 1],
-        'shiftLeft': [0, -1],
-        'enter': [1, 0],
-        'shiftEnter': [-1, 0]
+        'shiftLeft': [0, -1]
     });
 
     // Key indexes by action
@@ -578,6 +581,49 @@ export const useFocusStrategy: (
         activeMatrix.current]);
 
     /**
+     * Retrieves all command item buttons from a command cell element
+     * Queries for all button elements within the specified command cell container
+     *
+     * @param {HTMLElement} element - The command cell element containing command buttons
+     * @returns {HTMLElement[]} Array of button elements found in the command cell
+     * @private
+     */
+    const getCommandItems: (element: HTMLElement) => HTMLElement[] = (element: HTMLElement): HTMLElement[] => {
+        return [...element.querySelectorAll('button')];
+    };
+
+    /**
+     * Navigates to the next or previous command item button based on keyboard input
+     * Handles arrow key and Tab navigation within command cells
+     *
+     * @param {KeyboardEvent} e - Keyboard event from arrow or tab keys
+     * @returns {HTMLElement} The next command item button element to focus, or undefined if at boundary
+     * @private
+     * @description Moves left with ArrowLeft/Shift+Tab or right with ArrowRight/Tab
+     */
+    const nextCommandItem: (e: KeyboardEvent) => HTMLElement = (e: KeyboardEvent): HTMLElement => {
+        const target: HTMLElement = e.target as HTMLElement;
+        const commandItems: HTMLElement[] = getCommandItems(target.closest('.sf-grid-command-cell'));
+        const targetIndex: number = commandItems.indexOf(target);
+        return e.key === 'ArrowLeft' || (e.shiftKey && e.key === 'Tab') ? commandItems[targetIndex - 1] : commandItems[targetIndex + 1];
+    };
+
+    /**
+     * Checks if keyboard event should trigger navigation within command items
+     * Validates that the event is within a command cell and is a navigation key
+     *
+     * @param {KeyboardEvent} e - Keyboard event to validate
+     * @returns {boolean} True if navigation should occur within command items, false otherwise
+     * @private
+     * @description Returns true when event is ArrowRight/ArrowLeft/Tab and there's a next command item available
+     */
+    const isNextCommandItem: (e: KeyboardEvent) => boolean = (e: KeyboardEvent): boolean => {
+        return (e?.target as HTMLElement)?.closest('.sf-grid-command-cell')
+            && (e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'Tab')
+            && nextCommandItem(e) ? true : false;
+    };
+
+    /**
      * Handle key press event
      *
      * @param {KeyboardEvent} e - Keyboard event
@@ -594,7 +640,6 @@ export const useFocusStrategy: (
         case 'ArrowUp': action = e.shiftKey ? 'shiftUp' : 'upArrow'; break;
         case 'ArrowDown': action = e.shiftKey ? 'shiftDown' : 'downArrow'; break;
         case 'Tab': action = e.shiftKey ? 'shiftTab' : 'tab'; break;
-        case 'Enter': action = e.shiftKey ? 'shiftEnter' : 'enter'; break;
         case 'Home': action = e.ctrlKey || (isMacLike && e.metaKey) ? 'ctrlHome' : 'home'; break;
         case 'End': action = e.ctrlKey || (isMacLike && e.metaKey) ? 'ctrlEnd' : 'end'; break;
         default: return true; // Not a navigation key
@@ -611,8 +656,14 @@ export const useFocusStrategy: (
         // Get current position from action
         const matrix: IFocusMatrix = getActiveMatrix();
 
-        const current: number[] = getCurrentFromAction(action, navigators, action in keyActions.current, e);
+        let current: number[] = getCurrentFromAction(action, navigators, action in keyActions.current, e);
 
+        if ((e.shiftKey && e.key === 'Tab') && (e.target as HTMLElement)?.closest?.('.sf-grid-filterbar') && !(e.target as HTMLElement)?.classList.contains('sf-input') &&
+            (e.target as HTMLElement)?.classList.contains('sf-filterbar-dropdown')) {
+            current = matrix.current;
+        }
+        const commandItem: boolean = isNextCommandItem(e);
+        current = commandItem ? matrix.current : current;
         if (!current) { return true; }
 
         // Check if we're at the boundary of the current matrix
@@ -629,9 +680,9 @@ export const useFocusStrategy: (
         const isAtHeaderRight: boolean = activeMatrix.current === 'Header' &&
             current.toString() === headerMatrix.current.current.toString() && action === 'tab';
         const isAtContentLeft: boolean = activeMatrix.current === 'Content' &&
-            current.toString() === contentMatrix.current.current.toString() && action === 'shiftTab';
+            current.toString() === contentMatrix.current.current.toString() && action === 'shiftTab' && !commandItem;
         const isAtContentRight: boolean = activeMatrix.current === 'Content' &&
-            current.toString() === contentMatrix.current.current.toString() && action === 'tab';
+            current.toString() === contentMatrix.current.current.toString() && action === 'tab' && !commandItem;
         const isAtAggregateLeft: boolean = activeMatrix.current === 'Aggregate' &&
             current.toString() === aggregateMatrix.current.current.toString() && action === 'shiftTab';
         const isAtAggregateRight: boolean = activeMatrix.current === 'Aggregate' &&
@@ -715,15 +766,16 @@ export const useFocusStrategy: (
      *
      * @param {FocusedCellInfo} info - Cell info to focus
      * @param {KeyboardEvent} [e] - Keyboard event
+     * @param {FocusEvent} [focus] - Optional React focus event for programmatic focus handling
      * @returns {void}
      */
-    const addFocus: (info: FocusedCellInfo, e?: KeyboardEvent | MouseEvent) => void =
-        useCallback((info: FocusedCellInfo, e?: KeyboardEvent | MouseEvent): void => {
+    const addFocus: (info: FocusedCellInfo, e?: KeyboardEvent | MouseEvent, focus?: FocusEvent) => void =
+        useCallback((info: FocusedCellInfo, e?: KeyboardEvent | MouseEvent, focus?: FocusEvent): void => {
             removeFocusTabIndex();
 
             const newInfo: FocusedCellInfo = {
                 ...info,
-                outline: info.outline !== false && !info.element?.closest?.('tr.sf-filter-row .sf-cell'), // Default to true if not explicitly set to false
+                outline: info.outline !== false && !info.element?.closest?.('tr.sf-filter-row .sf-cell') && !info.element.querySelector('.sf-grid-checkselectall.sf-disabled'), // Default to true if not explicitly set to false
                 element: info.element,
                 elementToFocus: info.elementToFocus
             };
@@ -744,9 +796,25 @@ export const useFocusStrategy: (
 
             // Focus the element using DOM API
             requestAnimationFrame(() => {
-                const firstFocusableElement: HTMLElement = newInfo.elementToFocus?.querySelector(
+                let firstFocusableElement: HTMLElement = newInfo.elementToFocus?.querySelector(
                     'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
                 );
+                if ((e?.target as HTMLElement)?.closest?.('.sf-filterbar-dropdown') && e?.type === 'click') {
+                    firstFocusableElement = newInfo?.elementToFocus?.querySelector('.sf-filterbar-dropdown');
+                }
+                if (newInfo.element.closest('.sf-grid-command-cell') && (((e as KeyboardEvent)?.key === 'ArrowRight'
+                    || (e as KeyboardEvent)?.key === 'ArrowLeft' || (e as KeyboardEvent)?.key === 'Tab') || !isNullOrUndefined(focus)
+                    || e?.type === 'click')) {
+                    if (!isNullOrUndefined(focus) || e?.type === 'click') {
+                        firstFocusableElement = (e?.type === 'click' ? e.target : focus.target) as HTMLElement;
+                    } else if ((e?.target as HTMLElement)?.closest('.sf-grid-command-cell')) {
+                        const commandItem: HTMLElement = nextCommandItem(e as KeyboardEvent<Element>);
+                        firstFocusableElement = (commandItem ? commandItem : e.target) as HTMLElement;
+                    } else {
+                        const commandItems: HTMLElement[] = getCommandItems(newInfo.element);
+                        firstFocusableElement = (e as KeyboardEvent)?.key === 'ArrowLeft' || (e?.shiftKey && (e as KeyboardEvent)?.key === 'Tab') ? commandItems[commandItems.length - 1] : commandItems[0];
+                    }
+                }
                 const container: HTMLDivElement | null = gridRef.current?.contentScrollRef;
                 const element: HTMLElement | null =
                     (firstFocusableElement ?? newInfo.elementToFocus)?.closest?.('.sf-grid-content-row td.sf-cell, .sf-grid-header-row th.sf-cell');
@@ -965,9 +1033,11 @@ export const useFocusStrategy: (
      * Focus a cell
      *
      * @param {KeyboardEvent} [e] - Keyboard event
+     * @param {FocusEvent} [focus] - Optional React focus event for inline edit form focus handling
      * @returns {void}
      */
-    const focus: (e?: KeyboardEvent) => void = useCallback((e?: KeyboardEvent): void => {
+    const focus: (e?: KeyboardEvent, focus?: FocusEvent) => void =
+    useCallback((e?: KeyboardEvent, focus?: FocusEvent): void => {
         // Get the current matrix
         const matrix: IFocusMatrix = getActiveMatrix();
 
@@ -1001,6 +1071,20 @@ export const useFocusStrategy: (
         const rows: HTMLCollectionOf<HTMLTableRowElement> | NodeListOf<HTMLTableRowElement> = gridRef.current?.isEdit &&
             gridRef.current?.editModule?.isShowAddNewRowActive ? table?.querySelectorAll?.('tr.sf-grid-content-row:not(.sf-grid-add-row)') :
             table?.rows;
+        if (table && rows.length > rowIndex && rows[rowIndex as number]
+            && (rows[rowIndex as number].classList.contains('sf-grid-edit-row') || rows[rowIndex as number].classList.contains('sf-grid-add-row'))
+            && (!isNullOrUndefined(e?.key) || !isNullOrUndefined(focus))) {
+            removeFocusTabIndex();
+            if (!isNullOrUndefined(focus)) { return; }
+            const uid: string = rows[rowIndex as number].getAttribute('data-uid');
+            const isShiftTab: boolean = e.key === 'Tab' && e.shiftKey;
+            if (rows[rowIndex as number].classList.contains('sf-grid-add-row')) {
+                (commandEdit.current ? commandAddInlineFormRef.current[`${uid}`] : gridRef.current.addInlineRowFormRef).current.focusFirstField(isShiftTab, true);
+            } else {
+                (commandEdit.current ? commandEditInlineFormRef.current[`${uid}`] : gridRef.current.editInlineRowFormRef).current.focusFirstField(isShiftTab);
+            }
+            return;
+        }
         // Find the element in the DOM
         if (table && rows.length > rowIndex &&
         rows[rowIndex as number] &&
@@ -1010,10 +1094,50 @@ export const useFocusStrategy: (
             info.elementToFocus = info.element;
 
             // If we found an element, add focus to it
-            addFocus(info, e);
+            addFocus(info, e, focus);
             return;
         }
     }, [getFocusInfo, getActiveMatrix, activeMatrix.current, gridRef, addFocus, activeMatrix.current]);
+
+    /**
+     * Handle Tab navigation exit from inline edit rows back to the data grid
+     *
+     * @param {KeyboardEvent} e - Keyboard event (typically Tab or Shift+Tab)
+     * @returns {void}
+     * @private
+     */
+    const editToRow: (e: KeyboardEvent) => void = useCallback((e: KeyboardEvent): void => {
+        const rows: HTMLTableRowElement[] = [...gridRef.current?.getContentTable().rows];
+        const index: number = rows.indexOf((e.target as HTMLElement).closest('.sf-grid-content-row'));
+        const nextIndex: number = index + 1;
+        const previousIndex: number = index - 1;
+        const isTabForward: boolean = e.key === 'Tab' && !e.shiftKey;
+        const isTabBackward: boolean = e.key === 'Tab' && e.shiftKey;
+        const nextContentCell: boolean = isTabForward && nextIndex <= lastFocusableContentCellIndex[0]
+            && !(rows[`${nextIndex}`].classList.contains('sf-grid-edit-row') || rows[`${nextIndex}`].classList.contains('sf-grid-add-row')) ? true : false;
+        const previousContentCell: boolean = isTabBackward && previousIndex >= 0
+            && !(rows[`${previousIndex}`].classList.contains('sf-grid-edit-row') || rows[`${previousIndex}`].classList.contains('sf-grid-add-row')) ? true : false;
+        const nextAggregateCell: boolean = isTabForward && index === lastFocusableContentCellIndex[0]
+            && aggregateRowCount > 0 ? true : false;
+        const previousHeaderCell: boolean = isTabBackward && index === 0 ? true : false;
+
+        if (nextContentCell || nextAggregateCell || previousContentCell || previousHeaderCell) {
+            e.preventDefault();
+            e.stopPropagation();
+            setActiveMatrix(nextAggregateCell ? 'Aggregate' : previousHeaderCell ? 'Header' : 'Content');
+            const matrix: IFocusMatrix = getActiveMatrix();
+            const current: number[] = nextAggregateCell ? firstFocusableAggregateCellIndex : nextContentCell
+                ? [nextIndex, firstFocusableContentCellIndex[1]] : previousContentCell
+                    ? [previousIndex, lastFocusableContentCellIndex[1]] : previousHeaderCell ? lastFocusableHeaderCellIndex : [0, 0];
+            matrix.select(current[0], current[1]);
+            matrix.current = [...current];
+            focus(e);
+        }
+    }, [lastFocusableContentCellIndex,
+        firstFocusableAggregateCellIndex,
+        firstFocusableContentCellIndex,
+        lastFocusableHeaderCellIndex
+    ]);
 
     /**
      * Add outline to the focused cell
@@ -1045,6 +1169,10 @@ export const useFocusStrategy: (
             activeElement.closest('.sf-grid-add-row')
         );
         const isInFilterBar: boolean | Element = activeElement?.closest('.sf-filter-row .sf-cell');
+        if ((!event.shiftKey && event.key === 'Tab') && (event.target as HTMLElement)?.closest?.('.sf-grid-filterbar') && (event.target as HTMLElement)?.classList.contains('sf-input') &&
+            !(event.target as HTMLElement)?.classList.contains('sf-filterbar-dropdown')) {
+            return;
+        }
 
         // Enhanced edit mode handling for proper Tab navigation between fields
         // Prevent grid navigation from interfering with edit field focus
@@ -1196,6 +1324,9 @@ export const useFocusStrategy: (
         if (!isGridFocused) {
             setIsGridFocused(true);
         }
+        if ((event?.target as HTMLElement)?.closest('.sf-grid-edit-form')) {
+            removeFocusTabIndex();
+        }
         onClick(event);
     }, [onClick, setIsGridFocused, isGridFocused]);
 
@@ -1223,7 +1354,11 @@ export const useFocusStrategy: (
         if (contentRowCount > 0 && columns?.length > 0) {
             // Create proper row models similar to the original implementation
             // Use Array.from with index parameter to avoid unused variables
-            const rows: IRow<ColumnProps>[] = gridRef.current.getRowsObject();
+            let rows: IRow<ColumnProps>[] = gridRef.current.getRowsObject();
+            const commandAdd: boolean = commandEdit.current && commandAddRef.current.length ? true : false;
+            if (commandAdd) {
+                rows = gridRef.current.editSettings.newRowPosition === 'Top' ? [...commandAddRef.current, ...rows] : [...rows, ...commandAddRef.current];
+            }
 
             // Set the rows count explicitly before generating
             contentMatrix.current.rows = contentRowCount - 1;
@@ -1293,7 +1428,7 @@ export const useFocusStrategy: (
             && focusedCell.current.colIndex !== -1) {
             headerMatrix.current.current = [focusedCell.current.rowIndex, focusedCell.current.colIndex];
         }
-    }, [headerRowCount, contentRowCount, aggregateRowCount, columns?.length, columns]);
+    }, [headerRowCount, contentRowCount, aggregateRowCount, columns?.length, columns, commandAddRef.current.length]);
     useEffect(() => {
         if (isGridFocused && focusedCell.current.rowIndex === -1 && focusedCell.current.colIndex === -1 &&
                 activeMatrix.current === 'Content') {
@@ -1380,7 +1515,7 @@ export const useFocusStrategy: (
      * @returns {boolean} Whether the key is for navigation
      */
     const isNavigationKey: (event: KeyboardEvent) => boolean = useCallback((event: KeyboardEvent): boolean => {
-        return ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab', 'Home', 'End', 'Enter'].includes(event.key);
+        return ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab', 'Home', 'End'].includes(event.key);
     }, []);
 
     /**
@@ -1401,7 +1536,6 @@ export const useFocusStrategy: (
         case 'Tab': return event.shiftKey ? 'shiftTab' : 'tab';
         case 'Home': return event.ctrlKey ? 'ctrlHome' : 'home';
         case 'End': return event.ctrlKey ? 'ctrlEnd' : 'end';
-        case 'Enter': return event.shiftKey ? 'shiftEnter' : 'enter';
         case 'Escape': return 'escape';
         case 'a': return event.ctrlKey ? 'ctrlPlusA' : 'a';
         default: return null;
@@ -1416,7 +1550,7 @@ export const useFocusStrategy: (
      */
     const setLastContentCellTabIndex: () => void = useCallback(() => {
         // Clear any existing tabIndex=0 in content or aggregate cells
-        const currentFocusableContentCell: HTMLElement | null = gridRef.current.getContentTable()?.querySelector('[tabindex="0"]');
+        const currentFocusableContentCell: HTMLElement | null = gridRef.current.getContentTable()?.querySelector('[tabindex="0"]:not(.sf-grid-edit-form *)');
         if (currentFocusableContentCell && !gridRef.current.isEdit) {
             (currentFocusableContentCell as HTMLElement).tabIndex = -1;
             currentFocusableContentCell.classList.remove(CSS_FOCUSED, CSS_FOCUS);
@@ -1507,7 +1641,7 @@ export const useFocusStrategy: (
     const setGridFocus: (focused: boolean) => void = useCallback((focused: boolean): void => {
         if (!gridRef.current?.allowKeyboard) { return; }
         // Check if grid is in edit mode before changing focus
-        const isGridInEditMode: boolean = gridRef.current?.isEdit || false;
+        const isGridInEditMode: boolean = (gridRef.current?.isEdit && !commandEdit.current) || false;
 
         // Update the grid focus state
         setIsGridFocused(focused);
@@ -1599,8 +1733,8 @@ export const useFocusStrategy: (
                     table = gridRef.current?.getContentTable();
                     break;
                 }
-                const rows: HTMLCollectionOf<HTMLTableRowElement> | NodeListOf<HTMLTableRowElement> = gridRef.current?.isEdit &&
-                    gridRef.current?.editModule?.isShowAddNewRowActive ? table?.querySelectorAll?.('tr.sf-grid-content-row:not(.sf-grid-add-row)') :
+                const rows: HTMLCollectionOf<HTMLTableRowElement> | NodeListOf<HTMLTableRowElement> = ((gridRef.current?.isEdit &&
+                    gridRef.current?.editModule?.isShowAddNewRowActive) || (matrixType === 'Content' && commandEdit?.current)) ? table?.querySelectorAll?.('tr.sf-grid-content-row:not(.sf-grid-add-row)') :
                     table?.rows;
                 if (table && rows.length > rowIndex) {
                     const row: HTMLTableRowElement = rows[rowIndex as number];
@@ -1636,7 +1770,7 @@ export const useFocusStrategy: (
         setActiveMatrix(startInHeader ? 'Header' : 'Content');
         const matrix: IFocusMatrix = getActiveMatrix();
         // Find first valid cell using findCellIndex
-        const firstCell: number[] = matrix.matrix[0][0] === 1 ? [0, 0] : matrix.findCellIndex([0, 0], true);
+        const firstCell: number[] = (matrix?.matrix?.[0]?.[0] === 1) ? [0, 0] : matrix?.findCellIndex?.([0, 0], true);
 
         matrix.select(firstCell[0], firstCell[1]);
         matrix.current = [...firstCell];
@@ -1734,6 +1868,7 @@ export const useFocusStrategy: (
     return {
         // State
         getFocusedCell: () => focusedCell.current,
+        focusedCell,
         isGridFocused,
         focusByClick,
         setGridFocus,
@@ -1769,6 +1904,9 @@ export const useFocusStrategy: (
         // Utility methods
         isNavigationKey,
         getNavigationDirection,
+        isNextCommandItem,
+        getCommandItems,
+        editToRow,
 
         // Previous state tracking
         getPrevIndexes: () => prevIndexes.current,

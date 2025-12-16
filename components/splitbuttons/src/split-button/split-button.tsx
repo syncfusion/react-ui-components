@@ -1,4 +1,4 @@
-import { useState, useRef, forwardRef, useImperativeHandle, Ref, useEffect, ButtonHTMLAttributes } from 'react';
+import { useRef, forwardRef, useImperativeHandle, Ref, useEffect, useMemo, ButtonHTMLAttributes } from 'react';
 import { Button, Position, Color, Size, Variant, IButton } from '@syncfusion/react-buttons';
 import { preRender, useProviderContext } from '@syncfusion/react-base';
 import { DropDownButton, IDropDownButton, ButtonSelectEvent, ItemModel } from '../dropdown-button/dropdown-button';
@@ -162,16 +162,8 @@ export const SplitButton: React.ForwardRefExoticComponent<ISplitButtonProps & Re
         const buttonRef: React.RefObject<IButton | null> = useRef<IButton>(null);
         const dropDownRef: React.RefObject<IDropDownButton | null> = useRef<IDropDownButton>(null);
         const wrapperRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement | null>(null);
-        const [targetElement, setTargetElement] = useState<React.RefObject<HTMLElement> | null>(null);
         const { dir } = useProviderContext();
-
-        useEffect(() => {
-            if (wrapperRef.current) {
-                setTargetElement(wrapperRef as React.RefObject<HTMLElement>);
-            }
-        }, []);
-
-        const publicAPI: Partial<ISplitButton> = {
+        const publicAPI: Partial<ISplitButton> = useMemo(() => ({
             iconPosition,
             icon,
             target,
@@ -182,7 +174,7 @@ export const SplitButton: React.ForwardRefExoticComponent<ISplitButtonProps & Re
             color,
             variant,
             size
-        };
+        }), [iconPosition, icon, target, popupWidth, items, lazyOpen, itemTemplate, color, variant, size]);
 
         useEffect(() => {
             preRender('splitButton');
@@ -195,53 +187,51 @@ export const SplitButton: React.ForwardRefExoticComponent<ISplitButtonProps & Re
                     dropDownRef.current.toggle();
                 }
             },
-            element: buttonRef.current?.element
+            element: wrapperRef.current
         }), [publicAPI]);
 
         const wrapperClassName: string = [
             'sf-split-btn-wrapper',
-            size && `sf-split-btn-${size.toLowerCase().substring(0, 2)}`,
-            variant ? `sf-${variant.toLowerCase()}` : '',
-            className,
+            size ? `sf-split-btn-${String(size).toLowerCase().substring(0, 2)}` : '',
+            variant ? `sf-${String(variant).toLowerCase()}` : '',
             dir === 'rtl' ? 'sf-rtl' : ''
         ].filter(Boolean).join(' ');
 
         return (
-            <>
-                <div ref={wrapperRef} className={wrapperClassName}>
-                    <Button
-                        ref={buttonRef}
-                        className={`${className} ${(dir === 'rtl') ? 'sf-rtl' : ''} sf-control sf-btn sf-split-btn`}
-                        icon={icon}
-                        color={color}
-                        variant={variant}
-                        size={size}
-                        iconPosition={iconPosition}
-                        disabled={disabled}
-                        {...domProps}
-                    >
-                        {children}
-                    </Button>
-                    <DropDownButton
-                        ref={dropDownRef}
-                        relateTo={targetElement?.current as HTMLElement}
-                        target={target || targetElement as React.RefObject<HTMLElement> || undefined}
-                        className={`${className} ${(dir === 'rtl') ? 'sf-rtl' : ''} sf-icon-btn sf-control sf-dropdown-btn sf-lib sf-btn`}
-                        items={items}
-                        color={color}
-                        variant={variant}
-                        size={size}
-                        itemTemplate={itemTemplate}
-                        disabled={disabled}
-                        popupWidth={popupWidth}
-                        lazyOpen={lazyOpen}
-                        onOpen={onOpen}
-                        onClose={onClose}
-                        onSelect={onSelect}
-                    >
-                    </DropDownButton>
-                </div>
-            </>
+            <div ref={wrapperRef} className={wrapperClassName}>
+                <Button
+                    ref={buttonRef}
+                    className={`${className} ${(dir === 'rtl') ? 'sf-rtl' : ''} sf-control sf-btn sf-split-btn`}
+                    type="button"
+                    icon={icon}
+                    color={color}
+                    variant={variant}
+                    size={size}
+                    iconPosition={iconPosition}
+                    disabled={disabled}
+                    {...domProps}
+                >
+                    {children}
+                </Button>
+                <DropDownButton
+                    ref={dropDownRef}
+                    relateTo={wrapperRef.current as unknown as HTMLElement}
+                    target={target ?? (wrapperRef as unknown as React.RefObject<HTMLElement>)}
+                    className={`${className} ${(dir === 'rtl') ? 'sf-rtl' : ''} sf-icon-btn sf-control sf-dropdown-btn sf-btn`}
+                    items={items}
+                    color={color}
+                    variant={variant}
+                    size={size}
+                    itemTemplate={itemTemplate}
+                    disabled={disabled}
+                    popupWidth={popupWidth}
+                    lazyOpen={lazyOpen}
+                    onOpen={onOpen}
+                    onClose={onClose}
+                    onSelect={onSelect}
+                >
+                </DropDownButton>
+            </div>
         );
     });
 

@@ -3,7 +3,7 @@ import { useRef, useEffect, useState, forwardRef, useImperativeHandle } from 're
 import { calculatePosition, OffsetPosition, calculateRelativeBasedPosition } from '../common/position';
 import { AnimationOptions, IAnimation, preRender, useProviderContext } from '@syncfusion/react-base';
 import { Animation } from '@syncfusion/react-base';
-import { flip, fit, isCollide, CollisionCoordinates } from '../common/collision';
+import { flip, fit, isCollide, CollisionCoordinates, getFixedScrollableParent, getZindexPartial, getElementReact, getTransformElement, getZoomValue } from '../common/collision';
 
 /**
  * PositionAxis type.
@@ -103,6 +103,11 @@ export interface PopupAnimationOptions {
     hide?: AnimationOptions;
 }
 
+/**
+ * Specifies how the popup interprets its anchor when calculating position.
+ */
+export type TargetType = 'relative' | 'container';
+
 export interface PopupProps {
 
     /**
@@ -193,6 +198,21 @@ export interface PopupProps {
      * @default ActionOnScrollType.Reposition
      */
     actionOnScroll?: ActionOnScrollType;
+
+    /** Specifies whether the popup automatically adjusts its position when the content size changes.
+     *
+     * @default false
+     */
+    autoReposition?: boolean;
+
+    /**
+     * Specifies how to interpret the anchor for positioning:
+     * - 'relative'  => position relative to the anchor element's box (tooltip/dropdown)
+     * - 'container' => position relative to the container viewport (BODY or a panel)
+     *
+     * @default 'relative'
+     */
+    targetType?: TargetType;
 
     /** Callback invoked when the popup is opened.
      *
@@ -296,6 +316,8 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
             height = 'auto',
             className = '',
             actionOnScroll = ActionOnScrollType.Reposition,
+            autoReposition = false,
+            targetType = 'relative',
             onOpen,
             onClose,
             onTargetExitViewport,
@@ -307,13 +329,13 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
         const [leftPosition, setLeftPosition] = useState<number>(0);
         const [topPosition, setTopPosition] = useState<number>(0);
         const [popupClass, setPopupClass] = useState<string>(CLASSNAME_CLOSE);
-        const [fixedParent, setFixedParent] = useState<boolean>(false);
         const [popupZIndex, setPopupZIndex] = useState<number>(1000);
         const { dir } = useProviderContext();
-        const [currentShowAnimation, setCurrentShowAnimation] = useState<AnimationOptions>(animation.show as AnimationOptions);
-        const [currentHideAnimation, setCurrentHideAnimation] = useState<AnimationOptions>(animation.hide as AnimationOptions);
         const [currentRelatedElement, setRelativeElement] = useState<HTMLElement | null>(relativeElement);
-        const scrollParents: React.RefObject<Element[]> = useRef<Element[]>([]);
+        const scrollParents: React.RefObject<Element | null> = useRef<Element | null>(null);
+        const resizeObserverRef: React.RefObject<ResizeObserver | null> = useRef<ResizeObserver | null>(null);
+        const fixedParent: React.RefObject<boolean> = useRef<boolean>(false);
+        const targetInvisibleRef: React.RefObject<boolean> = React.useRef<boolean>(false);
 
         useImperativeHandle(
             ref,
@@ -346,18 +368,6 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
         }, [collision]);
 
         useEffect(() => {
-            if (!isEqual(currentShowAnimation, animation.show as AnimationOptions)) {
-                setCurrentShowAnimation(animation.show as AnimationOptions);
-            }
-        }, [animation.show]);
-
-        useEffect(() => {
-            if (!isEqual(currentHideAnimation, animation.hide as AnimationOptions)) {
-                setCurrentHideAnimation(animation.hide as AnimationOptions);
-            }
-        }, [currentHideAnimation, animation.hide]);
-
-        useEffect(() => {
             if (!open && initialOpenState.current === open) {
                 return;
             }
@@ -377,10 +387,56 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
             setRelativeElement(relativeElement);
         }, [relativeElement]);
 
-        const isEqual: (previousAnimation: AnimationOptions, currentAnimation: AnimationOptions)
-        => boolean = (previousAnimation: AnimationOptions, currentAnimation: AnimationOptions): boolean => {
-            return JSON.stringify(previousAnimation) === JSON.stringify(currentAnimation);
-        };
+        useEffect(() => {
+            if (animation?.show?.duration === 0 && onOpen && popupClass === CLASSNAME_OPEN && open) {
+                onOpen();
+            }
+        }, [popupClass]);
+
+        useEffect(() => {
+            if (!open || !autoReposition || !popupRef.current || typeof ResizeObserver === 'undefined') { return; }
+            if (resizeObserverRef.current) {
+                resizeObserverRef.current.disconnect();
+                resizeObserverRef.current = null;
+            }
+
+            const resizeInstance: ResizeObserver = new ResizeObserver(() => {
+                refreshPosition();
+            });
+            resizeInstance.observe(popupRef.current);
+            resizeObserverRef.current = resizeInstance;
+
+            return () => {
+                resizeInstance.disconnect();
+                if (resizeObserverRef.current === resizeInstance) {
+                    resizeObserverRef.current = null;
+                }
+            };
+        }, [open, position]);
+
+        useEffect(() => {
+            if (!open) { return; }
+            let rafId: number | null = null;
+            const onResize: () => void = () => {
+                if (rafId != null) { return; }
+                rafId = requestAnimationFrame(() => {
+                    rafId = null;
+                    refreshPosition();
+                });
+            };
+
+            window.addEventListener('resize', onResize);
+            window.addEventListener('orientationchange', onResize);
+            onResize();
+            return () => {
+                if (rafId != null) {
+                    cancelAnimationFrame(rafId);
+                    rafId = null;
+                }
+                window.removeEventListener('resize', onResize);
+                window.removeEventListener('orientationchange', onResize);
+            };
+        }, [open, position?.X, position?.Y, offsetX, offsetY, targetType, relateTo, collision?.X, collision?.Y]);
 
         const refreshPosition: (target?: HTMLElement, collision?: boolean) => void = (target?: HTMLElement, collision?: boolean): void => {
             if (target) {
@@ -395,24 +451,27 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
         const updatePosition: () => void = (): void => {
             const element: HTMLDivElement | null = popupRef.current;
             const relateToElement: HTMLElement = getRelateToElement();
-            let pos: EleOffsetPosition = { left: 0, top: 0 };
+            if (!element) { return; }
 
-            if (!element) {return; }
+            let pos: EleOffsetPosition = { left: 0, top: 0 };
 
             if (typeof position.X === 'number' && typeof position.Y === 'number') {
                 pos = { left: position.X, top: position.Y };
-            } else if ((typeof position.X === 'string' && typeof position.Y === 'number') ||
-                (typeof position.X === 'number' && typeof position.Y === 'string')) {
+            } else if (style?.top && style?.left) {
+                pos = { left: style.left, top: style.top };
+            } else if ((typeof position.X === 'string' && typeof position.Y === 'number') || (typeof position.X === 'number' && typeof position.Y === 'string')) {
                 const anchorPos: OffsetPosition = getAnchorPosition(relateToElement, element, position, offsetX, offsetY);
                 pos = typeof position.X === 'string' ? { left: anchorPos.left, top: position.Y } : { left: position.X, top: anchorPos.top };
             } else if (relateToElement) {
                 const display: string = element.style.display;
-                element.style.display = 'block';
+                element.style.display = '';
                 pos = getAnchorPosition(relateToElement, element, position, offsetX, offsetY);
                 element.style.display = display;
             }
 
-            if ((pos !== null)) {
+            if (pos) {
+                element.style.left = `${pos.left}px`;
+                element.style.top = `${pos.top}px`;
                 setLeftPosition(pos.left as number);
                 setTopPosition(pos.top as number);
             }
@@ -427,11 +486,14 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
                     setPopupZIndex(getZindexPartial(zIndexElement as HTMLElement));
                 }
                 if (collision.X !== CollisionType.None || collision.Y !== CollisionType.None) {
-                    setPopupClass(CLASSNAME_OPEN);
+                    const originalDisplay: string = popupRef.current.style.display;
+                    popupRef.current.style.visibility = 'hidden';
+                    popupRef.current.style.display = '';
                     checkCollision();
-                    setPopupClass(CLASSNAME_CLOSE);
+                    popupRef.current.style.visibility = '';
+                    popupRef.current.style.display = originalDisplay;
                 }
-                if (animationOptions) {
+                if (animationOptions && animationOptions.duration && animationOptions.duration > 0) {
                     animationOptions.begin = () => {
                         setPopupClass(CLASSNAME_OPEN);
                     };
@@ -441,16 +503,18 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
                     if (Animation) {
                         const animationInstance: IAnimation = Animation(animationOptions);
                         if (animationInstance.animate) {
-                            animationInstance.animate(popupRef.current as HTMLElement, animationOptions.duration &&
-                                animationOptions.duration > 0 ? undefined : { duration: 0 });
+                            animationInstance.animate(popupRef.current as HTMLElement);
                         }
                     }
+                }
+                else {
+                    setPopupClass(CLASSNAME_OPEN);
                 }
             }
         };
 
         const hide: (animationOptions?: AnimationOptions) => void = (animationOptions?: AnimationOptions): void => {
-            if (animationOptions) {
+            if (animationOptions && animationOptions.duration && animationOptions.duration > 0) {
                 animationOptions.begin = () => {
                     let duration: number = animationOptions.duration ? animationOptions.duration - 30 : 0;
                     duration = duration > 0 ? duration : 0;
@@ -464,10 +528,13 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
                 if (Animation) {
                     const animationInstance: IAnimation = Animation(animationOptions);
                     if (animationInstance.animate) {
-                        animationInstance.animate(popupRef.current as HTMLElement, animationOptions.duration &&
-                            animationOptions.duration > 0 ? undefined : { duration: 0 });
+                        animationInstance.animate(popupRef.current as HTMLElement);
                     }
                 }
+            }
+            else {
+                setPopupClass(CLASSNAME_CLOSE);
+                onClose?.();
             }
             removeScrollListeners();
         };
@@ -476,42 +543,36 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
             const element: HTMLDivElement | null = popupRef.current;
             const viewPortElement: HTMLElement | undefined | null = viewPortElementRef?.current;
 
-            if (!element || !viewPortElement) {
-                return;
-            }
+            if (!element) { return; }
 
-            if (isCollide(element, viewPortElement).length !== 0) {
-                let data: OffsetPosition = { left: 0, top: 0 };
+            if (isCollide(element, viewPortElement || null).length !== 0) {
                 if (!viewPortElement) {
-                    data = fit(element, viewPortElement, param) as OffsetPosition;
+                    const currentPos: OffsetPosition = { left: parseFloat(element.style.left) || leftPosition,
+                        top: parseFloat(element.style.top) || topPosition };
+                    const data: OffsetPosition = fit(element, null, param, currentPos) as OffsetPosition;
+                    if (param.X) { element.style.left = `${data.left}px`; setLeftPosition(data.left); }
+                    if (param.Y) { element.style.top = `${data.top}px`; setTopPosition(data.top); }
                 } else {
-                    const elementRect: DOMRect = element.getBoundingClientRect();
-                    const viewPortRect: DOMRect = viewPortElement.getBoundingClientRect();
-
-                    if (!elementRect || !viewPortRect) {
-                        return;
-                    }
-
+                    const elementRect: DOMRect = getElementReact(element) as DOMRect;
+                    const viewPortRect: DOMRect = getElementReact(viewPortElement) as DOMRect;
+                    if (!elementRect || !viewPortRect) { return; }
                     if (param.Y) {
                         if (viewPortRect.top > elementRect.top) {
-                            element.style.top = '0px';
+                            element.style.top = '0px'; setTopPosition(0);
                         } else if (viewPortRect.bottom < elementRect.bottom) {
-                            element.style.top = `${parseInt(element.style.top, 10) - (elementRect.bottom - viewPortRect.bottom)}px`;
+                            const newTop: number = parseInt(element.style.top, 10) - (elementRect.bottom - viewPortRect.bottom);
+                            element.style.top = `${newTop}px`; setTopPosition(newTop);
                         }
                     }
                     if (param.X) {
                         if (viewPortRect.right < elementRect.right) {
-                            element.style.left = `${parseInt(element.style.left, 10) - (elementRect.right - viewPortRect.right)}px`;
+                            const newLeft: number = parseInt(element.style.left, 10) - (elementRect.right - viewPortRect.right);
+                            element.style.left = `${newLeft}px`; setLeftPosition(newLeft);
                         } else if (viewPortRect.left > elementRect.left) {
-                            element.style.left = `${parseInt(element.style.left, 10) + (viewPortRect.left - elementRect.left)}px`;
+                            const newLeft: number = parseInt(element.style.left, 10) + (viewPortRect.left - elementRect.left);
+                            element.style.left = `${newLeft}px`; setLeftPosition(newLeft);
                         }
                     }
-                }
-                if (param.X) {
-                    element.style.left = `${data.left}px`;
-                }
-                if (param.Y) {
-                    element.style.top = `${data.top}px`;
                 }
             }
         };
@@ -524,15 +585,14 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
             if (!element || !relateToElement) {
                 return;
             }
-
-            const flippedPos: OffsetPosition | null =  flip(
+            const flippedPos: OffsetPosition | null = flip(
                 element,
                 relateToElement as HTMLElement,
                 offsetX,
                 offsetY,
                 typeof position.X === 'string' ? position.X : 'left',
                 typeof position.Y === 'string' ? position.Y : 'top',
-                viewPortElement,
+                viewPortElement as HTMLElement,
                 param
             );
 
@@ -568,82 +628,116 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
             }
         };
 
-        const getAnchorPosition: (anchorEle: HTMLElement, element: HTMLElement,
-            position: PositionAxis, offsetX: number, offsetY: number) => OffsetPosition = (
+        const getAnchorPosition: (anchorEle: HTMLElement, element: HTMLElement, position: PositionAxis, offsetX: number,
+            offsetY: number) =>
+        OffsetPosition = (
             anchorEle: HTMLElement,
             element: HTMLElement,
             position: PositionAxis,
             offsetX: number,
             offsetY: number
         ): OffsetPosition => {
-            const anchorRect: DOMRect = anchorEle.getBoundingClientRect();
-            const eleRect: DOMRect = element.getBoundingClientRect();
-            const anchorPos: OffsetPosition = { left: 0, top: 0 };
-            const targetTypes: string = anchorEle.tagName.toUpperCase() === 'BODY' ? 'body' : 'container';
+            const eleRect: DOMRect = getElementReact(element) as DOMRect;
+            const anchorRect: DOMRect = getElementReact(anchorEle) as DOMRect;
+            if (!eleRect || !anchorRect) {return { left: 0, top: 0 }; }
 
-            switch (position.X) {
-            default:
-            case 'left':
-                break;
-            case 'center':
-                anchorPos.left = targetTypes === 'body'
-                    ? window.innerWidth / 2 - eleRect.width / 2
-                    : anchorRect.left + (anchorRect.width / 2 - eleRect.width / 2);
-                break;
-            case 'right':
-                if (targetTypes === 'container') {
-                    const scaleX: number = 1;
-                    anchorPos.left += ((anchorRect.width - eleRect.width) / scaleX);
-                } else {
-                    anchorPos.left += (anchorRect.width);
+            const isBody: boolean = anchorEle.tagName === 'BODY';
+            const posX: string = typeof position.X === 'string' ? position.X : 'left';
+            const posY: string = typeof position.Y === 'string' ? position.Y : 'top';
+
+            const useDocBase: boolean | null = element.offsetParent && (element.offsetParent as HTMLElement).tagName === 'BODY' && isBody;
+            const anchorPos: OffsetPosition = useDocBase
+                ? calculatePosition(anchorEle, posX, posY)
+                : calculateRelativeBasedPosition(anchorEle, element);
+
+            let scaleX: number = 1;
+            let scaleY: number = 1;
+            const transformElement: HTMLElement | null = getTransformElement(element);
+            if (transformElement) {
+                const transformStyle: CSSStyleDeclaration = getComputedStyle(transformElement);
+                const transform: string = transformStyle.transform;
+                if (transform && transform !== 'none') {
+                    const values: RegExpMatchArray | null = transform.match(/matrix\(([^)]+)\)/);
+                    if (values && values[1]) {
+                        const parts: number[] = values[1].split(',').map(parseFloat);
+                        scaleX = parts[0];
+                        scaleY = parts[3];
+                    }
                 }
-                break;
+                const bodyZoom: number = getZoomValue(document.body as unknown as HTMLElement);
+                scaleX = bodyZoom * scaleX;
+                scaleY = bodyZoom * scaleY;
             }
 
-            switch (position.Y) {
-            case 'top':
-                break;
-            case 'center':
-                anchorPos.top = targetTypes === 'body'
-                    ? window.innerHeight / 2 - eleRect.height / 2
-                    : anchorRect.top + (anchorRect.height / 2 - eleRect.height / 2);
-                break;
-            case 'bottom':
-                anchorPos.top = targetTypes === 'body'
-                    ? window.innerHeight - eleRect.height
-                    : anchorRect.top + (anchorRect.height - eleRect.height);
-                break;
+            if (targetType === 'relative') {
+                anchorPos.left += posX === 'center' ? (anchorRect.width / 2) : (posX === 'right' ? anchorRect.width : 0);
+                anchorPos.top += posY === 'center' ? (anchorRect.height / 2) : (posY === 'bottom' ? anchorRect.height : 0);
+            } else if (isBody) {
+                anchorPos.left += posX === 'center' ? ((window.innerWidth - eleRect.width) / 2) : (posX === 'right' ? (window.innerWidth - eleRect.width) : 0);
+                anchorPos.top += posY === 'center' ? ((window.innerHeight - eleRect.height) / 2) : (posY === 'bottom' ? (window.innerHeight - eleRect.height) : 0);
+            } else {
+                anchorPos.left += posX === 'center' ? ((anchorRect.width - (eleRect.width / scaleX)) / 2) : (posX === 'right' ? ((anchorRect.width - (eleRect.width / scaleX))) : 0);
+                anchorPos.top += posY === 'center' ? ((anchorRect.height - (eleRect.height / scaleY)) / 2) : (posY === 'bottom' ? ((anchorRect.height - (eleRect.height / scaleY))) : 0);
             }
+
             anchorPos.left += offsetX;
             anchorPos.top += offsetY;
-
             return anchorPos;
         };
 
         const addScrollListeners: () => void = (): void => {
             if (actionOnScroll !== ActionOnScrollType.None && getRelateToElement()) {
                 const scrollableParents: Element[] = getScrollableParent(getRelateToElement());
-                scrollParents.current = scrollableParents;
-                scrollableParents.forEach((parent: Element) => {
-                    parent.addEventListener('scroll', handleScroll);
-                });
+                scrollParents.current = scrollableParents[scrollableParents.length - 1];
+                scrollParents.current?.addEventListener('scroll', handleScroll, true);
             }
         };
 
         const removeScrollListeners: () => void = (): void => {
             if (actionOnScroll !== ActionOnScrollType.None && getRelateToElement()) {
-                scrollParents.current?.forEach((parent: Element) => {
-                    if (parent) {
-                        parent.removeEventListener('scroll', handleScroll);
-                    }
-                });
-                scrollParents.current = [];
+                scrollParents.current?.removeEventListener('scroll', handleScroll, true);
+                scrollParents.current = null;
             }
         };
 
         const getRelateToElement: () => HTMLElement = (): HTMLElement => {
             const relateToElement: HTMLElement | string = relateTo === '' || relateTo === null || relateTo === 'body' ? document.body : relateTo;
             return relateToElement as HTMLElement;
+        };
+
+        const isPartiallyVisibleInContainer: (element: HTMLElement, container: HTMLElement | Window) => boolean
+            = (element: HTMLElement, container: HTMLElement | Window): boolean => {
+                const elRect: DOMRect = getElementReact(element) as DOMRect;
+                if (!elRect) { return false; }
+                if (container === window) {
+                    const viewRect: { top: number; left: number; right: number; bottom: number; }
+                        = { top: 0, left: 0, right: window.innerWidth, bottom: window.innerHeight };
+                    const interWidth: number = Math.min(elRect.right, viewRect.right) - Math.max(elRect.left, viewRect.left);
+                    const interHeight: number = Math.min(elRect.bottom, viewRect.bottom) - Math.max(elRect.top, viewRect.top);
+                    return interWidth > 0 && interHeight > 0;
+                }
+
+                const cRect: DOMRect = getElementReact(container as HTMLElement) as DOMRect;
+                if (!cRect) { return false; }
+                const interWidth: number = Math.min(elRect.right, cRect.right) - Math.max(elRect.left, cRect.left);
+                const interHeight: number = Math.min(elRect.bottom, cRect.bottom) - Math.max(elRect.top, cRect.top);
+                return interWidth > 0 && interHeight > 0;
+            };
+        const isElementVisibleAcrossScrollParents: (targetEl: HTMLElement) => boolean = (targetEl: HTMLElement): boolean => {
+            const parents: HTMLElement[] = getFixedScrollableParent(targetEl, fixedParent.current);
+            const containers: (HTMLElement | Window)[] = parents.map((parent: HTMLElement) => {
+                return (parent === document.documentElement) ? window : parent;
+            });
+            if (!containers.includes(window)) {
+                containers.push(window);
+            }
+
+            for (const container of containers) {
+                if (!isPartiallyVisibleInContainer(targetEl, container)) {
+                    return false;
+                }
+            }
+            return true;
         };
 
         const handleScroll: () => void = (): void => {
@@ -653,14 +747,22 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
                 hide();
                 onClose?.();
             }
-            if (targetRef?.current && !isElementOnViewport(targetRef?.current)) {
-                onTargetExitViewport?.();
+
+            const targetEl: HTMLElement | null = (targetRef?.current as HTMLElement | null) || getRelateToElement();
+            if (targetEl) {
+                const isVisible: boolean = isElementVisibleAcrossScrollParents(targetEl);
+                if (!isVisible && !targetInvisibleRef.current) {
+                    onTargetExitViewport?.();
+                    targetInvisibleRef.current = true;
+                } else if (isVisible && targetInvisibleRef.current) {
+                    targetInvisibleRef.current = false;
+                }
             }
         };
 
         const getScrollableParent: (element: HTMLElement) => Element[] = (element: HTMLElement): Element[] => {
             checkFixedParent(element);
-            return getFixedScrollableParent(element, fixedParent);
+            return getFixedScrollableParent(element, fixedParent.current);
         };
 
         const checkFixedParent: (element: HTMLElement) => void = (element: HTMLElement): void => {
@@ -673,28 +775,18 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
                     const popupElementStyle: CSSStyleDeclaration = getComputedStyle(popupElement);
 
                     if (!popupElement?.offsetParent && position === 'fixed' && popupElementStyle && popupElementStyle.position === 'fixed') {
-                        setFixedParent(true);
+                        fixedParent.current = true;
                     }
                     parent = parent.parentElement;
                 }
             }
         };
 
-        const isElementOnViewport: (element: Element) => boolean = (element: Element): boolean => {
-            const rect: DOMRect = element.getBoundingClientRect();
-            return (
-                rect.top >= 0 &&
-                rect.left >= 0 &&
-                rect.bottom <= window.innerHeight &&
-                rect.right <= window.innerWidth
-            );
-        };
-
         const popupStyle: React.CSSProperties = {
             position: 'absolute',
             left: `${leftPosition}px`,
             top: `${topPosition}px`,
-            zIndex: popupZIndex,
+            zIndex: isNaN(popupZIndex) ? 1000 : popupZIndex,
             width: width,
             height: height,
             ...style
@@ -731,78 +823,4 @@ export {
     isCollide,
     getZindexPartial,
     getFixedScrollableParent
-};
-
-const getZindexPartial: (element: HTMLElement) => number = (element: HTMLElement): number => {
-    let parent: HTMLElement | null = element.parentElement;
-    const parentZindex: string[] = [];
-
-    while (parent) {
-        if (parent.tagName !== 'BODY') {
-            const computedStyle: CSSStyleDeclaration = window.getComputedStyle(parent);
-            const index: string = computedStyle.zIndex;
-            const position: string = computedStyle.position;
-            if (index !== 'auto' && position !== 'static') {
-                parentZindex.push(index);
-            }
-            parent = parent.parentElement;
-        } else {
-            break;
-        }
-    }
-
-    const childrenZindex: string[] = [];
-    for (let i: number = 0; i < document.body.children.length; i++) {
-        const child: Element = document.body.children[i as number] as Element;
-        if (!element.isEqualNode(child) && child instanceof HTMLElement) {
-            const computedStyle: CSSStyleDeclaration = window.getComputedStyle(child);
-            const index: string = computedStyle.zIndex;
-            const position: string = computedStyle.position;
-            if (index !== 'auto' && position !== 'static') {
-                childrenZindex.push(index);
-            }
-        }
-    }
-    childrenZindex.push('999');
-
-    const siblingsZindex: string[] = [];
-    if (element.parentElement && element.parentElement.tagName !== 'BODY') {
-        const childNodes: HTMLElement[] = Array.from(element.parentElement.children) as HTMLElement[];
-        for (let i: number = 0; i < childNodes.length; i++) {
-            const child: Element = childNodes[i as number] as Element;
-            if (!element.isEqualNode(child) && child instanceof HTMLElement) {
-                const computedStyle: CSSStyleDeclaration = window.getComputedStyle(child);
-                const index: string = computedStyle.zIndex;
-                const position: string = computedStyle.position;
-                if (index !== 'auto' && position !== 'static') {
-                    siblingsZindex.push(index);
-                }
-            }
-        }
-    }
-
-    const finalValue: string[] = parentZindex.concat(childrenZindex, siblingsZindex);
-    const currentZindexValue: number = Math.max(...finalValue.map(Number)) + 1;
-    return currentZindexValue > 2147483647 ? 2147483647 : currentZindexValue;
-};
-
-const getFixedScrollableParent: (element: HTMLElement, fixedParent?: boolean)
-=> HTMLElement[] = (element: HTMLElement, fixedParent: boolean = false): HTMLElement[] => {
-    const scrollParents: HTMLElement[] = [];
-    const overflowRegex: RegExp = /(auto|scroll)/;
-    let parent: HTMLElement | null = element.parentElement;
-
-    while (parent && parent.tagName !== 'HTML') {
-        const { position, overflow, overflowY, overflowX } = getComputedStyle(parent);
-        if (!(getComputedStyle(element).position === 'absolute' && position === 'static')
-            && overflowRegex.test(`${overflow} ${overflowY} ${overflowX}`)) {
-            scrollParents.push(parent);
-        }
-        parent = parent.parentElement;
-    }
-
-    if (!fixedParent) {
-        scrollParents.push(document.documentElement);
-    }
-    return scrollParents;
 };

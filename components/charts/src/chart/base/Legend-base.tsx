@@ -1,6 +1,7 @@
 import { ChartBorderProps, ChartLegendProps, ChartLocationProps } from './interfaces';
-import { ChartSeriesType, ChartMarkerShape, LegendPosition, LegendShape } from './enum';
+import { ChartSeriesType, ChartMarkerShape, LegendShape } from './enum';
 import { Chart, PathOptions, Rect, ChartSizeProps, TextOption } from '../chart-area/chart-interfaces';
+import { LegendPosition } from '../../common';
 
 /**
  * Interface for the base legend component that defines core functionality and properties.

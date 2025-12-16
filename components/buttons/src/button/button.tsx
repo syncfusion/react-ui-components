@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef, ButtonHTMLAttributes, Ref } from 'react';
-import { preRender, SvgIcon, useProviderContext, useRippleEffect, Color, Size, Variant, Position } from '@syncfusion/react-base';
+import { preRender, useProviderContext, useRippleEffect, Color, Size, Variant, Position } from '@syncfusion/react-base';
+import { ChevronDownFillIcon } from '@syncfusion/react-icons';
 import * as React from 'react';
 export {  Color, Size, Variant, Position };
 
@@ -122,7 +123,6 @@ export const Button: React.ForwardRefExoticComponent<IButtonProps & React.RefAtt
         const [isActive, setIsActive] = useState<boolean>(selected ?? false);
         const { dir, ripple } = useProviderContext();
         const { rippleMouseDown, Ripple} = useRippleEffect(ripple, { duration: 500 });
-        const caretIcon: string = 'M5 8.5L12 15.5L19 8.5';
         const publicAPI: Partial<IButton> = {
             iconPosition,
             icon,
@@ -160,20 +160,20 @@ export const Button: React.ForwardRefExoticComponent<IButtonProps & React.RefAtt
             ? 'sf-font-size-12' : size && size.toLowerCase() === 'large' ? 'sf-font-size-16' : 'sf-font-size-14';
 
         const classNames: string = [
-            'sf-btn sf-control sf-align-center',
+            'sf-btn sf-control sf-align-center sf-radius-12',
             ButtonFontSizeClass,
             iconPosition && (iconPosition === Position.Top || iconPosition === Position.Bottom) ? 'sf-btn-vertical' : 'sf-btn-horizontal',
             className,
             dir === 'rtl' ? 'sf-rtl' : '',
             isActive ? 'sf-active' : '',
-            isLink ? 'sf-link' + (!props.color ? ' sf-info' : '') : '',
+            isLink ? 'sf-btn-link' + (!props.color ? ' sf-btn-info' : '') : '',
             !icon && children && `sf-btn sf-btn-${size.toLowerCase().substring(0, 2)}`,
             icon && !dropIcon && !children && `sf-icon-btn sf-icon-btn-${size.toLowerCase().substring(0, 2)}`,
             icon && children ? `sf-icon sf-icon-${size.toLowerCase().substring(0, 2)}` : '',
             iconPosition && `sf-btn-${iconPosition.toLowerCase()}`,
-            color && color.toLowerCase() !== 'primary' && 'sf-color',
-            color && color.toLowerCase() !== 'secondary' ? `sf-${color.toLowerCase()}` : '',
-            variant ? `sf-${variant.toLowerCase() }` : '',
+            color && 'sf-btn-color',
+            color && `sf-btn-${color.toLowerCase()}`,
+            variant ? `sf-btn-${variant.toLowerCase() }` : '',
             size && `sf-btn-${size.toLowerCase().substring(0, 2)}`,
             disabled && 'sf-cursor-default'
         ].filter(Boolean).join(' ');
@@ -211,7 +211,7 @@ export const Button: React.ForwardRefExoticComponent<IButtonProps & React.RefAtt
                     </span>
                 )}
                 {dropIcon && (
-                    <span className={'sf-btn-icon sf-icons sf-icon-right sf-caret'} ><SvgIcon fill='currentColor' width='16' height='16' viewBox='0 0 23 23' d={caretIcon}></SvgIcon></span>
+                    <span className={'sf-btn-icon sf-icons sf-icon-right sf-caret sf-content-center'} ><ChevronDownFillIcon/></span>
                 )}
                 {ripple && <Ripple />}
             </button>

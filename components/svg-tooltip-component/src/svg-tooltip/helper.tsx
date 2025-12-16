@@ -12,7 +12,7 @@ import { ITooltipThemeStyle, PathOption, Rect, RenderOption, Size, TextStyle, To
 export function getTooltipThemeColor(theme: TooltipTheme): ITooltipThemeStyle {
     let style: ITooltipThemeStyle;
     switch (theme) {
-    case 'Material3':
+    case 'Material':
         style = {
             tooltipFill: '#313033',
             tooltipBoldLabel: '#F4EFF4',
@@ -21,7 +21,7 @@ export function getTooltipThemeColor(theme: TooltipTheme): ITooltipThemeStyle {
             textStyle: { fontFamily: 'Roboto', color: '#F4EFF4', fontWeight: '400', size: '12px', headerTextSize: '12px', boldTextSize: '12px' }
         };
         break;
-    case 'Material3Dark':
+    case 'MaterialDark':
         style = {
             tooltipFill: '#E6E1E5',
             tooltipBoldLabel: '#313033',

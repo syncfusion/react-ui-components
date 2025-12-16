@@ -477,9 +477,17 @@ const LegendItem: React.FC<LegendItemProps> = ({
 }: LegendItemProps): React.ReactElement => {
     const legendShape: Required<PathOptions> = legendItem.symbolOption as Required<PathOptions>;
     const textOption: Required<TextOption> = legendItem.textOption as Required<TextOption>;
+    const groupRef: React.RefObject<SVGGElement | null> = useRef<SVGGElement>(null);
+
+    useEffect(() => {
+        if (groupRef.current) {
+            groupRef.current.style.pointerEvents = 'bounding-box';
+        }
+    }, []);
 
     return (
         <g
+            ref={groupRef}
             id={`${legend.legendID}_g_${index}`}
             role={(legend.accessibility as Required<ChartAccessibilityProps>).role || 'button'}
             aria-pressed={legendItem.visible ? 'true' : 'false'}

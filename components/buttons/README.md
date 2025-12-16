@@ -42,8 +42,8 @@ export default function App() {
 
 **Resources**
 
-- [Button Demo/Docs](https://react.syncfusion.com/button)
-- [Button API](https://react-api.syncfusion.com/button/overview)
+- [Button Demo/Docs](https://react.syncfusion.com/react-ui/button)
+- [Button API](https://react.syncfusion.com/api/button/overview)
 
 ## React Checkbox
 
@@ -71,8 +71,8 @@ export default function App() {
 
 **Resources**
 
-- [Checkbox Demo/Docs](https://react.syncfusion.com/checkbox)
-- [Checkbox API](https://react-api.syncfusion.com/checkbox/overview)
+- [Checkbox Demo/Docs](https://react.syncfusion.com/react-ui/checkbox)
+- [Checkbox API](https://react.syncfusion.com/api/checkbox/overview)
 
 ## React Chip
 
@@ -100,8 +100,8 @@ export default function App() {
 
 **Resources**
 
-- [Chip Demo/Docs](https://react.syncfusion.com/chip)
-- [Chip API](https://react-api.syncfusion.com/chip/overview)
+- [Chip Demo/Docs](https://react.syncfusion.com/react-ui/chip)
+- [Chip API](https://react.syncfusion.com/api/chip/overview)
 
 ## React ChipList
 
@@ -133,8 +133,8 @@ export default function App() {
 
 **Resources**
 
-- [ChipList Demo/Docs](https://react.syncfusion.com/chipList)
-- [ChipList API](https://react-api.syncfusion.com/chipList/overview)
+- [ChipList Demo/Docs](https://react.syncfusion.com/react-ui/chipList)
+- [ChipList API](https://react.syncfusion.com/api/chipList/overview)
 
 ## React Floating Action Button
 
@@ -168,8 +168,8 @@ export default function App() {
 
 **Resources**
 
-- [Floating Action Button Demo/Docs](https://react.syncfusion.com/floating-action-button)
-- [Floating Action Button API](https://react-api.syncfusion.com/floating-action-button/overview)
+- [Floating Action Button Demo/Docs](https://react.syncfusion.com/react-ui/floating-action-button)
+- [Floating Action Button API](https://react.syncfusion.com/api/floating-action-button/overview)
 
 ## React RadioButton
 
@@ -199,8 +199,8 @@ export default function App() {
 
 **Resources**
 
-- [RadioButton Demo/Docs](https://react.syncfusion.com/radio-button)
-- [RadioButton API](https://react-api.syncfusion.com/radio-button/overview)
+- [RadioButton Demo/Docs](https://react.syncfusion.com/react-ui/radio-button)
+- [RadioButton API](https://react.syncfusion.com/api/radio-button/overview)
 
 ## Support
 
@@ -220,4 +220,4 @@ Check the changelog [here](https://github.com/syncfusion/react-ui-components/blo
 
 See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campaign=notification) for more info.
 
-&copy; Copyright 2025 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential Studio® license and copyright applies to this distribution.
+&copy; Copyright 2026 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential Studio® license and copyright applies to this distribution.

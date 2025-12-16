@@ -41,4 +41,3 @@ The Toolbar component helps users efficiently organize and access frequently use
     - **Extended**: Hides overflow items in a secondary row accessible through an expand button
   - **Orientation Options:** Configure the toolbar in either horizontal or vertical layout to fit different UI design requirements.
   - **Keyboard Navigation:** Comprehensive keyboard accessibility with arrow key navigation, Home/End for first/last item access, and Tab for focus management.
- 

@@ -72,17 +72,6 @@ export type ChartRangePadding =
     'Round';
 
 /**
- * Defines the built-in themes available for rendering the chart.
- * ```props
- * Material3 :- Renders the chart using the Material 3 theme.
- * Material3Dark :- Renders the chart using the Material 3 dark theme.
- * ```
- */
-export type Theme =
-    'Material3' |
-    'Material3Dark';
-
-/**
  * Defines how empty data points are handled in the chart.
  * ```props
  * Gap :- Displays empty points as gaps in the chart.
@@ -101,30 +90,54 @@ export type EmptyPointMode =
  * Specifies the available types of chart series.
  * ```props
  * Line :- Represents a line series.
+ * MultiColoredLine :- Represents a multicolored line series.
  * Column :- Represents a column series.
  * Area :- Represents an area series.
  * Bar :- Represents a bar series.
  * StackingColumn :- Represents a stacking column series.
+ * StackingColumn100 :- Represents a 100% stacking column series.
  * StackingBar :- Represents a stacking bar series.
+ * StackingBar100 :- Represents a 100% stacking Bar series.
  * StepLine :- Represents a step line series.
  * SplineArea :- Represents a spline area series.
  * Scatter :- Represents a scatter series.
  * Spline :- Represents a spline series.
+ * StepArea :- Represents a step area series.
  * Bubble :- Represents a bubble series.
+ * Candle :- Represents a candle series.
+ * Hilo :- Represents a hilo series.
+ * HiloOpenClose :- Represents a hiloOpenClose series.
+ * RangeArea :- Represents a rangeArea series.
+ * RangeColumn :- Represents a rangeColumn series.
+ * StackingArea :- Represents a stacking area series.
+ * StackingArea100 :- Represents a 100% stacking area series.
+ * SplineRangeArea :- Represents a spline range area series.
  * ```
  */
 export type ChartSeriesType =
     'Line' |
+    'MultiColoredLine'|
     'Column' |
     'Area' |
     'Bar' |
     'StackingColumn' |
+    'StackingColumn100'|
     'StackingBar' |
+    'StackingBar100'|
     'StepLine' |
     'SplineArea' |
+    'SplineRangeArea' |
     'Scatter' |
     'Spline' |
-    'Bubble';
+    'StepArea'|
+    'Bubble' |
+    'Candle' |
+    'Hilo' |
+    'HiloOpenClose'|
+    'RangeArea'|
+    'RangeColumn'|
+    'StackingArea'|
+    'StackingArea100';
 
 /**
  * Specifies the position where the step begins in a step line series.
@@ -151,35 +164,6 @@ export type EdgeLabelPlacement =
     'None' |
     'Hide' |
     'Shift';
-
-
-/**
- * Specifies the position of the chart title.
- * ```props
- * Top :- Places the title at the top of the chart.
- * Right :- Places the title on the right side of the chart.
- * Bottom :- Places the title at the bottom of the chart.
- * Left :- Places the title on the left side of the chart.
- * Custom :- Places the title at a custom position based on specified x and y coordinates.
- * ```
- */
-export type TitlePosition =
-    'Top' |
-    'Right' |
-    'Bottom' |
-    'Left' |
-    'Custom';
-
-/**
- * Defines how tooltips fade out in the chart.
- * ```props
- * Click :- Removes the tooltip when the user clicks.
- * Move:- Removes the tooltip after a short delay when the pointer moves.
- * ```
- */
-export type FadeOutMode =
-    'Click' |
-    'Move';
 
 /**
  * Represents the data type used for axis values.
@@ -290,38 +274,6 @@ export type ChartMarkerShape =
     'None';
 
 /**
- * Specifies the position of the chart legend.
- * ```props
- * Auto :- Automatically places the legend based on the chart area type.
- * Top :- Displays the legend at the top of the chart.
- * Left :- Displays the legend on the left side of the chart.
- * Bottom :- Displays the legend at the bottom of the chart.
- * Right :- Displays the legend on the right side of the chart.
- * Custom :- Positions the legend based on specified x and y coordinates.
- * ```
- */
-export type LegendPosition =
-    'Auto' |
-    'Top' |
-    'Left' |
-    'Bottom' |
-    'Right' |
-    'Custom';
-
-/**
- * Defines how chart text should behave when it exceeds the boundaries of its container.
- * ```props
- * None :- Displays the full text even if it overlaps with other chart elements.
- * Wrap :- Breaks the text into multiple lines to fit within the container.
- * Trim :- Cuts off the text and may append ellipsis if it exceeds the container width.
- * ```
- */
-export type TextOverflow =
-    'None' |
-    'Wrap' |
-    'Trim';
-
-/**
  * Defines the set of interactive tools available in the chart's zooming toolbar.
  * ```props
  * ZoomIn :- Displays a tool that allows users to zoom into the chart.
@@ -348,6 +300,69 @@ export type ZoomMode =
     'XY' |
     'X' |
     'Y';
+
+/**
+ * Specifies the selection mode for chart elements.
+ * ```props
+ * * None :- Disables selection.
+ * * Series :- Allows selecting an entire series.
+ * * Point :- Allows selecting an individual data point.
+ * * Cluster :- Allows selecting a cluster of points.
+ * ```
+ */
+export type SelectionMode =
+    'None' |
+    'Series' |
+    'Point' |
+    'Cluster';
+
+/**
+ * Specifies the pattern used for highlighting or selecting chart elements.
+ *
+ * ```props
+ * * None :- No highlighting or selection pattern.
+ * * Chessboard :- Applies a chessboard pattern.
+ * * Dots :- Applies a dotted pattern.
+ * * DiagonalForward :- Applies a diagonal forward pattern
+ * * Crosshatch :- Applies a crosshatch pattern.
+ * * Pacman :- Applies a pacman-style pattern.
+ * * Diagonalbackward :- Applies a diagonal backward pattern.
+ * * Grid :- Applies a grid pattern.
+ * * Turquoise :- Applies a turquoise pattern.
+ * * Star :- Applies a star pattern.
+ * * Triangle :- Applies a triangle pattern.
+ * * Circle :- Applies a circle pattern.
+ * * Tile :- Applies a tile pattern.
+ * * Horizontaldash :- Applies a vertical dash pattern.
+ * * Verticaldash :- Applies a rectangle pattern.
+ * * Rectangle :- Applies a box pattern.
+ * * Box :- Applies a vertical stripe pattern.
+ * * Verticalstripe :- Applies a vertical stripe pattern.
+ * * Horizontalstripe :- Applies a horizontal stripe pattern.
+ * * Bubble :- Applies a bubble pattern.
+ * ```
+ */
+export type SelectionPattern =
+    'None' |
+    'Chessboard' |
+    'Dots' |
+    'DiagonalForward' |
+    'Crosshatch' |
+    'Pacman' |
+    'DiagonalBackward' |
+    'Grid' |
+    'Turquoise' |
+    'Star' |
+    'Triangle' |
+    'Circle' |
+    'Tile' |
+    'HorizontalDash' |
+    'VerticalDash' |
+    'Rectangle' |
+    'Box' |
+    'VerticalStripe' |
+    'HorizontalStripe' |
+    'Bubble';
 
 /**
  * Specifies the type of spline used for rendering.
@@ -431,3 +446,58 @@ export type StripLineSizeUnit =
 export type ZIndex =
     'Over' |
     'Behind';
+
+/**
+ * Specifies the display mode for crosshair lines in the chart. They are:
+ * ```props
+ * Both :- Displays both vertical and horizontal crosshair lines.
+ * Vertical :- Displays only the vertical crosshair line.
+ * Horizontal :- Displays only the horizontal crosshair line.
+ * ```
+ */
+export type CrosshairLineType =
+    'Both' |
+    'Vertical' |
+    'Horizontal';
+
+/**
+ * Defines series type of chart. They are
+ * ```props
+ * XY :- Represents XY type series.
+ * HighLow :- Represents HighLow type series.
+ * HighLowOpenClose :- Represents HLOC type series.
+ * ```
+ *
+ *  @private
+ */
+export type SeriesValueType =
+    'XY' |
+    'HighLow' |
+    'HighLowOpenClose';
+
+/**
+ * Specifies the coordinate unit type for chart annotations. They are:
+ * ```props
+ * Pixel :- Positions annotations using pixel values relative to the chart container.
+ * Point :- Positions annotations using axis values relative to chart data points.
+ * ```
+ */
+export type AnnotationCoordinateUnit =
+    'Pixel' |
+    'Point';
+
+/**
+ * Specifies the type of error bar to be rendered in the chart.
+ * Available options are:
+ * ```props
+ * * Percentage :- Renders an error bar based on percentage.
+ * * StandardDeviation :- Renders an error bar using standard deviation.
+ * * StandardError :- Renders an error bar using standard error.
+ * * Custom :-  Renders a custom-defined error bar.
+ * ```
+ */
+export type ErrorBarType =
+    'Percentage' |
+    'StandardDeviation' |
+    'StandardError' |
+    'Custom';

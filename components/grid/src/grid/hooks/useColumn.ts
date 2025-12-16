@@ -1,6 +1,6 @@
 import { ComponentType, createElement, isValidElement, ReactElement, useMemo } from 'react';
 import { DateFormatOptions, IL10n, formatUnit, isNullOrUndefined, NumberFormatOptions } from '@syncfusion/react-base';
-import { IValueFormatter, CellTypes, IRow, EditType, ValueType, FilterBarType } from '../types';
+import { IValueFormatter, CellTypes, IRow, EditType, ValueType, FilterBarType, TextAlign, ColumnType } from '../types';
 import { ColumnProps, IColumnBase } from '../types/column.interfaces';
 import { AggregateColumnProps, AggregateData } from '../types/aggregate.interfaces';
 import { useGridComputedProvider } from '../contexts';
@@ -24,14 +24,17 @@ const CSS_CLASS_NAMES: Record<string, string> = {
  */
 export const defaultColumnProps: <T>(props: Partial<IColumnBase<T>>) => Partial<IColumnBase<T>> =
     <T>(props: Partial<IColumnBase<T>>): Partial<IColumnBase<T>> => {
+        const commandColumn: boolean = !isNullOrUndefined(props.getCommandItems);
+        const isCheckboxColumn: boolean = props.type === ColumnType.Checkbox ||
+            (!!props.displayAsCheckBox && (props.edit?.type === EditType.CheckBox || props.type === ColumnType.Boolean));
         // computed values should handle in component inside alone since react not allowed us to compute here using memo.
         return {
             visible: true,
-            textAlign: 'Left',
+            textAlign: commandColumn || isCheckboxColumn ? TextAlign.Center : 'Left',
             disableHtmlEncode: true,
-            allowEdit: true,
+            allowEdit: commandColumn ? false : true,
             edit: {type: EditType.TextBox},
-            filter: { type: 'FilterBar', filterBarType: FilterBarType.TextBox },
+            filter: { type: 'FilterBar', filterBarType: FilterBarType.TextBox, filterOperators: [] },
             ...props,
             width: props.width ? formatUnit(props.width) : '',
             valueAccessor: props.valueAccessor ?? defaultValueAccessor<T>,
@@ -40,13 +43,14 @@ export const defaultColumnProps: <T>(props: Partial<IColumnBase<T>>) => Partial<
             uid: isNullOrUndefined(props.uid) ? getUid('grid-column') : props.uid,
             getFormatter: props.formatFn,
             getParser: props.parseFn,
-            allowSort: props.allowSort ?? true,
-            allowFilter: props.allowFilter ?? true,
-            allowSearch: props.allowSearch ?? true,
+            allowSort: commandColumn ? false : props.allowSort ?? true,
+            allowFilter: commandColumn ? false : props.allowFilter ?? true,
+            allowSearch: commandColumn ? false : props.allowSearch ?? true,
             templateSettings: {
                 ariaLabel: '',
                 ...props.templateSettings
-            }
+            },
+            headerCheckbox: props.headerCheckbox ?? true
         };
     };
 /**
@@ -306,11 +310,12 @@ export const useColumn: <T>(props: Partial<IColumnBase<T>>) => {
         textAlign,
         headerTextAlign,
         format,
+        type,
         width: formatUnit(width as string | number || ''),
         customAttributes,
         visible,
         disableHtmlEncode,
         ...rest
-    }), [field, headerText, textAlign, headerTextAlign, format, width, customAttributes, visible, rest]);
+    }), [field, headerText, textAlign, headerTextAlign, type, format, width, customAttributes, visible, rest]);
     return { publicAPI, privateAPI };
 };

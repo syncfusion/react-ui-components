@@ -1,91 +1,91 @@
-﻿@include export-module('timepicker-layout') {
-  //   timepicker layout
-  .sf-input-group.sf-control-wrapper.sf-time-wrapper.sf-non-edit.sf-input-focus .sf-input:focus ~ .sf-clear-icon,
-  .sf-float-input.sf-control-wrapper.sf-input-group.sf-time-wrapper.sf-non-edit.sf-input-focus input:focus ~ .sf-clear-icon {
-    display: flex;
+@use 'theme-variables' as *;
+
+@mixin timepicker-list-size($max-height, $item-height, $font-size) {
+  min-width: $timepicker-popup-width;
+  max-height: $max-height;
+  font-size: $font-size;
+  .sf-timepicker-item {
+    height: $item-height;
+    line-height: $item-height;
+  }
+}
+
+@include export-module('timepicker-layout') {
+  
+  .sf-timepicker-list {
+    overflow: auto;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    &.sf-ul {
+      width: auto;
+    }
+  }
+  
+  .sf-timepicker-list-sm {
+    @include timepicker-list-size($timepicker-popup-height-sm, $timepicker-item-height-sm, $timepicker-font-size-sm);
+  }
+  
+  .sf-timepicker-list-me {
+    @include timepicker-list-size($timepicker-popup-height-me, $timepicker-item-height-me, $timepicker-font-size-me);
+  }
+  
+  .sf-timepicker-list-la {
+    @include timepicker-list-size($timepicker-popup-height-la, $timepicker-item-height-la, $timepicker-font-size-la);
   }
 
-  .sf-time-wrapper,
-  .sf-control-wrapper.sf-time-wrapper {
-    .sf-time-icon.sf-icons {
-      font-size: $timepicker-icon-normal-font-size;
-      min-height: $timepicker-normal-input-min-height;
-      min-width: $timepicker-normal-input-min-width;
-      border-radius: $timepicker-normal-icon-border-radius;
-      margin: $timepicker-icon-margin;
-    }
+  .sf-timepicker-item {
+    cursor: default;
+    font-size: $timepicker-list-normal-font-size;
+    font-weight: $timepicker-font-weight-style;
+    overflow: hidden;
+    position: relative;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+    white-space: nowrap;
+    width: 100%;
+    text-indent: $timepicker-default-text-indent;
 
-    .sf-time-icon.sf-icons.sf-disabled {
-      pointer-events: none;
-    }
-
-    span {
+    &:hover {
       cursor: pointer;
     }
   }
+}
 
-  #{&}.sf-timepicker.sf-time-modal {
-    background: $timepicker-default-overlay;
-    height: 100%;
-    left: 0;
-    opacity: .5;
-    pointer-events: auto;
-    position: fixed;
-    top: 0;
-    width: 100%;
-    z-index: 999;
-  }
+.sf-timepicker-mob {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: $timepicker-mobile-bg-color;
 
-  #{&}.sf-timepicker.sf-popup {
-    border-style: solid;
-    border-width: 1px;
-    overflow: auto;
-
-    .sf-content {
-      position: relative;
-    }
-
-    .sf-list-parent.sf-ul {
-      margin: 0;
-      padding: $timepicker-list-normal-padding 0;
-
-      .sf-list-item {
-        cursor: default;
-        font-size: $timepicker-list-normal-font-size;
-        overflow: hidden;
-        position: relative;
-        text-overflow: ellipsis;
-        vertical-align: middle;
-        white-space: nowrap;
-        width: 100%;
-      }
-
-      .sf-list-item.sf-hover {
-        cursor: pointer;
-      }
-    }
-  }
-
-  #{&}.sf-timepicker.sf-popup {
-    .sf-list-parent.sf-ul .sf-list-item {
-      line-height: $timepicker-list-normal-line-height;
-      text-indent: $timepicker-list-normal-text-indent;
-    }
-  }
-
-  .sf-content-placeholder.sf-timepicker.sf-placeholder-timepicker {
-    background-size: 250px 33px;
-    min-height: 33px;
+  .sf-ul {
+    max-height: none;
+    height: auto;
+    padding: 0;
+    margin: 0;
   }
 }
 
-.sf-time-overflow {
-  overflow: hidden;
+.sf-timepicker-header {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: $timepicker-mobile-header-spacing;
+  padding: $timepicker-modal-list-item-padding;
+  background: $timepicker-mobile-header-color;
 }
 
-.sf-timepicker-mob-popup-wrap {
+.sf-timepicker-title {
+  font-size: $timepicker-font-size-me;
+  color: $timepicker-mobile-text-color;
+}
+
+.sf-timepicker-popup-wrap {
   align-items: center;
   display: flex;
+  min-width: 100%;
+  min-height: 100%;
   flex-direction: column;
   height: 100%;
   justify-content: center;
@@ -96,92 +96,10 @@
   width: 100%;
   z-index: 1002;
 
-  .sf-timepicker.sf-popup.sf-lib.sf-control.sf-popup-open {
-    left: 0 !important;
+  .sf-popup {
+    min-width: 100%;
+    min-height: 100%;
     position: relative;
-    top: 0 !important;
+    display: flex;
   }
-}
-
-.sf-timepicker-mob-popup-wrap .sf-popup-expand.sf-timepicker.sf-popup,
-.sf-datetimepicker.sf-popup-expand.sf-timepicker.sf-popup,
-.sf-timepicker-mob-popup-wrap .sf-popup-expand.sf-datetimepicker.sf-popup,
-.sf-datetimepicker.sf-popup-expand.sf-popup {
-  border-radius: 0;
-}
-
-.sf-timepicker-mob-popup-wrap .sf-popup-expand,
-.sf-datetimepicker.sf-popup-expand {
-    .sf-model-header {
-      height: $modal-header-height;
-      padding: $modal-header-padding;
-      display: $modal-header-display-style;
-      align-items: $modal-header-content-align;
-      font-size: $modal-header-portrait-font-size;
-      border-bottom: $modal-header-border-bottom;
-
-      .sf-popup-close {
-        float: $modal-close-icon-float;
-        padding: $modal-portrait-content-padding;
-      }
-
-      .sf-model-title {
-        padding: $modal-portrait-content-padding;
-        text-transform: $modal-header-title-transform;
-        font-weight: 500;
-      }
-
-      .sf-btn.sf-popup-close {
-        font-size: $modal-header-portrait-font-size;
-      }
-    }
-
-    .sf-content {
-      height: $modal-content-height;
-      overflow: $modal-content-overflow;
-
-      .sf-list-parent.sf-ul .sf-list-item {
-        padding: $modal-list-item-padding;
-        line-height: $modal-list-line-height;
-
-        @media (max-device-width: 768px) {
-          font-size: $modal-mobile-font-size;
-        }
-
-        @media (min-device-width: 768px) {
-          font-size: $modal-tablet-font-size;
-        }
-      }
-    }
-}
-
-@media screen and (orientation: landscape) {
-  .sf-timepicker-mob-popup-wrap .sf-popup-expand,
-  .sf-datetimepicker.sf-popup-expand {  
-      .sf-model-header {
-        height: $modal-header-landscape-height;
-        font-size: $modal-header-landscape-font-size;
-  
-        .sf-popup-close {
-          padding: $modal-landscape-padding;
-        }
-  
-        .sf-model-title {
-          padding: $modal-landscape-padding;
-        }
-
-        .sf-btn.sf-popup-close {
-          font-size: $modal-header-landscape-font-size;
-        }
-      }
-  
-      .sf-content {
-        height: $modal-content-landscape-height;
-  
-        .sf-list-parent.sf-ul .sf-list-item {
-          padding: $modal-list-item-padding;
-          line-height: $modal-landscape-list-line-height;
-        }
-      }
-    }
 }

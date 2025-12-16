@@ -671,15 +671,15 @@ export class DataUtil {
      * Specifies the Object with filter operators.
      */
     public static operatorSymbols: { [key: string]: string } = {
-        '<': 'lessthan',
-        '>': 'greaterthan',
-        '<=': 'lessthanorequal',
-        '>=': 'greaterthanorequal',
+        '<': 'lessThan',
+        '>': 'greaterThan',
+        '<=': 'lessThanOrEqual',
+        '>=': 'greaterThanOrEqual',
         '==': 'equal',
-        '!=': 'notequal',
+        '!=': 'notEqual',
         '*=': 'contains',
-        '$=': 'endswith',
-        '^=': 'startswith'
+        '$=': 'endsWith',
+        '^=': 'startsWith'
     };
     /**
      * Specifies the Object with filter operators which will be used for OData filter query generation.
@@ -692,12 +692,12 @@ export class DataUtil {
         '>=': ' ge ',
         '==': ' eq ',
         '!=': ' ne ',
-        'lessthan': ' lt ',
-        'lessthanorequal': ' le ',
-        'greaterthan': ' gt ',
-        'greaterthanorequal': ' ge ',
+        'lessThan': ' lt ',
+        'lessThanOrEqual': ' le ',
+        'greaterThan': ' gt ',
+        'greaterThanOrEqual': ' ge ',
         'equal': ' eq ',
-        'notequal': ' ne '
+        'notEqual': ' ne '
     };
     /**
      * Specifies the Object with filter operators which will be used for OData filter query generation.
@@ -707,12 +707,12 @@ export class DataUtil {
         '$=': 'endswith',
         '^=': 'startswith',
         '*=': 'substringof',
-        'endswith': 'endswith',
-        'startswith': 'startswith',
+        'endsWith': 'endswith',
+        'startsWith': 'startswith',
         'contains': 'substringof',
         'doesNotEndWith': 'not endswith',
         'doesNotStartWith': 'not startswith',
-        'doesNotcontain': 'not substringof',
+        'doesNotContain': 'not substringof',
         'wildcard': 'wildcard',
         'like': 'like'
     };
@@ -725,12 +725,12 @@ export class DataUtil {
         '$=': 'endswith',
         '^=': 'startswith',
         '*=': 'contains',
-        'endswith': 'endswith',
-        'startswith': 'startswith',
+        'endsWith': 'endswith',
+        'startsWith': 'startswith',
         'contains': 'contains',
         'doesNotEndWith': 'not endswith',
         'doesNotStartWith': 'not startswith',
-        'doesNotcontain': 'not contains',
+        'doesNotContain': 'not contains',
         'wildcard': 'wildcard',
         'like': 'like'
     };
@@ -1607,7 +1607,7 @@ export class DataUtil {
          * @param ignoreCase
          * @param ignoreAccent
          */
-        notequal: (actual: string | number | boolean, expected: string | number | boolean, ignoreCase?: boolean,
+        notEqual: (actual: string | number | boolean, expected: string | number | boolean, ignoreCase?: boolean,
                    ignoreAccent?: boolean): boolean => {
             if (ignoreAccent) {
                 actual = <string>DataUtil.ignoreDiacritics(actual);
@@ -1623,7 +1623,7 @@ export class DataUtil {
          * @param {boolean} ignoreCase?
          * @param ignoreCase
          */
-        lessthan: (actual: string | number | boolean, expected: string | number | boolean, ignoreCase?: boolean): boolean => {
+        lessThan: (actual: string | number | boolean, expected: string | number | boolean, ignoreCase?: boolean): boolean => {
             if (ignoreCase) {
                 return DataUtil.toLowerCase(actual) < DataUtil.toLowerCase(expected);
             }
@@ -1640,7 +1640,7 @@ export class DataUtil {
          * @param {boolean} ignoreCase?
          * @param ignoreCase
          */
-        greaterthan: (actual: string | number | boolean, expected: string | number | boolean, ignoreCase?: boolean): boolean => {
+        greaterThan: (actual: string | number | boolean, expected: string | number | boolean, ignoreCase?: boolean): boolean => {
             if (ignoreCase) {
                 return DataUtil.toLowerCase(actual) > DataUtil.toLowerCase(expected);
             }
@@ -1654,7 +1654,7 @@ export class DataUtil {
          * @param {boolean} ignoreCase?
          * @param ignoreCase
          */
-        lessthanorequal: (actual: string | number | boolean, expected: string | number | boolean, ignoreCase?: boolean): boolean => {
+        lessThanOrEqual: (actual: string | number | boolean, expected: string | number | boolean, ignoreCase?: boolean): boolean => {
             if (ignoreCase) {
                 return DataUtil.toLowerCase(actual) <= DataUtil.toLowerCase(expected);
             }
@@ -1671,7 +1671,7 @@ export class DataUtil {
          * @param {boolean} ignoreCase?
          * @param ignoreCase
          */
-        greaterthanorequal: (actual: string | number | boolean, expected: string | number | boolean, ignoreCase?: boolean): boolean => {
+        greaterThanOrEqual: (actual: string | number | boolean, expected: string | number | boolean, ignoreCase?: boolean): boolean => {
             if (ignoreCase) {
                 return DataUtil.toLowerCase(actual) >= DataUtil.toLowerCase(expected);
             }
@@ -1708,7 +1708,7 @@ export class DataUtil {
          * @param  {string|number} expected
          * @param  {boolean} ignoreCase?
          */
-        doesNotcontain: (actual: string | number, expected: string | number, ignoreCase?: boolean, ignoreAccent?: boolean): boolean => {
+        doesNotContain: (actual: string | number, expected: string | number, ignoreCase?: boolean, ignoreAccent?: boolean): boolean => {
             if (ignoreAccent) {
                 actual = <string>DataUtil.ignoreDiacritics(actual);
                 expected = <string>DataUtil.ignoreDiacritics(expected);
@@ -1747,7 +1747,7 @@ export class DataUtil {
          * @param ignoreCase
          * @param ignoreAccent
          */
-        startswith: (actual: string, expected: string, ignoreCase?: boolean, ignoreAccent?: boolean): boolean => {
+        startsWith: (actual: string, expected: string, ignoreCase?: boolean, ignoreAccent?: boolean): boolean => {
             if (ignoreAccent) {
                 actual = <string>DataUtil.ignoreDiacritics(actual);
                 expected = <string>DataUtil.ignoreDiacritics(expected);
@@ -1836,7 +1836,7 @@ export class DataUtil {
          * @param ignoreCase
          * @param ignoreAccent
          */
-        endswith: (actual: string, expected: string, ignoreCase?: boolean, ignoreAccent?: boolean): boolean => {
+        endsWith: (actual: string, expected: string, ignoreCase?: boolean, ignoreAccent?: boolean): boolean => {
             if (ignoreAccent) {
                 actual = <string>DataUtil.ignoreDiacritics(actual);
                 expected = <string>DataUtil.ignoreDiacritics(expected);
@@ -1921,7 +1921,7 @@ export class DataUtil {
          * @param {boolean} [ignoreAccent] - Whether to ignore accents/diacritics.
          * @returns {boolean} `true` if the value is not found, otherwise `false`.
          */
-        notin: (actual: string | number | Date, expectedArray: Array<string | number | Date>, ignoreCase?: boolean, ignoreAccent?: boolean): boolean => {
+        notIn: (actual: string | number | Date, expectedArray: Array<string | number | Date>, ignoreCase?: boolean, ignoreAccent?: boolean): boolean => {
             if (ignoreAccent) {
                 actual = <string>DataUtil.ignoreDiacritics(actual);
                 expectedArray = <Array<string | number>>DataUtil.ignoreDiacriticsForArrays(expectedArray);
@@ -2513,27 +2513,27 @@ export interface Aggregates {
  */
 export interface Operators {
     equal?: Function;
-    notequal?: Function;
-    lessthan?: Function;
-    greaterthan?: Function;
-    lessthanorequal?: Function;
-    greaterthanorequal?: Function;
+    notEqual?: Function;
+    lessThan?: Function;
+    greaterThan?: Function;
+    lessThanOrEqual?: Function;
+    greaterThanOrEqual?: Function;
     contains?: Function;
-    doesNotcontain?: Function;
+    doesNotContain?: Function;
     isNotNull?: Function;
     isNull?: Function;
-    startswith?: Function;
+    startsWith?: Function;
     doesNotStartWith?: Function;
     like?: Function;
     isEmpty?: Function;
     isNotEmpty?: Function;
     wildcard?: Function;
-    endswith?: Function;
+    endsWith?: Function;
     doesNotEndWith?: Function;
     processSymbols?: Function;
     processOperator?: Function;
     in?: Function;
-    notin?: Function;
+    notIn?: Function;
 }
 
 /**

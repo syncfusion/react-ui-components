@@ -1,5 +1,24 @@
 # Changelog
 
+## 32.1.19 (2025-12-16)
+
+### Spinner
+
+The React Spinner component is a lightweight, accessible loading indicator with multiple animated styles. It supports sizing, overlay mode, and customizable content, making it ideal for indicating progress across pages or specific UI sections.
+
+Explore the demo <a href="https://react.syncfusion.com/react-ui/spinner" target="_blank" rel="noopener noreferrer">here</a>
+
+**Key features**
+
+- **Multiple Styles:** Circular, Cupertino, SingleCircle, and DoubleCircle animations.
+- **Overlay Mode:** Fullscreen overlay option to block UI during loading.
+- **Theming Colors:** Built-in color variants: Primary, Secondary, Success, Warning, Error, and Info.
+- **Custom Size & Thickness:** Set size (px/em) and stroke thickness for precise visuals.
+- **Configurable Speed:** Control animation duration (ms/s) for rotation and dash effects.
+- **Accessible by Default:** role="status" with aria-live="polite" and optional label text.
+- **Slot for Custom Content:** Provide custom children to replace the default SVG.
+- **Performance Optimized:** Memoized SVG rendering for smooth animations.
+
 ## 31.1.17 (2025-09-05)
 
 ### Dialog

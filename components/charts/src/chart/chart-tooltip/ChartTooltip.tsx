@@ -40,7 +40,8 @@ export const ChartTooltip: React.FC<ChartTooltipProps> = (props: ChartTooltipPro
         props.fadeOutDuration,
         props.showNearestPoint,
         props.showHeaderLine,
-        props.showNearestTooltip
+        props.showNearestTooltip,
+        props.template
     ]);
 
     // This component doesn't render anything directly

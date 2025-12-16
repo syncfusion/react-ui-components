@@ -1,9 +1,5 @@
-/**
- * Calendar modules
- */
 export * from './calendar';
-
-/**
- * Calendar cell modules
- */
 export * from './calendar-cell';
+export * from './types';
+export * from '../calendar/components/calendar-footer';
+export * from '../calendar/components/calendar-header';

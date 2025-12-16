@@ -1615,9 +1615,19 @@ export interface IGrid<T = unknown> extends GridProps<T> {
      *
      * @param {boolean} skipPage - Optional. If true, excludes pagination information from the returned data.
      * @param {boolean} requiresCount - Optional. If true, includes the total record count in the response.
+     * @param {Object[] | DataManager | DataResult} dataSource - Defines the source of data, which can be a local array or a remote data manager.
      * @returns {Object[] | Promise<Response | DataReturnType>} An array of records or a promise for remote data.
      */
-    getData(skipPage?: boolean, requiresCount?: boolean): T[] | Promise<Response | DataReturnType>;
+    getData(skipPage?: boolean, requiresCount?: boolean, dataSource?: Object[] | DataManager | DataResult):
+    T[] | Promise<Response | DataReturnType>;
+
+    /**
+     * Determines whether the grid is using a remote data source.
+     * Remote data sources typically involve server-side operations for pagination, filtering, sorting, and searching.
+     *
+     * @returns {boolean} True if the grid is bound to a remote data source; otherwise, false.
+     */
+    isRemote(): boolean;
 
     /**
      * Retrieves an array of configuration objects for all currently hidden columns in the grid.
@@ -1681,6 +1691,16 @@ export interface IGrid<T = unknown> extends GridProps<T> {
      * @returns {ColumnProps[]} An array of column configuration objects.
      */
     getColumns(): ColumnProps[];
+
+    /**
+     * Returns the data module used by the grid.
+     *
+     * Use this to access the current applied queries and data-related configuration settings for the grid.
+     * This includes filtering, sorting, pagination, and other data operations.
+     *
+     * @returns {DataResult} The data module currently used by the grid.
+     */
+    getDataModule(): DataResult;
 
     /**
      * Retrieves the table row elements of the currently selected rows in the grid.
@@ -1891,6 +1911,7 @@ export interface IGrid<T = unknown> extends GridProps<T> {
      *
      * Typically invoked via the Update toolbar action or Enter key during editing.
      *
+     * @param {HTMLTableRowElement} rowElement - The row element to save record in command editing.
      * @returns {Promise<boolean>} Resolves to true if the operation succeeds. returns false if validation fails or the action is cancelled.
      *
      * @example
@@ -1905,13 +1926,14 @@ export interface IGrid<T = unknown> extends GridProps<T> {
      * };
      * ```
      */
-    saveDataChanges(): Promise<boolean>;
+    saveDataChanges(rowElement?: HTMLTableRowElement): Promise<boolean>;
 
     /**
      * Aborts the active CRUD operation, exits edit mode, and restores the original row state.
      *
      * Typically invoked via the Cancel toolbar action or Escape key during editing.
      *
+     * @param {HTMLTableRowElement} rowElement - The row element to cancel record in command editing.
      * @returns {void}
      *
      * @example
@@ -1919,7 +1941,7 @@ export interface IGrid<T = unknown> extends GridProps<T> {
      * gridRef.current?.cancelDataChanges();
      * ```
      */
-    cancelDataChanges(): void;
+    cancelDataChanges(rowElement?: HTMLTableRowElement): void;
 
     /**
      * Adds a new record to the grid’s data source.

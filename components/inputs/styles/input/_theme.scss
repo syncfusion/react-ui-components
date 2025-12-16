@@ -1,0 +1,143 @@
+@use 'theme-variables' as *;
+
+@include export-module('input-theme') {
+  .sf-input-group {
+    background: $input-transparent-background;
+    color: $input-content-color;
+    border-bottom-color: $input-border-color;
+    border-top-color: $input-transparent-background;
+
+    &:hover {
+      border-bottom-color: $input-border-hover-color;
+    }
+
+    &.sf-input-focus {
+      border-bottom-color: $input-border-focus-color;
+    }
+
+    &.sf-success {
+      border-bottom-color: $input-success-border-color;
+
+      .sf-float-text {
+        color: $input-text-success-color;
+      }
+
+      &::before,
+      &::after {
+        background: $input-success-border-color;
+      }
+    }
+
+    &.sf-warning {
+      border-bottom-color: $input-warning-border-color;
+
+      .sf-float-text {
+        color: $input-text-warning-color;
+      }
+
+      &::before,
+      &::after {
+        background: $input-warning-border-color;
+      }
+    }
+
+    &.sf-error {
+      border-bottom-color: $input-error-border-color;
+
+      .sf-float-text {
+        color: $input-text-error-color;
+      }
+
+      &::before,
+      &::after {
+        background: $input-error-border-color;
+      }
+    }
+
+    .sf-input-icon {
+      background: $input-transparent-background;
+      color: $input-close-icon-color;
+    }
+
+    .sf-input-icon:not(.sf-no-hover) {
+      &:hover {
+        background: $input-close-icon-hover-background;
+        color: $input-close-icon-hover-color;
+      }
+
+      &:active {
+        background: $input-close-icon-active-background;
+        color: $input-close-icon-active-color;
+      }
+    }
+
+    .sf-float-text {
+      color: $input-placeholder-color;
+    }
+
+    &::before,
+    &::after {
+      background: $input-line-background;
+    }
+
+    &.sf-outline {
+      border-color: $input-border-color;
+
+      &:hover {
+        border-color: $input-outlined-border-hover-color;
+      }
+
+      &.sf-success {
+        border-color: $input-success-border-color;
+      }
+
+      &.sf-warning {
+        border-color: $input-warning-border-color;
+      }
+
+      &.sf-error {
+        border-color: $input-error-border-color;
+      }
+
+      &.sf-input-focus {
+        border-color: $input-outlined-focus-border-color;
+        box-shadow: inset 1px 1px $input-outlined-focus-border-color, inset -1px 0 $input-outlined-focus-border-color, inset 0 -1px $input-outlined-focus-border-color;
+
+        &.sf-success {
+          border-color: $input-success-border-color;
+          box-shadow: inset 1px 1px $input-success-border-color, inset -1px 0 $input-success-border-color, inset 0 -1px $input-success-border-color;
+        }
+
+        &.sf-warning {
+          border-color: $input-warning-border-color;
+          box-shadow: inset 1px 1px $input-warning-border-color, inset -1px 0 $input-warning-border-color, inset 0 -1px $input-warning-border-color;
+        }
+
+        &.sf-error {
+          border-color: $input-error-border-color;
+          box-shadow: inset 1px 1px $input-error-border-color, inset -1px 0 $input-error-border-color, inset 0 -1px $input-error-border-color;
+        }
+      }
+    }
+
+    &.sf-filled {
+      background: $input-filled-background;
+      transition: $input-filled-background-transition;
+    }
+  }
+
+  .sf-input {
+    background: none;
+    color: inherit;
+
+    &::selection {
+      background: $input-select-background;
+      color: $input-select-font-color;
+    }
+
+    &::placeholder {
+      color: $input-placeholder-color;
+      user-select: none;
+    }
+  }
+}

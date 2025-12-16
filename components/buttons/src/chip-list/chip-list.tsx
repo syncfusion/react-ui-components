@@ -391,7 +391,8 @@ forwardRef<IChipList, ChipListProps>((props: ChipListComponentProps, ref: React.
             chipProps.avatar ? 'sf-chip-avatar-wrap' :
                 chipProps.leadingIcon ? 'sf-chip-icon-wrap' : '',
             chipProps.variant === 'Outlined' ? 'sf-outline' : '',
-            chipProps.color ? `sf-${color?.toLowerCase()}` : ''
+            chipProps.color ? `sf-${color?.toLowerCase()}` : '',
+            chipProps.avatar || chipProps.leadingIcon || chipProps.leadingIconUrl || selection === 'Multiple' ? 'sf-chip-has-icon' : ''
         ].filter(Boolean).join(' ');
         const { onClick, ...otherHtmlAttributes }: React.HTMLAttributes<HTMLDivElement> = htmlAttributes || {};
         return (

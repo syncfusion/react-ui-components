@@ -1,0 +1,15 @@
+@use '../../../base/styles/themes/variables' as *;
+
+$listview-icon-back-margin: $spacing-0 $spacing-14 $spacing-0 $spacing-0 !default;
+$listview-root-border-radius: $radius-4 !default;
+$listview-header-text-padding: $spacing-8 $spacing-15 $spacing-8 $spacing-15 !default;
+$listview-header-border-bottom: 0 !default;
+$listview-border-size: 0.0625rem !default;
+$listview-back-padding-right: $spacing-8 !default;
+$listview-header-font-size: $font-size-sm !default;
+$listview-header-font-weight: $font-weight-medium !default;
+
+$listview-line-color: rgba($border-light) !default;
+$listview-header-text-color: rgba($content-text-color-alt1) !default;
+$listview-header-bg: transparent !default;
+$listview-header-border: rgba($border-light) !default;

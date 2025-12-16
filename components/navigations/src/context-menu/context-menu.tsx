@@ -494,12 +494,12 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuComponentPr
             if (isOpen) {
                 let left: number = menuPosition.x;
                 let top: number = menuPosition.y;
-                const collide: string[] = isCollide(parentRef.current, document.documentElement, left, top);
+                const collide: string[] = isCollide(parentRef.current as HTMLElement, document.documentElement, left, top);
                 if (collide.includes('left') || collide.includes('right')) {
                     left = left - (parentRef?.current?.offsetWidth || 0);
                 }
                 if (collide.includes('bottom')) {
-                    const position: OffsetPosition = fit(parentRef.current, null, { X: false, Y: true },
+                    const position: OffsetPosition = fit(parentRef.current as HTMLElement, null, { X: false, Y: true },
                                                          { top: top, left: left }) as OffsetPosition;
                     top = position.top;
                 }

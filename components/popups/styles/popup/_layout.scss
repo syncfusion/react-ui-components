@@ -1,3 +1,5 @@
+@use 'theme-variables' as *;
+
 @include export-module('popup-layout') {
   .sf-popup {
     height: auto;

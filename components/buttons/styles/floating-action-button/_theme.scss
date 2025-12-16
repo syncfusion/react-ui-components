@@ -1,3 +1,6 @@
+@use 'mixin' as *;
+@use 'theme-variables' as *;
+
 @include export-module('floating-action-button-theme') {
   .sf-fab.sf-btn {
     box-shadow: $fab-box-shadow;

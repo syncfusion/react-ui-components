@@ -1,9 +1,4 @@
-/**
- * Calendar all modules
- */
+export * from './calendar-core/index';
 export * from './calendar/index';
-
-/**
- * DatePicker all modules
- */
 export * from './datepicker/index';
+export * from './timepicker/index';

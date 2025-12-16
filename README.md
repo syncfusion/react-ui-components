@@ -9,8 +9,8 @@ Syncfusion React UI Components library has been built from the ground up to be l
 For additional licensing details, refer to the [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campaign=notification).
 
 ## Resources
-* [Getting Started](https://react.syncfusion.com/overview/introduction)
-* [View Online Demos](https://react.syncfusion.com/button)
+* [Getting Started](https://react.syncfusion.com/react-ui/overview/introduction)
+* [View Online Demos](https://react.syncfusion.com/react-ui/button)
 
 ## React Components Highlights
 
@@ -51,7 +51,7 @@ Built-in `Material3` stylesheets offer a modern, accessible, and visually appeal
            <a href="components/charts/src/chart">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/chart/overview">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/charts/overview">Live demo</a>
        </td>
    </tr>
 </table>
@@ -70,7 +70,7 @@ Built-in `Material3` stylesheets offer a modern, accessible, and visually appeal
            <a href="components/grid/src/grid">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/data-grid/overview">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/data-grid/overview">Live demo</a>
        </td>
    </tr>
 </table>
@@ -89,7 +89,7 @@ Built-in `Material3` stylesheets offer a modern, accessible, and visually appeal
            <a href="components/buttons/src/button">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/button">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/button">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -100,7 +100,7 @@ Built-in `Material3` stylesheets offer a modern, accessible, and visually appeal
            <a href="components/buttons/src/chip">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/chip">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/chip">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -111,7 +111,7 @@ Built-in `Material3` stylesheets offer a modern, accessible, and visually appeal
            <a href="components/buttons/src/chipList">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/chiplist">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/chiplist">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -122,7 +122,7 @@ Built-in `Material3` stylesheets offer a modern, accessible, and visually appeal
            <a href="components/buttons/src/floating-action-button">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/floating-action-button">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/floating-action-button">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -136,7 +136,7 @@ Built-in `Material3` stylesheets offer a modern, accessible, and visually appeal
            <a href="components/splitbuttons/src/dropdown-button">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/dropdown-button">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/dropdown-button">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -147,7 +147,62 @@ Built-in `Material3` stylesheets offer a modern, accessible, and visually appeal
            <a href="components/splitbuttons/src/split-button">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/split-button">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/split-button">Live demo</a>
+       </td>
+   </tr>
+</table>
+
+### Calendars
+
+<table>
+    <tr>
+       <td>
+          <b>Scheduler</b>
+       </td>
+       <td rowspan="1">
+           <a href="https://www.npmjs.com/package/@syncfusion/react-scheduler"><img src="https://ej2.syncfusion.com/github/images/npm-logo.png" alt="npm package @syncfusion/react-scheduler" title="@syncfusion/react-scheduler" style="height:20px;" />
+       </td>
+       <td>
+           <a href="components/scheduler/src/scheduler">Source</a>
+       </td>
+       <td>
+           <a href="https://react.syncfusion.com/react-ui/scheduler/overview">Live demo</a>
+       </td>
+   </tr>
+   <tr>
+       <td>
+           <b>Calendar</b>
+       </td>
+        <td rowspan="3">
+           <a href="https://www.npmjs.com/package/@syncfusion/react-calendars"><img src="https://ej2.syncfusion.com/github/images/npm-logo.png" alt="npm package @syncfusion/react-calendars" title="@syncfusion/react-calendars" style="height:20px;" />
+       </td>
+       <td>
+           <a href="components/calendars/src/calendar">Source</a>
+       </td>
+       <td>
+           <a href="https://react.syncfusion.com/react-ui/calendar">Live demo</a>
+       </td>
+   </tr>
+   <tr>
+       <td>
+          <b>DatePicker</b>
+       </td>
+       <td>
+           <a href="components/calendars/src/datepicker">Source</a>
+       </td>
+       <td>
+           <a href="https://react.syncfusion.com/react-ui/datepicker">Live demo</a>
+       </td>
+   </tr>
+   <tr>
+       <td>
+          <b>TimePicker</b>
+       </td>
+       <td>
+           <a href="components/calendars/src/timepicker">Source</a>
+       </td>
+       <td>
+           <a href="https://react.syncfusion.com/react-ui/timepicker">Live demo</a>
        </td>
    </tr>
 </table>
@@ -166,7 +221,7 @@ Built-in `Material3` stylesheets offer a modern, accessible, and visually appeal
            <a href="components/notifications/src/toast">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/toast">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/toast">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -177,7 +232,7 @@ Built-in `Material3` stylesheets offer a modern, accessible, and visually appeal
            <a href="components/notifications/src/skeleton">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/skeleton">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/skeleton">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -188,7 +243,40 @@ Built-in `Material3` stylesheets offer a modern, accessible, and visually appeal
            <a href="components/notifications/src/message">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/message">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/message">Live demo</a>
+       </td>
+   </tr>
+   <tr>
+       <td>
+          <b>Spinner</b>
+       </td>
+       <td rowspan="1">
+           <a href="https://www.npmjs.com/package/@syncfusion/react-popups"><img src="https://ej2.syncfusion.com/github/images/npm-logo.png" alt="npm package @syncfusion/react-popups" title="@syncfusion/react-popups" style="height:20px;" />
+       </td>
+       <td>
+           <a href="components/popups/src/spinner">Source</a>
+       </td>
+       <td>
+           <a href="https://react.syncfusion.com/react-ui/spinner">Live demo</a>
+       </td>
+   </tr>
+</table>
+
+### Dropdowns
+
+<table>
+   <tr>
+       <td>
+           <b>Dropdown List</b>
+       </td>
+        <td rowspan="1">
+           <a href="https://www.npmjs.com/package/@syncfusion/react-dropdowns"><img src="https://ej2.syncfusion.com/github/images/npm-logo.png" alt="npm package @syncfusion/react-dropdowns" title="@syncfusion/react-dropdowns" style="height:20px;" />
+       </td>
+       <td>
+           <a href="components/dropdowns/src/drop-down-list">Source</a>
+       </td>
+       <td>
+           <a href="https://react.syncfusion.com/react-ui/dropdown-list">Live demo</a>
        </td>
    </tr>
 </table>
@@ -207,7 +295,7 @@ Built-in `Material3` stylesheets offer a modern, accessible, and visually appeal
            <a href="components/inputs/src/numerictextbox">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/numeric-textbox">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/numeric-textbox">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -218,7 +306,7 @@ Built-in `Material3` stylesheets offer a modern, accessible, and visually appeal
            <a href="components/inputs/src/textbox">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/textbox">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/textbox">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -229,7 +317,7 @@ Built-in `Material3` stylesheets offer a modern, accessible, and visually appeal
            <a href="components/inputs/src/textarea">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/textarea">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/textarea">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -240,7 +328,7 @@ Built-in `Material3` stylesheets offer a modern, accessible, and visually appeal
            <a href="components/inputs/src/form-validator">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/form">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/form">Live demo</a>
        </td>
    </tr>
    
@@ -255,7 +343,7 @@ Built-in `Material3` stylesheets offer a modern, accessible, and visually appeal
            <a href="components/buttons/src/button">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/checkbox">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/checkbox">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -266,7 +354,7 @@ Built-in `Material3` stylesheets offer a modern, accessible, and visually appeal
            <a href="components/buttons/src/radio-button">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/radio-button">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/radio-button">Live demo</a>
        </td>
    </tr>
 
@@ -286,7 +374,7 @@ Built-in `Material3` stylesheets offer a modern, accessible, and visually appeal
            <a href="components/popups/src/tooltip">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/tooltip">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/tooltip">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -297,7 +385,7 @@ Built-in `Material3` stylesheets offer a modern, accessible, and visually appeal
            <a href="components/popups/src/dialog">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/dialog">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/dialog">Live demo</a>
        </td>
    </tr>
 </table>
@@ -316,7 +404,7 @@ Built-in `Material3` stylesheets offer a modern, accessible, and visually appeal
            <a href="components/navigations/src/contextMenu">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/context-menu">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/context-menu">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -327,7 +415,7 @@ Built-in `Material3` stylesheets offer a modern, accessible, and visually appeal
            <a href="components/navigations/src/toolbar">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/toolbar">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/toolbar">Live demo</a>
        </td>
    </tr>
 </table>
@@ -342,6 +430,6 @@ Built-in `Material3` stylesheets offer a modern, accessible, and visually appeal
 Check the license detail [here](https://github.com/syncfusion/react-ui-components/blob/master/license).
 
 ## Changelog
-Check the changelog [here](https://react-api.syncfusion.com/release-notes/31.1.17). 
+Check the changelog [here](https://react.syncfusion.com/api/release-notes/32-1-19/). 
 
-&copy; Copyright 2025 Syncfusion, Inc. All Rights Reserved. The Syncfusion Essential Studio license and copyright applies to this distribution.
+&copy; Copyright 2026 Syncfusion, Inc. All Rights Reserved. The Syncfusion Essential Studio license and copyright applies to this distribution.

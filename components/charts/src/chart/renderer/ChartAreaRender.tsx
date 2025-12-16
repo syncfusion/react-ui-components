@@ -2,7 +2,7 @@
 import { useLayout } from '../layout/LayoutContext';
 import { ChartAreaProps } from '../base/interfaces';
 import { useEffect, useLayoutEffect, useState } from 'react';
-import { useRegisterClipRectSetter } from '../hooks/useClipRect';
+import { useRegisterClipRectSetter, useUnregisterClipRectSetter } from '../hooks/useClipRect';
 import { Chart, Rect } from '../chart-area/chart-interfaces';
 
 /**
@@ -18,6 +18,7 @@ export const ChartAreaRenderer: React.FC<ChartAreaProps> = (props: ChartAreaProp
     const { layoutRef, phase, setLayoutValue, reportMeasured, triggerRemeasure } = useLayout();
     const [clipRect, setClip] = useState<Rect | null>(null);
     const registerClipRect: (fn: (clipRect: Rect) => void) => void = useRegisterClipRectSetter();
+    const unregisterClipRect: () => void = useUnregisterClipRectSetter();
 
     /**
      * Sets the clipping rectangle for the chart area.
@@ -33,6 +34,10 @@ export const ChartAreaRenderer: React.FC<ChartAreaProps> = (props: ChartAreaProp
 
     useEffect(() => {
         registerClipRect(setClipRect);
+        return () => {
+            // clear the stored setter on unmount to break retaining path
+            unregisterClipRect();
+        };
     }, [registerClipRect]);
 
     useLayoutEffect(() => {

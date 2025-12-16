@@ -1,0 +1,16 @@
+@use '../../../base/styles/themes/variables' as *;
+
+$fab-offset: $spacing-16 !default;
+$fab-z-index: 100000 !default;
+$fab-border-radius: $radius-12 !default;
+$fab-dimension: $spacing-40 !default;
+$fab-padding: $spacing-0 $spacing-12 !default;
+$fab-small-border-radius: $radius-8 !default;
+$fab-small-min-dimension: $spacing-32 !default;
+$fab-small-btn-padding: $spacing-0 $spacing-4 !default;
+$fab-default-btn-padding: $spacing-0 $spacing-6 !default;
+$fab-btn-padding: $spacing-0 $spacing-8 !default;
+$fab-large-border-radius: $radius-16 !default;
+$fab-large-min-dimension: $spacing-56 !default;
+$fab-large-padding: $spacing-0 $spacing-16 !default;
+$fab-box-shadow: $shadow-lg !default;

@@ -1,4 +1,5 @@
 @use "sass:map";
+@use 'theme-variables' as *;
 
 @function tooltip-tip-get($direction, $property) {
   @return map.get(map.get($tooltip-tip-directions, $direction), $property);
@@ -48,8 +49,6 @@
     position: absolute;
     right: $tooltip-close-icon-right;
     top: $tooltip-close-icon-top;
-    height: $tooltip-close-icon-height;
-    width: $tooltip-close-icon-width;
     box-shadow: $tooltip-close-icon-box-shadow;
     display: flex;
     padding: $tooltip-close-icon-padding;

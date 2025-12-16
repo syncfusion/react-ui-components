@@ -6,7 +6,7 @@ const fs = (global.fs = global.fs || require("fs"));
 /**
  * Compile ts files
  */
-gulp.task('scripts', function(done) {
+gulp.task('component-scripts', function(done) {
     var ts = require('gulp-typescript');
     var tsProject = ts.createProject('./tsconfig.json', { 
         typescript: require('typescript'),
@@ -27,7 +27,7 @@ gulp.task('scripts', function(done) {
  * Compile styles
  */
 let isCompiled = true;
-gulp.task('styles', function (done) {
+gulp.task('component-styles', function (done) {
   var styles = './styles/**/*.scss';
   return gulp.src(styles, { base: './' })
       .pipe(sass({
@@ -50,19 +50,27 @@ gulp.task('styles', function (done) {
 /** 
 * Remove css variables for CSS files
 */
-gulp.task('remove-css', function (done) {
-    var getCss = glob.sync('./styles/**/*.css');
-    for (var i = 0; i < getCss.length; i++) {
-        var cssContent = fs.readFileSync(getCss[i], 'utf8');
-        cssContent = cssContent.replace(/(:root\s*{[^}]*})|(\:root, .sf-light-mode\s*{[^}]*})|(\.sf-dark-mode\s*{[^}]*})/g, '');
-        cssContent = cssContent.replace(/^\s*[\r\n]/gm, '');
-        fs.writeFileSync(getCss[i], cssContent, 'utf8');
+gulp.task('component-react-remove-css', function (done) {
+    const packageJson = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+    const fullPackageName = packageJson.name;
+    const componentNameMatch = fullPackageName.match(/@syncfusion\/react-(.*?)(?:-...)?$/);
+    const componentName = componentNameMatch && componentNameMatch[1] ? componentNameMatch[1] : fullPackageName.replace('@syncfusion/', '');
+    if (componentName !== 'base') {
+        var getCss = glob.sync('./styles/**/*.css');
+        for (var i = 0; i < getCss.length; i++) {
+            var cssContent = fs.readFileSync(getCss[i], 'utf8');
+            cssContent = cssContent.replace(/(:root\s*{[^}]*})|(\:root, .sf-light-mode\s*{[^}]*})|(:root,\s*\.sf-light-mode,\s*\.sf-dark-mode\s*{[^}]*})|(\.sf-dark-mode\s*{[^}]*})/g, '');
+            cssContent = cssContent.replace(/^\s*[\r\n]/gm, '');
+            fs.writeFileSync(getCss[i], cssContent, 'utf8');
+        }
+        done();
     }
-    done();
+    else {
+        done();
+    }
 });
 
 /**
  * Build ts and scss files
  */
-gulp.task('build', gulp.series('scripts', 'styles', 'remove-css'));
-
+gulp.task('component-build', gulp.series('component-scripts', 'component-styles', 'component-react-remove-css'));

@@ -21,6 +21,17 @@ export interface FilterSettings {
     enabled?: boolean;
 
     /**
+     * Determines whether filter bar operators are enabled for the grid.
+     * When set to true, allows users to select custom operators (e.g., equals, contains, greater than)
+     * in the filter bar for more advanced filtering capabilities. When false, only basic filtering is available.
+     * This setting works in conjunction with the `enabled` property to control filter behavior.
+     *
+     * @type {boolean}
+     * @default false
+     */
+    enableFilterBarOperator?: boolean;
+
+    /**
      * Specifies an array of `FilterPredicates` objects to define initial or active filter conditions for grid columns.
      * Each predicate represents a filter rule applied to a specific column, such as `field`, `operator`, and `value`.
      * Used to pre-filter data on grid initialization or to retrieve the current filter state.
@@ -90,6 +101,18 @@ export interface FilterSettings {
      * @default false
      */
     caseSensitive?: boolean;
+}
+
+/**
+ * @hidden
+ */
+export interface CustomOperators {
+    stringOperator?: { value: string; text: string }[];
+    numberOperator?: { value: string; text: string }[];
+    dateOperator?: { value: string; text: string }[];
+    datetimeOperator?: { value: string; text: string }[];
+    dateonlyOperator?: { value: string; text: string }[];
+    booleanOperator?: { value: string; text: string }[];
 }
 
 /**
@@ -745,6 +768,15 @@ export interface FilterAPI {
      * @default -
      */
     setFilterSettings: Dispatch<SetStateAction<FilterSettings>>;
+
+    /**
+     *
+     * @type {CustomOperators}
+     * @default {}
+     */
+    customOperators: CustomOperators;
+
+    getFilterProperties: FilterProperties;
 }
 
 /**

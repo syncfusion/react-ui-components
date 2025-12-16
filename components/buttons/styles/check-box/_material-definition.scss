@@ -1,0 +1,67 @@
+@use '../../../base/styles/themes/variables' as *;
+
+// Function for consistent ripple effects
+@function cbox-ripple-color($color, $opacity: 0.08) {
+  @return rgba($color, $opacity);
+}
+// Checkbox sizes
+$cbox-font-size: $font-size-base !default;
+$cbox-small-font-size: $font-size-sm !default;
+$cbox-large-font-size: $font-size-lg !default;
+$cbox-frame-dimension: 1em !default;
+
+$cbox-icon-size: $font-size-xs !default;
+$cbox-icon-small-size: $font-size-xs !default;
+$cbox-icon-large-size: $font-size-base !default;
+$cbox-sm-line-height: $line-height-sm !default;
+$cbox-la-line-height: $line-height-base !default;
+$cbox-vertical-line-height: 0 !default;
+
+// Ripple sizes
+$cbox-ripple-padding: $spacing-16 !default;
+$cbox-ripple-small-padding: $spacing-14 !default;
+$cbox-ripple-large-padding: $spacing-18 !default;
+
+// Borders
+$cbox-border-radius: $radius-2 !default;
+$cbox-border: 2px solid !default;
+
+// Margins
+$cbox-margin: $spacing-8 !default;
+
+// Colors
+$cbox-color: rgb($content-text-color) !default;
+$cbox-checkmark-color: rgb($primary-text-color) !default;
+$cbox-checkmark-bgcolor: rgb($primary) !default;
+
+// checkbox Ripple hover color
+$cbox-checked-ripple-bgcolor: rgba($primary, .08) !default;;
+
+// Color variants map with text colors
+$cbox-variants: (
+  'primary': (
+    bg: rgb($primary-bg-color), 
+    color: rgb($primary-text),
+    ripple: cbox-ripple-color($primary, 0.12)
+  ),
+  'success': (
+    bg: rgb($success-bg-color), 
+    color: rgb($success-text),
+    ripple: cbox-ripple-color($success-bg-color, 0.12)
+  ),
+  'info': (
+    bg: rgb($info-bg-color), 
+    color: rgb($info-text),
+    ripple: cbox-ripple-color($info-bg-color, 0.12)
+  ),
+  'warning': (
+    bg: rgb($warning-bg-color), 
+    color: rgb($warning-text),
+    ripple: cbox-ripple-color($warning-bg-color, 0.12)
+  ),
+  'error': (
+    bg: rgb($error-bg-color), 
+    color: rgb($error-text),
+    ripple: cbox-ripple-color($error-bg-color, 0.12)
+  )
+);

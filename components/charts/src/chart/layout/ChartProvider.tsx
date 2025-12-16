@@ -1,7 +1,7 @@
 import { createContext, useCallback, useMemo, useState } from 'react';
 import * as React from 'react';
 import { LayoutProvider } from './LayoutContext';
-import { ChartAreaProps, ChartComponentProps, ChartLegendProps, ChartStackLabelsProps, ChartTitleProps, Column, Row, ChartTooltipProps, ChartSeriesProps, ChartZoomSettingsProps } from '../base/interfaces';
+import { ChartAreaProps, ChartComponentProps, ChartLegendProps, ChartStackLabelsProps, ChartTitleProps, Column, Row, ChartTooltipProps, ChartSeriesProps, ChartZoomSettingsProps, ChartCrosshairProps, ChartSelectionProps, ChartHighlightProps, ChartAnnotationProps  } from '../base/interfaces';
 import { defaultChartConfigs } from '../base/default-properties';
 import { AxisModel, ChartProviderChildProps, ElementWithSize } from '../chart-area/chart-interfaces';
 
@@ -41,9 +41,14 @@ export const ChartProvider: React.FC<{
     const [primaryYAxis, setPrimaryYAxis] = useState<Partial<AxisModel>>(defaultChartConfigs.PrimaryYAxis);
     const [chartTooltip, setChartTooltipState] = useState<ChartTooltipProps>(defaultChartConfigs.ChartTooltip);
     const [chartSeries, setchartSeriesState] = useState<ChartSeriesProps[]>([defaultChartConfigs.ChartSeries]);
+    const [chartSelection, setSelection] = useState<ChartSelectionProps>(defaultChartConfigs.ChartSelection);
+    const [chartHighlight, setHighlight] = useState<ChartHighlightProps>(defaultChartConfigs.ChartHighlight);
     const [chartAxes, setAxes] = useState<AxisModel[]>([]);
     const [chartZoom, setZoom] = useState<ChartZoomSettingsProps>(defaultChartConfigs.ChartZoom);
     const [chartStackLabels, setChartStackLabelsState] = useState<ChartStackLabelsProps>(defaultChartConfigs.ChartStackLabels);
+    const [chartCrosshair, setChartCrosshairState] = useState<ChartCrosshairProps>(defaultChartConfigs.ChartCrosshair);
+    const [chartAnnotation, setChartAnnotationState] = useState<ChartAnnotationProps[]>([defaultChartConfigs.ChartAnnotation]);
+
     const setChartTitle: (titleProps: ChartTitleProps) => void = useCallback((titleProps: ChartTitleProps) => {
         setChartTitleState(titleProps);
         setRender(true);
@@ -89,6 +94,16 @@ export const ChartProvider: React.FC<{
         setRender(true);
     }, []);
 
+    const setChartSelection: (selectionProps: ChartSelectionProps) => void = useCallback((selectionProps: ChartSelectionProps) => {
+        setSelection(selectionProps);
+        setRender(true);
+    }, []);
+
+    const setChartHighlight: (highlightProps: ChartHighlightProps) => void = useCallback((highlightProps: ChartHighlightProps) => {
+        setHighlight(highlightProps);
+        setRender(true);
+    }, []);
+
     const setChartAxes: (axes: AxisModel[]) => void = useCallback((axes: AxisModel[]) => {
         setAxes(axes);
         setRender(true);
@@ -108,6 +123,16 @@ export const ChartProvider: React.FC<{
         setRender(true);
     }, []);
 
+    const setChartCrosshair: (crosshair: ChartCrosshairProps) => void = useCallback((crosshair: ChartCrosshairProps) => {
+        setChartCrosshairState(crosshair);
+        setRender(true);
+    }, []);
+
+    const setChartAnnotation: (annotation: ChartAnnotationProps[]) => void = useCallback((annotation: ChartAnnotationProps[]) => {
+        setChartAnnotationState(annotation);
+        setRender(true);
+    }, []);
+
     // Only recreate context value when setter functions or properties actually change
     const chartProps: ChartComponentProps = props;
     const contextValue: ChartProviderChildProps = useMemo(() => ({
@@ -121,8 +146,13 @@ export const ChartProvider: React.FC<{
         columns,
         rows,
         chartSeries,
+        chartSelection,
+        chartHighlight,
         chartTooltip,
         chartStackLabels,
+        chartCrosshair,
+        chartAnnotation,
+        setChartAnnotation,
         setChartTitle,
         setChartSubTitle,
         setChartArea,
@@ -134,15 +164,18 @@ export const ChartProvider: React.FC<{
         setChartPrimaryYAxis,
         setChartSeries,
         setChartAxes,
+        setChartSelection,
+        setChartHighlight,
         setChartTooltip,
         setChartZoom,
         setChartStackLabels,
+        setChartCrosshair,
         axisCollection: [primaryXAxis as AxisModel, primaryYAxis as AxisModel, ...chartAxes]
-    }), [chartProps, chartTitle, chartSubTitle, chartArea, render, chartLegend,
-        setChartLegend, parentElement, columns, rows, chartSeries, chartTooltip, chartStackLabels,
-        setChartTitle, setChartSubTitle, setChartArea, setChartColumns,
+    }), [chartProps, chartTitle, chartSubTitle, chartArea, render, chartLegend, chartSelection, chartHighlight,
+        setChartLegend, parentElement, columns, rows, chartSeries, chartTooltip, chartStackLabels, chartCrosshair,
+        setChartTitle, setChartSubTitle, setChartArea, setChartColumns, setChartSelection, setChartHighlight,
         setChartRows, setChartPrimaryXAxis, setChartPrimaryYAxis, setChartSeries, setChartAxes, setChartTooltip,
-        setChartStackLabels, chartZoom, setChartZoom,
+        chartAnnotation, setChartStackLabels, chartZoom, setChartZoom, setChartCrosshair, setChartAnnotation,
         [primaryXAxis as AxisModel, primaryYAxis as AxisModel, ...chartAxes]
     ]);
 

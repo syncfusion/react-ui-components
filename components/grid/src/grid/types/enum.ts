@@ -152,7 +152,23 @@ export enum ColumnType {
      *
      * @default 'dateTime'
      */
-    DateTime = 'dateTime'
+    DateTime = 'dateTime',
+
+    /**
+     * Represents a column type that renders checkboxes for row selection.
+     * Includes both header-level and row-level Checkbox components for bulk and individual selection.
+     *
+     * @default 'checkbox'
+     */
+    Checkbox = 'checkbox',
+
+    /**
+     * Represents a special column type for rendering command buttons (Edit, Delete, Update, Cancel).
+     * Used to define a column that displays action buttons instead of data values.
+     *
+     * @default 'command'
+     */
+    Command = 'command'
 }
 
 /**
@@ -749,4 +765,57 @@ export enum KeyboardKeys {
     DELETE = 'Delete',
     CTRL_HOME = 'Home',
     CTRL_END = 'End'
+}
+
+/**
+ * Defines the built‑in command item types (action buttons) available in a command column.
+ * These buttons provide standard CRUD operations within grid rows.
+ *
+ * @default -
+ * @example
+ * ```tsx
+ * // Using command item types in a command column
+ * const getCommandItems = (event: CommandItemEvent) => [
+ *   <CommandItem type={CommandItemType.Edit} />,
+ *   <CommandItem type={CommandItemType.Delete} />
+ * ];
+ *
+ * // In a grid configuration
+ * <Grid>
+ *   <Column
+ *     field="command"
+ *     type={ColumnType.Command}
+ *     getCommandItems={getCommandItems}
+ *   />
+ * </Grid>
+ * ```
+ */
+export enum CommandItemType {
+    /**
+     * Displays when the row is not in edit mode. Initiates editing for the row.
+     *
+     * @default 0
+     */
+    Edit,
+
+    /**
+     * Displays when the row is not in edit mode. Deletes the record.
+     *
+     * @default 1
+     */
+    Delete,
+
+    /**
+     * Displays in edit mode. Saves changes made to the record.
+     *
+     * @default 2
+     */
+    Update,
+
+    /**
+     * Displays in edit mode. Discards changes and restores the row to its previous state.
+     *
+     * @default 3
+     */
+    Cancel
 }

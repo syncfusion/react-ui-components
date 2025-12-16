@@ -1,0 +1,15 @@
+@use '../../../base/styles/themes/variables' as *;
+
+$skeleton-background-color: $content-bg-color-alt2 !default;
+$skeleton-border: none !default;
+$skeleton-border-radius: $radius-2 !default;
+$skeleton-circle-border-radius: $radius-full !default;
+$skeleton-shimmer-wave-color: $skeleton-wave-color !default;
+$skeleton-shimmer-background-color: transparent !default;
+$skeleton-shimmer-wave-length: calc(var(--sf-spacing) * 6.25) !default;
+$skeleton-shimmer-wave-width: calc(var(--sf-spacing) * 12.5) !default;
+$skeleton-shimmer-wave-pos: 50% !default;
+$skeleton-shimmer-wave-angle: 90deg !default;
+$skeleton-shimmer-effect-duration: 2s !default;
+$skeleton-shimmer-effect-timing-function: ease-in-out !default;
+$skeleton-shimmer-transform: translateX(calc(50% + $skeleton-shimmer-wave-length)) !default;

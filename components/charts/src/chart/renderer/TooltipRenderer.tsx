@@ -1,11 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useContext } from 'react';
 import { useLayout } from '../layout/LayoutContext';
-import { ChartFontProps, ChartTooltipProps, TooltipContentFunction } from '../base/interfaces';
+import { ChartFontProps, ChartTooltipTemplateProps, ChartLocationProps, ChartTooltipProps, TooltipContentFunction } from '../base/interfaces';
 import { Tooltip, TooltipRefHandle } from '@syncfusion/react-svg-tooltip';
 import { registerChartEventHandler } from '../hooks/useClipRect';
 import { isNullOrUndefined } from '@syncfusion/react-base';
 import { AxisModel, BaseZoom, Chart, Points, Rect, SeriesProperties, VisibleRangeProps } from '../chart-area/chart-interfaces';
 import { ChartMarkerShape } from '../base/enum';
+import { getClosestX, getCommonXValues } from '../utils/helper';
+import { ChartContext } from '../layout/ChartProvider';
 
 /**
  * Represents data for a specific point in a chart series.
@@ -49,6 +51,7 @@ function withInBounds(x: number, y: number, bounds: Rect, width: number = 0, hei
 
 export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltipProps) => {
     const { layoutRef, phase } = useLayout();
+    const {chartCrosshair } = useContext(ChartContext);
     const [tooltipVisible, setTooltipVisible] = useState(false);
     const [tooltipLocation, setTooltipLocation] = useState({ x: 0, y: 0 });
     const [tooltipData, setTooltipData] = useState<{
@@ -225,9 +228,6 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
             }, 2000);
         }
         const data: PointData = getData() as PointData;
-        if (lierIndex) {
-            data.lierIndex = lierIndex;
-        }
         // If no data point found, hide tooltip and return
         if ((!data || !data.point) && props.fadeOutMode === 'Click') {
             if (tooltipRef.current) {
@@ -360,15 +360,38 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
      * Formats the text content for the tooltip using data from PointData.
      *
      * @param {PointData} data - The data object containing point and series information.
+     * @param {boolean} isLast - Specifies whether the point belongs to the last series in a stacking group.
      * @returns {string} The formatted text for the tooltip.
      */
-    function getTooltipText(data: PointData): string {
+    function getTooltipText(data: PointData, isLast: boolean): string {
         // Get format
         let format: string | undefined = props.format || data.series.tooltipFormat;
+        const textX: string = '${point.x}';
         if (!format) {
-            const textX: string = '${point.x}';
-            format = !props.shared ? textX : '${series.name}';
-            format += ': ' + ('<b>${point.y}</b>');
+            switch (data.series.type) {
+            case 'RangeArea':
+            case 'RangeColumn':
+            case 'SplineRangeArea':
+            case 'Hilo':
+                format =
+                    '${point.x}  <br/>' +
+                    'High : <b>${point.high}</b><br/>' +
+                    'Low : <b>${point.low}</b>' ;
+                break;
+            case 'Candle':
+            case 'HiloOpenClose':
+                format =
+                    '${point.x}  <br/>' +
+                    'Open : <b>${point.open}</b><br/>' +
+                    'High : <b>${point.high}</b><br/>' +
+                    'Low : <b>${point.low}</b><br/>' +
+                    'Close : <b>${point.close}</b>';
+                break;
+            default:
+                format = !props.shared ? textX : '${series.name}';
+                format += ': ' + ('<b>${point.y}</b>');
+                break;
+            }
         }
         // Parse template
         let text: string = format;
@@ -380,6 +403,7 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
             const yAxis: AxisModel = data.series.yAxis;
             const value: string = formatPointValue(val, placeholder === '${point.x}' ? xAxis : yAxis, placeholder === '${point.x}', placeholder === '${point.y}');
             text = text.split(placeholder).join(value);
+
         });
 
         // Replace series values using Object.entries
@@ -388,6 +412,22 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
             const value: string = val?.toString() || '';
             text = text.split(placeholder).join(value);
         });
+        if (data.series && data.series.type?.includes('Stacking') && !data.series.type.includes('100') && !props.format && !data.series.tooltipFormat && (!props.shared || isLast)) {
+            const chart: Chart = data.series.chart;
+            const stackingGroup: string = data.series.stackingGroup ?? 'undefined';
+            if (chart && typeof data.point.index === 'number') {
+
+                const values: number[] | undefined = (data.point.y as number) >= 0
+                    ? chart.positiveStackedValues.get(stackingGroup)
+                    : chart.negativeStackedValues.get(stackingGroup);
+                const total: number | undefined = values?.[data.point.index];
+
+                if (total !== undefined) {
+                    const formattedTotal: string = formatPointValue(((Number.isFinite(total) ? ((total % 1 !== 0) ? total.toFixed(2) : String(total)) : '') as Object), data.series.yAxis, false, true);
+                    text += `<br/>Total: <b>${formattedTotal}</b>`;
+                }
+            }
+        }
         return text;
     }
 
@@ -429,10 +469,6 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
         let data: PointData = getData() as PointData;
         let closestPointData: PointData | null = null;
         let smallestDistance: number = Infinity;
-
-        if (lierIndex) {
-            data.lierIndex = lierIndex;
-        }
         // If no data point found directly under cursor, check for nearest point if enabled
         if (!data || !data.point) {
             const chart: Chart = layoutRef.current.chart as Chart;
@@ -471,6 +507,7 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
                 if (closestPointData) {
                     data = closestPointData;
                 }
+                chart.toolTipSeriesIndex = data?.series?.index;
             }
         }
 
@@ -505,7 +542,7 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
         previousPointsRef.current = [data];
 
         const header: string = findHeader(data);
-        let content: string = getTooltipText(data);
+        let content: string = getTooltipText(data, false);
 
         const customText: string | string[] | boolean = applyTooltipContentCallback(content, props);
         if (typeof customText === 'boolean' && !customText) {
@@ -516,9 +553,10 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
 
         // Get tooltip location
         const location: { x: number, y: number } | null = getSymbolLocation(data);
-        location!.x = props.location?.x !== undefined ? props.location!.x : location!.x;
-        location!.y = props.location?.y !== undefined ? props.location!.y : location!.y;
-
+        if (location) {
+            location.x = props.location?.x ?? location.x;
+            location.y = props.location?.y ?? location.y;
+        }
         // Update tooltip data
         setTooltipData({
             header,
@@ -559,10 +597,46 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
         if (!data.point.symbolLocations || !data.point.symbolLocations[0]) {
             return null;
         }
-        return {
-            x: data.series.clipRect!.x + data.point.symbolLocations[0].x,
+        const location: ChartLocationProps = {
+            x:  data.series.clipRect!.x + data.point.symbolLocations[0].x,
             y: data.series.clipRect!.y + data.point.symbolLocations[0].y
         };
+        switch (data.series.type) {
+        case 'RangeArea':
+        case 'SplineRangeArea':
+        case 'RangeColumn':
+            return getRangeArea(data, location);
+        default:
+            return location;
+        }
+    }
+
+    /**
+     * Renders tooltip in the interpolated gap between borders of Range Area series.
+     *
+     * @param {PointData} data - The data object containing point and series information.
+     * @param {ChartLocationProps} location - Determines the location of tooltip should indicates the data point.
+     * @returns {{x: number, y: number} | null} The calculated symbol location or null if not available.
+     * @private
+     */
+    function getRangeArea(
+        data: PointData,
+        location: ChartLocationProps
+    ): { x: number; y: number } | null {
+        const region: Rect = (data.point.regions as Rect[])[0];
+        if (!region || !data.series.clipRect) {
+            return location;
+        }
+        const { x: cx, y: cy }: {x: number, y: number} = data.series.clipRect;
+        const { x: rx, y: ry, width: rw, height: rh }: {x: number, y: number, width: number, height: number} = region;
+        if (!data.series.chart.requireInvertedAxis) {
+            // Normal chart: keep X, center Y between high & low
+            location.y = cy + ry + rh / 2;
+        } else {
+            // Transposed chart: keep Y, center X between high & low
+            location.x = cx + rx + rw / 2;
+        }
+        return location;
     }
 
     /**
@@ -648,8 +722,10 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
         const newShapes: ChartMarkerShape[] = [];
         const newPalette: string[] = [];
         // Generate content for each point
-        for (const data of collection) {
-            contentArray.push(getTooltipText(data));
+        for (let i: number = 0; i < collection.length; i++) {
+            const data: PointData = collection[i as number];
+            const isLast: boolean = i === collection.length - 1; //last series check
+            contentArray.push(getTooltipText(data, isLast));
             newShapes.push(getShapeForSeries(data));
             newPalette.push(findColor(data));
         }
@@ -669,8 +745,10 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
             location = { x: chart.mouseX, y: chart.mouseY };
         }
 
-        location.x = props.location?.x !== undefined ? props.location?.x : location.x;
-        location.y = props.location?.y !== undefined ? props.location?.y : location.y;
+        if (location) {
+            location.x = props.location?.x ?? location.x;
+            location.y = props.location?.y ?? location.y;
+        }
         // Update tooltip data
         setTooltipData({
             header,
@@ -693,109 +771,6 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
         setTooltipVisible(true);
         // Show tooltip
         tooltipRef.current?.fadeIn();
-    }
-
-    /**
-     * Helper function to get common X values across all visible series.
-     *
-     * @param {SeriesProperties[]} visibleSeries - The array of visible series in the chart.
-     * @returns {number[]} An array of common X values across the series.
-     */
-    function getCommonXValues(visibleSeries: SeriesProperties[]): number[] {
-        const commonXValues: number[] = [];
-        for (let j: number = 0; j < visibleSeries.length; j++) {
-            for (let i: number = 0; i < (visibleSeries[j as number].points && visibleSeries[j as number].points.length); i++) {
-                const point: Points = visibleSeries[j as number].points[i as number];
-                if (point && (point.index === 0 || point.index === visibleSeries[j as number].points.length - 1 ||
-                    (point.symbolLocations && point.symbolLocations.length > 0))) {
-                    void (point.xValue != null && commonXValues.push(point.xValue));
-                }
-            }
-        }
-        return commonXValues;
-    }
-
-    /**
-     * Finds the point closest to the current X position in the series.
-     *
-     * @param {Chart} chart - The chart object containing layout and data details.
-     * @param {SeriesProperties} series - The series within the chart to find the point in.
-     * @param {number[]} [xvalues] - Optional array of X values to consider.
-     * @returns {PointData | null} The closest PointData object or null if not found.
-     */
-    function getClosestX(chart: Chart, series: SeriesProperties, xvalues?: number[]): PointData | null {
-        let value: number = 0;
-        const rect: Rect = series.clipRect as Rect;
-
-        // Determine value based on axis inversion and mouse position
-        void (chart.mouseX <= rect.x + rect.width && chart.mouseX >= rect.x &&
-            (value = chart.requireInvertedAxis ?
-                getValueYByPoint(chart.mouseY - rect.y, rect.height, series.xAxis) :
-                getValueXByPoint(chart.mouseX - rect.x, rect.width, series.xAxis)));
-        // Get closest x value
-        const closest: number | null = getClosest(series, value, xvalues);
-
-        // Find the point with this X value using the closest result
-        const point: Points | undefined = closest !== null ? series.visiblePoints?.find((p: Points) => p.xValue === closest && p.visible)
-            : undefined;
-        // Return the point and series only if a point is found; otherwise, return null
-        return point ? { point, series, lierIndex } : null;
-    }
-
-    /**
-     * Finds the closest numeric value to a target within an array of `xData` values in the series.
-     *
-     * @param {SeriesProperties} series - The series within which to find the closest value.
-     * @param {number} value - The target value to find closest to.
-     * @param {number[]} [xvalues] - An optional array of X values to use for reference.
-     * @returns {number | null} The closest value or null if not found.
-     */
-    function getClosest(series: SeriesProperties, value: number, xvalues?: number[]): number | null {
-        let closest: number = 0; let data: number;
-        const xData: number[] = xvalues ? xvalues : series.xData;
-        const xLength: number = xData.length;
-        const leftSideNearest: number = 0.5;
-        const rightSideNearest: number = 0.5;
-        if (value >= series.xAxis.visibleRange.minimum - leftSideNearest && value <= series.xAxis.visibleRange.maximum + rightSideNearest) {
-            for (let i: number = 0; i < xLength; i++) {
-                data = xData[i as number];
-                if (closest == null || Math.abs(data - value) < Math.abs(closest - value)) {
-                    closest = data;
-                }
-            }
-        }
-        const isDataExist: boolean = series.xData.indexOf(closest) !== -1;
-        if (isDataExist) {
-            return closest;
-        } else {
-            return null;
-        }
-    }
-
-    /**
-     * Converts an X coordinate to a value using the axis configuration.
-     *
-     * @param {number} value - The position value to convert.
-     * @param {number} size - The size of the plotting area.
-     * @param {AxisModel} axis - The axis containing the range and scaling information.
-     * @returns {number} The equivalent value on the axis.
-     */
-    function getValueXByPoint(value: number, size: number, axis: AxisModel): number {
-        const actualValue: number = !axis.isAxisInverse ? value / size : (1 - (value / size));
-        return actualValue * (axis.visibleRange.delta) + axis.visibleRange.minimum;
-    }
-
-    /**
-     * Converts a Y coordinate to a value using the axis configuration.
-     *
-     * @param {number} value - The position value to convert.
-     * @param {number} size - The size of the plotting area.
-     * @param {AxisModel} axis - The axis containing the range and scaling information.
-     * @returns {number} The equivalent value on the axis.
-     */
-    function getValueYByPoint(value: number, size: number, axis: AxisModel): number {
-        const actualValue: number = axis.isAxisInverse ? value / size : (1 - (value / size));
-        return actualValue * (axis.visibleRange.delta) + axis.visibleRange.minimum;
     }
 
     /**
@@ -869,7 +844,7 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
         let markerHeight: number = 0;
         const series: SeriesProperties = pointData.series;
         markerHeight = (((series.marker?.visible) || ((props.shared || props.showNearestTooltip) &&
-            (!series.isRectSeries || series.marker?.visible)) || series.type === 'Scatter') && series.marker?.shape !== 'Image') ?
+            (!series.isRectSeries || series.marker?.visible)) || series.type === 'Scatter') && series.marker?.shape !== 'Image' && series?.marker?.highlightable) ?
             ((series.marker?.height as number) + 2) / 2 + (2 * (series.marker?.border?.width || 0)) : 0;
         return markerHeight;
     }
@@ -879,6 +854,13 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
     }
     const chart: Chart = layoutRef.current.chart as Chart;
     chart.tooltipRef = tooltipRef;
+    const tooltipTemplate: ChartTooltipTemplateProps = {
+        x: tooltipData.pointData?.x,
+        y: tooltipData.pointData?.y,
+        tooltip: tooltipData.pointData?.tooltip,
+        pointIndex: tooltipData.pointData?.index,
+        seriesIndex: (tooltipData.pointData?.series as SeriesProperties)?.index
+    } as ChartTooltipTemplateProps;
     const areaBounds: Rect = chart?.rect;
     return (
         <Tooltip
@@ -886,8 +868,8 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
             location={tooltipLocation}
             header={tooltipData.header}
             content={tooltipData.content}
-            template={undefined}
-            data={tooltipData.pointData}
+            template={props.template}
+            data={tooltipTemplate}
             enableShadow={false}
             showHeaderLine={props.showHeaderLine}
             shapes={props.showMarker ? shapes : []}
@@ -901,6 +883,7 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
             controlName="Chart"
             enableAnimation={props.enableAnimation}
             textStyle={tooltipData.textStyle}
+            crosshair = {chartCrosshair.enable}
             // isTextWrap={true}
             duration={props.duration}
             opacity={props.opacity}

@@ -8,13 +8,14 @@ import { FormValueType } from '@syncfusion/react-inputs';
 import { NumericTextBoxProps, TextBoxProps } from '@syncfusion/react-inputs';
 import { DatePickerProps } from '@syncfusion/react-calendars';
 import { DropDownListProps } from '@syncfusion/react-dropdowns';
+import { CommandColumnProps } from './command.interfaces';
 
 /**
  * Defines the properties for configuring a column in the grid, including layout, behavior, and data binding options.
  * Specifies comprehensive column settings that control appearance, functionality, and user interaction capabilities.
  * Enables customization of sorting, filtering, editing, and display characteristics for individual grid columns.
  */
-export interface ColumnProps<T = unknown> {
+export interface ColumnProps<T = unknown> extends CommandColumnProps {
     /**
      * Defines the field name that maps the column to a specific data source property for data binding operations.
      * Enables sorting and filtering functionality based on the specified field name within the dataset.
@@ -93,8 +94,11 @@ export interface ColumnProps<T = unknown> {
     disableHtmlEncode?: boolean;
 
     /**
-     * Specifies the column's data type (e.g., `string`, `number`, `date`).
-     * Influences sorting, filtering, and formatting behavior.
+     * Defines the column’s data type (e.g., `string`, `number`, `date`, or `checkbox`).
+     * The type determines how the grid handles sorting, filtering, formatting, and row selection behavior.
+     * By default, the column type is automatically assigned based on the value of the first cell in each column.
+     * If the first cell is empty, the column type must be defined manually.
+     * Template columns, command columns, and checkbox columns do not require a type definition.
      *
      * @default null
      */
@@ -451,6 +455,16 @@ export interface ColumnProps<T = unknown> {
      * };
      */
     cellClass?: string | ((props?: CellClassProps<T>) => string);
+
+    /**
+     * Specifies whether the header checkbox is displayed in the checkbox column.
+     * By default, it is enabled when the column type is set to `Checkbox` in the column definition.
+     * The header checkbox allows users to select or deselect all rows at once.
+     * To disable the select‑all or deselect‑all functionality, set `headerCheckbox` to false in the checkbox column definition.
+     *
+     * @default true
+     */
+    headerCheckbox?: boolean;
 }
 
 /**
@@ -828,6 +842,15 @@ export interface ColumnFilterParams {
     operator?: string;
 
     /**
+     * Specifies the operators available for filtering operations in the column.
+     * Defines which filter operators (e.g., 'equals', 'contains', 'greaterThan') are enabled for the column's filter UI.
+     * Allows customization of available filtering options based on column-specific requirements.
+     *
+     * @default []
+     */
+    filterOperators?: string[];
+
+    /**
      * Specifies configuration parameters for the filter component, such as text box, numeric input, or dropdown properties.
      * Allows customization of the filter UI components, like placeholders or value ranges.
      * Enhances the filtering experience with tailored input controls.
@@ -948,6 +971,12 @@ export interface PrepareColumns<T = unknown> {
      * @default []
      */
     uiColumns?: ColumnProps<T>[];
+    /**
+     * Specifies if the column renders a checkbox for selection.
+     *
+     * @default false
+     */
+    isCheckBoxColumn?: boolean;
 }
 
 /**

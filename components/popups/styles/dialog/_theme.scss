@@ -1,6 +1,8 @@
+@use 'theme-variables' as *;
+
 @include export-module('dialog-theme') {
   .sf-dialog {
-    background-color: $dialog-bg-color;
+    background: $dialog-bg-color;
     box-shadow: $dialog-shadow-color;
   }
 

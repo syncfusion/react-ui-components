@@ -1,3 +1,5 @@
+@use 'theme-variables' as *;
+
 @include export-module('h-scroll-theme') {
 
   .sf-hscroll-nav {

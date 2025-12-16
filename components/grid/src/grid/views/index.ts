@@ -6,6 +6,7 @@ export * from './HeaderRows';
 export * from './FilterBar';
 export * from './editing/ConfirmDialog';
 export * from './editing/InlineEditForm';
+export * from './editing/PopupEditForm';
 export * from './editing/EditCell';
 export * from './editing/ValidationTooltips';
 export * from './ContentPanel';

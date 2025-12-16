@@ -1,9 +1,11 @@
 import { isNullOrUndefined } from '@syncfusion/react-base';
-import { LabelIntersectMode, TextOverflow } from '../../../base/enum';
+import { LabelIntersectMode } from '../../../base/enum';
 import { AxisTextStyle } from '../../../chart-axis/base';
 import { getMaxRotatedTextSize, getRotatedTextSize, getTitle, isBreakLabel, isZoomSet, measureText, useTextWrap, valueToCoefficient } from '../../../utils/helper';
 import { createDoubleRange } from './DoubleAxisRenderer';
-import { AxisModel, Chart, ColumnProps, RowProps, ChartSizeProps, TextStyleModel, VisibleLabel } from '../../../chart-area/chart-interfaces';
+import { AxisModel, Chart, ColumnProps, RowProps, ChartSizeProps, TextStyleModel, VisibleLabel} from '../../../chart-area/chart-interfaces';
+import { calculateCrossAxisLabelSize } from './CrossAxisHerlper';
+import { TextOverflow } from '../../../../common';
 
 /**
  * Calculates the maximum width of visible labels on the specified chart axis.
@@ -192,7 +194,12 @@ export function findLabelSize(axis: AxisModel, innerPadding: number, definition:
         }
     }
 
-    const labelSize: number = titleSize + innerPadding + (axis.titleStyle.padding as number) + (axis.labelStyle.padding as number) +
+    let labelSize: number = titleSize + innerPadding + (axis.titleStyle.padding as number) + (axis.labelStyle.padding as number) +
+        (axis.orientation === 'Vertical' ? axis.maxLabelSize.width : axis.maxLabelSize.height);
+
+    labelSize = calculateCrossAxisLabelSize(axis, labelSize);
+
+    labelSize = titleSize + innerPadding + (axis.titleStyle.padding as number) + (axis.labelStyle.padding as number) +
         (axis.orientation === 'Vertical' ? axis.maxLabelSize.width : axis.maxLabelSize.height);
     const computedTitlePadding: number = ((axis.titleStyle.text !== '' && axis.titleStyle.padding !== 5) ? axis.titleStyle.padding as number : 0);
     if (axis.isAxisOpposedPosition) {
@@ -291,4 +298,21 @@ export function calculateVisibleRangeOnZooming(axis: AxisModel): void {
             delta: axis.doubleRange.delta, interval: axis.visibleRange.interval
         };
     }
+}
+
+/**
+ * Calculates the difference in position or size between the axis and its crossing axis.
+ *
+ * @param {AxisModel} axis - The primary axis model for which the difference is calculated.
+ * @returns {number} The computed difference, based on axis positioning logic.
+ * @private
+ */
+export function findDifference (axis: AxisModel): number  {
+    let value: number = 0;
+    if (axis.isAxisOpposedPosition) {
+        value = axis.isAxisInverse ? axis.visibleRange.minimum : axis.visibleRange.maximum;
+    } else {
+        value = axis.isAxisInverse ? axis.visibleRange.maximum : axis.visibleRange.minimum;
+    }
+    return Math.abs((axis.axisCrossesAt as number) - value);
 }

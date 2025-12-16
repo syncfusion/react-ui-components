@@ -15,6 +15,7 @@ import { searchModule, SearchSettings, SearchEvent } from './search.interfaces';
 import { SortSettings, SortModule, SortEvent, SortDescriptor } from '../types/sort.interfaces';
 import { ToolbarAPI } from './toolbar.interfaces';
 import * as React from 'react';
+import { UseCommandColumnResult } from './command.interfaces';
 
 /**
  * IValueFormatter interface defines the methods for value formatting services
@@ -231,6 +232,13 @@ export interface IRow<T> {
     isSelected?: boolean;
 
     /**
+     * Indicates whether the selection is in an intermediate state.
+     *
+     * @default false
+     */
+    isIntermediateState?: boolean;
+
+    /**
      * Indicates whether the row is expanded.
      *
      * @default false
@@ -299,6 +307,13 @@ export interface IRow<T> {
      * @default null
      */
     editInlineRowFormRef?: RefObject<InlineEditFormRef<T extends IColumnBase<infer C> ? C : unknown>>;
+
+    /**
+     * Unique react identifier for the row.
+     *
+     * @default -
+     */
+    key?: string;
 }
 
 /**
@@ -397,6 +412,7 @@ export interface MutableGridBase<T = unknown> {
     totalRecordsCount?: number;
     responseData?: Object;
     setResponseData?: Dispatch<SetStateAction<Object>>;
+    commandColumnModule?: UseCommandColumnResult;
     /**
      * Get the parent element
      */

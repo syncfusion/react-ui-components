@@ -1345,6 +1345,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
             height: formatUnit(height),
             display: 'block'
         };
+        setElePos(elePos);
         setTooltipStyle((prevStyle: React.HTMLAttributes<HTMLDivElement> | undefined) => ({
             ...prevStyle,
             style: {

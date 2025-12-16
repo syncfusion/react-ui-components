@@ -64,8 +64,8 @@ export default function App() {
 
 **Resources**
 
-- [Form Demo/Docs](https://react.syncfusion.com/form)
-- [Form API](https://react-api.syncfusion.com/form/overview)
+- [Form Demo/Docs](https://react.syncfusion.com/react-ui/form)
+- [Form API](https://react.syncfusion.com/api/form/overview)
 
 ## React Numeric TextBox
 
@@ -99,8 +99,8 @@ export default function App() {
 
 **Resources**
 
-- [Numeric TextBox Demo/Docs](https://react.syncfusion.com/numeric-textbox)
-- [Numeric TextBox API](https://react-api.syncfusion.com/numeric-textbox/overview)
+- [Numeric TextBox Demo/Docs](https://react.syncfusion.com/react-ui/numeric-textbox)
+- [Numeric TextBox API](https://react.syncfusion.com/api/numeric-textbox/overview)
 
 ## React TextArea
 
@@ -132,8 +132,8 @@ export default function App() {
 
 **Resources**
 
-- [TextArea Demo/Docs](https://react.syncfusion.com/textarea)
-- [TextArea API](https://react-api.syncfusion.com/textarea/overview)
+- [TextArea Demo/Docs](https://react.syncfusion.com/react-ui/textarea)
+- [TextArea API](https://react.syncfusion.com/api/textarea/overview)
 
 ## React TextBox
 
@@ -167,8 +167,8 @@ export default function App() {
 
 **Resources**
 
-- [TextBox Demo/Docs](https://react.syncfusion.com/textbox)
-- [TextBox API](https://react-api.syncfusion.com/textbox/overview)
+- [TextBox Demo/Docs](https://react.syncfusion.com/react-ui/textbox)
+- [TextBox API](https://react.syncfusion.com/api/textbox/overview)
 
 <p align="center">
 Trusted by the world's leading companies
@@ -196,4 +196,4 @@ Check the changelog [here](https://github.com/syncfusion/react-ui-components/blo
 
 See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campaign=notification) for more info.
 
-&copy; Copyright 2025 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential Studio® license and copyright applies to this distribution.
+&copy; Copyright 2026 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential Studio® license and copyright applies to this distribution.

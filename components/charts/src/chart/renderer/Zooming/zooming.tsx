@@ -63,7 +63,6 @@ interface ZoomRedrawOptions {
  * @param {boolean} [props.pinchZoom=false] - Enables zooming with touch pinch gestures
  * @param {boolean} [props.pan=false] - Enables panning of the zoomed chart
  * @param {ZoomMode} [props.mode='XY'] - Determines zoom direction ('X', 'Y', or 'XY')
- * @param {ToolbarItems[]} [props.items=[]] - Toolbar items to display for zoom control
  * @param {boolean} [props.toolbar=false] - Whether to always show the zoom toolbar
  * @returns {JSX.Element | null} The zoom selection rectangle or null when not in selection mode
  *
@@ -824,7 +823,6 @@ export function performMouseWheelZooming(e: WheelEvent, mouseX: number, mouseY: 
 /**
  * Calculates zoom factors for each axis based on mouse wheel zooming
  *
- * @private
  * @param {number} direction - The zoom direction (1 for in, -1 for out)
  * @param {number} mouseX - Mouse X position
  * @param {number} mouseY - Mouse Y position

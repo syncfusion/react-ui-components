@@ -1,6 +1,6 @@
 {
   "name": "@syncfusion/react-buttons",
-  "version": "31.2.12",
+  "version": "32.1.19",
   "description": "Syncfusion React Buttons package is a feature-rich collection of UI components including Button, CheckBox, RadioButton, Switch, Chip, and more for building modern, interactive React applications.",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
@@ -38,14 +38,15 @@
   "module": "./index.js",
   "readme": "README.md",
   "dependencies": {
-    "@syncfusion/react-base": "~31.2.12"
+    "@syncfusion/react-base": "~32.1.19",
+    "@syncfusion/react-icons": "~32.1.19"
   },
   "devDependencies": {
     "gulp": "4.0.2",
     "gulp-typescript": "5.0.1",
     "typescript": "5.7.2",
-    "gulp-sass": "5.1.0",
-    "sass": "1.83.1",
+    "gulp-sass": "6.0.1",
+    "sass": "1.92.1",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "@types/react": "19.0.1",
@@ -53,7 +54,7 @@
     "@types/node": "^22.15.17"
   },
   "scripts": {
-    "build": "gulp build"
+    "build": "gulp component-build"
   },
   "typings": "index.d.ts",
   "sideEffects": false

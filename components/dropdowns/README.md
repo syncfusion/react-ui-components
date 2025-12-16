@@ -26,11 +26,43 @@ The Dropdown List component provides a user-friendly interface for selecting a s
 
 - **Templates:** Customize the Dropdown List appearance using various template options:
 
-- **Item Template:** Use itemTemplate to style individual items or display additional information.
-    - **Header Template:** Add custom content at the top of the Dropdown List using headerTemplate.
-    - **Footer Template:** Include extra information or actions at the bottom using footerTemplate.
-    - **Value Template:** Style the selected value using valueTemplate for a personalized display.
-    - **Label Mode:** Control how labels or placeholders appear with the labelMode property. Available modes include Never, Always, and Auto.
+  - **Item Template:** Use itemTemplate to style individual items or display additional information.
+  - **Header Template:** Add custom content at the top of the Dropdown List using headerTemplate.
+  - **Footer Template:** Include extra information or actions at the bottom using footerTemplate.
+  - **Value Template:** Style the selected value using valueTemplate for a personalized display.
+
+- **Label Mode:** Control how labels or placeholders appear with the labelMode property. Available modes include Never, Always, and Auto.
+
+- **Sorting:** Control item order using the sortOrder property.
+
+- **Popup Customization:** Configure popupSettings (width, height, zIndex, position, offset, collision).
+
+- **Clear Button:** Show a clear icon to reset selection via clearButton.
+
+- **Sizes and Variants:** Adjust UI with size (Small, Medium, Large) and variant (Standard, Outlined, Filled).
+
+**Usage**
+
+```tsx
+import { DropDownList } from '@syncfusion/react-dropdowns';
+
+const data = [
+  { text: 'Apple', value: 'apple' },
+  { text: 'Banana', value: 'banana' },
+  { text: 'Cherry', value: 'cherry' }
+];
+
+export default function App() {
+  return (
+    <DropDownList
+      id="fruits"
+      dataSource={data}
+      fields={{ text: 'text', value: 'value' }}
+      placeholder="Select a fruit"
+    />
+  );
+}
+```
 
 <p align="center">
 Trusted by the world's leading companies
@@ -57,5 +89,5 @@ Check the changelog [here](https://github.com/syncfusion/react-ui-components/blo
 
 See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campaign=notification) for more info.
 
-&copy; Copyright 2025 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential Studio® license and copyright applies to this distribution.
+&copy; Copyright 2026 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential Studio® license and copyright applies to this distribution.
 

@@ -1,0 +1,13 @@
+@use '../../../base/styles/themes/variables' as *;
+
+$spin-primary-color: rgb($primary) !default;
+$spin-secondary-color: rgb($secondary) !default;
+$spin-success-color: rgb($success) !default;
+$spin-warning-color: rgb($warning) !default;
+$spin-error-color: rgb($error) !default;
+$spin-info-color: rgb($info) !default;
+$spin-backdrop-color: $transparent !default;
+$spinner-padding: $spacing-8 !default;
+$spinner-gap: $spacing-8 !default;
+$spinner-z-index: 1000 !default;
+$spinner-radius-round: $radius-full !default;

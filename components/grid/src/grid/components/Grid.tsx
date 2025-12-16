@@ -13,7 +13,7 @@ import {
     useEffect
 } from 'react';
 import { ITooltip, Tooltip } from '@syncfusion/react-popups';
-import { SortDirection, RenderRef, ValueType, ActionType } from '../types';
+import { SortDirection, RenderRef, ValueType, ActionType, UseDataResult } from '../types';
 import { GridProps, GridRef, IGridBase } from '../types/grid.interfaces';
 import { PagerArgsInfo } from '../types/page.interfaces';
 import { useGridComputedProps } from '../hooks';
@@ -121,6 +121,9 @@ const GridBase: <T, >(props: Partial<IGridBase<T>> & RefAttributes<GridRef<T>>) 
                 setPagerMessage: (message: string) => {
                     renderExposedRef.current.pagerModule?.updateExternalMessage(message);
                 },
+                getDataModule: () => {
+                    return protectedAPI.dataModule as UseDataResult;
+                },
                 get selectedRowIndexes(): number[] {
                     return protectedAPI.selectionModule.selectedRowIndexes;
                 },
@@ -198,8 +201,17 @@ const GridBase: <T, >(props: Partial<IGridBase<T>> & RefAttributes<GridRef<T>>) 
             getContent: () => renderExposedRef.current.contentPanelRef,
             isEdit: protectedAPI.editModule?.isEdit,
             editRecord: protectedAPI.editModule?.editRecord,
-            saveDataChanges: protectedAPI.editModule?.saveDataChanges,
-            cancelDataChanges: protectedAPI.editModule?.cancelDataChanges,
+            saveDataChanges: (rowElement?: HTMLTableRowElement) => {
+                return (protectedAPI.editModule?.saveDataChanges as Function)?.(
+                    undefined, undefined, undefined,
+                    protectedAPI.commandColumnModule.commandEdit.current ? rowElement?.getAttribute('data-uid') : undefined
+                );
+            },
+            cancelDataChanges: (rowElement?: HTMLTableRowElement) => {
+                return (protectedAPI.editModule?.cancelDataChanges as Function)?.(
+                    undefined, protectedAPI.commandColumnModule.commandEdit.current ? rowElement?.getAttribute('data-uid') : undefined
+                );
+            },
             addRecord: protectedAPI.editModule?.addRecord,
             deleteRecord: protectedAPI.editModule?.deleteRecord,
             setRowData: publicAPI.setRowData,

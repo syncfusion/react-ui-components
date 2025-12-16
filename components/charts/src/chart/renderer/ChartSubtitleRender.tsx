@@ -3,7 +3,7 @@ import { ForwardedRef, forwardRef, JSX, useEffect, useLayoutEffect } from 'react
 import { useLayout } from '../layout/LayoutContext';
 import { ChartTitleProps } from '../base/interfaces';
 import { getMaxRotatedTextSize, getTextAnchor, getTitle, measureText, titlePositionX } from '../utils/helper';
-import { TextOverflow, TitlePosition } from '../base/enum';
+import { TextOverflow, TitlePosition } from '../../common';
 import { Chart, MarginModel, Rect, ChartSizeProps, TextStyleModel, TitleOptions } from '../chart-area/chart-interfaces';
 import { HorizontalAlignment } from '@syncfusion/react-base';
 

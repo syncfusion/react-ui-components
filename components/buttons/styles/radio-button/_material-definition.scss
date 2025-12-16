@@ -1,0 +1,83 @@
+@use '../../../base/styles/themes/variables' as *;
+
+$radio-btn-border: 1px solid !default;
+$radio-btn-border-radius: $radius-full !default;
+$radio-btn-font-size: $font-size-sm !default;
+$radio-btn-opacity: $opacity0 !default;
+$radio-btn-small-font-size: $font-size-xs !default;
+$radio-btn-large-font-size: $font-size-base !default;
+$radio-btn-large-height: $spacing-10 !default;
+$radio-btn-large-padding: $spacing-28 !default;
+$radio-btn-large-width: $spacing-20 !default;
+$radio-btn-large-ripple-left-position: calc(var(--sf-spacing) * -0.5625) !default;
+$radio-btn-large-ripple-top-position: calc(var(--sf-spacing) * -0.625) !default;
+$radio-btn-large-ripple-size: $spacing-20 !default;
+$radio-btn-height: $spacing-8 !default;
+$radio-btn-width: $spacing-16 !default;
+$radio-btn-small-height: $spacing-7 !default;
+$radio-btn-icon-left: $spacing-5 !default;
+$radio-btn-ripple-left-position: calc(var(--sf-spacing) * -0.4375) !default;
+$radio-btn-ripple-top-position: calc(var(--sf-spacing) * -0.5) !default;
+$radio-btn-ripple-size: $spacing-16 !default;
+$radio-btn-small-icon-left: $spacing-4 !default;
+$radio-btn-small-ripple-position: calc(var(--sf-spacing) * -0.1875) !default;
+$radio-btn-icon-height: $spacing-3 !default;
+$radio-btn-small-icon-height: $spacing-3 !default;
+$radio-btn-padding-left: $spacing-24 !default;
+$radio-btn-small-padding: $spacing-22 !default;
+$radio-btn-background-color: $transparent !default;
+$radio-btn-border-color: rgba($content-text-color-alt1) !default;
+$radio-btn-checked-border-color: rgba($primary) !default;
+$radio-btn-checked-color: rgba($primary) !default;
+$radio-btn-checked-background-color: $transparent !default;
+$radio-btn-checked-ripple-bgcolor: rgba($primary, .08) !default;
+$radio-btn-disabled-border-color: rgba($content-text-color, .38) !default;
+$radio-btn-disabled-background-color: transparent !default;
+$radio-btn-disabled-color: $content-text-color-disabled !default;
+$radio-btn-font-color: rgba($content-text-color) !default;
+$radio-btn-focus-ripple-bgcolor: rgba($content-text-color, .12) !default;
+$radio-btn-ripple-bgcolor: rgba($content-text-color, .08) !default;
+$radio-btn-large-icon-height: $spacing-4 !default;
+$radio-btn-large-icon-left: $spacing-6 !default;
+$radio-btn-small-ripple-Width: $spacing-11 !default;
+$radio-btn-small-bottom-padding-top: $spacing-40 !default;
+$radio-btn-bottom-padding-left: $spacing-0 !default;
+$radio-btn-medium-bottom-padding-top: $spacing-48 !default;
+$radio-secondary-color: rgb($content-text-color-alt1, 1) !default;
+$radio-secondary-hover-color: rgb($content-text-color-alt1, 0.1) !default;
+$radio-success-color: rgb($success, 1) !default;
+$radio-success-hover-color: rgb($success, .08) !default;
+$radio-info-color: rgb($info, 1) !default;
+$radio-info-hover-color: rgb($info, .08) !default;
+$radio-warning-color: rgb($warning, 1) !default;
+$radio-warning-hover-color: rgb($warning, .08) !default;
+$radio-danger-color: rgb($error, 1)  !default;
+$radio-danger-hover-color: rgb($error, .08) !default;
+
+$radio-variants: (
+  secondary: (
+    bg: $radio-secondary-color,
+    hover: $radio-secondary-hover-color,
+    border: $radio-secondary-color
+  ),
+  success: (
+    bg: $radio-success-color,
+    hover: $radio-success-hover-color,
+    border: $radio-success-color
+  ),
+  warning: (
+    bg: $radio-warning-color,
+    hover: $radio-warning-hover-color,
+    border: $radio-warning-color
+  ),
+  info: (
+    bg: $radio-info-color,
+    hover: $radio-info-hover-color,
+    border: $radio-info-color
+  ),
+  error: (
+    bg: $radio-danger-color,
+    hover: $radio-danger-hover-color,
+    border: $radio-danger-color
+  )
+);

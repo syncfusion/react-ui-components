@@ -1,13 +1,16 @@
-import { memo, useRef, useEffect, useCallback, forwardRef, useMemo, useState, useImperativeHandle, CSSProperties, JSX, RefAttributes, ReactElement } from 'react';
-import { FieldValidationRules, Form, FormField, FormState, FormValueType, IFormValidator, ValidationRules } from '@syncfusion/react-inputs';
+import { memo, useRef, useEffect, useCallback, forwardRef, useMemo, useState, useImperativeHandle, CSSProperties, JSX, RefAttributes, ReactElement, RefObject } from 'react';
+import { Form, FormField, FormState, FormValueType, IFormValidator, ValidationRules } from '@syncfusion/react-inputs';
 import { EditCell, ValidationTooltips } from '../index';
-import { EditCellRef, InlineEditFormProps, InlineEditFormRef } from '../../types/edit.interfaces';
+import { EditCellRef, InlineEditFormProps, InlineEditFormRef, UseEditResult } from '../../types/edit.interfaces';
 import { useGridComputedProvider, useGridMutableProvider } from '../../contexts';
-import { IValueFormatter, ValueType } from '../../types';
-import { ColumnProps, ColumnValidationParams, IColumnBase } from '../../types/column.interfaces';
+import { EditType, IValueFormatter, ValueType } from '../../types';
+import { ColumnProps, IColumnBase } from '../../types/column.interfaces';
 import { getObject } from '../../utils';
 import { DataUtil } from '@syncfusion/react-data';
-import { isNullOrUndefined, isUndefined } from '@syncfusion/react-base';
+import { IL10n, isNullOrUndefined, isUndefined } from '@syncfusion/react-base';
+import { Checkbox } from '@syncfusion/react-buttons';
+import { CommandColumnBase } from '../../components/CommandColumn';
+import { useFormValidationRules } from '../../hooks';
 
 /**
  * InlineEditForm component that prevents unnecessary re-renders during typing
@@ -28,7 +31,8 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
         rowUid,
         template: CustomTemplate,
         disabled = false,
-        isAddOperation
+        isAddOperation,
+        rowObject
     }: InlineEditFormProps<T>, ref: React.ForwardedRef<InlineEditFormRef<T>>) => {
         // Use refs to store stable callback references
         const onFieldChangeRef: React.RefObject<((field: string, value: ValueType | null) => void) |
@@ -46,39 +50,20 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
                 onFieldChangeRef.current?.(field, value);
             }, []);
 
+        const rowRef: RefObject<HTMLTableRowElement> = useRef<HTMLTableRowElement>(null);
         const formRef: React.RefObject<IFormValidator> = useRef<IFormValidator>(null);
         const editCellRefs: React.RefObject<{ [field in keyof T]?: EditCellRef }> = useRef<{ [field in keyof T]?: EditCellRef }>({});
         const { rowHeight, id, getVisibleColumns, serviceLocator, editModule, contentPanelRef, contentTableRef,
             height } = useGridComputedProvider<T>();
-        const { colElements: ColElements, cssClass } = useGridMutableProvider<T>();
+        const { colElements: ColElements, cssClass, focusModule, commandColumnModule } = useGridMutableProvider<T>();
+        const { commandEdit } = commandColumnModule;
         const formatter: IValueFormatter = serviceLocator?.getService<IValueFormatter>('valueFormatter');
+        const localization: IL10n = serviceLocator?.getService<IL10n>('localization');
 
         /**
          * Internal data state that's isolated from grid until save
          */
-        const [internalData, setInternalData] = useState<T>(() => {
-            // For add operations, start with truly empty data
-            if (isAddOperation && !(editData && Object.keys(editData).length)) {
-                const addData: T = {} as T;
-                columns.forEach((column: ColumnProps<T>) => {
-                    if (column.field && column.defaultValue !== undefined) {
-                        // Apply defaultValue only when explicitly set
-                        if (column.type === 'string') {
-                            addData[column.field] = typeof column.defaultValue === 'string'
-                                ? column.defaultValue
-                                : String(column.defaultValue);
-                        } else {
-                            addData[column.field] = column.defaultValue;
-                        }
-                    }
-                    // Don't set any value if no defaultValue is specified
-                });
-                return addData;
-            } else {
-                // For edit operations, use all existing data
-                return editData ? { ...editData } : {} as T;
-            }
-        });
+        const [internalData, setInternalData] = useState<T>(internalDataFn(isAddOperation, editData, columns));
 
         const isLastRow: boolean = useMemo(() => {
             return height !== 'auto' && ((editModule?.editSettings?.newRowPosition === 'Bottom' && isAddOperation) ||
@@ -90,109 +75,7 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
          * Enhanced FormValidator integration with comprehensive validation rule mapping
          * This creates a proper ValidationRules object for the FormValidator component
          */
-        const formValidationRules: ValidationRules = useMemo(() => {
-            const rules: ValidationRules = {};
-
-            columns.forEach((column: ColumnProps<T>) => {
-                if (column.field && column.visible && (column.validationRules || column.type || column.edit?.type)) {
-                    const columnRules: FieldValidationRules = {};
-                    const validationRules: ColumnValidationParams = column.validationRules || {};
-
-                    // Convert column validation rules to FormValidator format
-                    if (validationRules.required !== undefined && validationRules.required !== false) {
-                        columnRules.required = [validationRules.required, 'This field is required.'];
-                    }
-
-                    if (validationRules.minLength !== undefined) {
-                        columnRules.minLength = [validationRules.minLength, `Please enter at least ${validationRules.minLength} characters.`];
-                    }
-
-                    if (validationRules.maxLength !== undefined) {
-                        columnRules.maxLength = [validationRules.maxLength, `Please enter no more than ${validationRules.maxLength} characters.`];
-                    }
-
-                    if (validationRules.min !== undefined) {
-                        columnRules.min = [validationRules.min, `Please enter a value greater than or equal to ${validationRules.min}.`];
-                    }
-
-                    if (validationRules.max !== undefined) {
-                        columnRules.max = [validationRules.max, `Please enter a value less than or equal to ${validationRules.max}.`];
-                    }
-
-                    // Enhanced range validation support
-                    if (validationRules.range && Array.isArray(validationRules.range) && validationRules.range.length === 2) {
-                        columnRules.range = [validationRules.range, `Please enter a value in between ${validationRules.range[0]} and ${validationRules.range[1]}.`];
-                    }
-
-                    // Enhanced range length validation support
-                    if (validationRules.rangeLength && Array.isArray(validationRules.rangeLength) &&
-                    validationRules.rangeLength.length === 2) {
-                        columnRules.rangeLength = [validationRules.rangeLength,
-                            `Please enter between ${
-                                validationRules.rangeLength[0]
-                            } and ${validationRules.rangeLength[1]} characters.`];
-                    }
-
-                    // Enhanced regex validation support
-                    if (validationRules.regex) {
-                        columnRules.regex = [validationRules.regex, 'This field format is invalid.'];
-                    }
-
-                    if (validationRules.email) {
-                        columnRules.email = [validationRules.email, 'Please enter a valid email.'];
-                    }
-
-                    if (validationRules.url) {
-                        columnRules.url = [validationRules.url, 'Please enter a valid url.'];
-                    }
-
-                    if (validationRules.digits) {
-                        columnRules.digits = [validationRules.digits, 'Please enter digits(0-9) only.'];
-                    }
-
-                    if (validationRules.creditCard) {
-                        columnRules.creditCard = [validationRules.creditCard, 'Please enter a valid creditcard number.'];
-                    }
-
-                    if (validationRules.tel) {
-                        columnRules.tel = [validationRules.tel, 'Please enter a valid telephone number.'];
-                    }
-
-                    if (validationRules.equalTo) {
-                        columnRules.equalTo = [validationRules.equalTo,
-                            `This field value not matches with ${validationRules.equalTo} field value.`];
-                    }
-
-                    // Enhanced custom validation with proper error handling
-                    if (validationRules.customValidator && typeof validationRules.customValidator === 'function') {
-                        columnRules.customValidator = (value: FormValueType) => {
-                            try {
-                                const result: string | null = validationRules.customValidator(value);
-                                return result || null;
-                            } catch (error) {
-                                return `Validation error: ${(error as Error).message}`;
-                            }
-                        };
-                    }
-
-                    if (column.type === 'number') {
-                        columnRules.number = [validationRules.number, 'Please enter a valid number.'];
-                    }
-
-                    if (column.type === 'date') {
-                        columnRules.date = [validationRules.date, 'Please enter a valid date.'];
-                    }
-
-                    // Only add rules if there are actual validation rules defined
-                    if (Object.keys(columnRules).length > 0) {
-                        rules[column.field] = columnRules;
-                    }
-                }
-            });
-
-            return rules;
-        }, [columns]);
-
+        const formValidationRules: ValidationRules = useFormValidationRules(columns);
         const isNewSessionRef: React.RefObject<boolean> = useRef(false);
 
         // Track Tab direction for proper focus management after save
@@ -222,15 +105,15 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
          * For add operations, primary key fields should be focused first
          * For edit operations, skip primary key fields (they're disabled)
          */
-        const focusFirstField: () => void = useCallback(() => {
+        const focusFirstField: (last?: boolean, edit?: boolean) => void = useCallback((last?: boolean, edit?: boolean) => {
             let firstEditableColumn: ColumnProps<T> | undefined;
 
             if (isAddOperation) {
                 // For add operations, primary key fields are enabled and should be focused first
-                firstEditableColumn = columns.find((col: ColumnProps<T>) =>
-                    col.allowEdit !== false && col.visible &&
-                    col.field &&
-                    col.isPrimaryKey === true
+                firstEditableColumn = (last ? [...columns].reverse() : columns).find((col: ColumnProps<T>) =>
+                    (col.allowEdit !== false || col.getCommandItems) && col.visible &&
+                    (col.field || col.getCommandItems) &&
+                    (col.isPrimaryKey === true || edit)
                 );
 
                 // If no primary key field found, find the first non-primary key editable field
@@ -244,26 +127,33 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
             } else {
                 // For edit operations, skip primary key fields (they're disabled)
                 // Focus the first non-primary key editable field
-                if (editModule.focusLastField.current) {
+                if (editModule.focusLastField.current || last) {
                     firstEditableColumn = [...columns].reverse().find((col: ColumnProps<T>) =>
-                        col.allowEdit !== false && col.visible &&
+                        (col.allowEdit !== false || col.getCommandItems) && col.visible &&
                         !col.isPrimaryKey &&
-                        col.field
+                        (col.field || col.getCommandItems)
                     );
                 } else {
                     firstEditableColumn = columns.find((col: ColumnProps<T>) =>
-                        col.allowEdit !== false && col.visible &&
+                        (col.allowEdit !== false || col.getCommandItems) && col.visible &&
                         !col.isPrimaryKey &&
-                        col.field
+                        (col.field || col.getCommandItems)
                     );
                 }
                 editModule.focusLastField.current = false;
             }
 
-            if (firstEditableColumn && editCellRefs.current[firstEditableColumn.field]) {
+            if ((firstEditableColumn && editCellRefs.current[firstEditableColumn.field]) || firstEditableColumn?.getCommandItems) {
                 requestAnimationFrame(() => {
                     setTimeout(() => {
-                        editCellRefs?.current?.[firstEditableColumn?.field]?.focus?.();
+                        focusModule.removeFocusTabIndex();
+                        focusModule.setGridFocus(true);
+                        if (firstEditableColumn?.getCommandItems) {
+                            const commandItems: HTMLElement[] = focusModule.getCommandItems(rowRef.current.querySelector('.sf-grid-command-cell'));
+                            (last ? commandItems[commandItems.length - 1] : commandItems[0]).focus();
+                        } else {
+                            editCellRefs?.current?.[firstEditableColumn?.field]?.focus?.();
+                        }
                     }, 0);
                 });
             }
@@ -314,73 +204,20 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
          * Handle field value change with proper data isolation
          * This prevents re-renders while maintaining data consistency
          */
-        const handleFieldChange: (column: ColumnProps<T>, value: ValueType) =>
-        void = useCallback((column: ColumnProps<T>, value: ValueType) => {
-            let formattedValue: ValueType = (column?.type === 'date' || column?.type === 'datetime' || column?.type === 'number') && typeof value === 'string' ?
-                (formatter.fromView(value, (column as IColumnBase<T>)?.parseFn, column?.type)) : value;
-            if ((column?.type === 'number' && isNaN(formattedValue as number)) ||
-                ((column?.type === 'date' || column?.type === 'datetime') && isUndefined(formattedValue as string))) {
-                formattedValue = '';
-            }
-            // Update internal data immediately for UI responsiveness
-            const topLevelKey: string = column.field.split('.')[0];
-            const copiedComplexData: Object = column.field.includes('.') && typeof internalData[topLevelKey as string] === 'object'
-                ? {
-                    ...internalData,
-                    [topLevelKey]: JSON.parse(JSON.stringify(internalData[topLevelKey as string]))
-                }
-                : { ...internalData };
-
-            const editedData: T = DataUtil.setValue(column.field, formattedValue, copiedComplexData) as T;
-            setInternalData({...editedData});
-
-            // Update FormValidator state
-            if (!isNullOrUndefined(internalData[topLevelKey as string]) && typeof internalData[topLevelKey as string] === 'object'
-                && !(internalData[topLevelKey as string] instanceof Date)) {
-                formState?.onChange?.(topLevelKey, { value: {
-                    ...editedData[topLevelKey as string],
-                    [column.field.split('.')[1]]: value
-                } as FormValueType });
-            } else {
-                formState?.onChange?.(column.field, { value: value as FormValueType });
-            }
-            // Notify parent for validation but don't expose data until save
-            stableOnFieldChange?.(column.field, formattedValue);
-        }, [stableOnFieldChange, formState]);
+        const handleFieldChange: (column: ColumnProps<T>, value: ValueType, formatter: IValueFormatter, internalData: T,
+            setInternalData: (value: React.SetStateAction<T>) => void, formState: FormState,
+            stableOnFieldChange: (field: string, value: ValueType | null) => void) =>
+        void = useCallback(handleFieldChangeFn, [stableOnFieldChange, formState]);
 
         /**
          * Handle field blur
          * Enhanced blur handling to properly trigger FormValidator validation
          * This ensures validation happens on every field blur event
          */
-        const handleFieldBlur: (column: ColumnProps<T>, value: ValueType | Record<string, unknown>) =>
-        void = useCallback((column: ColumnProps<T>, value: ValueType | Record<string, unknown>) => {
-            value = (column?.type === 'date' || column?.type === 'number') && typeof value === 'string' ?
-                (formatter.fromView(value, (column as IColumnBase<T>)?.parseFn, column?.type)) : value;
-            // Update internal data on blur (consistency check)
-            const topLevelKey: string = column.field.split('.')[0];
-            const copiedComplexData: Object = column.field.includes('.') && typeof internalData[topLevelKey as string] === 'object'
-                ? {
-                    ...internalData,
-                    [topLevelKey]: JSON.parse(JSON.stringify(internalData[topLevelKey as string]))
-                }
-                : { ...internalData };
-
-            const editedData: T = DataUtil.setValue(column.field, value, copiedComplexData) as T;
-            setInternalData({...editedData});
-
-            if (!(isAddOperation && editModule.isShowAddNewRowActive) ||
-                (isAddOperation && formState && Object.keys(formState.errors).length > 0)) {
-                // Always trigger FormValidator blur validation
-                // This is essential for proper validation behavior
-                formState?.onBlur?.(column.field);
-
-                // Also trigger manual validation for immediate feedback
-                // This ensures validation errors are displayed immediately on blur
-                formRef.current?.validateField?.(column.field);
-            }
-
-        }, [formState]);
+        const handleFieldBlur: (column: ColumnProps<T>, value: ValueType | Record<string, unknown>, formatter: IValueFormatter,
+            internalData: T, setInternalData: (value: React.SetStateAction<T>) => void, isAddOperation: boolean,
+            editModule: UseEditResult<T>, formState: FormState, formRef: RefObject<IFormValidator>) =>
+        void = useCallback(handleFieldBlurFn, [formState]);
 
         /**
          * Handle Enter key (save)
@@ -400,6 +237,7 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
          * Expose imperative methods via ref
          */
         useImperativeHandle(ref, () => ({
+            rowRef: rowRef,
             focusFirstField,
             validateForm,
             getEditCells,
@@ -417,23 +255,23 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
          * and automatically saves the form while maintaining proper focus management
          * For add operations, include primary key fields in boundary detection
          */
-        const handleTabBoundaryNavigation: (event: KeyboardEvent, currentField: string) => boolean =
-            useCallback((event: KeyboardEvent, currentField: string) => {
+        const handleTabBoundaryNavigation: (event: React.KeyboardEvent, currentField: string) => boolean =
+            useCallback((event: React.KeyboardEvent, currentField: string) => {
                 // Get editable columns based on operation type
                 let editableColumns: ColumnProps<T>[];
 
                 if (isAddOperation) {
                     // For add operations, include primary key fields (they're enabled)
                     editableColumns = columns.filter((col: ColumnProps<T>) =>
-                        col.allowEdit !== false &&
-                        col.field
+                        (col.allowEdit !== false || col.getCommandItems) &&
+                        (col.field || col.getCommandItems)
                     );
                 } else {
                     // For edit operations, exclude primary key fields (they're disabled)
                     editableColumns = columns.filter((col: ColumnProps<T>) =>
-                        col.allowEdit !== false && col.visible &&
+                        (col.allowEdit !== false || col.getCommandItems) && col.visible &&
                         !col.isPrimaryKey &&
-                        col.field
+                        (col.field || col.getCommandItems)
                     );
                 }
 
@@ -442,14 +280,18 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
                 if (currentIndex === -1) {
                     return false;
                 }
-
+                const commandItem: boolean = focusModule.isNextCommandItem(event);
                 const isTabForward: boolean = event.key === 'Tab' && !event.shiftKey;
                 const isTabBackward: boolean = event.key === 'Tab' && event.shiftKey;
-                const isLastField: boolean = currentIndex === editableColumns.length - 1;
-                const isFirstField: boolean = currentIndex === 0;
+                const isLastField: boolean = currentIndex === editableColumns.length - 1 && !commandItem;
+                const isFirstField: boolean = currentIndex === 0 && !commandItem;
 
                 // Detect boundary conditions for auto-save
                 if ((isTabForward && isLastField) || (isTabBackward && isFirstField)) {
+                    if (commandEdit.current) {
+                        focusModule.editToRow(event);
+                        return false;
+                    }
                     // Track Tab direction for proper focus management
                     lastTabDirectionRef.current = isTabForward;
 
@@ -471,7 +313,7 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
                 }
 
                 return false; // Indicate that normal Tab navigation should continue
-            }, [columns, isAddOperation, onSave]);
+            }, [columns, isAddOperation, onSave, focusModule]);
 
         /**
          * Render edit cells with proper data binding
@@ -492,12 +334,28 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
                 // Let EditCell handle undefined values appropriately for each input type
                 const fieldError: string = validationErrors[column.field];
 
+                // Computes the CSS class for cell alignment
+                const alignClass: string = `sf-${(column.textAlign ?? 'Left').toLowerCase()}-align`;
+
+                if (column.type === 'checkbox') {
+                    return (
+                        <td className={'sf-cell ' + alignClass}>
+                            <Checkbox
+                                className="sf-grid-checkselect"
+                                aria-label={localization?.getConstant('SelectRow')}
+                                disabled={true}
+                            />
+                        </td>
+                    );
+                }
+                const commandColumn: boolean = !isNullOrUndefined(column.getCommandItems);
+
                 if (!isEditable) {
                     return column.visible ? (
                         <td
                             key={`edit-cell-${column.field || index}`}
                             className={'sf-cell sf-grid-edit-cell sf-edit-disabled' + (isAddOperation && isLastRow ? ' sf-last-row' : '') +
-                                (!isAddOperation && isLastRow ? ' sf-last-cell' : '')}
+                                (!isAddOperation && isLastRow ? ' sf-last-cell' : '') + (commandColumn ? ' sf-grid-command-cell' : '') + (!!column?.displayAsCheckBox && column?.edit?.type === EditType.CheckBox ? ` ${alignClass}` : '')}
                             data-mappinguid={column.uid}
                             role='gridcell'
                             aria-colindex={index + 1}
@@ -506,23 +364,32 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
                                 textAlign: (column.textAlign?.toLowerCase() as CSSProperties['textAlign'])
                             }}
                         >
-                            <FormField name={column.field}>
-                                <EditCell<T>
-                                    ref={(cellRef: EditCellRef | null) => storeEditCellRef(column.field, cellRef)}
-                                    column={{ ...column, allowEdit: false }}
-                                    value={getObject(column.field, formState?.values) ?? formState?.values?.[column.field]}
-                                    data={internalData as T}
-                                    error={formState?.errors[column.field]}
-                                    onChange={handleFieldChange.bind(null, column)}
-                                    onBlur={handleFieldBlur.bind(null, column)}
-                                    disabled={disabled}
-                                    onFocus={() => {
-                                        formState?.onFocus?.(column.field);
-                                    }}
-                                    isAdd={isAddOperation}
-                                    formState={formState}
-                                />
-                            </FormField>
+                            {commandColumn ?
+                                <CommandColumnBase row={rowObject} column={column} />
+                                :
+                                <FormField name={column.field}>
+                                    <EditCell<T>
+                                        ref={(cellRef: EditCellRef | null) => storeEditCellRef(column.field, cellRef)}
+                                        column={{ ...column, allowEdit: false }}
+                                        value={getObject(column.field, formState?.values) ?? formState?.values?.[column.field]}
+                                        data={internalData as T}
+                                        error={formState?.errors[column.field]}
+                                        onChange={(value: unknown) => handleFieldChange(
+                                            column, value as ValueType, formatter, internalData,
+                                            setInternalData, formState, stableOnFieldChange)}
+                                        onBlur={(value: ValueType | Object | undefined) => handleFieldBlur(
+                                            column, value as ValueType | Record<string, unknown>, formatter,
+                                            internalData, setInternalData, isAddOperation, editModule, formState, formRef)}
+                                        disabled={disabled}
+                                        onFocus={() => {
+                                            formState?.onFocus?.(column.field);
+                                        }}
+                                        isAdd={isAddOperation}
+                                        formState={formState}
+                                        rowObject={rowObject}
+                                    />
+                                </FormField>
+                            }
                         </td>
                     ) : (
                         <td
@@ -536,7 +403,7 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
                     <td
                         key={`edit-cell-${column.field}`}
                         className={'sf-cell sf-grid-edit-cell' + (isAddOperation && isLastRow ? ' sf-last-row' : '') +
-                            (!isAddOperation && isLastRow ? ' sf-last-cell' : '')}
+                            (!isAddOperation && isLastRow ? ' sf-last-cell' : '') + (!!column?.displayAsCheckBox && column?.edit?.type === EditType.CheckBox ? ` ${alignClass}` : '')}
                         data-mappinguid={column.uid}
                         role='gridcell'
                         aria-colindex={index + 1}
@@ -553,14 +420,19 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
                                 value={getObject(column.field, formState?.values) ?? formState?.values?.[column.field]}
                                 data={internalData}
                                 error={formState?.errors[column.field]}
-                                onChange={handleFieldChange.bind(null, column)}
-                                onBlur={handleFieldBlur.bind(null, column)}
+                                onChange={(value: unknown) => handleFieldChange(
+                                    column, value as ValueType, formatter, internalData,
+                                    setInternalData, formState, stableOnFieldChange)}
+                                onBlur={(value: ValueType | Object | undefined) => handleFieldBlur(
+                                    column, value as ValueType | Record<string, unknown>, formatter,
+                                    internalData, setInternalData, isAddOperation, editModule, formState, formRef)}
                                 disabled={disabled}
                                 onFocus={() => {
                                     formState?.onFocus?.(column.field);
                                 }}
                                 isAdd={isAddOperation}
                                 formState={formState}
+                                rowObject={rowObject}
                             />
                         </FormField>
                     </td>
@@ -572,7 +444,7 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
                 );
             });
         }, [columns, internalData, validationErrors, isAddOperation, disabled, handleFieldChange,
-            handleFieldBlur, handleEnter, handleEscape, storeEditCellRef
+            handleFieldBlur, handleEnter, handleEscape, storeEditCellRef, formState
         ]);
 
         // Render custom edit template if provided
@@ -659,7 +531,7 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
             return () => {
                 formRef.current?.element?.removeEventListener('editCellTab', handleTabEvent as EventListener);
             };
-        }, [handleTabBoundaryNavigation]);
+        }, [handleTabBoundaryNavigation, focusModule]);
 
         /**
          * Enhanced focus management for proper auto-focus behavior
@@ -721,6 +593,7 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
 
         return rowUid ? (
             <tr
+                ref={rowRef}
                 className={'sf-grid-content-row ' + (rowUid.includes('grid-add-row') ? 'sf-grid-add-row' : 'sf-grid-edit-row')}
                 aria-rowindex={editRowIndex + 1}
                 data-uid={rowUid}
@@ -759,7 +632,7 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
                         </table>
 
                         {formState && Object.keys(formState.errors).length > 0 && (
-                            <ValidationTooltips formState={formState} editCellRefs={editCellRefs} />
+                            <ValidationTooltips formState={formState} editCellRefs={editCellRefs} rowRef={rowRef} />
                         )}
                     </Form>
                 </td>
@@ -770,3 +643,141 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
     })) as <T>(props: InlineEditFormProps<T> & RefAttributes<InlineEditFormRef<T>>) => ReactElement;
 
 (InlineEditForm as React.ForwardRefExoticComponent<InlineEditFormProps & React.RefAttributes<InlineEditFormRef>>).displayName = 'InlineEditForm';
+
+/**
+ * Initializes internal data for edit/add operations with default values.
+ * For add operations, creates empty object with only explicitly defined defaultValues; for edit operations, copies all existing data.
+ *
+ * @private
+ * @param {boolean} isAddOperation - Flag indicating if this is an add operation (true) or edit operation (false)
+ * @param {T} editData - The data to initialize with; for edit operations, this is the existing row data
+ * @param {ColumnProps<T>[]} columns - Array of column definitions to extract default values from
+ * @returns {T} Initialized data object with appropriate values for the operation type
+ */
+export const internalDataFn: <T>(isAddOperation: boolean, editData: T, columns: ColumnProps<T>[]) => T =
+    <T, >(isAddOperation: boolean, editData: T, columns: ColumnProps<T>[]): T => {
+        // For add operations, start with truly empty data
+        if (isAddOperation && !(editData && Object.keys(editData).length)) {
+            const addData: T = {} as T;
+            columns.forEach((column: ColumnProps<T>) => {
+                if (column.field && column.defaultValue !== undefined) {
+                    // Apply defaultValue only when explicitly set
+                    if (column.type === 'string') {
+                        addData[column.field] = typeof column.defaultValue === 'string'
+                            ? column.defaultValue
+                            : String(column.defaultValue);
+                    } else {
+                        addData[column.field] = column.defaultValue;
+                    }
+                }
+                // Don't set any value if no defaultValue is specified
+            });
+            return addData;
+        } else {
+            // For edit operations, use all existing data
+            return editData ? { ...editData } : {} as T;
+        }
+    };
+
+/**
+ * Updates internal form data and notifies parent of field changes on user input.
+ * Formats values based on column type and updates both internal state and FormValidator state for real-time validation.
+ *
+ * @private
+ * @param {ColumnProps<T>} column - The column definition for the field being changed
+ * @param {ValueType} value - The new value entered by the user
+ * @param {IValueFormatter} formatter - Formatter service for type conversion
+ * @param {T} internalData - Current internal form data state
+ * @param {Function} setInternalData - State setter function for internal data
+ * @param {FormState} formState - Current FormValidator state
+ * @param {Function} stableOnFieldChange - Stable callback to notify parent of field changes
+ * @returns {void}
+ */
+export const handleFieldChangeFn: <T>(column: ColumnProps<T>, value: ValueType, formatter: IValueFormatter, internalData: T,
+    setInternalData: (value: React.SetStateAction<T>) => void, formState: FormState,
+    stableOnFieldChange: (field: string, value: ValueType | null) => void) => void =
+    <T, >(column: ColumnProps<T>, value: ValueType, formatter: IValueFormatter, internalData: T,
+        setInternalData: (value: React.SetStateAction<T>) => void, formState: FormState,
+        stableOnFieldChange: (field: string, value: ValueType | null) => void) => {
+        let formattedValue: ValueType = (column?.type === 'date' || column?.type === 'datetime' || column?.type === 'number') && typeof value === 'string' ?
+            (formatter.fromView(value, (column as IColumnBase<T>)?.parseFn, column?.type)) : value;
+        if ((column?.type === 'number' && isNaN(formattedValue as number)) ||
+            ((column?.type === 'date' || column?.type === 'datetime') && isUndefined(formattedValue as string))) {
+            formattedValue = '';
+        }
+        // Update internal data immediately for UI responsiveness
+        const topLevelKey: string = column.field.split('.')[0];
+        const copiedComplexData: Object = column.field.includes('.') && typeof internalData[topLevelKey as string] === 'object'
+            ? {
+                ...internalData,
+                [topLevelKey]: JSON.parse(JSON.stringify(internalData[topLevelKey as string]))
+            }
+            : { ...internalData };
+
+        const editedData: T = DataUtil.setValue(column.field, formattedValue, copiedComplexData) as T;
+        setInternalData({ ...editedData });
+
+        // Update FormValidator state
+        if (!isNullOrUndefined(internalData[topLevelKey as string]) && typeof internalData[topLevelKey as string] === 'object'
+            && !(internalData[topLevelKey as string] instanceof Date)) {
+            formState?.onChange?.(topLevelKey, {
+                value: {
+                    ...editedData[topLevelKey as string],
+                    [column.field.split('.')[1]]: value
+                } as FormValueType
+            });
+        } else {
+            formState?.onChange?.(column.field, { value: value as FormValueType });
+        }
+        // Notify parent for validation but don't expose data until save
+        stableOnFieldChange?.(column.field, formattedValue);
+    };
+
+/**
+ * Validates field on blur and updates internal data for consistency.
+ * Triggers FormValidator validation to display immediate feedback for validation errors.
+ *
+ * @private
+ * @param {ColumnProps<T>} column - The column definition for the field losing focus
+ * @param {ValueType | Record<string, unknown>} value - The current value of the field
+ * @param {IValueFormatter} formatter - Formatter service for type conversion
+ * @param {T} internalData - Current internal form data state
+ * @param {Function} setInternalData - State setter function for internal data
+ * @param {boolean} isAddOperation - Flag indicating if this is an add operation
+ * @param {UseEditResult<T>} editModule - Edit module providing edit state and functions
+ * @param {FormState} formState - Current FormValidator state
+ * @param {RefObject<IFormValidator>} formRef - Reference to FormValidator component
+ * @returns {void}
+ */
+export const handleFieldBlurFn: <T>(column: ColumnProps<T>, value: ValueType | Record<string, unknown>, formatter: IValueFormatter,
+    internalData: T, setInternalData: (value: React.SetStateAction<T>) => void, isAddOperation: boolean, editModule: UseEditResult<T>,
+    formState: FormState, formRef: RefObject<IFormValidator>) => void =
+    <T, >(column: ColumnProps<T>, value: ValueType | Record<string, unknown>, formatter: IValueFormatter,
+        internalData: T, setInternalData: (value: React.SetStateAction<T>) => void, isAddOperation: boolean, editModule: UseEditResult<T>,
+        formState: FormState, formRef: RefObject<IFormValidator>) => {
+        value = (column?.type === 'date' || column?.type === 'number') && typeof value === 'string' ?
+            (formatter.fromView(value, (column as IColumnBase<T>)?.parseFn, column?.type)) : value;
+        // Update internal data on blur (consistency check)
+        const topLevelKey: string = column.field.split('.')[0];
+        const copiedComplexData: Object = column.field.includes('.') && typeof internalData[topLevelKey as string] === 'object'
+            ? {
+                ...internalData,
+                [topLevelKey]: JSON.parse(JSON.stringify(internalData[topLevelKey as string]))
+            }
+            : { ...internalData };
+
+        const editedData: T = DataUtil.setValue(column.field, value, copiedComplexData) as T;
+        setInternalData({ ...editedData });
+
+        if (!(isAddOperation && editModule.isShowAddNewRowActive) ||
+            (isAddOperation && formState && Object.keys(formState.errors).length > 0)) {
+            // Always trigger FormValidator blur validation
+            // This is essential for proper validation behavior
+            formState?.onBlur?.(column.field);
+
+            // Also trigger manual validation for immediate feedback
+            // This ensures validation errors are displayed immediately on blur
+            formRef.current?.validateField?.(column.field);
+        }
+
+    };

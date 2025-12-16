@@ -8,12 +8,14 @@ import { MutableGridSetter } from '../../types/interfaces';
 import { formatUnit } from '@syncfusion/react-base';
 import { parseUnit } from '../../utils';
 
-export const ValidationTooltips: React.FC<ValidationTooltipsProps> = ({ formState, editCellRefs }: {
+export const ValidationTooltips: React.FC<ValidationTooltipsProps> = ({ formState, editCellRefs, rowRef }: {
     formState: FormState | null,
-    editCellRefs?: React.RefObject<{ [field: string]: EditCellRef }>
+    editCellRefs?: React.RefObject<{ [field: string]: EditCellRef }>,
+    rowRef?: RefObject<HTMLTableRowElement>
 }) => {
     const grid: Partial<GridRef> & Partial<MutableGridSetter> = useGridComputedProvider();
-    const { editModule } = useGridMutableProvider();
+    const { editModule, commandColumnModule } = useGridMutableProvider();
+    const { commandEdit } = commandColumnModule;
     const [tooltipTargets, setTooltipTargets] = useState<Record<string, React.RefObject<HTMLElement>>>({});
     const [activeTooltips, setActiveTooltips] = useState<Set<string>>(new Set());
 
@@ -32,9 +34,13 @@ export const ValidationTooltips: React.FC<ValidationTooltipsProps> = ({ formStat
             let targetElement: HTMLElement | null = null;
 
             // First, try to find the input element
-            const inputElement: HTMLElement = editModule?.isShowAddNewRowActive && editModule?.isShowAddNewRowDisabled ?
+            let inputElement: HTMLElement = editModule?.isShowAddNewRowActive && editModule?.isShowAddNewRowDisabled ?
                 grid.element?.querySelector(`.sf-grid-edit-row [id="grid-edit-${field}"]`) as HTMLElement :
-                grid.element?.querySelector(`[id="grid-edit-${field}"]`) as HTMLElement;
+                (editModule.editSettings.mode === 'Popup' ? rowRef.current : grid.element)?.querySelector(`[id="grid-edit-${field}"]`) as HTMLElement;
+            if (commandEdit.current) {
+                const uid: string = rowRef.current.getAttribute('data-uid');
+                inputElement = rowRef.current.querySelector(`[id="${uid}-grid-edit-${field}"]`) as HTMLElement;
+            }
 
             // Once we have the input element, find its containing table cell (td)
             // This ensures the tooltip arrow targets the cell, not the input itself

@@ -89,7 +89,7 @@ export interface IRadioButton extends RadioButtonProps {
     element?: HTMLInputElement | null;
 }
 
-type IRadioButtonProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange'> & IRadioButton;
+type IRadioButtonProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'size'> & IRadioButton;
 
 /**
  * The RadioButton component allows users to select a single option from a group, utilizing a circular input field that provides a clear user selection interface.
@@ -157,6 +157,7 @@ export const RadioButton: React.ForwardRefExoticComponent<IRadioButtonProps & Re
             }
         };
         const handleMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+            if (disabled) { return; }
             if (ripple && rippleContainerRef.current && rippleMouseDown) {
                 const syntheticEvent: React.MouseEvent<HTMLSpanElement, MouseEvent> = {
                     ...e,
@@ -165,7 +166,7 @@ export const RadioButton: React.ForwardRefExoticComponent<IRadioButtonProps & Re
                 } as unknown as React.MouseEvent<HTMLSpanElement>;
                 rippleMouseDown(syntheticEvent);
             }
-        }, [ripple, rippleMouseDown]);
+        }, [disabled, ripple, rippleMouseDown]);
 
         const handleFocus: () => void = () => {
             setIsFocused(true);
@@ -174,12 +175,15 @@ export const RadioButton: React.ForwardRefExoticComponent<IRadioButtonProps & Re
             setIsFocused(false);
         };
 
+        const sizeLower: string = String(size).toLowerCase();
+        const colorLower: string = color ? String(color).toLowerCase() : '';
+
         const classNames: string = [
             'sf-radio-wrapper',
             'sf-wrapper',
             className,
-            size && size.toLowerCase() !== 'medium' ? `sf-${size.toLowerCase()}` : '',
-            color && color.toLowerCase() !== 'secondary' ? `sf-${color.toLowerCase()}` : '',
+            size !== undefined && sizeLower !== 'medium' ? `sf-${sizeLower}` : '',
+            color && `sf-radio-${colorLower}`,
             'sf-pos-relative sf-display-inline-block'
         ].filter(Boolean).join(' ');
 
@@ -188,7 +192,7 @@ export const RadioButton: React.ForwardRefExoticComponent<IRadioButtonProps & Re
         const labelBottom: boolean = labelPlacement === 'Bottom';
 
         return (
-            <div className={classNames} onMouseDown={handleMouseDown}>
+            <div className={classNames} onMouseDown={!disabled ? handleMouseDown : undefined}>
                 <input
                     ref={radioInputRef}
                     type="radio"
@@ -204,10 +208,11 @@ export const RadioButton: React.ForwardRefExoticComponent<IRadioButtonProps & Re
                     defaultChecked={!isControlled ? isChecked : undefined}
                     {...domProps}
                 />
-                <label className={`sf-cursor-pointer sf-pos-relative sf-prevent-select sf-display-inline-block ${labelBefore ? 'sf-right' : ''} ${labelBottom ? 'sf-bottom' : ''} ${isFocused ? 'sf-focus' : ''} ${rtlClass}`} htmlFor={domProps.id ? domProps.id : `sf-${value}`}>                    <span  ref={rippleContainerRef} className="sf-ripple-container" >
-                    {ripple && <Ripple />}
-                </span>
-                <span className="sf-label">{label}</span>
+                <label className={`sf-radio-label sf-control sf-radio-${size.toLowerCase().substring(0, 2)} ${labelBefore ? 'sf-right' : ''} ${labelBottom ? 'sf-bottom' : ''} ${isFocused ? 'sf-focus' : ''} ${rtlClass}`} htmlFor={domProps.id ? domProps.id : `sf-${value}`}>
+                    <span ref={rippleContainerRef} className="sf-ripple-container" >
+                        {ripple && !disabled && <Ripple />}
+                    </span>
+                    <span className="sf-label">{label}</span>
                 </label>
             </div>
         );

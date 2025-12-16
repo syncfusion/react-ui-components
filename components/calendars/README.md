@@ -1,7 +1,15 @@
-# Syncfusion React Calendar Components
+# Syncfusion React Calendars Components
  
 The Syncfusion React Calendar components for managing date and time with features like date formatting, inline editing, multiple (range) selection, range restriction, month and year selection, strict mode, and globalization.
- 
+
+## Setup
+
+To install `calendars` and its dependent packages, use the following command,
+
+```sh
+npm install @syncfusion/react-calendars
+```
+
 ## React Calendar
  
 The Calendar component provides a versatile and interactive date selection interface with support for multiple views, customizations, and selection modes. It is designed to handle a wide range of scheduling and planning use cases.
@@ -17,6 +25,18 @@ The Calendar component provides a versatile and interactive date selection inter
 - **Week Number Display:** Enable the weekNumber property to show week numbers alongside calendar dates for better context in scheduling.
  
 - **Multi-Date Selection:** Activate the multiSelect property to allow users to select multiple non-consecutive dates, ideal for marking events or selecting custom date ranges.
+
+**Usage**
+
+```tsx
+import { Calendar } from '@syncfusion/react-calendars';
+
+export default function App() {
+  return (
+    <Calendar/>
+  );
+}
+```
  
 ## React DatePicker
  
@@ -31,13 +51,47 @@ The DatePicker component offers a streamlined and customizable interface for sel
 - **View Modes:** Navigate through Month, Year, and Decade views to provide flexible date selection experiences.
  
 - **Custom Cell Templates:** Highlight important dates, events, or special occasions using the cellTemplate property to apply custom styling, icons, or indicators.
- 
-## Setup
- 
-To install `Calendars` and its dependent packages, use the following command,
- 
-```sh
-npm install @syncfusion/react-calendars
+
+**Usage**
+
+```tsx
+import { DatePicker } from '@syncfusion/react-calendars';
+
+export default function App() {
+  return (
+    <DatePicker/>
+  );
+}
+```
+
+## React TimePicker
+
+The TimePicker component provides an intuitive way to select times with flexible formatting, validation, min/max constraints, and keyboard navigation. It supports inline or dialog (centered) popups, mobile-friendly full-screen mode, and customizable list item templates.
+
+**Key features**
+
+- **Time formats:** Display and parse times using the format property (for example, 'h:mm a', 'HH:mm').
+
+- **Range restriction:** Limit selectable times with the minTime and maxTime properties.
+
+- **Step intervals:** Control the time list interval via step (in minutes).
+
+- **Strict mode:** Enable strictMode to allow only valid times and automatically correct invalid input to the closest valid time within the configured range.
+
+- **Inline or centered popup:** Choose Inline (anchored) or Popup (centered dialog overlay). Auto adapts to device by default.
+
+- **Templates:** Customize list items with itemTemplate for special styling or content.
+
+**Usage**
+
+```tsx
+import { TimePicker } from '@syncfusion/react-calendars';
+
+export default function App() {
+  return (
+    <TimePicker/>
+  );
+}
 ```
  
 <p align="center">
@@ -66,5 +120,5 @@ Check the changelog [here](https://github.com/syncfusion/react-ui-components/blo
  
 See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campai…) for more info.
  
-&copy; Copyright 2025 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential Studio® license and copyright applies to this distribution.
+&copy; Copyright 2026 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential Studio® license and copyright applies to this distribution.
  

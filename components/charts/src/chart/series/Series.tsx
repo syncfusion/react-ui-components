@@ -3,10 +3,12 @@
  */
 import * as React from 'react';
 import { useContext, useEffect, useRef } from 'react';
-import { ChartDataLabelProps, ChartMarkerProps, ChartSeriesProps, SeriesProps } from '../base/interfaces';
+import { ChartDataLabelProps, ChartMarkerProps, ChartSeriesProps, SeriesProps, ChartErrorBarProps } from '../base/interfaces';
 import { ChartContext } from '../layout/ChartProvider';
 import { defaultChartConfigs } from '../base/default-properties';
 import { ChartMarker } from './Marker';
+import { ChartErrorBar } from './ErrorBar';
+import { SeriesProperties } from '../chart-area/chart-interfaces';
 
 /**
  * Creates a replacer function for JSON.stringify that handles circular references.
@@ -168,6 +170,39 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
         })
     );
 
+    // String representation of error bar configurations for all series.
+    const errorBarSignature: string = JSON.stringify(
+        childArray.map((child: React.ReactNode) => {
+            if (
+                React.isValidElement(child) &&
+                child.type === ChartSeries &&
+                (child.props as ChartSeriesProperty).children
+            ) {
+                let eSignature: Partial<ChartSeriesProperty> = {};
+                React.Children.forEach(
+                    (child.props as ChartSeriesProperty).children,
+                    (c: React.ReactNode) => {
+                        if (React.isValidElement(c)) {
+                            const type: React.ElementType = c.type as React.ElementType<keyof React.JSX.IntrinsicElements>;
+                            const isNamedComponent: boolean =
+                                (typeof type === 'function') &&
+                                ('displayName' in type) &&
+                                ((type as { displayName?: string }).displayName === 'ChartErrorBar');
+                            if (c.type === ChartErrorBar || isNamedComponent) {
+                                eSignature = {
+                                    ...eSignature,
+                                    ...pickPrimitiveProps(c.props as ChartSeriesProperty)
+                                };
+                            }
+                        }
+                    }
+                );
+                return eSignature;
+            }
+            return null;
+        })
+    );
+
     /**
      * Extracts and processes the series array from child components.
      * This core method transforms React component hierarchy into a data structure
@@ -180,7 +215,7 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
             .map((child: React.ReactNode) => {
                 if (!React.isValidElement(child) || child.type !== ChartSeries) { return null; }
 
-                const seriesProps: ChartSeriesProps = {
+                const seriesProps: ChartSeriesProps | SeriesProperties = {
                     ...defaultChartConfigs.ChartSeries,
                     ...(child.props as ChartSeriesProperty),
                     ...defaultChartConfigs.ChartSeries
@@ -211,9 +246,9 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
                 // Process marker and data label configuration
                 React.Children.forEach(
                     (child.props as ChartSeriesProperty).children,
-                    (markerChild: React.ReactNode) => {
-                        if (React.isValidElement(markerChild) && markerChild.type === ChartMarker) {
-                            const { children: markerChildren, ...markerProps } = markerChild.props as ChartSeriesProperty;
+                    (seriesChild: React.ReactNode) => {
+                        if (React.isValidElement(seriesChild) && seriesChild.type === ChartMarker) {
+                            const { children: markerChildren, ...markerProps } = seriesChild.props as ChartSeriesProperty;
 
                             const markerConfig: ChartMarkerProps = {
                                 ...defaultChartConfigs.ChartSeries.marker,
@@ -245,6 +280,32 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
 
                             seriesProps.marker = markerConfig;
                         }
+
+                        // Process error bar configuration
+                        if (React.isValidElement(seriesChild)) {
+                            const type: React.ElementType = seriesChild.type as React.ElementType<keyof React.JSX.IntrinsicElements>;
+                            const isErrorBarNamed: boolean =
+                                (typeof type === 'function') &&
+                                ('displayName' in type) &&
+                                ((type as { displayName?: string }).displayName === 'ChartErrorBar');
+
+                            if (seriesChild.type === ChartErrorBar || isErrorBarNamed) {
+                                const errorBarProps: ChartErrorBarProps = seriesChild.props as ChartErrorBarProps;
+                                const defaultErrorBar: ChartErrorBarProps | undefined =
+                                    (defaultChartConfigs.ChartSeries as Partial<SeriesProperties>)
+                                        .errorBar as ChartErrorBarProps | undefined;
+                                // Deep-merge to ensure nested errorBarCap properties fall back to defaults
+                                const mergedErrorBar: ChartErrorBarProps = {
+                                    ...(defaultErrorBar || {}),
+                                    ...errorBarProps,
+                                    errorBarCap: {
+                                        ...(defaultErrorBar?.errorBarCap || {}),
+                                        ...(errorBarProps?.errorBarCap || {})
+                                    }
+                                };
+                                (seriesProps as SeriesProperties).errorBar = mergedErrorBar as ChartErrorBarProps;
+                            }
+                        }
                     }
                 );
 
@@ -270,7 +331,7 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
             const typeName: string = typeof child.type === 'string'
                 ? child.type
                 : ((child.type as { name: string }).name);
-            const seriesPropsSignature: ChartSeriesProperty =
+            const seriesPropsSignature: ChartSeriesProperty | SeriesProperties =
                 typeof child.props === 'object' && child.props !== null
                     ? { ...(child.props as ChartSeriesProperty) }
                     : {} as ChartSeriesProperty;
@@ -278,13 +339,13 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
             if (child.type === ChartSeries) {
                 React.Children.forEach(
                     (child.props as { children?: React.ReactNode }).children,
-                    (markerChild: React.ReactNode) => {
-                        if (React.isValidElement(markerChild) && markerChild.type === ChartMarker) {
-                            const markerProps: ChartMarkerProps = { ...markerChild.props as ChartMarkerProps };
+                    (seriesChild: React.ReactNode) => {
+                        if (React.isValidElement(seriesChild) && seriesChild.type === ChartMarker) {
+                            const markerProps: ChartMarkerProps = { ...seriesChild.props as ChartMarkerProps };
                             // Look for a ChartDataLabel inside marker
-                            if ((markerChild.props as ChartSeriesProperty).children) {
+                            if ((seriesChild.props as ChartSeriesProperty).children) {
                                 React.Children.forEach(
-                                    (markerChild.props as ChartSeriesProperty).children,
+                                    (seriesChild.props as ChartSeriesProperty).children,
                                     (dlChild: React.ReactNode) => {
                                         if (React.isValidElement(dlChild)) {
                                             const type: React.ElementType =
@@ -301,6 +362,19 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
                                 );
                             }
                             seriesPropsSignature.marker = markerProps;
+                        }
+
+                        // Capture error bar props in deep signature
+                        if (React.isValidElement(seriesChild)) {
+                            const type: React.ElementType = seriesChild.type as React.ElementType<keyof React.JSX.IntrinsicElements>;
+                            const isErrorBarNamed: boolean =
+                                (typeof type === 'function') &&
+                                ('displayName' in type) &&
+                                ((type as { displayName?: string }).displayName === 'ChartErrorBar');
+                            if (seriesChild.type === ChartErrorBar || isErrorBarNamed) {
+                                const ebProps: ChartErrorBarProps = { ...seriesChild.props as ChartErrorBarProps };
+                                (seriesPropsSignature as SeriesProperties).errorBar = ebProps;
+                            }
                         }
                     }
                 );
@@ -342,6 +416,7 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
         opacity,
         visible,
         markerSignature,
+        errorBarSignature,
         deepSignature,
         splineType,
         legendShape,

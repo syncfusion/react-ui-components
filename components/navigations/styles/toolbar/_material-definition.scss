@@ -1,0 +1,55 @@
+@use '../../../base/styles/themes/variables' as *;
+
+$toolbar-border-width: $spacing-0 !default;		
+$toolbar-border-style: solid !default;
+$toolbar-border-color: rgba($border-light) !default;
+$toolbar-bg-color: $content-bg-color-alt2 !default;
+$toolbar-box-shadow: none !default;
+
+$toolbar-items-height: $spacing-40 !default;
+$toolbar-items-min-width: calc(var(--sf-spacing) * 3.125) !default;
+$toolbar-items-padding: $spacing-8 $spacing-12 !default;
+$toolbar-items-gap: $spacing-4 !default;
+
+$toolbar-item-min-height: $spacing-40 !default;
+$toolbar-item-height: $spacing-40 !default;
+$toolbar-item-min-width: $spacing-40 !default;
+
+$toolbar-vertical-items-padding: $spacing-8 $spacing-12 !default;
+
+$toolbar-separator-height: $spacing-24 !default;
+$toolbar-separator-min-height: $toolbar-separator-height !default;
+$toolbar-separator-min-width: $spacing-1 !default;
+$toolbar-separator-border-style: solid !default;
+$toolbar-separator-border-color: rgba($border-light) !default;
+$toolbar-separator-horizontal-border-width: 0 1px 0 0 !default;
+$toolbar-separator-vertical-border-width: 0 0 1px 0 !default;
+
+$toolbar-nav-width: $spacing-40 !default;
+$toolbar-nav-border-style: solid !default;
+$toolbar-nav-pressed-box-shadow: none !default;
+$toolbar-nav-selected-box-shadow: none !default;
+$toolbar-nav-position-offset: $spacing-0 !default;
+
+$toolbar-popup-border-width: 0 0 0 1px !default;
+$toolbar-popup-rtl-border-width: 0 1px 0 0 !default;
+$toolbar-popup-vertical-border-width: 1px 0 0 0 !default;
+$toolbar-popup-vertical-rtl-border-width: 1px 0 0 0 !default;
+$toolbar-popup-vertical-min-width: $spacing-40 !default;
+$toolbar-popup-min-width: $spacing-40 !default;
+$toolbar-popup-padding: $spacing-0 !default;
+
+$toolbar-popup-nav-active-bg: $content-bg-color-pressed !default;
+$toolbar-popup-nav-hover-bg: $content-bg-color-hover !default;
+$toolbar-popup-nav-hover-active-bg: $content-bg-color-pressed !default;
+$toolbar-popup-nav-focus-bg: $content-bg-color-focus !default;
+$toolbar-popup-nav-selected-bg: $content-bg-color-pressed !default;
+$toolbar-popup-nav-selected-icons-active-color: rgba($icon-color) !default;
+$toolbar-popup-nav-font-size: $font-size-xl !default;
+
+$toolbar-popup-icon-color: rgba($icon-color) !default;
+$toolbar-popup-border-radius: $radius-4 !default;
+$toolbar-popup-bg-color: $flyout-bg-color !default;
+$toolbar-popup-box-shadow: $shadow-md !default;
+$toolbar-popup-item-bg-color: $transparent !default;
+$toolbar-popup-item-min-height: $spacing-40 !default;

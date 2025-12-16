@@ -1,3 +1,5 @@
+@use 'theme-variables' as *;
+
 @mixin grid-top-bottom-padding($bottom, $top) {
   padding-bottom: $bottom;
   padding-top: $top;

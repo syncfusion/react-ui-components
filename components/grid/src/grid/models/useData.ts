@@ -361,18 +361,14 @@ export const useData: <T>(gridInstance?: Partial<IGrid<T>> & Partial<MutableGrid
                     editArgs.cancelDataChanges = deff.reject;
                     grid.onDataChangeRequest?.(editArgs);
                     deff.promise.then(() => {
-                        dataState.current = { isPending: true, resolver: def.resolve, isEdit: true };
+                        dataState.current = { resolver: def.resolve, isEdit: true };
                         grid.onDataRequest?.(state);
                     }).catch(() => void 0);
                 } else {
                     state.action = gridAction;
-                    dataState.current = { isPending: true, resolver: def.resolve };
+                    dataState.current = { resolver: def.resolve };
                     grid.onDataRequest?.(state);
                 }
-            } else {
-                setTimeout(() => {
-                    def.resolve(dataManager);
-                }, 0);
             }
             return def;
         }, [gridAction, grid, dataManager]);

@@ -9,8 +9,9 @@ import {
     memo,
     RefObject,
     JSX,
-    useEffect,
-    ReactElement
+    ReactElement,
+    Dispatch,
+    SetStateAction
 } from 'react';
 import {
     HeaderRowsRef,
@@ -85,12 +86,15 @@ const HeaderRowsBase: (props: Partial<IHeaderRowsBase> & RefAttributes<HeaderRow
              * @param {number} index - Row index
              * @param {HTMLTableRowElement} element - Row DOM element
              */
-            const storeRowRef: (index: number, element: HTMLTableRowElement, cellRef: ICell<ColumnProps<T>>[]) => void =
-                useCallback((index: number, element: HTMLTableRowElement, cellRef: ICell<ColumnProps<T>>[]) => {
+            const storeRowRef: (index: number, element: HTMLTableRowElement,
+                cellRef: ICell<ColumnProps<T>>[], setRowObject: Dispatch<SetStateAction<IRow<ColumnProps<T>>>>) => void =
+                useCallback((index: number, element: HTMLTableRowElement, cellRef: ICell<ColumnProps<T>>[],
+                             setRowObject: Dispatch<SetStateAction<IRow<ColumnProps<T>>>>) => {
                     // Directly update the element reference in the row object
                     if (rowsObjectRef.current[index as number]) { // StrictMode purpose type gaurd condition added.
                         rowsObjectRef.current[index as number].element = element;
                         rowsObjectRef.current[index as number].cells = cellRef;
+                        rowsObjectRef.current[index as number].setRowObject = setRowObject;
                     }
                 }, []);
 
@@ -113,7 +117,7 @@ const HeaderRowsBase: (props: Partial<IHeaderRowsBase> & RefAttributes<HeaderRow
                         <RowBase<T>
                             ref={(element: RowRef<T>) => {
                                 if (element?.rowRef?.current) {
-                                    storeRowRef(rowIndex, element.rowRef.current, element.getCells());
+                                    storeRowRef(rowIndex, element.rowRef.current, element.getCells(), element.setRowObject);
                                 }
                             }}
                             role='row'
@@ -145,12 +149,6 @@ const HeaderRowsBase: (props: Partial<IHeaderRowsBase> & RefAttributes<HeaderRow
                 rowsObjectRef.current = rowOptions;
                 return rows;
             }, [columnsDirective, textWrapSettings?.enabled, textWrapSettings, rowHeight, filterSettings?.enabled, rowClass]);
-
-            useEffect(() => {
-                return () => {
-                    rowsObjectRef.current = [];
-                };
-            }, []);
 
             return (
                 <thead

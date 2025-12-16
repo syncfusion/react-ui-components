@@ -2,6 +2,7 @@ export * from './enum';
 export * from './interfaces';
 export * from './aggregate.interfaces';
 export * from './column.interfaces';
+export * from './command.interfaces';
 export * from './edit.interfaces';
 export * from './filter.interfaces';
 export * from './focus.interfaces';

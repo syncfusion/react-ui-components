@@ -1,4 +1,5 @@
-@import 'mixin.scss';
+@use 'mixin' as *;
+@use 'theme-variables' as *;
 
 @include export-module('floating-action-button-layout') {
   // Base button styling

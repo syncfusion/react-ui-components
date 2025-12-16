@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useImperativeHandle, useRef, forwardRef, Ref, JSX, InputHTMLAttributes } from 'react';
-import { preRender, useProviderContext, SvgIcon, useRippleEffect, getUniqueID, Color, Size, Position } from '@syncfusion/react-base';
+import { preRender, useProviderContext, useRippleEffect, getUniqueID, Color, Size, Position } from '@syncfusion/react-base';
+import { CheckLargeIcon, IntermediateBarIcon} from '@syncfusion/react-icons';
 
 /**
  * Interface for Checkbox change event arguments
@@ -66,6 +67,13 @@ export interface CheckboxProps {
     checkedIcon?: React.ReactNode;
 
     /**
+     * Specifies a custom icon to be displayed in the indeterminate state. This replaces the default indeterminate icon.
+     *
+     * @default -
+     */
+    indeterminateIcon?: React.ReactNode;
+
+    /**
      * Specifies the position of the label relative to the Checkbox. It determines whether the label appears before or after the Checkbox element in the UI.
      *
      * @default Position.Right
@@ -89,7 +97,7 @@ export interface CheckboxProps {
     /**
      * Specifies the Color style of the button. Options include 'Primary', 'Secondary', 'Warning', 'Success', 'Error', and 'Info'.
      *
-     * @default -
+     * @default Color.Primary
      */
     color?: Color;
 
@@ -123,7 +131,7 @@ export interface ICheckbox extends CheckboxProps {
     element?: HTMLElement | null;
 }
 
-type ICheckboxProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange'> & ICheckbox;
+type ICheckboxProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'size'> & ICheckbox;
 
 /**
  * The Checkbox component allows users to select one or multiple options from a list, providing a visual representation of a binary choice with states like checked, unchecked, or indeterminate.
@@ -141,14 +149,16 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckboxProps & React.Re
             onChange,
             checked,
             defaultChecked = false,
-            color,
+            color = Color.Primary,
             icon,
             checkedIcon,
+            indeterminateIcon,
             className = '',
             disabled = false,
             indeterminate = false,
             labelPlacement = Position.Right,
             name = '',
+            label = '',
             value = '',
             size = Size.Medium,
             id= getUniqueID('checkbox'),
@@ -165,18 +175,11 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckboxProps & React.Re
 
         const [isIndeterminate, setIsIndeterminate] = useState(indeterminate);
         const [isFocused, setIsFocused] = useState(false);
-        const [storedLabel, setStoredLabel] = useState<string>(props.label ?? '');
-        const [storedLabelPosition, setStoredLabelPosition] = useState<Position>(
-            labelPlacement ?? Position.Right
-        );
-
         const inputRef: React.RefObject<HTMLInputElement | null> = useRef<HTMLInputElement | null>(null);
         const wrapperRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement | null>(null);
         const rippleContainerRef: React.RefObject<HTMLSpanElement | null> = useRef<HTMLSpanElement | null>(null);
         const { dir, ripple } = useProviderContext();
         const { rippleMouseDown, Ripple} = useRippleEffect(ripple, {isCenterRipple: true});
-        const checkIcon: string = 'M23.8284 3.75L8.5 19.0784L0.17157 10.75L3 7.92157L8.5 13.4216L21 0.92157L23.8284 3.75Z';
-        const indeterminateIcon: string = 'M0.5 0.5H17.5V3.5H0.5V0.5Z';
 
         const publicAPI: Partial<ICheckbox> = {
             checked,
@@ -200,11 +203,6 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckboxProps & React.Re
         }, [checked, isControlled]);
 
         useEffect(() => {
-            setStoredLabel(props.label ?? '');
-            setStoredLabelPosition(labelPlacement ?? 'After');
-        }, [props.label, labelPlacement]);
-
-        useEffect(() => {
             preRender('checkbox');
         }, []);
 
@@ -215,7 +213,7 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckboxProps & React.Re
         const handleStateChange: React.ChangeEventHandler<HTMLInputElement> = useCallback(
             (event: React.ChangeEvent<HTMLInputElement>): void => {
                 const newChecked: boolean = event.target.checked;
-                setIsIndeterminate(false);
+                setIsIndeterminate(isIndeterminate);
                 setIsFocused(false);
                 if (!isControlled) {
                     setCheckedState(newChecked);
@@ -224,7 +222,7 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckboxProps & React.Re
                     onChange({ event, value: newChecked });
                 }
             },
-            [onChange, isControlled]
+            [onChange, isControlled, isIndeterminate]
         );
 
         const handleFocus: () => void = () => {
@@ -236,16 +234,17 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckboxProps & React.Re
         };
 
         const handleMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-            if (ripple && rippleContainerRef.current && rippleMouseDown) {
-                const syntheticEvent: React.MouseEvent<HTMLSpanElement, MouseEvent> = {
-                    ...e,
-                    currentTarget: rippleContainerRef.current,
-                    target: rippleContainerRef.current,
-                    preventDefault: e.preventDefault,
-                    stopPropagation: e.stopPropagation
-                } as React.MouseEvent<HTMLSpanElement>;
-                rippleMouseDown(syntheticEvent);
+            if (!ripple || !rippleContainerRef.current || !rippleMouseDown){
+                return;
             }
+            const syntheticEvent: React.MouseEvent<HTMLSpanElement, MouseEvent> = {
+                ...e,
+                currentTarget: rippleContainerRef.current,
+                target: rippleContainerRef.current,
+                preventDefault: e.preventDefault,
+                stopPropagation: e.stopPropagation
+            } as React.MouseEvent<HTMLSpanElement>;
+            rippleMouseDown(syntheticEvent);
         }, [ripple, rippleMouseDown]);
 
         const wrapperClass: string = [
@@ -258,41 +257,37 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckboxProps & React.Re
             size && size.toLowerCase() !== 'medium' ? `sf-${size.toLowerCase()}` : ''
         ].filter(Boolean).join(' ');
 
-        const renderRipple: () => JSX.Element = () => (
-            <span ref={rippleContainerRef} className={`sf-checkbox-ripple sf-checkbox-ripple-${size.toLowerCase().substring(0, 2)}  ${(storedLabelPosition === 'Top' || storedLabelPosition === 'Bottom') ? 'sf-checkbox-vertical' : 'sf-checkbox-horizontal'}`}>
+        const renderRipple: () => JSX.Element = useCallback(() => (
+            <span ref={rippleContainerRef} className={`sf-checkbox-ripple sf-checkbox-ripple-${size.toLowerCase().substring(0, 2)}  ${(labelPlacement === 'Top' || labelPlacement === 'Bottom') ? 'sf-checkbox-vertical' : 'sf-checkbox-horizontal'}`}>
                 {ripple && <Ripple />}
             </span>
-        );
+        ), [ripple, size, labelPlacement, rippleContainerRef]);
 
-        const labelFontSizeClass: string = size && size.toLowerCase() === 'small'
-            ? 'sf-font-size-12' : size && size.toLowerCase() === 'large' ? 'sf-font-size-16' : 'sf-font-size-14';
+        const sizeMap: Record<string, string> = {
+            small: 'sf-font-size-sm',
+            large: 'sf-font-size-base'
+        };
+        const labelFontSizeClass: string = size ? sizeMap[size.toLowerCase()] ?? 'sf-font-size-sm' : 'sf-font-size-sm';
 
         const renderIcons: () => JSX.Element = () => {
-            const sizeDimensions: any = {
-                Small: { width: '12', height: '12', viewBox: '0 0 26 20' },
-                Medium: { width: '12', height: '12', viewBox: '0 0 25 20' },
-                Large: { width: '16', height: '16', viewBox: '0 0 26 20' }
+            const getSizeDimensions: (size: Size) => number = (size: Size): number => {
+                const sizeMap: Record<Size, number> = {
+                    [Size.Small]: 12,
+                    [Size.Medium]: 14,
+                    [Size.Large]: 16
+                };
+                return sizeMap[size as Size] ?? 14;
             };
-            const dimensions: any = sizeDimensions[size as keyof typeof sizeDimensions] || sizeDimensions.Medium;
+            const dimensions: number = getSizeDimensions(size);
             return (
                 <span className={`sf-checkbox-icons ${FRAME}-${size.toLowerCase().substring(0, 2)} ${isIndeterminate ? INDETERMINATE : checkedState ? CHECK : ''}`}>
-                    {isIndeterminate && (
-                        <SvgIcon
-                            width={dimensions.width}
-                            height={dimensions.height}
-                            viewBox="0 0 20 2"
-                            d={indeterminateIcon}
-                            fill="currentColor"
-                        />
+                    {isIndeterminate && indeterminateIcon ? (
+                        indeterminateIcon
+                    ) : isIndeterminate && (
+                        <IntermediateBarIcon width={20} height={20} fill='currentColor' />
                     )}
                     {checkedState && !isIndeterminate && (
-                        <SvgIcon
-                            width={dimensions.width}
-                            height={dimensions.height}
-                            viewBox={dimensions.viewBox}
-                            d={checkIcon}
-                            fill="currentColor"
-                        />
+                        <CheckLargeIcon width={dimensions} height={dimensions} fill="currentColor" />
                     )}
                 </span>
             );
@@ -305,7 +300,7 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckboxProps & React.Re
                 aria-disabled={disabled ? 'true' : 'false'}
                 onMouseDown={handleMouseDown}
             >
-                <label className={`sf-checkbox-label sf-${storedLabelPosition.toLowerCase()}`}>
+                <label className={`sf-checkbox-label sf-${labelPlacement.toLowerCase()} sf-checkbox-${size.toLowerCase()}`}>
                     <input
                         ref={inputRef}
                         id={id}
@@ -320,8 +315,8 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckboxProps & React.Re
                         onChange={handleStateChange}
                         {...domProps}
                     />
-                    <span className={`${LABEL} ${labelFontSizeClass}`}>{storedLabel}</span>
-                    { renderRipple()}
+                    {label && (<span className={`${LABEL} ${labelFontSizeClass}`}>{label}</span>)}
+                    {ripple && renderRipple()}
                     {checkedState ? checkedIcon : icon}
                     {!checkedIcon && !icon && renderIcons()}
                 </label>
@@ -347,7 +342,6 @@ const createCSSCheckbox: (props: CSSCheckboxProps) => JSX.Element = (props: CSSC
         ...domProps
     } = props;
     const { dir, ripple } = useProviderContext();
-    const checkIcon: string = 'M23.8284 3.75L8.5 19.0784L0.17157 10.75L3 7.92157L8.5 13.4216L21 0.92157L23.8284 3.75Z';
     const rippleContainerRef: React.RefObject<HTMLSpanElement | null> = useRef<HTMLSpanElement | null>(null);
     const { rippleMouseDown, Ripple} = useRippleEffect(ripple, {isCenterRipple: true});
     const handleMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -364,12 +358,12 @@ const createCSSCheckbox: (props: CSSCheckboxProps) => JSX.Element = (props: CSSC
     }, [ripple, rippleMouseDown]);
     return (
         <div className={`sf-checkbox-wrapper ${className} ${(dir === 'rtl') ? 'sf-rtl' : ''}`} onMouseDown={handleMouseDown} {...domProps}>
-            {<span ref={rippleContainerRef} className={`sf-ripple-container ${checked ? 'sf-ripple-check' : ''}`}>
+            {<span ref={rippleContainerRef} className={`sf-ripple-container sf-checkbox-ripple sf-checkbox-ripple-me ${checked ? 'sf-ripple-check' : ''} sf-checkbox-horizontal`}>
                 {ripple && <Ripple />}
             </span>}
-            <span className={`sf-frame e-icons ${checked ? 'sf-check' : ''}`}>
+            <span className={`sf-checkbox-frame-me sf-checkbox-icons ${checked ? 'sf-checkbox-checked' : ''}`}>
                 {checked && (
-                    <SvgIcon width='12' height='12' viewBox='0 0 25 20' d={checkIcon} fill="currentColor"></SvgIcon>
+                    <CheckLargeIcon width={12} height={12} fill='currentColor'/>
                 )}
             </span>
             {label && (

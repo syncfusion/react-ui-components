@@ -1,0 +1,34 @@
+@use '../../../base/styles/themes/variables' as *;
+
+$toast-position-distance: $spacing-10 !default;
+$toast-bottom-gap: $spacing-10 !default;
+$toast-padding: $spacing-16 !default;
+$toast-margin: $spacing-0 $spacing-0 $toast-bottom-gap !default;
+$toast-action-btn-padding: $spacing-6 !default;
+$toast-action-btn-inline-margin: $spacing-10 !default;
+$toast-progressbar-height: $spacing-4 !default;
+$toast-content-padding: $spacing-8 $spacing-0 $spacing-2 $spacing-0 !default;
+$toast-border-radius: $radius-4 !default;
+$toast-font-size: $font-size-sm !default;
+$toast-title-font-size: $font-size-base !default;
+$toast-title-font-weight: $font-weight-medium !default;
+$toast-border: $radius-0 !default;
+$toast-box-shadow: $shadow-lg !default;
+
+$toast-icon-font-size: $font-size-xl !default;
+$toast-icon-inline-margin: $spacing-12 !default;
+$toast-icon-hover-border-radius: $radius-full !default;
+
+$toast-close-icon-padding: $spacing-6 !default;
+$toast-close-icon-font-size: $font-size-xl !default;
+$toast-close-icon-inline-margin: $spacing-6 !default;
+
+$toast-progress-color: rgb($primary) !default;
+$toast-bg-color: rgb($tooltip-bg-color) !default;
+$toast-font-color: rgb($content-bg-color) !default;
+$toast-close-icon-hover-bg-color: rgba($grey-white, .18) !default;
+
+$toast-success-bg-color: rgb($success) !default;
+$toast-info-bg-color: rgb($info-dark) !default;
+$toast-warning-bg-color: rgb($warning-dark) !default;
+$toast-danger-bg-color: rgb($error-dark) !default;

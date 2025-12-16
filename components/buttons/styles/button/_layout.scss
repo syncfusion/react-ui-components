@@ -1,11 +1,10 @@
-@import 'mixin.scss';
+@use 'theme-variables' as *;
 
 @include export-module('button-layout') {
 
   .sf-btn {
     border: $btn-border;
-    border-radius: $btn-border-radius;
-    letter-spacing: .15px;
+    letter-spacing: $btn-letter-spacing;
     cursor: pointer;
     position: relative;
     justify-content: center;
@@ -13,102 +12,88 @@
     text-align: center;
     user-select: none;
     white-space: nowrap;
-    font-weight: 500;
+    font-weight: $btn-font-weight;
 
     &.sf-btn-me {
       svg {
-        height: $btn-svg-size;
-        width: $btn-svg-size;
+        font-size: $btn-svg-font-size;
       }
     }
 
     &.sf-btn-la {
       svg {
-        height: $btn-large-svg-size;
-        width: $btn-large-svg-size;
+        font-size: $btn-large-svg-font-size;
       }
     }
 
     &.sf-btn-sm {
       svg {
-        height: $btn-small-svg-size;
-        width: $btn-small-svg-size;
+        font-size: $btn-small-svg-font-size;
       }
     }
   }
 
-  /* Top Bottom positioning */
   .sf-btn-vertical {
     flex-direction: column;
-    padding: 8px 16px;
+    padding: $btn-vertical-padding;
   }
 
   .sf-btn-la:not(.sf-icon-btn) {
-    gap: 12px;
+    gap: $btn-large-text-gap;
   }
 
   .sf-btn-sm:not(.sf-icon-btn) {
-    gap: 8px;
+    gap: $btn-small-text-gap;
   }
 
   .sf-btn-me:not(.sf-icon-btn) {
-    gap: 10px;
+    gap: $btn-medium-text-gap;
   }
 
   .sf-btn-la:not(.sf-icon-btn):not(.sf-btn-vertical) {
-    padding: 0 32px;
+    padding: $btn-large-horizontal-padding;
   }
 
   .sf-btn-sm:not(.sf-icon-btn):not(.sf-btn-vertical) {
-    padding: 0 16px;
+    padding: $btn-small-horizontal-padding;
   }
 
   .sf-btn-me:not(.sf-icon-btn):not(.sf-btn-vertical) {
-    padding: 0 24px;
-  }
-
-  .sf-round {
-    border-radius: $btn-round-border-radius;
+    padding: $btn-medium-horizontal-padding;
   }
   
-  /* Button SVG */
   .sf-btn svg {
     display: block;
-    vertical-align: middle;
   }
   
-  /* Button hover/focus */
   .sf-btn:hover, .sf-btn:focus {
     text-decoration: none;
   }
   
-  /* Icon-only button sizes */
   .sf-icon-btn.sf-icon-btn-sm {
-    width: 32px;
+    padding: $btn-small-icon-padding;
   }
   
   .sf-icon-btn.sf-icon-btn-me {
-    width: 40px;
+    padding: $btn-medium-icon-padding;
   }
   
   .sf-icon-btn.sf-icon-btn-la {
-    width: 48px;
+    padding: $btn-large-icon-padding;
   }
   
-  /* Button sizes */
   .sf-btn-sm:not(.sf-btn-vertical) {
-    height: 32px;
+    line-height: $btn-small-line-height;
   }
   
   .sf-btn-me:not(.sf-btn-vertical) {
-    height: 40px;
+    line-height: $btn-medium-line-height;
   }
 
   .sf-btn-la:not(.sf-btn-vertical) {
-    height: 48px;
+    line-height: $btn-large-line-height;
   }
   
-  /* RTL Support - Top/Bottom */
   .sf-rtl.sf-btn-top {
     flex-direction: column-reverse;
   }

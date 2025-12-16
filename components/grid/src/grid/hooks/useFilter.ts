@@ -1,5 +1,5 @@
 import { useCallback, RefObject, useEffect, useState } from 'react';
-import { FilterEvent, FilterSettings, FilterPredicates, filterModule, FilterProperties, IFilterOperator } from '../types/filter.interfaces';
+import { FilterEvent, FilterSettings, FilterPredicates, filterModule, FilterProperties, IFilterOperator, CustomOperators } from '../types/filter.interfaces';
 import { ActionType, IValueFormatter, ValueType } from '../types';
 import { GridRef } from '../types/grid.interfaces';
 import { IColumnBase, ColumnProps } from '../types/column.interfaces';
@@ -52,9 +52,75 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
 
 
     const filterOperators: IFilterOperator = {
-        contains: 'contains', endsWith: 'endswith', equal: 'equal', greaterThan: 'greaterthan', greaterThanOrEqual: 'greaterthanorequal',
-        lessThan: 'lessthan', lessThanOrEqual: 'lessthanorequal', notEqual: 'notequal', startsWith: 'startswith', wildCard: 'wildcard',
+        contains: 'contains', endsWith: 'endsWith', equal: 'equal', greaterThan: 'greaterThan', greaterThanOrEqual: 'greaterThanOrEqual',
+        lessThan: 'lessThan', lessThanOrEqual: 'lessThanOrEqual', notEqual: 'notEqual', startsWith: 'startsWith', wildCard: 'wildcard',
         isNull: 'isNull', isNotNull: 'isNotNull', like: 'like'
+    };
+
+    const numOptr: { value: string; text: string }[] = [
+        { value: 'equal', text: localization?.getConstant('equal') },
+        { value: 'greaterThan', text: localization?.getConstant('greaterThan') },
+        { value: 'greaterThanOrEqual', text: localization?.getConstant('greaterThanOrEqual') },
+        { value: 'lessThan', text: localization?.getConstant('lessThan') },
+        { value: 'lessThanOrEqual', text: localization?.getConstant('lessThanOrEqual') },
+        { value: 'notEqual', text: localization?.getConstant('notEqual') },
+        { value: 'isNull', text: localization?.getConstant('isNull') },
+        { value: 'isNotNull', text: localization?.getConstant('isNotNull') }
+    ];
+    const customOperators: CustomOperators = {
+        stringOperator: [
+            { value: 'startsWith', text: localization?.getConstant('startsWith') },
+            { value: 'endsWith', text: localization?.getConstant('endsWith') },
+            { value: 'contains', text: localization?.getConstant('contains') },
+            { value: 'equal', text: localization?.getConstant('equal') },
+            { value: 'isEmpty', text: localization?.getConstant('isEmpty') },
+            { value: 'doesNotStartWith', text: localization?.getConstant('doesNotStartWith') },
+            { value: 'doesNotEndWith', text: localization?.getConstant('doesNotEndWith') },
+            { value: 'doesNotContain', text: localization?.getConstant('doesNotContain') },
+            { value: 'notEqual', text: localization?.getConstant('notEqual') },
+            { value: 'isNotEmpty', text: localization?.getConstant('isNotEmpty') },
+            { value: 'like', text: localization?.getConstant('like') }
+        ],
+
+        numberOperator: numOptr,
+
+        dateOperator: [
+            { value: 'equal', text: localization?.getConstant('equal') },
+            { value: 'greaterThan', text: localization?.getConstant('greaterThan') },
+            { value: 'greaterThanOrEqual', text: localization?.getConstant('greaterThanOrEqual') },
+            { value: 'lessThan', text: localization?.getConstant('lessThan') },
+            { value: 'lessThanOrEqual', text: localization?.getConstant('lessThanOrEqual') },
+            { value: 'notEqual', text: localization?.getConstant('notEqual') },
+            { value: 'isNull', text: localization?.getConstant('isNull') },
+            { value: 'isNotNull', text: localization?.getConstant('isNotNull') }
+        ],
+
+        datetimeOperator: [
+            { value: 'equal', text: localization?.getConstant('equal') },
+            { value: 'greaterThan', text: localization?.getConstant('greaterThan') },
+            { value: 'greaterThanOrEqual', text: localization?.getConstant('greaterThanOrEqual') },
+            { value: 'lessThan', text: localization?.getConstant('lessThan') },
+            { value: 'lessThanOrEqual', text: localization?.getConstant('lessThanOrEqual') },
+            { value: 'notEqual', text: localization?.getConstant('notEqual') },
+            { value: 'isNull', text: localization?.getConstant('isNull') },
+            { value: 'isNotNull', text: localization?.getConstant('isNotNull') }
+        ],
+
+        dateonlyOperator: [
+            { value: 'equal', text: localization?.getConstant('equal') },
+            { value: 'greaterThan', text: localization?.getConstant('greaterThan') },
+            { value: 'greaterThanOrEqual', text: localization?.getConstant('greaterThanOrEqual') },
+            { value: 'lessThan', text: localization?.getConstant('lessThan') },
+            { value: 'lessThanOrEqual', text: localization?.getConstant('lessThanOrEqual') },
+            { value: 'notEqual', text: localization?.getConstant('notEqual') },
+            { value: 'isNull', text: localization?.getConstant('isNull') },
+            { value: 'isNotNull', text: localization?.getConstant('isNotNull') }
+        ],
+
+        booleanOperator: [
+            { value: 'equal', text: localization?.getConstant('equal') },
+            { value: 'notEqual', text: localization?.getConstant('notEqual') }
+        ]
     };
 
     /**
@@ -63,6 +129,16 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
     useEffect(() => {
         setFilterSettings(filterSetting);
     }, [filterSetting]);
+
+    /**
+     * update filterSettings for column uid
+     */
+    useEffect(() => {
+        const columns: FilterPredicates[] = gridRef.current?.filterSettings.columns;
+        for (const column of columns) {
+            column.uid = gridRef.current?.getColumnByField(column.field).uid;
+        }
+    }, [filterSettings]);
 
     /**
      * Initialize Filter Column when filterSetting column changes
@@ -86,22 +162,30 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
     /**
      * Handle grid-level key-press event
      */
-    const mouseDownHandler: (e: React.MouseEvent) => void  = useCallback((e: React.MouseEvent): void => {
+    const mouseDownHandler: (e: React.MouseEvent) => void = useCallback((e: React.MouseEvent): void => {
         const target: Element = e.target as Element;
-        if (filterSettings?.enabled && filterSettings?.type === 'FilterBar' &&
-            target.closest('th') && target.closest('th').classList.contains('sf-cell') &&
-            (target.classList.contains('sf-clear-icon') || target.closest('.sf-clear-icon'))) {
-            const targetText: HTMLInputElement = target.classList.contains('sf-clear-icon') ?
-                target.previousElementSibling as  HTMLInputElement :
-                target.closest('.sf-clear-icon').previousElementSibling as  HTMLInputElement;
-            removeFilteredColsByField((targetText.classList.contains('sf-datepicker') ? targetText.parentElement : targetText).id.slice(0, -14)); //Length of _filterBarcell = 14
+        if (filterSettings?.enabled && filterSettings?.type === 'FilterBar') {
+            if (target.closest('th') && target.closest('th').classList.contains('sf-cell') &&
+                (target.classList.contains('sf-clear-icon') || target.closest('.sf-clear-icon'))) {
+                const targetText: HTMLInputElement = target.classList.contains('sf-clear-icon') ?
+                    target.previousElementSibling as HTMLInputElement : filterSettings?.enableFilterBarOperator ?
+                        target.closest('.sf-clear-icon').previousElementSibling.previousElementSibling as HTMLInputElement :
+                        target.closest('.sf-clear-icon').previousElementSibling as HTMLInputElement;
+                removeFilteredColsByField((targetText.classList.contains('sf-datepicker') ? targetText.parentElement : targetText).id.slice(0, -14)); //Length of _filterBarcell = 14
+            }
+            if (filterSettings?.enableFilterBarOperator && (e.target as HTMLElement).classList.contains('sf-list-item')) {
+                const inputId: string = document.querySelector('.sf-popup-open').getAttribute('id').replace('_popup', '');
+                if (inputId.indexOf('grid-column') !== -1) {
+                    (closest(document.getElementById(inputId), 'div').querySelector('.sf-filter-text') as HTMLElement).focus();
+                }
+            }
         }
     }, [filterSettings, getFilterProperties]);
 
     /**
      * Handle grid-level key-press event
      */
-    const keyUpHandler: (event: React.KeyboardEvent) => void  = useCallback((event: React.KeyboardEvent): void => {
+    const keyUpHandler: (event: React.KeyboardEvent) => void = useCallback((event: React.KeyboardEvent): void => {
         const target: HTMLInputElement = event.target as HTMLInputElement;
         if (target && matches(target, '.sf-filter-row input')) {
             const closeHeaderEle: Element = closest(target, '.sf-filter-row th.sf-cell');
@@ -110,6 +194,11 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
                 getFilterProperties.value = target.value.trim();
                 processFilter(event, target);
             }
+        }
+        if ((target.classList.contains('sf-filterbar-dropdown') &&  event.keyCode === 27) || (document.querySelector('.sf-popup-open.sf-filterbar-dropdown')
+            && (event.keyCode === 13 ))) {
+            const inputTarget: Element = closest(event.target as HTMLElement, '.sf-grid-filterbar');
+            inputTarget.querySelector('input').focus();
         }
     }, [filterSettings, getFilterProperties]);
 
@@ -342,7 +431,7 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
         }
         if (getFilterProperties.operator === filterOperators.lessThan || getFilterProperties.operator === filterOperators.greaterThan) {
             if ((getFilterProperties.value as string).charAt(0) === '=') {
-                getFilterProperties.operator = getFilterProperties.operator + 'orequal';
+                getFilterProperties.operator = getFilterProperties.operator + 'OrEqual';
                 getFilterProperties.value = (getFilterProperties.value as string).substring(1);
             }
         }
@@ -393,6 +482,10 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
                   predicate: string, caseSensitive: boolean, ignoreAccent: boolean): void => {
         getFilterProperties.column = gridRef.current.getColumns().find((col: ColumnProps) => col.field === fieldName);
         let filterCell: HTMLInputElement;
+        if (gridRef.current.filterSettings?.type === 'FilterBar' && gridRef.current.filterSettings?.enableFilterBarOperator
+            && isNullOrUndefined(getFilterProperties.column.filterTemplate)) {
+            operator = gridRef.current.getColumnByField(fieldName).filter?.operator || 'equal';
+        }
         if (operator === 'like' && filterValue && (filterValue as string).indexOf('%') === -1) {
             filterValue = '%' + filterValue + '%';
         }
@@ -503,7 +596,7 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
             gridRef.current.dataSource as DataManager).adaptor).getModuleName ? (<{ getModuleName?: Function }>(
                 gridRef.current.dataSource as DataManager).adaptor).getModuleName() : undefined;
         for (let i: number = 0, len: number = arrayVal.length; i < len; i++) {
-            const isMenuNotEqual: boolean = getFilterProperties.operator === 'notequal';
+            const isMenuNotEqual: boolean = getFilterProperties.operator === 'notEqual';
             currentFilterPredicate = {
                 field: getFilterProperties.fieldName, uid: column.uid, isForeignKey: false, operator: getFilterProperties.operator,
                 value: arrayVal[parseInt(i.toString(), 10)], predicate: getFilterProperties.predicate,
@@ -518,11 +611,11 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
             }
             if ((prevFilterObject && (isNullOrUndefined(prevFilterObject.value)
                 || prevFilterObject.value === '') && (prevFilterObject.operator === 'equal'
-                || prevFilterObject.operator === 'notequal')) && (moduleName !== 'ODataAdaptor' && moduleName !== 'ODataV4Adaptor')) {
+                || prevFilterObject.operator === 'notEqual')) && (moduleName !== 'ODataAdaptor' && moduleName !== 'ODataV4Adaptor')) {
                 handleExistingFilterCleanup(getFilterProperties.fieldName, filterCol);
             }
             if (isNullOrUndefined(getFilterProperties.value) && (getFilterProperties.operator === 'equal' ||
-                getFilterProperties.operator === 'notequal') && (moduleName !== 'ODataAdaptor' && moduleName !== 'ODataV4Adaptor')) {
+                getFilterProperties.operator === 'notEqual') && (moduleName !== 'ODataAdaptor' && moduleName !== 'ODataV4Adaptor')) {
                 handleExistingFilterCleanup(getFilterProperties.fieldName, filterCol);
                 if (column.type === 'string') {
                     filterCol.push({
@@ -573,7 +666,7 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
     const handleExistingFilterCleanup: (field: string, filterCol: FilterPredicates[]) => void = (
         field: string, filterCol: FilterPredicates[]): void => {
         for (let i: number = 0; i < filterCol.length; i++) {
-            if (filterCol[`${i}`].field === field && (filterCol[`${i}`].operator === 'equal' || filterCol[`${i}`].operator === 'notequal')
+            if (filterCol[`${i}`].field === field && (filterCol[`${i}`].operator === 'equal' || filterCol[`${i}`].operator === 'notEqual')
                 && isNullOrUndefined(filterCol[`${i}`].value)) {
                 filterCol.splice(i, 1);
                 i = i - 1;
@@ -742,6 +835,8 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
         keyUpHandler,
         mouseDownHandler,
         filterSettings,
-        setFilterSettings
+        setFilterSettings,
+        customOperators,
+        getFilterProperties
     };
 };

@@ -1,3 +1,5 @@
+@use 'theme-variables' as *;
+
 @mixin dropdown-separator() {
   border-bottom-style: $drop-down-btn-li-border-style;
   border-bottom-width: $drop-down-btn-li-border-width;

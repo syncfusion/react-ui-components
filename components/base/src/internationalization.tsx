@@ -26,11 +26,9 @@ export interface DateFormatOptions {
      */
     calendar?: string;
     /**
-     * Enable server side date formating.
-     */
-    isServerRendered?: boolean;
-    /**
      * Determines the locale of the date formatting.
+     *
+     * @private
      */
     locale?: string
 }
@@ -69,6 +67,8 @@ export interface NumberFormatOptions {
     skeleton?: string;
     /**
      * Specifies the currency code to be used for formatting.
+     *
+     * @private
      */
     currency?: string | null;
     /**
@@ -85,6 +85,8 @@ export interface NumberFormatOptions {
     altSymbol?: string;
     /**
      * Determines the locale of the number formatting.
+     *
+     * @private
      */
     locale?: string
 }
@@ -102,14 +104,14 @@ export const cldrData: Object = {};
  *
  * @private
  */
-export let defaultCulture: string = 'en-US';
+export const defaultCulture: string = 'en-US';
 
 /**
  * Specifies default currency code to be considered
  *
  * @private
  */
-export let defaultCurrencyCode: string = 'USD';
+export const defaultCurrencyCode: string = 'USD';
 
 const mapper: string[] = ['numericObject', 'dateObject'];
 
@@ -131,7 +133,8 @@ export function getDateFormat(props?: DateFormatOptions): Function {
  */
 export function getNumberFormat(props?: NumberFormatOptions): Function {
     if (props && !props.currency) {
-        props.currency = defaultCurrencyCode;
+        const locale: string = props.locale || defaultCulture;
+        props.currency = getLocaleCurrencyCode(locale) || defaultCurrencyCode;
     }
     return NumberFormat.numberFormatter(props?.locale || defaultCulture, props || {}, cldrData);
 }
@@ -233,27 +236,6 @@ export function getNumberPattern(option: NumberFormatOptions, isExcel?: boolean)
 export function getFirstDayOfWeek(culture: string): number {
     return IntlBase.getWeekData(culture, cldrData);
 }
-/**
- * Set the default culture to all components
- *
- * @private
- * @param {string} cultureName - Specifies the culture name to be set as default culture.
- * @returns {void}
- */
-export function setCulture(cultureName: string): void {
-    defaultCulture = cultureName;
-}
-
-/**
- * Set the default currency code to all components
- *
- * @private
- * @param {string} currencyCode - Specifies the currency code to be set as default currency.
- * @returns {void}
- */
-export function setCurrencyCode(currencyCode: string): void {
-    defaultCurrencyCode = currencyCode;
-}
 
 /**
  * Load the CLDR data into context
@@ -307,4 +289,129 @@ export function getNumberDependable(locale: string, currency: string): string {
  */
 export function getDefaultDateObject(mode?: string): Object {
     return IntlBase.getDependables(cldrData, '', mode, false)[mapper[1]];
+}
+
+
+/**
+ * Describes metadata for a currency within CLDR currencyData.
+ * Keys like _tender, _from, and _to are string-encoded flags/dates.
+ *
+ */
+interface CldrCurrencyDetails {
+    _tender?: string;
+    _from?: string;
+    _to?: string;
+}
+
+/**
+ * A single currency entry mapping a currency code to its details.
+ *
+ */
+interface CldrCurrencyEntry {
+    [currencyCode: string]: CldrCurrencyDetails;
+}
+
+/**
+ * Minimal shape of the CLDR supplemental data required for currency and locale resolution.
+ *
+ * - likelySubtags helps derive full locales (and therefore regions) from partial tags.
+ * - currencyData.region maps a region code to an ordered list of currency entries with validity windows.
+ *
+ */
+interface CldrSupplemental {
+    supplemental: {
+        currencyData: {
+            region: Record<string, CldrCurrencyEntry[]>;
+        };
+        likelySubtags: Record<string, string>;
+    };
+}
+
+/**
+ * Returns the default currency code for a given locale using loaded CLDR data.
+ *
+ * @private
+ * @param {string} locale - The locale string used to determine the region.
+ * @returns {string | null} - The default currency code (e.g., 'USD', 'EUR') or null if not found.
+ */
+export function getLocaleCurrencyCode(locale: string): string | null {
+    const defaultCulture: string = 'en-US';
+    const targetLocale: string = locale || defaultCulture;
+    // Extract region code from locale (e.g., 'IN' from 'en-IN')
+    const regionCode: string = getLocaleRegionCode(targetLocale, cldrData as CldrSupplemental);
+    const regionPath: string = `supplemental.currencyData.region.${regionCode}`;
+    const entries: unknown = getValue(regionPath, cldrData) || [];
+    const currencyEntries: CldrCurrencyEntry[] = Array.isArray(entries) ? entries : [];
+    if (currencyEntries.length === 0) {
+        return null;
+    }
+    const currentDate: Date = new Date();
+    // Filter for tender currencies (not historical/non-tender)
+    const tenderEntries: CldrCurrencyEntry[] = currencyEntries.filter((entry: CldrCurrencyEntry) => {
+        const currencyCode: string | undefined = Object.keys(entry)[0];
+        if (!currencyCode) { return false; }
+        const details: CldrCurrencyDetails = (Object.values(entry) as CldrCurrencyDetails[])[0];
+        return details && details._tender !== 'false';
+    });
+    // Find a currency that is currently valid (based on _from and _to dates)
+    const activeEntry: CldrCurrencyEntry | undefined = tenderEntries.find((entry: CldrCurrencyEntry) => {
+        const currencyCode: string | undefined = Object.keys(entry)[0];
+        if (!currencyCode) { return false; }
+        const details: CldrCurrencyDetails = (Object.values(entry) as CldrCurrencyDetails[])[0];
+        const fromDateOk: boolean = !details._from || new Date(details._from) <= currentDate;
+        const toDateOk: boolean = !details._to || currentDate <= new Date(details._to);
+        return fromDateOk && toDateOk;
+    });
+    if (activeEntry) {
+        const activeCurrencyCode: string | undefined = Object.keys(activeEntry)[0];
+        return activeCurrencyCode || null;
+    }
+    // If no active currency, return the most recent tender one by _from date
+    if (tenderEntries.length === 0) {
+        return null;
+    }
+    const mostRecentEntry: CldrCurrencyEntry = tenderEntries
+        .slice()
+        .sort((entryA: CldrCurrencyEntry, entryB: CldrCurrencyEntry) => {
+            const [[currencyCodeA, detailsA]] = Object.entries(entryA) as [[string, CldrCurrencyDetails]];
+            const [[currencyCodeB, detailsB]] = Object.entries(entryB) as [[string, CldrCurrencyDetails]];
+            if (!currencyCodeA || !detailsA || !currencyCodeB || !detailsB) {
+                return 0;
+            }
+            const startDateA: string = detailsA._from || '0001-01-01';
+            const startDateB: string = detailsB._from || '0001-01-01';
+            return new Date(startDateB).getTime() - new Date(startDateA).getTime();
+        })[0];
+    const mostRecentCurrencyCode: string | undefined = Object.keys(mostRecentEntry)[0];
+    return mostRecentCurrencyCode || null;
+}
+
+/**
+ * Attempts to derive the region (territory) from a locale string.
+ *
+ * @private
+ * @param {string} locale - The locale string (e.g., 'en-US', 'fr_FR') from which to extract the region.
+ * @param {Object} [cldrData] - Optional CLDR data object containing supplemental likelySubtags.
+ * @returns {string | null} - The region code (e.g., 'US', 'FR') or null if it cannot be determined.
+ *
+ */
+export function getLocaleRegionCode(locale: string, cldrData: CldrSupplemental): string | null {
+    if (!locale) { return null; }
+    // Normalize locale: replace underscores with hyphens and lowercase
+    const normalizedLocale: string = locale.replace(/_/g, '-').toLowerCase();
+    // Retrieve likely subtags from CLDR; fallback to normalized if missing
+    const likelySubtags: Record<string, string> = cldrData?.supplemental?.likelySubtags || {};
+    const likelySubtagsMap: Map<string, string> = new Map<string, string>(Object.entries(likelySubtags));
+    const maximizedLocale: string = likelySubtagsMap.get(normalizedLocale) || normalizedLocale;
+    // Use Intl.Locale if available (modern environments)
+    if (typeof Intl.Locale === 'function') {
+        const localeObj: Intl.Locale = new Intl.Locale(maximizedLocale);
+        if (localeObj.region) {
+            return localeObj.region.toUpperCase();
+        }
+    }
+    // Fallback regex to extract region (e.g., 2-letter code like 'US' or 3-digit numeric)
+    const regionRegex: RegExp = /(?:^|[-_])([A-Z]{2}|\d{3})(?:$|[-_])/i;
+    const match: RegExpMatchArray | null = maximizedLocale.match(regionRegex);
+    return match ? match[1].toUpperCase() : null;
 }

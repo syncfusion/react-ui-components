@@ -1,10 +1,12 @@
+@use 'theme-variables' as *;
+
 @include export-module('contextmenu-layout') {
 
   .sf-contextmenu {
 
     .sf-menu-parent {
       list-style: none;
-      margin: 0;
+      margin: $context-menu-ul-margin;
       overflow-x: hidden;
       user-select: none;
       padding: $context-menu-ul-padding;
@@ -21,9 +23,9 @@
     .sf-menu-item {
       cursor: pointer;
       position: relative;
-      height: $context-menu-li-height;
+      line-height: $context-menu-li-line-height;
       padding: $context-menu-li-padding;
-      gap: 12px;
+      gap: $context-menu-li--items-gap;
     }
 
     .sf-menu-url {
@@ -40,7 +42,7 @@
       pointer-events: none;
       height: auto;
       margin: $context-menu-li-separator-padding;
-      padding: 0;
+      padding: $context-menu-li-separator-margin;
     }
 
     .sf-blank-icon {
@@ -56,10 +58,13 @@
       pointer-events: none;
     }
 
-    .sf-submenu-icon svg,
     .sf-menu-icon,
     .sf-menu-icon svg {
       font-size: $context-menu-icon-font-size;
+    }
+
+    .sf-submenu-icon svg {
+      font-size: $context-menu-submenu-icon-font-size;
     }
   }
 }

@@ -89,20 +89,33 @@ const StackingBarSeriesRenderer: StackingBarSeriesRendererType = {
                 }
             }
 
-            // Replace the existing if-else block with this ternary operator
             startvalue = series.index > 0 && index !== undefined
                 ? series.chart.visibleSeries[index as number]?.stackedValues?.endValues?.[point.index]
                 : series.stackedValues?.startValues?.[point.index];
         }
 
-        // Calculate rectangle coordinates with null safety
-        const endValue: number | undefined = (!series.visible && series.isLegendClicked)
-            ? startvalue
-            : (stackedValue.endValues?.[point.index] ?? 0);
+        let legendFallbackStart: number | undefined;
+        let legendFallbackEnd: number | undefined;
 
-        const startValueForRect: number | undefined = (!series.visible && series.isLegendClicked)
-            ? startvalue
-            : (stackedValue.startValues?.[point.index] ?? 0);
+        // Apply legend fallback only for StackingBar100 series
+        if (series.type === 'StackingBar100' && !series.visible && series.isLegendClicked) {
+            const prevVisibleSeries : SeriesProperties| undefined = [...series.chart.visibleSeries]
+                .reverse()
+                .find((s: SeriesProperties) => s.index < series.index && s.visible && s.stackedValues?.endValues);
+
+            legendFallbackStart = legendFallbackEnd = prevVisibleSeries?.stackedValues?.endValues?.[point.index] ?? 0;
+        }
+
+        //  Use existing logic — with fallback override only if available
+        const endValue: number | undefined = legendFallbackEnd ??
+            ((!series.visible && series.isLegendClicked)
+                ? startvalue
+                : (stackedValue.endValues?.[point.index] ?? 0));
+
+        const startValueForRect: number | undefined = legendFallbackStart ??
+            ((!series.visible && series.isLegendClicked)
+                ? startvalue
+                : (stackedValue.startValues?.[point.index] ?? 0));
 
         const rect: Rect = columnBaseInstance.getRectangle(
             Number(point.xValue) + sideBySideInfo.start,
@@ -124,7 +137,6 @@ const StackingBarSeriesRenderer: StackingBarSeriesRendererType = {
             rect.y = series.chart.iSTransPosed ? rect.y : rect.y - (series.columnWidthInPixel / 2);
         }
 
-        // Trigger point render event
         const argsData: PointRenderingEvent = columnBaseInstance.triggerEvent(
             series,
             point,
@@ -134,7 +146,7 @@ const StackingBarSeriesRenderer: StackingBarSeriesRendererType = {
                 color: series.border?.color ?? 'transparent'
             }
         );
-        // Update symbol location and draw rectangle
+
         columnBaseInstance.updateSymbolLocation(point, {
             x: rect.x,
             y: rect.y,

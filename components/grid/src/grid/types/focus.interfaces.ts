@@ -1,4 +1,4 @@
-import { MouseEvent, KeyboardEvent } from 'react';
+import { MouseEvent, KeyboardEvent, RefObject } from 'react';
 import { IRow } from '../types';
 import { ColumnProps } from '../types/column.interfaces';
 import { useFocusStrategy } from '../hooks';
@@ -365,6 +365,15 @@ export interface FocusStrategyResult {
     getFocusedCell: () => FocusedCellInfo;
 
     /**
+     * A React RefObject holding the current focused cell information in the Data Grid.
+     * Provides persistent access to the focused cell state across component re-renders.
+     * Enables imperative focus management by storing the FocusedCellInfo with detailed cell context.
+     *
+     * @default {}
+     */
+    focusedCell: RefObject<FocusedCellInfo>;
+
+    /**
      * Indicates whether the grid currently has focus.
      * When true, signifies that the grid or one of its elements is actively focused; when false, indicates no focus.
      * Used to track the grid’s focus state for navigation or interaction handling.
@@ -444,9 +453,10 @@ export interface FocusStrategyResult {
      * Used for programmatic focus changes or user-driven navigation.
      *
      * @param {KeyboardEvent} e - Optional. The keyboard event that triggered focus.
+     * @param {React.FocusEvent} focus - Optional. The focus event that triggered focus.
      * @returns {void}
      */
-    focus: (e?: KeyboardEvent) => void;
+    focus: (e?: KeyboardEvent, focus?: React.FocusEvent) => void;
 
     /**
      * Removes focus from the grid.
@@ -601,6 +611,36 @@ export interface FocusStrategyResult {
      * @returns {string} The navigation direction string.
      */
     getNavigationDirection: (event: KeyboardEvent) => string;
+
+    /**
+     * Checks if keyboard navigation should occur within command items in a command column cell.
+     * Validates that the event is triggered within a command cell and involves navigation keys.
+     * Returns true if the next command item should be focused, false otherwise.
+     *
+     * @param {KeyboardEvent} e - The keyboard event from arrow keys, Tab, or Shift+Tab
+     * @returns {boolean} True if navigation should occur within command items, false otherwise
+     */
+    isNextCommandItem: (e: KeyboardEvent) => boolean;
+
+    /**
+     * Retrieves all command item buttons from a command cell element.
+     * Queries the command cell container for all focusable button elements.
+     * Returns an array of button elements that can be navigated using arrow keys.
+     *
+     * @param {HTMLElement} element - The command cell element containing command buttons
+     * @returns {HTMLElement[]} Array of button elements found in the command cell
+     */
+    getCommandItems: (element: HTMLElement) => HTMLElement[];
+
+    /**
+     * Handles Tab navigation exit from inline edit rows back to the data grid.
+     * Manages focus transition when tabbing out of edit/add rows to adjacent data rows or matrix sections.
+     * Supports boundary navigation between Header, Content, and Aggregate matrices.
+     *
+     * @param {KeyboardEvent} e - Keyboard event (typically Tab or Shift+Tab for navigation)
+     * @returns {void}
+     */
+    editToRow: (e: KeyboardEvent) => void;
 
     /**
      * Retrieves the indexes of the previously focused cell.

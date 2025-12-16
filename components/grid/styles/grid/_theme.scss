@@ -1,3 +1,6 @@
+@use 'mixin' as *;
+@use 'theme-variables' as *;
+
 @include export-module('grid-theme') {
 
   .sf-grid {
@@ -18,8 +21,8 @@
     background-color: $grid-row-bg-color;
   }
 
-  .sf-grid-table {
-    background-color: $grid-header-bg-color;
+  .sf-grid-filterbar .sf-input-group.sf-outline .sf-label-top {
+    background: $grid-header-bg-color;
   }
 
   .sf-grid-header-container {

@@ -1,0 +1,27 @@
+@use '../../../base/styles/themes/variables' as *;
+
+// layout variables
+$split-btn-zindex: 2 !default;
+$split-btn-border-radius: $radius-20 !default;
+$split-btn-topleft-border-radius: $radius-4 !default;
+$split-btn-sm-border-radius: $radius-16 !default;
+$split-btn-la-border-radius: $radius-24 !default;
+$split-btn-gap: $spacing-2 !default;
+$split-btn-focus-outline-offset: 0 !default;
+$split-btn-active-box-shadow: none !default;
+
+// layout variables for .sf-split-btn
+$split-btn-font-size: $font-size-sm !default;
+$split-btn-padding: $spacing-16 $spacing-12 !default;
+$split-btn-padding-block: $spacing-10 !default;
+$split-btn-sm-font-size: $font-size-xs !default;
+$split-btn-sm-padding: $spacing-12 $spacing-10 !default;
+$split-btn-la-font-size: $font-size-base !default;
+$split-btn-la-padding: $spacing-20 $spacing-16 !default;
+
+// Layout variables for .sf-dropdown-btn
+$split-btn-sm-active-border-radius: $radius-16 !default;
+$split-btn-la-active-border-radius: $radius-24 !default;
+$split-btn-dropdown-padding-sm: $spacing-10 $spacing-12 !default;
+$split-btn-dropdown-padding-me: $spacing-12 $spacing-14 !default;
+$split-btn-dropdown-padding-la: $spacing-12 $spacing-14 !default;

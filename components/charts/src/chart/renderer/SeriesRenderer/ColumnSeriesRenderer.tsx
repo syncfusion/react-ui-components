@@ -9,8 +9,9 @@ const columnBaseInstance: ColumnBaseReturnType = ColumnBase();
 
 /**
  * Animation state interface for column series animations
+ * @private
  */
-interface AnimationState {
+export interface AnimationState {
     previousPathLengthRef: React.RefObject<number[]>;
     isInitialRenderRef: React.RefObject<boolean[]>;
     renderedPathDRef: React.RefObject<string[]>;
@@ -21,8 +22,9 @@ interface AnimationState {
 
 /**
  * Result interface for animation operations
+ * @private
  */
-interface AnimationResult {
+export interface AnimationResult {
     strokeDasharray: string;
     strokeDashoffset: number;
     interpolatedD: string | undefined;

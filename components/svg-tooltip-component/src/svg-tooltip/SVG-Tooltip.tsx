@@ -37,7 +37,7 @@ const defaultProps: Partial<TooltipProps> = {
     marginX: 5,
     marginY: 5,
     arrowPadding: 7,
-    theme: 'Material3',
+    theme: 'Material',
     areaBounds: { x: 0, y: 0, width: 0, height: 0 },
     isCanvas: false,
     isTextWrap: false,
@@ -147,7 +147,7 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
 
     // Still need separate state for theme as it's used in other calculations
     const [themeStyle, setThemeStyle] = useState<ITooltipThemeStyle>(
-        getTooltipThemeColor(mergedProps.theme || 'Material3')
+        getTooltipThemeColor(mergedProps.theme || 'Material')
     );
 
     // Use refs for values that don't trigger re-renders
@@ -267,7 +267,7 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
 
     // Initialize theme when component mounts
     useEffect(() => {
-        setThemeStyle(getTooltipThemeColor(mergedProps.theme || 'Material3'));
+        setThemeStyle(getTooltipThemeColor(mergedProps.theme || 'Material'));
     }, [mergedProps.theme]);
 
     // Process tooltip text - memoized to prevent excessive calls
@@ -799,7 +799,7 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
                     mergedProps.palette?.[count as number] || '#000000',
                     1,
                     isStrokedShape ? mergedProps.palette?.[count as number] || '#000000'
-                        : mergedProps.theme === 'Material3' ? '#cccccc' : '#ffffff',
+                        : mergedProps.theme === 'Material' ? '#cccccc' : '#ffffff',
                     1,
                     null
                 );
@@ -1346,7 +1346,7 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
     // Final component render
     return (
         <>
-            {mergedProps.template && mergedProps.data ? (
+            {mergedProps.template ? (
                 <div
                     id={tooltipId}
                     className="e-tooltip"
@@ -1357,7 +1357,7 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
                         opacity: state.tooltipOpacity,
                         left: state.tooltipPosition.x + 'px',
                         top: state.tooltipPosition.y + 'px',
-                        transition: (mergedProps.enableAnimation && !state.isInitialAppearance && state.tooltipOpacity === 1)
+                        transition: mergedProps.crosshair ? '' : (mergedProps.enableAnimation && !state.isInitialAppearance && state.tooltipOpacity === 1)
                             ? 'top 300ms ease-out, left 300ms ease-out, opacity 300ms ease-out'
                             : 'opacity 300ms ease-out'
                     }}
@@ -1372,7 +1372,7 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
                             overflow: 'hidden'
                         }}
                     >
-                        {mergedProps.template(mergedProps.data)}
+                        {mergedProps.data && mergedProps.template(mergedProps.data)}
                     </div>
                 </div>
             ) : (
@@ -1382,7 +1382,7 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
                     className="e-tooltip"
                     style={{
                         opacity: state.tooltipOpacity,
-                        transition: (mergedProps.enableAnimation && !state.isInitialAppearance && state.tooltipOpacity === 1)
+                        transition: mergedProps.crosshair ? '' : (mergedProps.enableAnimation && !state.isInitialAppearance && state.tooltipOpacity === 1)
                             ? 'transform 300ms ease-out, opacity 300ms ease-out'
                             : 'opacity 300ms ease-out'
                     }}

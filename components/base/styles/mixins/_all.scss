@@ -1,3 +1,3 @@
-@import './decorator.scss';
-@import './_radius.scss';
-@import './core.scss';
+@forward './decorator.scss';
+@forward './_radius.scss';
+@forward './core.scss';

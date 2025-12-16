@@ -198,7 +198,11 @@ export const AxisRenderer: React.FC<ChartAxesProps> = ({ axes }: { axes: AxisMod
             axis.labelStyle.placement,
             axis.labelStyle.align,
             axis.labelStyle.format,
-            axis.indexed
+            axis.indexed,
+            axis.crossAt?.value,
+            axis.crossAt?.axis,
+            axis.crossAt?.allowOverlap,
+            axis.crosshairTooltip
         ])
     ]);
 
@@ -302,7 +306,7 @@ export const AxisRenderer: React.FC<ChartAxesProps> = ({ axes }: { axes: AxisMod
                                 {drawYAxisTickLines(axis, idx, yScale, chart, currentAxis)}
                                 {drawYAxisMinorGridLines(axis, idx, chart, yScale, currentAxis)}
                                 {drawYAxisMinorTicks(axis, idx, yScale, chart, currentAxis)}
-                                {drawYAxisLabels(axis, idx, axis.updatedRect, chart, yScale)}
+                                {drawYAxisLabels(axis, idx, axis.crossAt?.allowOverlap ? axis.updatedRect : axis.rect, chart, yScale)}
                                 {drawAxisTitle(axis, chart, idx, currentAxis)}
                                 {drawAxisLine(axis, currentAxis, chart)}
                             </>
@@ -320,7 +324,7 @@ export const AxisRenderer: React.FC<ChartAxesProps> = ({ axes }: { axes: AxisMod
                                 {drawXAxisTickLines(axis, idx, xScale, chart, currentAxis)}
                                 {drawXAxisMinorGridLines(axis, idx, chart, xScale, currentAxis)}
                                 {drawXAxisMinorTicks(axis, idx, xScale, chart, currentAxis)}
-                                {drawXAxisLabels(axis, idx, axis.updatedRect, chart, xScale)}
+                                {drawXAxisLabels(axis, idx, axis.crossAt?.allowOverlap ? axis.updatedRect : axis.rect, chart, xScale)}
                                 {drawAxisTitle(axis, chart, idx, currentAxis)}
                                 {drawAxisLine(axis, currentAxis, chart)}
                             </>

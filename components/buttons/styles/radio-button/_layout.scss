@@ -1,609 +1,181 @@
+@use "sass:map";
+@use 'mixin' as *;
+@use 'theme-variables' as *;
 
 @include export-module('radiobutton-layout') {
+
+  .sf-radio-label {
+    color: $radio-btn-font-color;
+    display: flex;
+    vertical-align: middle;
+    align-items: center;
+    white-space: normal;
+    position: relative;
+    line-height: normal;
+    user-select: none;
+    cursor: pointer;
+    &::before,
+    &::after {
+      border: $radio-btn-border;
+      border-radius: $radio-btn-border-radius;
+      box-sizing: border-box;
+      content: '';
+      position: absolute;
+    }
+  }
+
+  .sf-radio-label {
+    &::before {
+      border-color: $radio-btn-checked-border-color;
+    }
+  }
+
+  .sf-radio:checked {
+    +label {
+      &::after {
+        background-color: $radio-btn-checked-color;
+        color: $radio-btn-checked-color;
+        transform: scale(1);
+      }
+    }
+  }
+
+  .sf-radio-label {
+    &:focus,
+    &.sf-focus,
+    &:hover {
+      .sf-ripple-container {
+        background: $radio-btn-checked-ripple-bgcolor;
+      }
+    }
+  }
+
   .sf-radio {
     appearance: none;
     height: 1px;
-    opacity: 0;
+    opacity: $radio-btn-opacity;
     width: 1px;
-
-    &:not(:checked):not(:disabled):hover {
-      +label.sf-rtl,
-      +label.sf-right {
-        &::after {
-          left: auto;
-        }
-      }
-    }
-
     +label {
-      margin: 0;
-      vertical-align: middle;
-      white-space: nowrap;
-
-      &.sf-bottom {
-        .sf-label {
-          padding-top: $radio-btn-small-bottom-padding-top;
-          padding-left: 0;
-        }
-      }
-
-      & .sf-label {
-        color: $radio-btn-font-color;
-        display: inline-block;
-        font-family: $font-family;
-        font-size: $radio-btn-font-size;
-        line-height: $radio-btn-line-height;
-        padding-left: $radio-btn-padding-left;
-        vertical-align: text-top;
-        white-space: normal;
-      }
-
-      &:focus,
-      &.sf-focus {
-        & .sf-ripple-container {
-          background-color: $radio-btn-focus-ripple-bgcolor;
-        }
-      }
-
-      & .sf-ripple-element {
-        background-color: $radio-btn-checked-ripple-bgcolor;
-      }
-
       &::before {
-        border: $radio-btn-border;
-        border-radius: 50%;
-        box-sizing: border-box;
-        content: '';
-        height: $radio-btn-height;
-        left: 0;
-        position: absolute;
-        width: $radio-btn-width;
         background-color: $radio-btn-background-color;
         border-color: $radio-btn-border-color;
       }
-
-      &:focus {
-        &::before {
-          box-shadow: $radio-btn-focussed-box-shadow;
-        }
-      }
-
-      &:active {
-        & .sf-ripple-element {
-          background-color: $radio-btn-ripple-bgcolor;
-        }
-      }
-
       &::after {
-        border: 1px solid;
-        border-radius: 50%;
-        box-sizing: border-box;
-        content: '';
-        height: $radio-btn-icon-height;
-        left: $radio-btn-icon-left;
-        position: absolute;
-        top: $radio-btn-icon-top;
         transform: scale(0);
-        width: $radio-btn-icon-width;
       }
-
       & .sf-ripple-container {
-        border-radius: 50%;
-        height: $radio-btn-ripple-size;
-        left: $radio-btn-ripple-left-position;
+        border-radius: $radio-btn-border-radius;
         position: absolute;
-        top: $radio-btn-ripple-top-position;
-        width: $radio-btn-ripple-size;
         z-index: 1;
-
-        & .sf-ripple-element {
-          border-radius: 50%;
-        }
-      }
-
-      &.sf-right,
-      &.sf-rtl {
-        & .sf-label {
-          padding-left: 0;
-          padding-right: $radio-btn-padding-left;
-        }
-
-        &::before {
-          left: auto;
-          right: 0;
-        }
-
-        &::after {
-          left: auto;
-          right: $radio-btn-icon-right;
-        }
-
-        & .sf-ripple-container {
-          left: auto;
-          right: $radio-btn-ripple-position;
-        }
-      }
-
-      &.sf-right {
-        &.sf-rtl {
-          & .sf-label {
-            padding-left: $radio-btn-padding-left;
-            padding-right: 0;
-          }
-
-          &::before {
-            left: 0;
-            right: auto;
-          }
-
-          &::after {
-            left: $radio-btn-icon-right;
-            right: auto;
-          }
-
-          & .sf-ripple-container {
-            left: -8px;
-            right: auto;
-          }
-        }
-      }
-
-      &.sf-small {
-
-        & .sf-label {
-          line-height: $radio-btn-small-line-height;
-          padding-left: $radio-btn-small-padding;
-        }
-
-        &::before {
-          height: $radio-btn-small-height;
-          width: $radio-btn-small-width;
-        }
-
-        &::after {
-          height: $radio-btn-small-icon-height;
-          left: $radio-btn-small-icon-left;
-          top: $radio-btn-small-icon-top;
-          width: $radio-btn-small-icon-width;
-        }
-
-        & .sf-ripple-container {
-          left: $radio-btn-small-ripple-position;
-          top: $radio-btn-small-ripple-position;
-        }
-
-        &.sf-right,
-        &.sf-rtl {
-          & .sf-label {
-            padding-left: 0;
-            padding-right: $radio-btn-small-padding;
-          }
-
-          &::after {
-            left: auto;
-            right: $radio-btn-small-icon-right;
-          }
-
-          & .sf-ripple-container {
-            left: auto;
-            right: $radio-btn-small-ripple-position;
-          }
-        }
-
-        &.sf-right {
-          &.sf-rtl {
-            & .sf-label {
-              padding-left: $radio-btn-small-padding;
-              padding-right: 0;
-            }
-
-            &::after {
-              left: $radio-btn-small-icon-right;
-              right: auto;
-            }
-
-            & .sf-ripple-container {
-              left: $radio-btn-small-rtl-ripple-left-position;
-              right: auto;
-            }
-          }
-        }
       }
     }
-
-
-    &:focus {
-      +label {
-        &::before {
-          border-color: $radio-btn-focus-check-border-color;
-          box-shadow: $radio-btn-focussed-box-shadow;
-        }
-      }
-    }
-
-    &:focus {
-      +label {
-        &::before {
-          border-color: $radio-btn-hover-border-color;
-          box-shadow: $radio-btn-focussed-box-shadow;
-        }
-      }
-    }
-
-    &:checked {
-      +label {
-        &::after {
-          transform: scale(1);
-          transition: $radio-btn-check-transition;
-        }
-      }
-    }
-
-    &:hover {
-      +label {
-        & .sf-ripple-container {
-          background: $radio-btn-ripple-bgcolor;
-        }
-      }
-
-      +label {
-        &::before {
-          border-color: $radio-btn-hover-border-color;
-        }
-      }
-    }
-
-    &:checked {
-      +label {
-        &::before {
-          background-color: $radio-btn-checked-background-color;
-          border-color: $radio-btn-checked-border-color;
-        }
-
-        &::after {
-          background-color: $radio-btn-checked-color;
-          color: $radio-btn-checked-color;
-        }
-
-        &:active {
-          & .sf-ripple-element {
-            background-color: $radio-btn-checked-ripple-bgcolor;
-          }
-        }
-      }
-
-      +.sf-focus {
-        & .sf-ripple-container {
-          background-color: $radio-btn-checked-ripple-bgcolor;
-        }
-
-        &::before {
-          outline: $radio-btn-focus-outline;
-          outline-offset: $radio-btn-focus-outline-offset;
-        }
-      }
-    }
-
-    &:checked {
-      &:focus {
-        +label {
-          &::before {
-            border-color: $radio-btn-focus-check-border-color;
-          }
-
-          &::after {
-            background-color: $radio-btn-focus-check-bg-color;
-            color: $radio-btn-focus-check-bg-color;
-          }
-        }
-      }
-
-      +label {
-        &:hover {
-          & .sf-ripple-container {
-            background: $radio-btn-checked-ripple-bgcolor;
-          }
-          &::before {
-            border-color: $radio-btn-hover-check-border-color;
-          }
-
-          &::after {
-            background-color: $radio-btn-hover-check-bg-color;
-            color: $radio-btn-hover-check-bg-color;
-          }
-        }
-      }
-    }
-
     &:disabled {
       +label {
         cursor: default;
         pointer-events: none;
-
         &::before {
           background-color: $radio-btn-disabled-background-color;
           border-color: $radio-btn-disabled-border-color;
-          cursor: default;
         }
-
         & .sf-ripple-container {
           background-color: transparent;
 
           &::after {
             background-color: transparent;
-            cursor: default;
           }
         }
-
         & .sf-label {
           color: $radio-btn-disabled-color;
         }
       }
+    }
+  }
 
-      &:checked {
-        +label {
-          &::before {
-            background-color: $radio-btn-disabled-background-color;
-            border-color: $radio-btn-disabled-checked-border-color;
-          }
+  .sf-radio-me {
+  @include radio-base(
+    $radio-btn-font-size,
+    $radio-btn-padding-left,
+    $radio-btn-height,
+    $radio-btn-icon-height,
+    $radio-btn-icon-left,
+    $radio-btn-ripple-size,
+    $radio-btn-ripple-left-position
+  );
 
-          &::after {
-            background-color: $radio-btn-disabled-checked-color;
-            border-color: $radio-btn-disabled-checked-color;
-            cursor: default;
-          }
+  &.sf-bottom .sf-label {
+    padding-top: $radio-btn-medium-bottom-padding-top;
+    padding-inline-start: $radio-btn-bottom-padding-left;
+  }
 
-          & .sf-ripple-container,
-          & .sf-ripple-container::after {
-            background-color: transparent;
-          }
-        }
+  @include radio-orientation(
+    $radio-btn-padding-left,
+    $radio-btn-icon-left,
+    $radio-btn-ripple-left-position
+  );
+}
+
+.sf-radio-sm {
+  @include radio-base(
+    $radio-btn-small-font-size,
+    $radio-btn-small-padding,
+    $radio-btn-small-height,
+    $radio-btn-small-icon-height,
+    $radio-btn-small-icon-left,
+    $radio-btn-small-ripple-Width,
+    $radio-btn-small-ripple-position
+  );
+
+  &.sf-bottom .sf-label {
+    padding-top: $radio-btn-small-bottom-padding-top;
+    padding-inline-start: $radio-btn-bottom-padding-left;
+  }
+
+  @include radio-orientation(
+    $radio-btn-small-padding,
+    $radio-btn-small-icon-left,
+    $radio-btn-small-ripple-position
+  );
+}
+
+.sf-radio-la {
+  @include radio-base(
+    $radio-btn-large-font-size,
+    $radio-btn-large-padding,
+    $radio-btn-large-height,
+    $radio-btn-large-icon-height,
+    $radio-btn-large-icon-left,
+    $radio-btn-large-ripple-size,
+    $radio-btn-large-ripple-left-position
+  );
+
+  &.sf-bottom .sf-label {
+    padding-top: $radio-btn-medium-bottom-padding-top;
+    padding-inline-start: $radio-btn-bottom-padding-left;
+  }
+
+  @include radio-orientation(
+    $radio-btn-large-padding,
+    $radio-btn-large-icon-left,
+    $radio-btn-large-ripple-left-position
+  );
+}
+
+
+  @each $variant, $colors in $radio-variants {
+    .sf-radio-#{$variant} {
+      .sf-radio:checked + label::after {
+        background-color: map.get($colors, bg);
+        border-color: map.get($colors, border);
+      }
+
+      .sf-radio-label::before {
+        border-color: map.get($colors, border);
+      }
+
+      .sf-radio-label:hover .sf-ripple-container {
+        background: map.get($colors, hover);
       }
     }
   }
 
-  .sf-small .sf-radio + label,
-  .sf-radio + label.sf-small {
-    & .sf-label {
-      line-height: $radio-btn-small-line-height;
-      padding-left: $radio-btn-small-padding;
-      font-size: $radio-btn-small-font-size;
-    }
-
-    &::before {
-      height: $radio-btn-small-height;
-      width: $radio-btn-small-width;
-    }
-
-    &.sf-bottom {
-      .sf-label {
-        padding-top: $radio-btn-small-bottom-padding-top;
-        padding-left: 0;
-      }
-    }
-
-    &::after {
-      height: $radio-btn-small-icon-height;
-      left: $radio-btn-small-icon-left;
-      top: $radio-btn-small-icon-top;
-      width: $radio-btn-small-icon-width;
-    }
-
-    & .sf-ripple-container {
-      width: $radio-btn-small-ripple-Width;
-      height: $radio-btn-small-ripple-height;
-      left: $radio-btn-small-ripple-position;
-      top: $radio-btn-small-ripple-position;
-    }
-
-    &.sf-right,
-    &.sf-rtl {
-      & .sf-label {
-        padding-left: 0;
-        padding-right: $radio-btn-small-padding;
-      }
-
-      &::after {
-        left: auto;
-        right: $radio-btn-small-icon-right;
-      }
-
-      & .sf-ripple-container {
-        left: auto;
-        right: $radio-btn-small-ripple-position;
-      }
-    }
-
-    &.sf-right {
-      &.sf-rtl {
-        & .sf-label {
-          padding-left: $radio-btn-small-padding;
-          padding-right: 0;
-        }
-
-        &::after {
-          left: $radio-btn-small-icon-right;
-          right: auto;
-        }
-
-        & .sf-ripple-container {
-          left: $radio-btn-small-rtl-ripple-left-position;
-          right: auto;
-        }
-      }
-    }
-  }
-
-  .sf-large .sf-radio {
-    &:not(:checked):hover {
-      +label.sf-rtl,
-      +label.sf-right {
-        &::after {
-          left: auto;
-        }
-      }
-    }
-
-  }
-
-  .sf-large .sf-radio + label,
-  .sf-radio + label.sf-large {
-
-    & .sf-label {
-      font-size: $radio-btn-large-font-size;
-      line-height: $radio-btn-large-line-height;
-      padding-left: $radio-btn-large-padding;
-    }
-
-    &::before {
-      height: $radio-btn-large-height;
-      width: $radio-btn-large-width;
-    }
-
-    &.sf-bottom {
-      .sf-label {
-        padding-top: $radio-btn-small-bottom-padding-top;
-        padding-left: 0;
-      }
-    }
-
-    &::after {
-      height: $radio-btn-large-icon-height;
-      left: $radio-btn-large-icon-left;
-      top: $radio-btn-large-icon-top;
-      width: $radio-btn-large-icon-width;
-    }
-
-    & .sf-ripple-container {
-      height: $radio-btn-large-ripple-size;
-      left: $radio-btn-large-ripple-left-position;
-      top: $radio-btn-large-ripple-top-position;
-      width: $radio-btn-large-ripple-size;
-    }
-
-    &.sf-right,
-    &.sf-rtl {
-      & .sf-label {
-        padding-left: 0;
-        padding-right: $radio-btn-large-padding;
-      }
-
-      &::after {
-        left: auto;
-        right: $radio-btn-large-icon-right;
-      }
-
-      & .sf-ripple-container {
-        left: auto;
-        right: $radio-btn-large-ripple-position;
-      }
-    }
-
-    &.sf-right {
-      &.sf-rtl {
-        & .sf-label {
-          padding-left: $radio-btn-large-padding;
-          padding-right: 0;
-        }
-
-        &::after {
-          left: $radio-btn-large-icon-right;
-          right: auto;
-        }
-
-        & .sf-ripple-container {
-          left: $radio-btn-large-rtl-ripple-left-position;
-          right: auto;
-        }
-      }
-    }
-
-  }
-
-  .sf-success .sf-radio:checked + label::after {
-    background-color: $radio-success-color;
-    border-color: $radio-success-color;
-  }
-  
-  .sf-success .sf-radio:checked:focus + label::after, .sf-success .sf-radio:checked + label:hover::after {
-    background-color: $radio-success-hover-color;
-    border-color: $radio-success-hover-color;
-  }
-  
-  .sf-success .sf-radio:checked + label::before {
-    border-color: $radio-success-color;
-  }
-  
-  .sf-success .sf-radio:checked:focus + label::before, .sf-success .sf-radio:checked + label:hover::before {
-    border-color: $radio-success-hover-color;
-  }
-  
-  .sf-success .sf-radio +label:hover::before {
-    border-color: $radio-hover-border-color;
-  }
-  
-  .sf-info .sf-radio:checked + label::after {
-    background-color: $radio-info-color;
-    border-color: $radio-info-color;
-  }
-  
-  .sf-info .sf-radio:checked:focus + label::after, .sf-info .sf-radio:checked + label:hover::after { /* csslint allow: adjoining-classes */
-    background-color: $radio-info-hover-color;
-    border-color: $radio-info-hover-color;
-  }
-  
-  .sf-info .sf-radio:checked + label::before {
-    border-color: $radio-info-color;
-  }
-  
-  .sf-info .sf-radio:checked:focus + label::before, .sf-info .sf-radio:checked + label:hover::before {
-    border-color: $radio-info-hover-color;
-  }
-  
-  .sf-info .sf-radio + label:hover::before {
-    border-color: $radio-hover-border-color;
-  }
-  
-  .sf-warning .sf-radio:checked + label::after {
-    background-color: $radio-warning-color;
-    border-color: $radio-warning-color;
-  }
-  
-  .sf-warning .sf-radio:checked:focus + label::after, .sf-warning .sf-radio:checked + label:hover::after { /* csslint allow: adjoining-classes */
-    background-color: $radio-warning-hover-color;
-  }
-  
-  .sf-warning .sf-radio:checked + label::before {
-    border-color: $radio-warning-color;
-  }
-  
-  .sf-warning .sf-radio:checked:focus + label::before, .sf-warning .sf-radio:checked + label:hover::before {
-    border-color: $radio-warning-hover-color;
-  }
-  
-  .sf-warning .sf-radio + label:hover::before {
-    border-color: $radio-hover-border-color;
-  }
-  
-  .sf-error .sf-radio:checked + label::after {
-    background-color: $radio-danger-color;
-    border-color: $radio-danger-color;
-  }
-  
-  .sf-error .sf-radio:checked:focus + label::after, .sf-error .sf-radio:checked + label:hover::after { /* csslint allow: adjoining-classes */
-    background-color: $radio-danger-hover-color;
-    border-color: $radio-danger-hover-color;
-  }
-  
-  .sf-error .sf-radio:checked + label::before {
-    border-color: $radio-danger-color;
-  }
-  
-  .sf-error .sf-radio:checked:focus + label::before, .sf-error .sf-radio:checked + label:hover::before {
-    border-color: $radio-danger-hover-color;
-  }
-  
-  .sf-error .sf-radio + label:hover::before {
-    border-color: $radio-hover-border-color;
-  }
 }

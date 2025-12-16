@@ -11,6 +11,7 @@ import { calculateLogarithmicAxis } from './AxisTypeRenderer/LogarithmicAxisRend
 import { calculateRowSize } from './ChartRowsRender';
 import { calculateColumnSize } from './ChartColumnsRender';
 import { AxisModel, Chart, ChartAxisLayout, ColumnProps, PathOptions, Rect, RowProps, ChartSizeProps, TextOption, TextStyleModel, Thickness, VisibleLabel } from '../../chart-area/chart-interfaces';
+import { crossAt, updateCrossValue, axisInside } from './AxisTypeRenderer/CrossAxisHerlper';
 
 /**
  * Measures and computes the layout of axes within the given chart rectangle.
@@ -31,6 +32,7 @@ export function measureAxis(rect: Rect, chart: Chart): void {
         seriesClipRect: { x: 0, y: 0, width: 0, height: 0 }
     };
     const chartAreaWidth: number = chart.chartArea.width ? stringToNumber(chart.chartArea.width, chart.availableSize.width) : 0;
+    crossAt(chart);
     chartAxisLayout.seriesClipRect = { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
     chart.chartAxislayout = chartAxisLayout;
     measureRowAxis(chart, chartAxisLayout.initialClipRect);
@@ -455,7 +457,7 @@ export function drawBottomLine(chart: Chart, definition: RowProps | ColumnProps,
  * @private
  */
 function drawAxis(axis: AxisModel, index: number, control: Chart): void {
-    axis.updatedRect = axis.rect;
+    updateCrossValue(axis);
     const isVisible: boolean = (axis.visible as boolean && axis.internalVisibility);
     const lineWidth: number = axis.lineStyle?.width as number;
     if (axis.orientation === 'Horizontal') {
@@ -851,7 +853,8 @@ export function drawXAxisLabels(axis: AxisModel, index: number, rect: Rect, char
         <defs>
             <clipPath id={`${chart.element.id}_Axis_Label_${index}_Clip`}>
                 <rect x={chart.clipRect.x - axis.maxLabelSize.width} y={chart.chartAreaRect.y}
-                    width={chart.chartAreaRect.width + axis.maxLabelSize.width} height={chart.chartAreaRect.height} />
+                    width={chart.chartAreaRect.width + axis.maxLabelSize.width}
+                    height={chart.chartAreaRect.height + axis.maxLabelSize.height} />
             </clipPath>
         </defs>
         <g clipPath={`url(#${chart.element.id}_Axis_Label_${index}_Clip)`} id={chart.element.id + '_Axis_' + index + '_Labels'}>
@@ -1349,6 +1352,7 @@ export function isBorder(axis: AxisModel, index: number, value: number, seriesCl
  * Calculates the appropriate tick size for an axis in relation to its crossing axis.
  *
  * @param {AxisModel} axis - The main axis model for which the tick size is calculated.
+ * @param {AxisModel} crossAxis - The crossing axis model that may influence the tick size.
  * @returns {number} The computed tick size for the main axis.
  * @private
  */
@@ -1358,6 +1362,13 @@ export function findTickSize(
     if (axis.tickPosition === 'Inside') {
         return 0;
     }
+    if (
+        axis &&
+        (!axis.visibleRange || axisInside(axis, axis.visibleRange))
+    ) {
+        return 0;
+    }
+
     return (axis.majorTickLines.height as number);
 }
 

@@ -1,6 +1,6 @@
 import { ChartLocationProps, ChartMarkerProps } from '../../base/interfaces';
 import { PathCommand } from '../../common/base';
-import { getPoint, withInRange } from '../../utils/helper';
+import { applyPointRenderCallback, getPoint, withInRange } from '../../utils/helper';
 import { LineBase, LineBaseReturnType } from './LineBase';
 import { interpolatePathD, parsePathCommands } from './SeriesAnimation';
 import MarkerRenderer from './MarkerRenderer';
@@ -266,6 +266,7 @@ const SplineAreaSeriesRenderer: SplineAreaSeriesInterface = {
         const isDropMode: boolean = (series.emptyPointSettings && series.emptyPointSettings.mode === 'Drop') as boolean;
         const segmentStartIndices: number[] = [];
         const segmentBaselinePoints: ChartLocationProps[] = [];
+        let seriesFill: string | undefined;
 
         const visiblePoints: Points[] = lineBaseInstance.enableComplexProperty(series);
 
@@ -372,6 +373,15 @@ const SplineAreaSeriesRenderer: SplineAreaSeriesInterface = {
 
                 lineBaseInstance.storePointLocation(point, series, isInverted, getCoordinate);
                 firstPoint = point;
+
+                const customizedValues: string = applyPointRenderCallback(({
+                    seriesIndex: series.index as number, color: series.interior as string,
+                    xValue: point.xValue as  number | Date | string | null,
+                    yValue: point.yValue as  number | Date | string | null
+                }), series.chart);
+                point.interior = customizedValues;
+
+                if (!seriesFill) {seriesFill = customizedValues; }
             } else {
                 if (!isDropMode && firstPoint) {
                     closeSegment(previous);
@@ -388,7 +398,7 @@ const SplineAreaSeriesRenderer: SplineAreaSeriesInterface = {
         const name: string = series.chart.element.id + '_Series_' + series.index;
         const options: RenderOptions[] = [{
             id: name,
-            fill: series.interior,
+            fill: seriesFill || series.interior,
             strokeWidth: 0,
             stroke: 'transparent',
             opacity: series.opacity,
@@ -402,7 +412,7 @@ const SplineAreaSeriesRenderer: SplineAreaSeriesInterface = {
                 id: borderName,
                 fill: 'transparent',
                 strokeWidth: series.border.width,
-                stroke: series.border.color ? series.border.color : series.interior,
+                stroke: series.border.color ? series.border.color : seriesFill,
                 opacity: 1,
                 dashArray: series.border.dashArray,
                 d: topLine.trim()

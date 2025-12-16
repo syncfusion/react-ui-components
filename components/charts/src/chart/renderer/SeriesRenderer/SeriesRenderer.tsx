@@ -1,6 +1,6 @@
 
 import { forwardRef, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ChartSeriesProps, ChartDataLabelProps, ChartMarkerProps, SeriesAccessibility } from '../../base/interfaces';
+import { ChartSeriesProps, ChartDataLabelProps, ChartMarkerProps, SeriesAccessibility, ChartErrorBarProps } from '../../base/interfaces';
 import { areDataSourcesEqual, checkTabindex, firstToLowerCase, useVisiblePoints } from '../../utils/helper';
 import ColumnSeries from './ColumnSeriesRenderer';
 import * as React from 'react';
@@ -29,8 +29,19 @@ import ScatterSeriesRenderer from './ScatterSeriesRenderer';
 import BubbleSeriesRenderer from './BubbleSeriesRenderer';
 import SplineAreaSeriesRenderer from './SplineAreaSeriesRenderer';
 import { ChartSeriesType } from '../../base/enum';
-import { Chart, DataLabelRendererResult, DataPoint, Points, Rect, RenderOptions, SeriesModules, SeriesProperties } from '../../chart-area/chart-interfaces';
+import { Chart, DataLabelRendererResult, DataPoint, MarkerOptions, MarkerProperties, Points, Rect, RenderOptions, SeriesModules, SeriesProperties } from '../../chart-area/chart-interfaces';
 import { isEqual, useStableDataLabelProps, useStableDataSources, useStableMarkerProps } from '../../hooks/useDeepCompare';
+import CandleSeriesRenderer from './CandleSeriesRenderer';
+import HiloSeriesRenderer from './HiloSeriesRenderer';
+import HiloOpenCloseSeriesRenderer from './HiloOpenCloseRenderer';
+import RangeAreaSeriesRenderer from './RangeAreaSeriesRenderer';
+import StepAreaSeriesRenderer from './StepAreaSeriesRenderer';
+import StackingAreaSeriesRenderer from './StackingAreaSeriesRenderer';
+import RangeColumnSeriesRenderer from './RangeColumnSeriesRenderer';
+import SplineRangeAreaRenderer from './SplineRangeAreaSeriesRenderer';
+import { renderErrorBarsJSX } from './ErrorBarRender';
+import MultiColoredLineSeriesRenderer from './MultiColoredLineSeriesRenderer';
+
 // Create a global chart instance for storing options
 export const chart: Chart = {} as Chart;
 // Add our custom properties to the chart object
@@ -62,10 +73,11 @@ type ChartExtensions = {
  */
 const seriesOptionsByChartId: { [chartId: string]: RenderOptions[][] } = {};
 const markersOptionsByChartId: { [chartId: string]: ChartMarkerProps[] } = {};
-const dataLabelOptionsByChartId: { [chartId: string]: DataLabelRendererResult[][] } = {};
+export const dataLabelOptionsByChartId: { [chartId: string]: DataLabelRendererResult[][] } = {};
 
 export const seriesModules: SeriesModules = {
     'lineSeriesModule': LineSeriesRenderer,
+    'multiColoredLineSeriesModule': MultiColoredLineSeriesRenderer,
     'splineSeriesModule': SplineSeriesRenderer,
     'columnSeriesModule': ColumnSeries,
     'barSeriesModule': BarSeries,
@@ -75,7 +87,15 @@ export const seriesModules: SeriesModules = {
     'stackingBarSeriesModule': StackingBarSeriesRenderer,
     'scatterSeriesModule': ScatterSeriesRenderer,
     'bubbleSeriesModule': BubbleSeriesRenderer,
-    'splineAreaSeriesModule': SplineAreaSeriesRenderer
+    'splineAreaSeriesModule': SplineAreaSeriesRenderer,
+    'stepAreaSeriesModule': StepAreaSeriesRenderer,
+    'stackingAreaSeriesModule': StackingAreaSeriesRenderer,
+    'candleSeriesModule': CandleSeriesRenderer,
+    'hiloSeriesModule': HiloSeriesRenderer,
+    'hiloOpenCloseSeriesModule': HiloOpenCloseSeriesRenderer,
+    'rangeAreaSeriesModule': RangeAreaSeriesRenderer,
+    'rangeColumnSeriesModule': RangeColumnSeriesRenderer,
+    'splineRangeAreaSeriesModule': SplineRangeAreaRenderer
 };
 
 const processRenderResult: (renderResult: RenderOptions[] | {
@@ -197,6 +217,7 @@ export const SeriesRenderer: React.ForwardRefExoticComponent<ChartSeriesProps[] 
         const [labelOpacity, setLabelOpacity] = useState(0);
         const [_dataLabelVersion, setDataLabelVersion] = useState(0);
         const [_seriesVersion, setSeriesVersion] = useState(0);
+        const [_errorBarVersion, setErrorBarVersion] = useState(0);
         const { layoutRef, reportMeasured, setDisableAnimation, phase, triggerRemeasure
             , animationProgress, setAnimationProgress } = useLayout();
         const animationFrameRef: React.RefObject<number> = useRef<number>(0);
@@ -280,9 +301,26 @@ export const SeriesRenderer: React.ForwardRefExoticComponent<ChartSeriesProps[] 
                     const updatedData: Object[] = Array.isArray(prevDataSource)
                         ? prevDataSource.map((prevPoint: DataPoint, idx: number) => {
                             const newPoint: DataPoint = newDataSource[idx as number];
-                            if (prevPoint.x === newPoint.x && prevPoint.y !== newPoint.y) {
-                                hasUpdate = true;
-                                return newPoint;
+                            if (series.type === 'Candle' || series.type === 'Hilo' || series.type === 'HiloOpenClose') {
+                                // For candles, check if close value changed (not y value)
+                                if (prevPoint.x === newPoint.x &&
+                                    prevPoint?.close !== newPoint.close) {
+                                    hasUpdate = true;
+                                    return newPoint;
+                                }
+                            } else if (series.type === 'RangeArea' || series.type === 'RangeColumn') {
+                                if (prevPoint.x === newPoint.x &&
+                                    (prevPoint?.high !== newPoint.high ||
+                                        prevPoint?.low !== newPoint.low)) {
+                                    hasUpdate = true;
+                                    return newPoint;
+                                }
+                            } else {
+                                // Standard series logic
+                                if (prevPoint.x === newPoint.x && prevPoint.y !== newPoint.y) {
+                                    hasUpdate = true;
+                                    return newPoint;
+                                }
                             }
                             return prevPoint;
                         })
@@ -376,6 +414,39 @@ export const SeriesRenderer: React.ForwardRefExoticComponent<ChartSeriesProps[] 
             }
             return undefined;
         }, [isDataLabelEnabled, animationProgress, isAnimationEnabled, durations]);
+
+        useEffect(() => {
+            if (phase === 'measuring' || !layoutRef.current?.chart) {
+                return;
+            }
+            const visibleSeries: SeriesProperties[] = (layoutRef.current.chart as Chart).visibleSeries;
+            const hasErrorBarChanges: boolean = visibleSeries.some((series: SeriesProperties) => {
+                const nextErrorBar: ChartErrorBarProps = (seriesList[series.index] as SeriesProperties)?.errorBar;
+                return !isEqual(series.errorBar, nextErrorBar);
+            });
+            if (!hasErrorBarChanges) {
+                return;
+            }
+            visibleSeries.forEach((series: SeriesProperties) => {
+                if ((seriesList[series.index] as SeriesProperties)?.errorBar) {
+                    let changeStyleProps: boolean = false;
+                    const updatedErrorBar: ChartErrorBarProps = (seriesList[series.index] as SeriesProperties)?.errorBar;
+                    const currentErrorBar: ChartErrorBarProps = series.errorBar;
+                    if (
+                        updatedErrorBar?.errorBarCap?.color !== currentErrorBar?.errorBarCap?.color ||
+                        updatedErrorBar?.errorBarCap?.width !== currentErrorBar?.errorBarCap?.width ||
+                        updatedErrorBar?.errorBarCap?.opacity !== currentErrorBar?.errorBarCap?.opacity ||
+                        updatedErrorBar?.color !== currentErrorBar?.color ||
+                        updatedErrorBar?.width !== currentErrorBar?.width
+                    ) {
+                        changeStyleProps = true;
+                    }
+                    series.errorBar = (seriesList[series.index] as SeriesProperties)?.errorBar;
+                    renderErrorBarsJSX(series, changeStyleProps);
+                }
+            });
+            setErrorBarVersion((prev: number) => prev + 1);
+        }, [seriesList]);
 
         /**
          * Effect that detects and responds to changes in marker properties.
@@ -704,13 +775,15 @@ export const SeriesRenderer: React.ForwardRefExoticComponent<ChartSeriesProps[] 
                 (chart as Chart).dataLabelOptions = [];
 
                 (layoutRef.current.chart as Chart).visibleSeries?.forEach((visibleSeries: SeriesProperties) => {
-                    const matchingSeries: ChartSeriesProps = seriesList[visibleSeries.index];
-                    const newType: ChartSeriesType | undefined = matchingSeries.type || visibleSeries.type;
-                    matchingSeries.visible = visibleSeries.visible;
-                    if (visibleSeries.type !== newType) {
-                        reRender = true;
+                    const matchingSeries: ChartSeriesProps | SeriesProperties = seriesList[visibleSeries.index];
+                    if (matchingSeries) {
+                        const newType: ChartSeriesType | undefined = matchingSeries.type || visibleSeries.type;
+                        matchingSeries.visible = visibleSeries.visible;
+                        if (visibleSeries.type !== newType) {
+                            reRender = true;
+                        }
+                        visibleSeries.type = newType;
                     }
-                    visibleSeries.type = newType;
                 });
 
                 if ((layoutRef.current.chart as Chart).visibleSeries?.length !== processedSeriesData.length || reRender) {
@@ -866,7 +939,17 @@ export const SeriesRenderer: React.ForwardRefExoticComponent<ChartSeriesProps[] 
                     (_options: RenderOptions[], index: number) => {
                         const pathOptions: RenderOptions[] = currentChartSeriesOptions[index as number];
                         if (pathOptions !== undefined) {
-                            const seriesIndex: number = pathOptions[0] && pathOptions[0].id ? parseInt(pathOptions[0].id.split('_Series_')[1]?.split('_')[0], 10) : index;
+                            const seriesOption: RenderOptions | MarkerOptions | null | undefined =
+                                pathOptions?.[0]
+                                    ? pathOptions[0]
+                                    : (markersOptionsByChartId[currentChartId as string]
+                                        ? (markersOptionsByChartId[currentChartId as string][index as number] as MarkerProperties)
+                                            ?.markerOptionsList?.[0]
+                                        : null);
+                            const seriesId: string = seriesOption?.id ?? '';
+                            const part: string = seriesId.split('_Series_')[1]?.split('_')[0];
+                            const parsed: number = part ? parseInt(part, 10) : NaN;
+                            const seriesIndex: number = Number.isFinite(parsed) ? parsed : (index as number);
                             if (!Array.isArray(pathOptions) || !(layoutRef.current.chart as Chart).visibleSeries![seriesIndex as number]) {
                                 return null;
                             }
@@ -894,114 +977,135 @@ export const SeriesRenderer: React.ForwardRefExoticComponent<ChartSeriesProps[] 
                                     accessibility?.tabIndex as number : -1) : -1;
                             // Prepare animation state for series rendering
                             return (
-                                <>
-                                    <g
-                                        key={seriesIndex}
-                                        id={`${(layoutRef.current.chart as Chart).element.id}SeriesGroup${seriesIndex}`}
-                                        transform={`translate(${(layoutRef.current.chart as Chart).visibleSeries![seriesIndex as number].clipRect?.x}, ${(layoutRef.current.chart as Chart).visibleSeries![seriesIndex as number].clipRect?.y})`}
-                                        clipPath={`url(#${(layoutRef.current.chart as Chart).element.id}_ChartSeriesClipRect_${seriesIndex})`}
-                                        style={{ outline: 'none' }}
-                                        role={(layoutRef.current.chart as Chart).visibleSeries![seriesIndex as number].accessibility!.role ? (layoutRef.current.chart as Chart).visibleSeries![seriesIndex as number].accessibility!.role : 'region'}
-                                        tabIndex={tabIndex}
-                                        aria-label={(layoutRef.current.chart as Chart).visibleSeries![seriesIndex as number].accessibility?.ariaLabel ? (layoutRef.current.chart as Chart).visibleSeries![seriesIndex as number].accessibility?.ariaLabel : ((layoutRef.current.chart as Chart).visibleSeries![seriesIndex as number].name + ',' + (layoutRef.current.chart as Chart).visibleSeries![seriesIndex as number].type + ' series with ' + (layoutRef.current.chart as Chart).visibleSeries![seriesIndex as number].points?.length + ' data points')}
-                                        aria-hidden="false"
-                                    >
-                                        <defs>
-                                            <clipPath id={`${(layoutRef.current.chart as Chart).element.id}_ChartSeriesClipRect_${seriesIndex}`}>
-                                                <rect
-                                                    id={`${(layoutRef.current.chart as Chart).element.id}ChartSeriesClipRect${seriesIndex}_Rect`}
-                                                    fill={'transparent'}
-                                                    stroke={'grey'}
-                                                    strokeWidth={1}
-                                                    opacity={1}
-                                                    x={0}
-                                                    y={0}
-                                                    width={(layoutRef.current.chart as Chart).
-                                                        visibleSeries![seriesIndex as number].clipRect!.width}
-                                                    height={(layoutRef.current.chart as Chart).
-                                                        visibleSeries![seriesIndex as number].clipRect!.height}
-                                                />
-                                            </clipPath>
-                                        </defs>
-
-                                        {pathOptions.map((pathOption: RenderOptions, pathIndex: number) => {
-                                            const currentSeries: SeriesProperties = (layoutRef.current.chart as Chart).
-                                                visibleSeries?.[seriesIndex as number] as SeriesProperties;
-                                            let seriesType: string = firstToLowerCase(currentSeries.type as string);
-                                            seriesType = seriesType.replace('100', '');
-                                            const currentPoint: Points | undefined = currentSeries?.visiblePoints?.[pathIndex as number];
-                                            if (currentPoint !== undefined && currentSeries && seriesType && pathOption) {
-                                                const animationProps: {
-                                                    strokeDasharray: string | number;
-                                                    strokeDashoffset: number;
-                                                    interpolatedD?: string;
-                                                    animatedDirection?: string;
-                                                    animatedTransform?: string;
-                                                    animatedClipPath?: string;
-                                                    scatterTransform?: string;
-                                                } = currentSeries.propsChange ? {
-                                                    strokeDasharray: 'none',
-                                                    strokeDashoffset: 0
-                                                } : seriesModules[seriesType + 'SeriesModule' as keyof typeof seriesModules].doAnimation(
-                                                    pathOption,
-                                                    seriesIndex,
-                                                    animationState,
-                                                    visibleSeries?.[seriesIndex as number]?.animation?.enable || false,
-                                                    currentSeries,
-                                                    currentPoint,
-                                                    pathIndex,
-                                                    visibleSeries as SeriesProperties[]
-                                                );
-
-                                                return (
-                                                    <path
-                                                        key={pathOption.id}
-                                                        id={pathOption.id}
-                                                        d={currentSeries?.isRectSeries
-                                                            ? animationProps.animatedDirection ?
-                                                                animationProps.animatedDirection : pathOption.d
-                                                            : animationProps.interpolatedD ?? pathOption.d}
-                                                        stroke={pathOption.stroke}
-                                                        strokeWidth={!currentSeries.visible &&
-                                                            animationProgress === 1 ? 0 : pathOption.strokeWidth}
-                                                        fill={pathOption.fill}
-                                                        strokeDasharray={currentSeries?.isRectSeries ? 'none' : animationProps.strokeDasharray}
-                                                        strokeDashoffset={currentSeries?.isRectSeries ? 0 : animationProps.strokeDashoffset}
-                                                        opacity={pathOption.opacity}
-                                                        transform={seriesType === 'Scatter' ? animationProps.scatterTransform : animationProps.animatedTransform}
-                                                        style={{ clipPath: animationProps.animatedClipPath, outline: 'none' }}
+                                <React.Fragment key={`series_${seriesIndex}_${index}`}>
+                                    <>
+                                        <g
+                                            key={`${(layoutRef.current.chart as Chart).element.id}SeriesGroup${seriesIndex}`}
+                                            id={`${(layoutRef.current.chart as Chart).element.id}SeriesGroup${seriesIndex}`}
+                                            transform={`translate(${(layoutRef.current.chart as Chart).visibleSeries![seriesIndex as number].clipRect?.x}, ${(layoutRef.current.chart as Chart).visibleSeries![seriesIndex as number].clipRect?.y})`}
+                                            clipPath={`url(#${(layoutRef.current.chart as Chart).element.id}_ChartSeriesClipRect_${seriesIndex})`}
+                                            style={{ outline: 'none' }}
+                                            role={(layoutRef.current.chart as Chart).visibleSeries![seriesIndex as number].accessibility!.role ? (layoutRef.current.chart as Chart).visibleSeries![seriesIndex as number].accessibility!.role : 'region'}
+                                            tabIndex={tabIndex}
+                                            aria-label={(layoutRef.current.chart as Chart).visibleSeries![seriesIndex as number].accessibility?.ariaLabel ? (layoutRef.current.chart as Chart).visibleSeries![seriesIndex as number].accessibility?.ariaLabel : ((layoutRef.current.chart as Chart).visibleSeries![seriesIndex as number].name + ',' + (layoutRef.current.chart as Chart).visibleSeries![seriesIndex as number].type + ' series with ' + (layoutRef.current.chart as Chart).visibleSeries![seriesIndex as number].points?.length + ' data points')}
+                                            aria-hidden="false"
+                                        >
+                                            <defs>
+                                                <clipPath id={`${(layoutRef.current.chart as Chart).element.id}_ChartSeriesClipRect_${seriesIndex}`}>
+                                                    <rect
+                                                        id={`${(layoutRef.current.chart as Chart).element.id}ChartSeriesClipRect${seriesIndex}_Rect`}
+                                                        fill={'transparent'}
+                                                        stroke={'grey'}
+                                                        strokeWidth={1}
+                                                        opacity={1}
+                                                        x={0}
+                                                        y={0}
+                                                        width={(layoutRef.current.chart as Chart).
+                                                            visibleSeries![seriesIndex as number].clipRect!.width}
+                                                        height={(layoutRef.current.chart as Chart).
+                                                            visibleSeries![seriesIndex as number].clipRect!.height}
                                                     />
-                                                );
-                                            }
-                                            return null;
-                                        })}
-                                    </g>
-                                    {/* Render markers with exact same animation progress as the series */}
-                                    {markersOptionsByChartId[currentChartId as string] &&
+                                                </clipPath>
+                                            </defs>
+
+                                            {pathOptions.map((pathOption: RenderOptions, pathIndex: number) => {
+                                                const currentSeries: SeriesProperties = (layoutRef.current.chart as Chart).
+                                                    visibleSeries?.[seriesIndex as number] as SeriesProperties;
+                                                let seriesType: string = firstToLowerCase(currentSeries.type as string);
+                                                seriesType = seriesType.replace('100', '');
+                                                const currentPoint: Points | undefined =
+                                                currentSeries?.visiblePoints?.[pathIndex as number];
+                                                if (currentPoint !== undefined && currentSeries && seriesType && pathOption) {
+                                                    const animationProps: {
+                                                        strokeDasharray: string | number;
+                                                        strokeDashoffset: number;
+                                                        interpolatedD?: string;
+                                                        animatedDirection?: string;
+                                                        animatedTransform?: string;
+                                                        animatedClipPath?: string;
+                                                        scatterTransform?: string;
+                                                    } = currentSeries.propsChange ? {
+                                                        strokeDasharray: 'none',
+                                                        strokeDashoffset: 0
+                                                    } : seriesModules[seriesType + 'SeriesModule' as keyof typeof seriesModules].doAnimation(
+                                                        pathOption,
+                                                        seriesIndex,
+                                                        animationState,
+                                                        visibleSeries?.[seriesIndex as number]?.animation?.enable || false,
+                                                        currentSeries,
+                                                        currentPoint,
+                                                        pathIndex,
+                                                        visibleSeries as SeriesProperties[]
+                                                    );
+
+                                                    return (
+                                                        <path
+                                                            key={pathOption.id}
+                                                            id={pathOption.id}
+                                                            d={currentSeries?.isRectSeries
+                                                                ? animationProps.animatedDirection ?
+                                                                    animationProps.animatedDirection : pathOption.d
+                                                                : animationProps.interpolatedD ?? pathOption.d}
+                                                            stroke={pathOption.stroke}
+                                                            strokeWidth={!currentSeries.visible &&
+                                                                animationProgress === 1 ? 0 : pathOption.strokeWidth}
+                                                            fill={pathOption.fill}
+                                                            fillOpacity={currentSeries.type === 'Candle' ? pathOption.fillOpacity : pathOption.opacity}
+                                                            strokeOpacity={currentSeries.type === 'Candle' ? 1 : pathOption.opacity}
+                                                            strokeDasharray={currentSeries?.isRectSeries ? 'none' : animationProps.strokeDasharray}
+                                                            strokeDashoffset={currentSeries?.isRectSeries ? 0 :
+                                                                animationProps.strokeDashoffset}
+                                                            opacity={currentSeries.type === 'Candle' ? '' : pathOption.opacity}
+                                                            transform={seriesType === 'Scatter' ? animationProps.scatterTransform : animationProps.animatedTransform}
+                                                            style={{ clipPath: animationProps.animatedClipPath, outline: 'none' }}
+                                                        />
+                                                    );
+                                                }
+                                                return null;
+                                            })}
+                                        </g>
+                                        {/* Render markers with exact same animation progress as the series */}
+                                        {markersOptionsByChartId[currentChartId as string] &&
                                         markersOptionsByChartId[currentChartId as string].length !== 0
                                         && (((layoutRef.current.chart as Chart).visibleSeries as SeriesProperties[])[seriesIndex as number]
                                             ?.isRectSeries && ((layoutRef.current.chart as Chart)
                                             .visibleSeries as SeriesProperties[])[seriesIndex as number]
                                             ?.animation?.enable ? animationProgress === 1 : true) &&
                                     (
-                                        renderMarkerJSX(
-                                            markersOptionsByChartId[currentChartId as string],
-                                            seriesIndex,
-                                            animationProgress,
-                                            ((layoutRef.current.chart as Chart).visibleSeries as
-                                                SeriesProperties[])[seriesIndex as number]?.type,
-                                            (layoutRef.current.chart as Chart).element.id,
-                                            (((layoutRef.current.chart as Chart).visibleSeries as SeriesProperties[])[seriesIndex as number]
-                                                ?.propsChange),
-                                            ((layoutRef.current.chart as Chart).visibleSeries as SeriesProperties[])[seriesIndex as number],
-                                            // Pass distinct progress for add/remove
-                                            ((layoutRef.current.chart as Chart).visibleSeries as
-                                                SeriesProperties[])[seriesIndex as number]?.isPointAdded ? animationProgress : 1,
-                                            ((layoutRef.current.chart as Chart).visibleSeries as
+                                        <React.Fragment key={`markers_${seriesIndex}`}>{
+                                            renderMarkerJSX(
+                                                markersOptionsByChartId[currentChartId as string],
+                                                seriesIndex,
+                                                animationProgress,
+                                                ((layoutRef.current.chart as Chart).visibleSeries as
+                                                    SeriesProperties[])[seriesIndex as number]?.type,
+                                                (layoutRef.current.chart as Chart).element.id,
+                                                (((layoutRef.current.chart as Chart).visibleSeries as
+                                                SeriesProperties[])[seriesIndex as number]
+                                                    ?.propsChange),
+                                                ((layoutRef.current.chart as Chart).visibleSeries as
+                                                SeriesProperties[])[seriesIndex as number],
+                                                // Pass distinct progress for add/remove
+                                                ((layoutRef.current.chart as Chart).visibleSeries as
+                                                    SeriesProperties[])[seriesIndex as number]?.isPointAdded ? animationProgress : 1,
+                                                ((layoutRef.current.chart as Chart).visibleSeries as
                                                 SeriesProperties[])[seriesIndex as number]?.isPointRemoved ? animationProgress : 1
-                                        )
+                                            )}
+                                        </React.Fragment>
                                     )}
-                                </>
+                                        {(() => {
+                                            const currentSeries: SeriesProperties = (layoutRef.current.chart as Chart)
+                                                .visibleSeries?.[seriesIndex as number] as SeriesProperties;
+                                            if (currentSeries?.errorBar?.visible && (animationProgress === 1
+                                                || currentSeries?.isLegendClicked)) {
+                                                return (<React.Fragment key={`errorBars_${seriesIndex}`}>
+                                                    {renderErrorBarsJSX(currentSeries)}
+                                                </React.Fragment>);
+                                            }
+                                            return null;
+                                        })()}
+                                    </>
+                                </React.Fragment>
                             );
                         }
                         return null;
@@ -1039,7 +1143,7 @@ export const SeriesRenderer: React.ForwardRefExoticComponent<ChartSeriesProps[] 
                                     dataLabel.length === 0 ||
                                     !(layoutRef.current?.chart as Chart)?.visibleSeries?.[actualSeriesIndex as number] ||
                                     !(layoutRef.current?.chart as Chart)?.visibleSeries?.[actualSeriesIndex as number]?.
-                                        marker?.dataLabel?.visible) {
+                                        marker?.dataLabel?.visible || (dataLabel[0] && dataLabel[0].template)) {
                                     return null;
                                 }
 
@@ -1069,7 +1173,8 @@ export const SeriesRenderer: React.ForwardRefExoticComponent<ChartSeriesProps[] 
                                         dataLabel.length === 0 ||
                                         !(layoutRef.current?.chart as Chart)?.visibleSeries?.[actualSeriesIndex as number] ||
                                         !(layoutRef.current?.chart as Chart)?.visibleSeries?.
-                                            [actualSeriesIndex as number]?.marker?.dataLabel?.visible) {
+                                            [actualSeriesIndex as number]?.marker?.dataLabel?.visible ||
+                                            (dataLabel[0] && dataLabel[0].template)) {
                                     return null;
                                 }
 

@@ -8,9 +8,9 @@ import { getSeriesColor, getThemeColor } from '../utils/theme';
 import { processChartSeries } from './SeriesRenderer/ProcessData';
 import { ChartContext } from '../layout/ChartProvider';
 import { defaultChartConfigs } from '../base/default-properties';
-import { Theme } from '../base/enum';
 import { AxisModel, Chart, ColumnProps, ElementWithSize, RowProps, SeriesProperties, ChartSizeProps } from '../chart-area/chart-interfaces';
 import { markerShapes } from './SeriesRenderer/MarkerRenderer';
+import { Theme } from '../../common';
 
 /**
  * ChartRenderer - Core functional component responsible for rendering the complete chart layout and structure.
@@ -35,7 +35,7 @@ export const ChartRenderer: React.FC<ChartComponentProps> = (props: ChartCompone
             const borderWidth: number = border.width as number;
             const rectWidth: number = availableSize.width - borderWidth;
             const rectHeight: number = availableSize.height - borderWidth;
-            const theme: Theme = props.theme || 'Material3';
+            const theme: Theme = props.theme || 'Material';
             let visibleSeries: SeriesProperties[] = calculateVisibleSeries(chartSeries as SeriesProperties[], props, theme);
             const requireInvertedAxis: boolean = calculateAreaType(visibleSeries, props);
             const visibleAxisCollection: AxisModel[] = calculateVisibleAxis(
@@ -58,7 +58,8 @@ export const ChartRenderer: React.FC<ChartComponentProps> = (props: ChartCompone
             const chartConfiguration: Partial<Chart> = createChartLayoutConfig(
                 props, parentElement, margin, disableAnimation as boolean, border as Required<ChartBorderProps>, availableSize,
                 dir, borderWidth, rectWidth, rectHeight, locale, theme, requireInvertedAxis, axisCollection,
-                triggerRemeasure, visibleAxisCollection, chartRows, chartColumns, visibleSeries, chartArea, chartZoom, chartTooltip);
+                triggerRemeasure, visibleAxisCollection, chartRows, chartColumns, visibleSeries, chartArea, chartZoom
+                , chartTooltip);
             setLayoutValue('chart', chartConfiguration);
             setDisableAnimation?.(false);
             reportMeasured('Chart');

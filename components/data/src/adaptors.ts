@@ -1108,7 +1108,7 @@ export class ODataAdaptor extends UrlAdaptor {
 
         if (predicate.operator === 'isEmpty' || predicate.operator === 'isnull' || predicate.operator === 'isNotEmpty' ||
             predicate.operator === 'isNotNull') {
-            operator = predicate.operator.indexOf('isnot') !== -1 ? DataUtil.odBiOperator['notequal'] : DataUtil.odBiOperator['equal'];
+            operator = predicate.operator.indexOf('isnot') !== -1 ? DataUtil.odBiOperator['notEqual'] : DataUtil.odBiOperator['equal'];
             val = predicate.operator === 'isnull' || predicate.operator === 'isNotNull' ? null : '\'\'';
         }
         else {
@@ -1135,12 +1135,12 @@ export class ODataAdaptor extends UrlAdaptor {
                 if (val.charAt(0) === '%' && val.lastIndexOf('%') < 2) {
                     val = val.substring(1, val.length);
                     operator = !isNullOrUndefined(this.getModuleName) && this.getModuleName() === 'ODataV4Adaptor' ?
-                        DataUtil.odv4UniOperator['endswith'] : DataUtil.odUniOperator['endswith'];
+                        DataUtil.odv4UniOperator['endsWith'] : DataUtil.odUniOperator['endsWith'];
                 }
                 else if (val.charAt(val.length - 1) === '%' && val.indexOf('%') > val.length - 3) {
                     val = val.substring(0, val.length - 1);
                     operator = !isNullOrUndefined(this.getModuleName) && this.getModuleName() === 'ODataV4Adaptor' ?
-                        DataUtil.odv4UniOperator['startswith'] : DataUtil.odUniOperator['startswith'];
+                        DataUtil.odv4UniOperator['startsWith'] : DataUtil.odUniOperator['startsWith'];
                 }
                 else if (val.lastIndexOf('%') !== val.indexOf('%') && val.lastIndexOf('%') > val.indexOf('%') + 1) {
                     val = val.substring(val.indexOf('%') + 1, val.lastIndexOf('%'));
@@ -1166,7 +1166,7 @@ export class ODataAdaptor extends UrlAdaptor {
                     splittedValue = splittedStringValue[0];
                     splittedValue = '\'' + splittedValue + '\'';
                     operator = !isNullOrUndefined(this.getModuleName) && this.getModuleName() === 'ODataV4Adaptor' ?
-                        DataUtil.odv4UniOperator['startswith'] : DataUtil.odUniOperator['startswith'];
+                        DataUtil.odv4UniOperator['startsWith'] : DataUtil.odUniOperator['startsWith'];
                     returnValue += operator + '(';
                     returnValue += field + ',';
                     if (guid) { returnValue += guid; }
@@ -1178,7 +1178,7 @@ export class ODataAdaptor extends UrlAdaptor {
                     splittedValue = splittedStringValue[splittedStringValue.length - 1];
                     splittedValue = '\'' + splittedValue + '\'';
                     operator = !isNullOrUndefined(this.getModuleName) && this.getModuleName() === 'ODataV4Adaptor' ?
-                        DataUtil.odv4UniOperator['endswith'] : DataUtil.odUniOperator['endswith'];
+                        DataUtil.odv4UniOperator['endsWith'] : DataUtil.odUniOperator['endsWith'];
                     if (count > 0) {
                         returnValue += ' and ';
                     }

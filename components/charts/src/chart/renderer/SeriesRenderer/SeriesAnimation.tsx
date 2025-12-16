@@ -1,9 +1,9 @@
-import { getPathLength, valueToCoefficient } from '../../utils/helper';
+import { getPathLength, resolveRectPointFromId, valueToCoefficient } from '../../utils/helper';
 import { PathCommand } from '../../common/base';
 import { interpolateSteplinePathD } from './StepLineSeriesRenderer';
 import { StepPosition } from '../../base/enum';
 import { interpolateSplinePathD } from './SplineSeriesRenderer';
-import { Points, RenderOptions, SeriesProperties } from '../../chart-area/chart-interfaces';
+import { Points, Rect, RenderOptions, SeriesProperties } from '../../chart-area/chart-interfaces';
 import { interpolateBorderPath } from './AreaSeriesRenderer';
 import { ChartLocationProps } from '../../base/interfaces';
 
@@ -852,6 +852,11 @@ export const calculatePathAnimation: (pathOptions: RenderOptions, index: number,
 export function handleRectAnimation(pathOption: RenderOptions, currentSeries:
 SeriesProperties, index: number, currentPoint: Points | undefined
 , pointIndex: number, state: AnimationState, enableAnimation: boolean): { animatedDirection?: string; animatedTransform?: string; } {
+    // Always resolve the true point/index from the element id (avoids empty-point skew)
+    const resolvedPointAndIndex: { point?: Points; index: number; } = (currentSeries?.type === 'RangeColumn')
+        ? resolveRectPointFromId(pathOption, currentSeries, currentPoint, pointIndex)
+        : { point: currentPoint, index: pointIndex };
+    const { point: resolvedPoint, index: resolvedIndex } = resolvedPointAndIndex;
     const isFirstRenderRef: React.MutableRefObject<boolean> = state.isFirstRenderRef;
     const isInitialRenderRef: React.MutableRefObject<boolean[]> = state.isInitialRenderRef;
     const animationProgress: number = state.animationProgress;
@@ -861,7 +866,7 @@ SeriesProperties, index: number, currentPoint: Points | undefined
 
     if (animationProgress === 1) {
         previousSeriesOptionsRef.current[index as number] ||= [];
-        previousSeriesOptionsRef.current[index as number][pointIndex as number] = pathOption;
+        previousSeriesOptionsRef.current[index as number][resolvedIndex as number] = pathOption;
     }
     if (currentSeries && currentPoint && enableAnimation) {
         if (isFirstRenderRef.current && isInitial) {
@@ -869,17 +874,18 @@ SeriesProperties, index: number, currentPoint: Points | undefined
                 isFirstRenderRef.current = false;
                 isInitialRenderRef.current[index as number] = false;
             }
-            return { animatedTransform: animateRect(currentSeries, currentPoint, animationProgress), animatedDirection: undefined };
+            return { animatedTransform: animateRect(currentSeries, resolvedPoint as Points, animationProgress),
+                animatedDirection: undefined };
         }
 
         if (!isFirstRenderRef.current &&
             previousSeriesOptionsRef.current &&
             previousSeriesOptionsRef.current[index as number] &&
-            previousSeriesOptionsRef.current[index as number][pointIndex as number] &&
-            (previousSeriesOptionsRef.current[index as number][pointIndex as number].d !== pathOption.d)) {
+            previousSeriesOptionsRef.current[index as number][resolvedIndex as number] &&
+            (previousSeriesOptionsRef.current[index as number][resolvedIndex as number].d !== pathOption.d)) {
 
             direction = calculateRectPathDirection(
-                previousSeriesOptionsRef.current[index as number][pointIndex as number].d,
+                previousSeriesOptionsRef.current[index as number][resolvedIndex as number].d,
                 pathOption.d,
                 animationProgress
             );
@@ -913,6 +919,15 @@ export const animateRect: (series: SeriesProperties, point: Points, progress?: n
     let elementWidth: number = +point.regions[0].width;
     let centerX: number;
     let centerY: number;
+    if (series.type === 'Candle' || series.type === 'Hilo' || series.type === 'HiloOpenClose' || series.type === 'RangeColumn') {
+        const rect: Rect = point.regions[0];
+        const centerX: number = rect.x + rect.width / 2;
+        const centerY: number = rect.y + rect.height / 2;
+        const isInverted: boolean = !!series.chart.requireInvertedAxis;
+        return isInverted
+            ? `translate(${centerX} ${centerY}) scale(${progress}, 1) translate(${-centerX} ${-centerY})`
+            : `translate(${centerX} ${centerY}) scale(1, ${progress}) translate(${-centerX} ${-centerY})`;
+    }
     if (!series.chart.requireInvertedAxis) {
         if (series?.type!.indexOf('Stacking') > -1) {
             centerX = x;
@@ -970,10 +985,13 @@ export function calculateRectPathDirection(
         const startCmd: PathCommand = startCommands[i as number];
         const endCmd: PathCommand = endCommands[i as number];
         if (startCmd.type !== endCmd.type) {
+            if (startCmd.type.toUpperCase() === 'Z' && endCmd.type.toUpperCase() === 'Z') {
+                result += 'Z ';
+            }
             continue;
         }
         result += startCmd.type + ' ';
-        switch (startCmd.type) {
+        switch (startCmd.type.toUpperCase()) {
         case 'M':
         case 'L': {
             const x: number = interpolate(startCmd.params[0], endCmd.params[0], progress);
@@ -987,6 +1005,10 @@ export function calculateRectPathDirection(
             const ex: number = interpolate(startCmd.params[2], endCmd.params[2], progress);
             const ey: number = interpolate(startCmd.params[3], endCmd.params[3], progress);
             result += `${cx} ${cy} ${ex} ${ey} `;
+            break;
+        }
+        case 'Z': {
+            result += '';
             break;
         }
         }
@@ -1009,6 +1031,10 @@ export function parsePathCommands(path: string): PathCommand[] {
         const part: string = parts[i as number].trim();
         if (/^[MLHVCSQTAZ]$/i.test(part)) {
             currentType = part;
+            if (currentType.toUpperCase() === 'Z') {
+                commands.push({ type: currentType, params: [] });
+                currentType = ''; // Reset currentType after consuming 'Z'
+            }
             continue;
         }
         if (currentType && part) {
@@ -1067,3 +1093,4 @@ export const doInitialAnimation: (series: SeriesProperties, animationProgress: n
         scale: easedProgress
     };
 };
+

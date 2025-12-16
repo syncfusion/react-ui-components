@@ -87,6 +87,26 @@ export enum Size {
 }
 
 /**
+ * Enumeration for specifying sorting orders in the ListView. Available options are as follows None, Ascending, and Descending.
+ *
+ */
+export enum SortOrder {
+    /**
+     * No specific sorting order is applied to the ListView items. The items are displayed in their original order.
+     */
+    None = 'None',
+    /**
+     * Ascending order sorting is applied to the ListView items.
+     */
+    Ascending = 'Ascending',
+    /**
+     * Descending order sorting is applied to the ListView items.
+     */
+    Descending = 'Descending'
+}
+
+
+/**
  * Defines layout orientation for components. Each orientation specifies the directional arrangement for layout and component behavior.
  */
 export enum Orientation {

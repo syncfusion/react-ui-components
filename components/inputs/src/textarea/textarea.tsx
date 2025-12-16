@@ -1,9 +1,8 @@
 import * as React from 'react';
-import { forwardRef, ReactNode, Ref, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { CLASS_NAMES, LabelMode, renderClearButton, renderFloatLabelElement } from '../common/inputbase';
-import { getUniqueID, preRender, useProviderContext } from '@syncfusion/react-base';
-import { Variant } from '../textbox/textbox';
-export { LabelMode };
+import { forwardRef, ReactNode, Ref, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, useId } from 'react';
+import { CLASS_NAMES, inputBaseProps, LabelMode, renderClearButton, renderFloatLabelElement } from '../common/inputbase';
+import { preRender, useProviderContext, Variant, Size } from '@syncfusion/react-base';
+export { LabelMode, Variant, Size };
 
 export interface TextAreaChangeEvent {
     /**
@@ -16,26 +15,6 @@ export interface TextAreaChangeEvent {
      */
     value?: string;
 }
-
-/**
- * Constant for horizontal resize mode
- */
-const RESIZE_X: string = 'sf-resize-x';
-
-/**
- * Constant for vertical resize mode
- */
-const RESIZE_Y: string = 'sf-resize-y';
-
-/**
- * Constant for both horizontal and vertical resize mode
- */
-const RESIZE_XY: string = 'sf-resize-xy';
-
-/**
- * Constant for no resize mode
- */
-const RESIZE_NONE: string = 'sf-resize-none';
 
 /**
  * Constant for multi-line input class
@@ -74,8 +53,26 @@ export enum ResizeMode {
     Vertical = 'Vertical'
 }
 
+const RESIZE_MAP: Record<ResizeMode, string> = {
+    /**
+     * Constant for no resize mode
+     */
+    [ResizeMode.None]: 'sf-resize-none',
+    /**
+     * Constant for both horizontal and vertical resize mode
+     */
+    [ResizeMode.Both]: 'sf-resize-xy',
+    /**
+     * Constant for horizontal resize mode
+     */
+    [ResizeMode.Horizontal]: 'sf-resize-x',
+    /**
+     * Constant for vertical resize mode
+     */
+    [ResizeMode.Vertical]: 'sf-resize-y'
+};
 
-export interface TextAreaProps {
+export interface TextAreaProps extends inputBaseProps {
     /**
      * Specifies the value of the component. When provided, the component will be controlled.
      *
@@ -141,13 +138,6 @@ export interface TextAreaProps {
      * @returns {void}
      */
     onChange?: (event: TextAreaChangeEvent) => void;
-
-    /**
-     * Specifies the visual style variant of the component.
-     *
-     * @default Variant.Standard
-     */
-    variant?: Variant;
 }
 
 export interface ITextArea extends TextAreaProps {
@@ -188,6 +178,7 @@ forwardRef<ITextArea, ITextAreaProps>((props: ITextAreaProps, ref: Ref<ITextArea
         rows = null,
         clearButton = false,
         className = '',
+        size = Size.Medium,
         variant,
         onChange,
         onBlur,
@@ -203,8 +194,10 @@ forwardRef<ITextArea, ITextAreaProps>((props: ITextAreaProps, ref: Ref<ITextArea
 
     const displayValue: string | undefined = isControlled ? value : uncontrolledValue;
 
+    const textareaId: string = `textArea_${useId()}`;
+
     const [isFocused, setIsFocused] = useState(false);
-    const id: string = useMemo(() => rest.id || getUniqueID('textArea_'), [rest.id]);
+    const id: string = useMemo(() => rest.id || textareaId, [rest.id]);
     const elementRef: React.RefObject<HTMLTextAreaElement | null> = useRef<HTMLTextAreaElement>(null);
     const { locale, dir } = useProviderContext();
 
@@ -239,7 +232,8 @@ forwardRef<ITextArea, ITextAreaProps>((props: ITextAreaProps, ref: Ref<ITextArea
             ((displayValue) !== '') ? CLASS_NAMES.VALIDINPUT : '',
             variant && variant.toLowerCase() !== 'standard'  ? variant.toLowerCase() === 'outlined' ? 'sf-outline' : `sf-${variant.toLowerCase()}` : '',
             AUTOWIDTH,
-            'sf-medium'
+            size && size.toLowerCase() !== 'small' ? `sf-${size.toLowerCase()}` : '',
+            'sf-control'
         );
     };
 
@@ -285,6 +279,9 @@ forwardRef<ITextArea, ITextAreaProps>((props: ITextAreaProps, ref: Ref<ITextArea
         const newValue: string = '';
         if (!isControlled) {
             setUncontrolledValue(newValue);
+            if (elementRef.current) {
+                elementRef.current.value = newValue;
+            }
         }
 
         if (onChange) {
@@ -292,8 +289,8 @@ forwardRef<ITextArea, ITextAreaProps>((props: ITextAreaProps, ref: Ref<ITextArea
         }
     }, [onChange, isControlled]);
 
-    const getCurrentResizeClass: (resizeMode: string) => string = (resizeMode: string) => {
-        return resizeMode === 'None' ? RESIZE_NONE : (resizeMode === 'Both' ? RESIZE_XY : resizeMode === 'Horizontal' ? RESIZE_X : RESIZE_Y );
+    const getCurrentResizeClass: (resizeMode: ResizeMode) => string = (resizeMode: ResizeMode) => {
+        return RESIZE_MAP[`${resizeMode}`];
     };
 
     return (
@@ -317,7 +314,7 @@ forwardRef<ITextArea, ITextAreaProps>((props: ITextAreaProps, ref: Ref<ITextArea
                     width: width ? (typeof width === 'number' ? `${width}px` : width) : undefined,
                     resize: resizeMode === 'None' ? 'none' : undefined
                 }}
-                className={`sf-control sf-textarea sf-lib sf-input ${getCurrentResizeClass(resizeMode)}`}
+                className={`sf-textarea sf-lib sf-input ${getCurrentResizeClass(resizeMode)}`}
                 aria-multiline="true"
                 aria-labelledby={`label_${id}`}
             />
@@ -329,7 +326,7 @@ forwardRef<ITextArea, ITextAreaProps>((props: ITextAreaProps, ref: Ref<ITextArea
                 id
             )}
             {clearButton && renderClearButton(
-                (displayValue) ? (displayValue).toString() : '',
+                (displayValue && isFocused) ? (displayValue).toString() : '',
                 clearValue, clearButton, 'textarea', locale
             )}
         </div>

@@ -1,4 +1,4 @@
-import { RefObject, ComponentType } from 'react';
+import { RefObject, ComponentType, ComponentProps } from 'react';
 import { ColumnProps } from '../types/column.interfaces';
 import { useEdit } from '../hooks';
 import { IFormValidator } from '@syncfusion/react-inputs';
@@ -8,14 +8,24 @@ import { ICheckbox, CheckboxProps } from '@syncfusion/react-buttons';
 import { IDatePicker, DatePickerProps } from '@syncfusion/react-calendars';
 import { IDropDownList, DropDownListProps } from '@syncfusion/react-dropdowns';
 import { ActionType, EditType, NewRowPosition } from '../types/enum';
-import { ValueType } from './';
+import { IRow, ValueType } from './';
+import { Dialog, IDialog } from '@syncfusion/react-popups';
 
 /**
- * Edit mode enumeration for Grid edit modes.
- *
- * @private
+ * Defines the editing interaction mode for grid records.
+ * ```props
+ * * Normal :- Allows inline editing directly within grid cells.
+ * * Popup :- Displays edit form in a modal dialog with auto-generated fields.
+ * * PopupTemplate :- Displays edit form in a modal dialog using custom template.
+ * ```
  */
-export type EditMode = 'Normal';
+export type EditMode = 'Normal' | 'Popup' | 'PopupTemplate';
+
+/**
+ * Configuration settings for customizing the Syncfusion `Dialog` component used in popup edit mode.
+ * Accepts any valid `Dialog` component props as partial properties for dialog customization.
+ */
+export type PopupSettings = Partial<ComponentProps<typeof Dialog>>;
 
 /**
  * Represents the configuration options for enabling and customizing editing behavior in a grid component.
@@ -29,7 +39,7 @@ export interface EditSettings<T = unknown> {
      *
      * When this property is set to true, new rows can be inserted either through programmatic methods
      * or by using toolbar 'Add' action. To enable this functionality, at least one column must be defined
-     * as a primary key using the isPrimaryKey property in the column configuration.
+     * as a primary key using the `isPrimaryKey` property in the column configuration.
      *
      * @default false
      */
@@ -40,7 +50,7 @@ export interface EditSettings<T = unknown> {
      *
      * When this property is set to true, users can modify cell values in existing rows either through
      * programmatic updates or via toolbar 'Edit' interaction. Editing requires that at least one column
-     * is marked as a primary key using the isPrimaryKey property.
+     * is marked as a primary key using the `isPrimaryKey` property.
      *
      * @default false
      */
@@ -61,11 +71,12 @@ export interface EditSettings<T = unknown> {
      *
      * The editing mode defines how users interact with editable cells.
      *
-     * Supported mode include:
-     * - Normal: Allows inline editing directly within grid cells.
+     * Supported modes include:
+     * - `Normal` :- Inline editing directly within grid cells.
+     * - `Popup` :- Modal dialog with auto-generated form fields.
+     * - `PopupTemplate` :- Modal dialog with custom template.
      *
      * @default 'Normal'
-     * @private
      */
     mode?: EditMode;
 
@@ -115,7 +126,7 @@ export interface EditSettings<T = unknown> {
      * Specifies a custom React component to be used as the edit template for grid rows.
      *
      * This component replaces the default editing interface and receives the current row data as props.
-     * It can be used to implement advanced form layouts, validation logic, or third-party integrations.
+     * It can be used to implement advanced form layouts, validation logic, or custom component integrations.
      *
      * @default null
      * @example
@@ -147,12 +158,50 @@ export interface EditSettings<T = unknown> {
      * Specifies the position at which a new row is inserted into the grid.
      *
      * Supported values include:
-     * - Top: Inserts the new row at the beginning of the grid.
-     * - Bottom: Inserts the new row at the end of the grid.
+     * - `Top`: Inserts the new row at the beginning of the grid.
+     * - `Bottom`: Inserts the new row at the end of the grid.
      *
      * @default 'Top' | NewRowPosition.Top
      */
     newRowPosition?: string | NewRowPosition;
+
+    /**
+     * Configuration settings for customizing the Syncfusion `Dialog` component used in popup edit mode.
+     *
+     * Accepts any valid `Dialog` component props for popup styling, positioning, and behavior customization.
+     *
+     * @default null
+     */
+    popupSettings?: PopupSettings;
+
+    /**
+     * Custom React component template for rendering the popup edit form.
+     *
+     * Used with `PopupTemplate` mode to display custom form layouts in the modal dialog.
+     *
+     * @default null
+     */
+    popupTemplate?: ComponentType<PopupTemplateProps<T>>;
+}
+
+/**
+ * Props interface for custom popup template component used in `PopupTemplate` edit mode.
+ * Provides row data and operation context to the template component.
+ */
+export interface PopupTemplateProps<T = unknown> {
+    /**
+     * The current data object for the row being edited or added.
+     *
+     * @default -
+     */
+    data: T;
+
+    /**
+     * Indicates whether the operation is for adding a new row.
+     *
+     * @default false
+     */
+    isAdd: boolean;
 }
 
 /**
@@ -170,6 +219,7 @@ export interface EditState<T = unknown> {
     showAddNewRowData: T; // Data for the persistent add new row
     isShowAddNewRowActive: boolean; // Whether the add new row is currently active
     isShowAddNewRowDisabled: boolean; // Whether the add new row inputs should be disabled (but still visible)
+    rowObject: IRow<ColumnProps<T>>;
 }
 
 /**
@@ -208,6 +258,8 @@ export interface UseEditResult<T = unknown> {
     nextPrevEditRowInfo: RefObject<KeyboardEvent>;
     focusLastField: RefObject<boolean>;
     escEnterIndex: RefObject<number>;
+    rowObject: IRow<ColumnProps<T>>;
+    popupEditFormRef: RefObject<InlineEditFormRef<T>>;
 }
 
 /**
@@ -730,6 +782,20 @@ export interface EditCellProps<T = unknown> {
      * @default null
      */
     formState?: FormState;
+
+    /**
+     * Provides access to row data, row index, and row state information.
+     *
+     * @default -
+     */
+    rowObject?: IRow<ColumnProps<T>>;
+
+    /**
+     * Reference to the Dialog component instance for the edit popup.
+     *
+     * @default null
+     */
+    popupRef?: React.RefObject<IDialog>;
 }
 
 /**
@@ -759,6 +825,13 @@ export interface EditCellRef {
      * @returns {void}
      */
     setValue(value: ValueType | Object | null): void;
+
+    /**
+     * Reference to the underlying input element or Syncfusion component instance.
+     *
+     * @default null
+     */
+    inputRef: RefObject<EditCellInputRef>;
 }
 
 /**
@@ -850,9 +923,11 @@ export interface InlineEditFormRef<T = unknown> {
     /**
      * Sets focus on the first editable field in the form.
      *
+     * @param last - Optional parameter indicating whether to focus the last field.
+     * @param edit - Optional parameter indicating whether to ignore the primary column.
      * @returns {void}
      */
-    focusFirstField: () => void;
+    focusFirstField?: (last?: boolean, edit?: boolean) => void;
 
     /**
      * Validates all form fields and returns the validation result.
@@ -902,6 +977,13 @@ export interface InlineEditFormRef<T = unknown> {
      * @default null
      */
     formRef: React.RefObject<IFormValidator>;
+
+    /**
+     * Reference to the row DOM element.
+     *
+     * @default null
+     */
+    readonly rowRef: RefObject<HTMLTableRowElement | null>;
 }
 
 /**
@@ -930,6 +1012,13 @@ export interface InlineEditFormProps<T = unknown> extends EditFormProps<T> {
      * @default false
      */
     isAddOperation: boolean;
+
+    /**
+     * Provides access to row data, row index, and row state information.
+     *
+     * @default -
+     */
+    rowObject?: IRow<ColumnProps<T>>;
 }
 
 /**
@@ -987,6 +1076,13 @@ export interface ValidationTooltipsProps {
      * @default null
      */
     editCellRefs?: React.RefObject<{ [field: string]: EditCellRef }>;
+
+    /**
+     * Reference to the row DOM element.
+     *
+     * @default null
+     */
+    rowRef?: RefObject<HTMLTableRowElement>;
 }
 
 /**

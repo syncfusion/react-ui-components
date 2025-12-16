@@ -1,5 +1,5 @@
 import { Browser } from '@syncfusion/react-base';
-import { Theme } from '../base/enum';
+import { Theme } from '../../common';
 import { Rect, TextStyleModel } from '../chart-area/chart-interfaces';
 
 export interface IThemeStyle {
@@ -56,7 +56,7 @@ export interface IThemeStyle {
 export function getThemeColor(theme: Theme): IThemeStyle {
     let style: IThemeStyle;
     switch (theme) {
-    case 'Material3':
+    case 'Material':
         style = {
             axisLabel: '#49454E',
             axisTitle: '#1E192B',
@@ -69,7 +69,7 @@ export function getThemeColor(theme: Theme): IThemeStyle {
             background: 'transparent',
             areaBorder: '#E7E0EC',
             errorBar: '#79747E',
-            crosshairLine: '#49454E',
+            crosshairLine: '#9E9E9E',
             crosshairBackground: 'rgba(73, 69, 78, 0.1)',
             crosshairFill: '#313033',
             crosshairLabel: '#F4EFF4',
@@ -82,8 +82,8 @@ export function getThemeColor(theme: Theme): IThemeStyle {
             selectionRectStroke: '#6200EE',
             selectionCircleStroke: '#79747E',
             tabColor: '#49454E',
-            bearFillColor: '#5887FF',
-            bullFillColor: '#F7523F',
+            bearFillColor: '#E53935',
+            bullFillColor: '#43A047',
             toolkitSelectionColor: '#49454E',
             toolkitFill: '#49454E',
             toolkitIconRectOverFill: '#EADDFF',
@@ -121,7 +121,7 @@ export function getThemeColor(theme: Theme): IThemeStyle {
             }
         };
         break;
-    case 'Material3Dark':
+    case 'MaterialDark':
         style = {
             axisLabel: '#CAC4D0',
             axisTitle: '#E8DEF8',
@@ -134,7 +134,7 @@ export function getThemeColor(theme: Theme): IThemeStyle {
             background: 'transparent',
             areaBorder: '#49454F',
             errorBar: '#938F99',
-            crosshairLine: '#CAC4D0',
+            crosshairLine: '#9E9E9E',
             crosshairBackground: 'rgba(73, 69, 78, 0.1)',
             crosshairFill: '#E6E1E5',
             crosshairLabel: '#313033',
@@ -147,8 +147,8 @@ export function getThemeColor(theme: Theme): IThemeStyle {
             selectionRectStroke: '#4EAAFF',
             selectionCircleStroke: '#938F99',
             tabColor: '#CAC4D0',
-            bearFillColor: '#B3F32F',
-            bullFillColor: '#FF9E45',
+            bearFillColor: '#FF7043',
+            bullFillColor: '#66BB6A',
             toolkitSelectionColor: '#CAC4D0',
             toolkitFill: '#CAC4D0',
             toolkitIconRectOverFill: '#4F378B',
@@ -202,13 +202,13 @@ export function getThemeColor(theme: Theme): IThemeStyle {
 export function getSeriesColor(theme: Theme): string[] {
     let palette: string[];
     switch (theme) {
-    case 'Material3':
+    case 'Material':
         palette = [
             '#1E88E5', '#F25087', '#FB8C00', '#43A047', '#E53935',
             '#706C6C', '#F2BD02', '#00ACC1', '#7443B2', '#324070'
         ];
         break;
-    case 'Material3Dark':
+    case 'MaterialDark':
         palette = [
             '#1E88E5', '#F25087', '#FB8C00', '#43A047', '#E53935',
             '#706C6C', '#F2BD02', '#00ACC1', '#7443B2', '#324070'

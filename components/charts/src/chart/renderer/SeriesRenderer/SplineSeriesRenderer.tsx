@@ -1,6 +1,6 @@
 import { ChartMarkerProps, ChartLocationProps } from '../../base/interfaces';
 import { PathCommand } from '../../common/base';
-import { getPoint, withInRange } from '../../utils/helper';
+import { applyPointRenderCallback, getPoint, withInRange } from '../../utils/helper';
 import { LineBase, LineBaseReturnType } from './LineBase';
 import { calculatePathAnimation, interpolate, parsePathCommands } from './SeriesAnimation';
 import MarkerRenderer from './MarkerRenderer';
@@ -491,6 +491,7 @@ const SplineSeriesRenderer: SplineSeriesInterface = {
         let firstPoint: Points | null = null;
         // let prevIndex = 0;
         const isDropMode: boolean = series.emptyPointSettings?.mode === 'Drop';
+        let seriesStroke: string | undefined;
 
         for (let i: number = 0; i < points.length; i++) {
             const point: Points = points[i as number];
@@ -530,6 +531,15 @@ const SplineSeriesRenderer: SplineSeriesInterface = {
 
                 lineBaseInstance.storePointLocation(point, series, isInverted, getCoordinate);
                 firstPoint = point;
+
+                const customizedValues: string = applyPointRenderCallback(({
+                    seriesIndex: series.index as number, color: series.interior as string,
+                    xValue: point.xValue as number | Date | string | null,
+                    yValue: point.yValue as number | Date | string | null
+                }), series.chart);
+                point.interior = customizedValues;
+
+                if (!seriesStroke) {seriesStroke = customizedValues; }
             } else {
                 if (!isDropMode && firstPoint) {
                     firstPoint = null;
@@ -542,7 +552,7 @@ const SplineSeriesRenderer: SplineSeriesInterface = {
             id: name,
             fill: 'none',
             strokeWidth: series.width,
-            stroke: series.interior,
+            stroke: seriesStroke as string,
             opacity: series.opacity,
             dashArray: series.dashArray,
             d: direction

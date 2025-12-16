@@ -1,0 +1,421 @@
+@use 'sass:math';
+@use 'sass:color';
+@use 'sass:meta';
+@use 'sass:list';
+@use 'all' as *;
+
+:root, .sf-light-mode {
+  --sf-color-black: 0, 0, 0;
+  --sf-color-white: 255, 255, 255;
+  --sf-color-primary: 103, 80, 164;
+  --sf-color-primary-container: 234, 221, 255;
+  --sf-color-secondary: 98, 91, 113;
+  --sf-color-surface: 255, 255, 255;
+  --sf-color-surface-variant: 231, 224, 236;
+  --sf-color-background: 255, 255, 255;
+  --sf-color-on-primary: 255, 255, 255;
+  --sf-color-on-primary-container: 33, 0, 94;
+  --sf-color-on-surface: 28, 27, 31;
+  --sf-color-on-surface-variant: 73, 69, 78;
+  --sf-color-outline: 121, 116, 126;
+  --sf-color-outline-variant: 196, 199, 197;
+  --sf-color-shadow: 0, 0, 0;
+  --sf-color-inverse-surface: 49, 48, 51;
+  --sf-color-inverse-on-surface: 244, 239, 244;
+  --sf-color-scrim: 0, 0, 0;
+  --sf-color-error: 179, 38, 30;
+  --sf-color-error-container: 249, 222, 220;
+  --sf-color-on-error: 255, 250, 250;
+  --sf-color-on-error-container: 65, 14, 11;
+  --sf-color-success: 32, 81, 7;
+  --sf-color-success-container: 209, 255, 186;
+  --sf-color-on-success: 244, 255, 239;
+  --sf-color-on-success-container: 13, 39, 0;
+  --sf-color-info: 1, 87, 155;
+  --sf-color-info-container: 233, 245, 255;
+  --sf-color-on-info: 250, 253, 255;
+  --sf-color-on-info-container: 0, 51, 91;
+  --sf-color-warning: 145, 76, 0;
+  --sf-color-warning-container: 254, 236, 222;
+  --sf-color-on-warning: 255, 255, 255;
+  --sf-color-on-warning-container: 47, 21, 0;
+  --sf-color-success-text: 255, 255, 255;
+  --sf-color-warning-text: 255, 255, 255;
+  --sf-color-error-text: 255, 255, 255;
+  --sf-color-info-text: 255, 255, 255;
+  --sf-color-line-color: 231, 227, 240;
+}
+
+:root, .sf-light-mode, .sf-dark-mode {
+  --sf-font-size: 1rem;
+  --sf-spacing: 1rem;
+  --sf-radius: 1rem;
+  --sf-font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+  --sf-letter-spacing: 0px;
+  --sf-elevation: 0 .8px 16px rgba($black, .15);
+  --sf-elevation-1: 0 1px 3px 1px rgba(0, 0, 0, .15), 0 1px 2px 0 rgba(0, 0, 0, .3);
+  --sf-elevation-2: 0 2px 6px 2px rgba(0, 0, 0, .15), 0 1px 2px 0 rgba(0, 0, 0, .3);
+  --sf-elevation-3: 0 1px 3px 0 rgba(0, 0, 0, .3), 0 4px 8px 3px rgba(0, 0, 0, .15);
+  --sf-elevation-inner:inset 0 1px 2px rgba($black, .075);
+}
+
+:root, .sf-light-mode, .sf-dark-mode { 
+  --sf-font-size-xs: calc(var(--sf-font-size) * 0.75);
+  --sf-font-size-sm: calc(var(--sf-font-size) * 0.875);
+  --sf-font-size-base: calc(var(--sf-font-size) * 1);
+  --sf-font-size-lg: calc(var(--sf-font-size) * 1.125);
+  --sf-font-size-xl: calc(var(--sf-font-size) * 1.25);
+  --sf-font-size-2xl: calc(var(--sf-font-size) * 1.5);
+  --sf-line-height-xs: calc(var(--sf-font-size) * 1);
+  --sf-line-height-sm: calc(var(--sf-font-size) * 1.25);
+  --sf-line-height-base: calc(var(--sf-font-size) * 1.5);
+  --sf-line-height-lg: calc(var(--sf-font-size) * 1.75);
+  --sf-line-height-2xl: calc(var(--sf-font-size) * 2);
+  --sf-line-height-3xl: calc(var(--sf-font-size) * 2.25);
+  --sf-line-height-5xl: 1;
+  --sf-font-weight-normal: 400;
+  --sf-font-weight-medium: 500;
+  --sf-font-weight-semibold: 600;
+  --sf-letter-spacing-normal: var(--sf-letter-spacing);
+  --sf-letter-spacing-wide: calc(var(--sf-letter-spacing) + 0.1px);
+  --sf-letter-spacing-wider: calc(var(--sf-letter-spacing) + 0.25px);
+  --sf-spacing-0: 0;
+  --sf-spacing-1: calc(var(--sf-spacing) * 0.0625);
+  --sf-spacing-2: calc(var(--sf-spacing) * 0.125);
+  --sf-spacing-3: calc(var(--sf-spacing) * 0.1875);
+  --sf-spacing-4: calc(var(--sf-spacing) * 0.25);
+  --sf-spacing-5: calc(var(--sf-spacing) * 0.3125);
+  --sf-spacing-6: calc(var(--sf-spacing) * 0.375);
+  --sf-spacing-7: calc(var(--sf-spacing) * 0.4375);
+  --sf-spacing-8: calc(var(--sf-spacing) * 0.5);
+  --sf-spacing-9: calc(var(--sf-spacing) * 0.5625);
+  --sf-spacing-10: calc(var(--sf-spacing) * 0.625);
+  --sf-spacing-11: calc(var(--sf-spacing) * 0.6875);
+  --sf-spacing-12: calc(var(--sf-spacing) * 0.75);
+  --sf-spacing-13: calc(var(--sf-spacing) * 0.8125);
+  --sf-spacing-14: calc(var(--sf-spacing) * 0.875);
+  --sf-spacing-15: calc(var(--sf-spacing) * 0.9375);
+  --sf-spacing-16: calc(var(--sf-spacing) * 1);
+  --sf-spacing-18: calc(var(--sf-spacing) * 1.125);
+  --sf-spacing-20: calc(var(--sf-spacing) * 1.25);
+  --sf-spacing-22: calc(var(--sf-spacing) * 1.375);
+  --sf-spacing-24: calc(var(--sf-spacing) * 1.5);
+  --sf-spacing-28: calc(var(--sf-spacing) * 1.75);
+  --sf-spacing-30: calc(var(--sf-spacing) * 1.875);
+  --sf-spacing-32: calc(var(--sf-spacing) * 2);
+  --sf-spacing-40: calc(var(--sf-spacing) * 2.5);
+  --sf-spacing-48: calc(var(--sf-spacing) * 3);
+  --sf-spacing-56: calc(var(--sf-spacing) * 3.5);
+  --sf-spacing-72: calc(var(--sf-spacing) * 4.5);
+  --sf-radius-0: 0px;
+  --sf-radius-2: calc(var(--sf-radius) * 0.125);
+  --sf-radius-4: calc(var(--sf-radius) * 0.25);
+  --sf-radius-6: calc(var(--sf-radius) * 0.375);
+  --sf-radius-8: calc(var(--sf-radius) * 0.5);
+  --sf-radius-12: calc(var(--sf-radius) * 0.75);
+  --sf-radius-16: calc(var(--sf-radius) * 1);
+  --sf-radius-20: calc(var(--sf-radius) * 1.25);
+  --sf-radius-24: calc(var(--sf-radius) * 1.5);
+  --sf-radius-28: calc(var(--sf-radius) * 1.75);
+  --sf-radius-full: 999px;
+}
+
+$black: sf-color('black') !default;
+$white: sf-color('white') !default;
+
+$load-roboto-font: true !default;
+$primary : sf-color('primary') !default;
+$primary-container: sf-color('primary-container') !default;
+$secondary: sf-color('secondary') !default;
+$surface: sf-color('surface') !default;
+$surface-variant: sf-color('surface-variant') !default;
+$background: sf-color('background') !default;
+$on-primary: sf-color('on-primary') !default;
+$on-surface: sf-color('on-surface') !default;
+$on-surface-variant: sf-color('on-surface-variant') !default;
+$outline: sf-color('outline') !default;
+$outline-variant: sf-color('outline-variant') !default;
+$shadow: sf-color('shadow') !default;
+$inverse-surface: sf-color('inverse-surface') !default;
+$inverse-on-surface: sf-color('inverse-on-surface') !default;
+$scrim: sf-color('scrim') !default;
+$error: sf-color('error') !default;
+$error-container: sf-color('error-container') !default;
+$on-error: sf-color('on-error') !default;
+$on-error-container: sf-color('on-error-container') !default;
+$success: sf-color('success') !default;
+$success-container: sf-color('success-container') !default;
+$on-success: sf-color('on-success') !default;
+$on-success-container: sf-color('on-success-container') !default;
+$info: sf-color('info') !default;
+$info-container: sf-color('info-container') !default;
+$on-info: sf-color('on-info') !default;
+$on-info-container: sf-color('on-info-container') !default;
+$warning: sf-color('warning') !default;
+$warning-container: sf-color('warning-container') !default;
+$on-warning: sf-color('on-warning') !default;
+$on-warning-container: sf-color('on-warning-container') !default;
+$success-text: sf-color('success-text') !default;
+$warning-text: sf-color('warning-text') !default;
+$info-text: sf-color('info-text') !default;
+$error-text: sf-color('error-text') !default;
+$grid-line: sf-color('line-color') !default;
+$pager-line: sf-color('line-color') !default;
+
+$surface1: linear-gradient(0deg, rgba($primary, $opacity5), rgba($primary, $opacity5)), rgba($surface) !default;
+$surface2: linear-gradient(0deg, rgba($primary, $opacity8), rgba($primary, $opacity8)), rgba($surface) !default;
+$surface3: linear-gradient(0deg, rgba($primary, $opacity11), rgba($primary, $opacity11)), rgba($surface) !default;
+
+$primary-text-color: $on-primary !default;
+$primary-light: $primary-container !default;
+$transparent: transparent !default;
+$info-dark: $info !default;
+$warning-dark: $warning !default;
+$error-dark: $error !default;
+
+$content-bg-color: $surface !default;
+$content-bg-color-alt1: $surface1 !default;
+$content-bg-color-alt2: $surface2 !default;
+$content-bg-color-alt3: $surface3 !default;
+$content-bg-color-hover: rgba($on-surface, $opacity5) !default;
+$content-bg-color-pressed: rgba($on-surface, $opacity8) !default;
+$content-bg-color-focus: rgba($on-surface, $opacity4) !default;
+$content-bg-color-selected: $primary-light !default;
+$flyout-bg-color: linear-gradient(0deg, rgba($content-bg-color, 1), rgba($content-bg-color, 1)), rgba($content-bg-color) !default;
+$flyout-bg-color-hover: rgba($on-surface, $opacity5) !default;
+$flyout-bg-color-selected: rgba($primary-container, .65) !default;
+$flyout-bg-color-focus: rgba($on-surface, $opacity4) !default;
+$overlay-bg-color: rgba($scrim, .5) !default;
+$table-bg-color-selected: rgba($primary-container, .65) !default;
+$table-bg-color-selected-hover: color-mix(in srgb, rgba($primary-container, .85), rgba($on-surface, 0.15));
+
+$content-text-color: $on-surface !default;
+$content-text-color-alt1: $on-surface-variant !default;
+$content-text-color-hover: $content-text-color !default;
+$content-text-color-selected: $content-text-color !default;
+$content-text-color-disabled: rgba($on-surface, .38) !default;
+$flyout-text-color: $content-text-color !default;
+$flyout-text-color-hover: $content-text-color !default;
+$flyout-text-color-selected: $content-text-color !default;
+$flyout-text-color-disabled: rgba($on-surface, .38) !default;
+
+$icon-color: $on-surface-variant !default;
+$icon-color-disabled: rgba($on-surface-variant, .38) !default;
+
+$border-light: $outline-variant !default;
+$border: $outline !default;
+$border-warning: $warning !default;
+$border-error: $error !default;
+$border-success: $success !default;
+$flyout-border: $border-light !default;
+
+$tooltip-bg-color: $inverse-surface !default;
+$tooltip-border: $inverse-surface !default;
+$tooltip-text-color: $inverse-on-surface !default;
+
+$shadow: var(--sf-elevation)!default;
+$shadow-sm: var(--sf-elevation-1) !default;
+$shadow-md: var(--sf-elevation-2) !default;
+$shadow-lg: var(--sf-elevation-3) !default;
+$shadow-inner: var(--sf-elevation-inner)!default;
+
+$shadow-focus-ring1: 0 0 0 1px #fff, 0 0 0 3px #000 !default;
+
+$secondary-bg-color: linear-gradient(0deg, rgba($content-bg-color, 1), rgba($content-bg-color, 1)), rgba($content-bg-color) !default;
+$secondary-border-color: linear-gradient(0deg, rgba($content-bg-color, 1), rgba($content-bg-color, 1)) !default;
+$secondary-text-color: $on-surface !default;
+$secondary-text-color-hover: $secondary-text-color !default;
+$secondary-border-color-pressed: linear-gradient(0deg, rgba($secondary-text-color, $opacity12), rgba($secondary-text-color, $opacity12)) !default;
+$secondary-text-color-pressed: $secondary-text-color !default;
+$secondary-bg-color-disabled: rgba($secondary, .12) !default;
+$secondary-outline-bg-pressed: rgba($on-surface, .12) !default;
+
+$primary-bg-color: $primary !default;
+$primary-border-color: $primary !default;
+$primary-text: $primary-text-color !default;
+$primary-bg-color-hover: linear-gradient(0deg, rgba($primary-text, $opacity8), rgba($primary-text, $opacity8)), rgba($primary-bg-color) !default;
+$primary-bg-color-pressed: linear-gradient(0deg, rgba($primary-text, $opacity12), rgba($primary-text, $opacity12)), rgba($primary-bg-color) !default;
+$primary-text-disabled: rgba($on-surface, .38) !default;
+
+$success-bg-color: $success !default;
+$success-border-color: $success !default;
+$success-text: $white !default;
+$success-bg-color-hover: linear-gradient(0deg, rgba($success-text, $opacity8), rgba($success-text, $opacity8)), rgba($success-bg-color) !default;
+$success-text-hover: $success-text !default;
+$success-bg-color-pressed: linear-gradient(0deg, rgba($success-text, $opacity12), rgba($success-text, $opacity12)), rgba($success-bg-color) !default;
+$success-bg-color-disabled: rgba($secondary, .12) !default;
+$success-border-color-disabled: $success-bg-color-disabled !default;
+
+$warning-bg-color: $warning !default;
+$warning-border-color: $warning !default;
+$warning-text: $white !default;
+$warning-bg-color-hover: linear-gradient(0deg, rgba($warning-text, $opacity8), rgba($warning-text, $opacity8)), rgba($warning-bg-color) !default;
+$warning-text-hover: $warning-text !default;
+$warning-bg-color-pressed: linear-gradient(0deg, rgba($warning-text, $opacity12), rgba($warning-text, $opacity12)), rgba($warning-bg-color) !default;
+
+$error-bg-color: $error !default;
+$error-border-color: $error !default;
+$error-text: $white !default;
+$error-bg-color-hover: linear-gradient(0deg, rgba($error-text, $opacity8), rgba($error-text, $opacity8)), rgba($error-bg-color) !default;
+$error-text-hover: $error-text !default;
+$error-bg-color-pressed: linear-gradient(0deg, rgba($error-text, $opacity12), rgba($error-text, $opacity12)), rgba($error-bg-color) !default;
+
+$info-text: $white !default;
+$info-bg-color: $info !default;
+$info-border-color: $info-bg-color !default;
+$info-bg-color-hover: linear-gradient(0deg, rgba($info-text, $opacity8), rgba($info-text, $opacity8)), rgba($info-bg-color) !default;
+$info-text-hover: $info-text !default;
+$info-bg-color-pressed: linear-gradient(0deg, rgba($info-text, $opacity12), rgba($info-text, $opacity12)), rgba($info-bg-color) !default;
+
+$primary-outline: $primary-bg-color !default;
+$success-outline: $success-bg-color !default;
+$info-outline: $info-bg-color !default;
+$info-outline-border: $outline !default;
+
+$series-1: $surface-variant !default;
+
+$msg-color: rgba($on-surface) !default;
+$msg-bg-color: $content-bg-color-alt1 !default;
+$msg-border-color: linear-gradient(0deg, rgba($primary, $opacity5), rgba($primary, $opacity5)) !default;
+$msg-color-alt1: rgba($on-surface) !default;
+$msg-bg-color-alt1: $transparent !default;
+$msg-border-color-alt1: rgba($outline-variant) !default;
+$msg-color-alt2: rgba($inverse-on-surface) !default;
+$msg-bg-color-alt2: rgba($inverse-surface) !default;
+$msg-border-color-alt2: rgba($inverse-surface) !default;
+
+$msg-icon-color: rgba($on-surface-variant) !default;
+$msg-icon-color-alt1: rgba($on-surface-variant) !default;
+$msg-icon-color-alt2: rgba($inverse-on-surface) !default;
+
+$msg-close-icon-color: rgba($icon-color) !default;
+$msg-close-icon-color-alt1: rgba($icon-color) !default;
+$msg-close-icon-color-alt2: rgba($inverse-on-surface) !default;
+
+$msg-success-color: rgba($on-success-container) !default;
+$msg-success-bg-color: rgba($success-container) !default;
+$msg-success-border-color: rgba($success-container) !default;
+$msg-success-color-alt1: rgba($on-success-container) !default;
+$msg-success-bg-color-alt1: $transparent !default;
+$msg-success-border-color-alt1: rgba($success) !default;
+$msg-success-color-alt2: rgba($on-success) !default;
+$msg-success-bg-color-alt2: rgba($success) !default;
+$msg-success-border-color-alt2: rgba($success) !default;
+
+$msg-success-icon-color: rgba($success) !default;
+$msg-success-icon-color-alt1: rgba($on-success-container) !default;
+$msg-success-icon-color-alt2: rgba($on-success) !default;
+
+$msg-success-close-icon-color: rgba($icon-color) !default;
+$msg-success-close-icon-color-alt1: rgba($icon-color) !default;
+$msg-success-close-icon-color-alt2: rgba($on-success) !default;
+
+$msg-error-color: rgba($on-error-container) !default;
+$msg-error-bg-color: rgba($error-container) !default;
+$msg-error-border-color: rgba($error-container) !default;
+$msg-error-color-alt1: rgba($on-error-container) !default;
+$msg-error-bg-color-alt1: $transparent !default;
+$msg-error-border-color-alt1: rgba($error) !default;
+$msg-error-color-alt2: rgba($on-error) !default;
+$msg-error-bg-color-alt2: rgba($error) !default;
+$msg-error-border-color-alt2: rgba($error) !default;
+
+$msg-error-icon-color: rgba($error) !default;
+$msg-error-icon-color-alt1: rgba($on-error-container) !default;
+$msg-error-icon-color-alt2: rgba($on-error) !default;
+
+$msg-error-close-icon-color: rgba($icon-color) !default;
+$msg-error-close-icon-color-alt1: rgba($icon-color) !default;
+$msg-error-close-icon-color-alt2: rgba($on-error) !default;
+
+$msg-warning-color: rgba($on-warning-container) !default;
+$msg-warning-bg-color: rgba($warning-container) !default;
+$msg-warning-border-color: rgba($warning-container) !default;
+$msg-warning-color-alt1: rgba($on-warning-container) !default;
+$msg-warning-bg-color-alt1: $transparent !default;
+$msg-warning-border-color-alt1: rgba($warning) !default;
+$msg-warning-color-alt2: rgba($on-warning) !default;
+$msg-warning-bg-color-alt2: rgba($warning) !default;
+$msg-warning-border-color-alt2: rgba($warning) !default;
+
+$msg-warning-icon-color: rgba($warning) !default;
+$msg-warning-icon-color-alt1: rgba($on-warning-container) !default;
+$msg-warning-icon-color-alt2: rgba($on-warning) !default;
+
+$msg-warning-close-icon-color: rgba($icon-color) !default;
+$msg-warning-close-icon-color-alt1: rgba($icon-color) !default;
+$msg-warning-close-icon-color-alt2: rgba($on-warning) !default;
+
+$msg-info-color: rgba($on-info-container) !default;
+$msg-info-bg-color: rgba($info-container) !default;
+$msg-info-border-color: rgba($info-container) !default;
+$msg-info-color-alt1: rgba($on-info-container) !default;
+$msg-info-bg-color-alt1: $transparent !default;
+$msg-info-border-color-alt1: rgba($info) !default;
+$msg-info-color-alt2: rgba($on-info) !default;
+$msg-info-bg-color-alt2: rgba($info) !default;
+$msg-info-border-color-alt2: rgba($info) !default;
+
+$msg-info-icon-color: rgba($info) !default;
+$msg-info-icon-color-alt1: rgba($on-info-container) !default;
+$msg-info-icon-color-alt2: rgba($on-info) !default;
+
+$msg-info-close-icon-color: rgba($icon-color) !default;
+$msg-info-close-icon-color-alt1: rgba($icon-color) !default;
+$msg-info-close-icon-color-alt2: rgba($on-info) !default;
+
+$skeleton-wave-color: rgba(255, 255, 255, 1) !default;
+
+$grey-white: #fff !default;
+$grey-300: #e0e0e0 !default;
+$tooltip-text-color: #f9fafb !default;
+
+.sf-dark-mode {
+  --sf-color-black: 0, 0, 0;
+  --sf-color-white: 255, 255, 255;
+  --sf-color-primary: 208, 188, 255;
+  --sf-color-primary-container: 79, 55, 139;
+  --sf-color-secondary: 204, 194, 220;
+  --sf-color-surface: 28, 27, 31;
+  --sf-color-surface-variant: 73, 69, 79;
+  --sf-color-background: 28, 27, 31;
+  --sf-color-on-primary: 55, 30, 115;
+  --sf-color-on-primary-container: 234, 221, 255;
+  --sf-color-on-surface: 230, 225, 229;
+  --sf-color-on-surface-variant: 202, 196, 208;
+  --sf-color-outline: 147, 143, 153;
+  --sf-color-outline-variant: 68, 71, 70;
+  --sf-color-shadow: 0, 0, 0;
+  --sf-color-inverse-surface: 230, 225, 229;
+  --sf-color-inverse-on-surface: 49, 48, 51;
+  --sf-color-scrim: 0, 0, 0;
+  --sf-color-error: 242, 184, 181;
+  --sf-color-error-container: 140, 29, 24;
+  --sf-color-on-error: 96, 20, 16;
+  --sf-color-on-error-container: 249, 222, 220;
+  --sf-color-success: 83, 202, 23;
+  --sf-color-success-container: 22, 62, 2;
+  --sf-color-on-success: 13, 39, 0;
+  --sf-color-on-success-container: 183, 250, 150;
+  --sf-color-info: 71, 172, 251;
+  --sf-color-info-container: 0, 67, 120;
+  --sf-color-on-info: 0, 51, 91;
+  --sf-color-on-info-container: 173, 219, 255;
+  --sf-color-warning: 245, 180, 130;
+  --sf-color-warning-container: 123, 65, 0;
+  --sf-color-on-warning: 99, 52, 0;
+  --sf-color-on-warning-container: 255, 220, 193;
+  --sf-color-success-text: 0, 0, 0;
+  --sf-color-warning-text: 0, 0, 0;
+  --sf-color-info-text: 0, 0, 0;
+  --sf-color-error-text: 0, 0, 0;
+  --sf-color-line-color: 57, 53, 67;
+}
+
+$error-font-color: $error !default;
+$warning-font-color: $warning !default;
+$success-font-color: $success !default;
+$information-font-color: $info !default;
+
+$frozen-shadow: rgba(0, 0, 0, .12) !default;
+$frozen-shadow-2: rgba(0, 0, 0, .12) !default;

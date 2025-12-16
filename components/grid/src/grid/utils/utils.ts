@@ -178,7 +178,7 @@ export function getDatePredicate(filterObject: FilterPredicates, type?: string, 
         datePredicate = predicates;
     } else {
         filterObject.operator = filterObject.operator.toLowerCase();
-        if (filterObject.operator === 'equal' || filterObject.operator === 'notequal') {
+        if (filterObject.operator === 'equal' || filterObject.operator === 'notEqual') {
             if (type === 'datetime') {
                 prevDate = new Date(value.setSeconds(value.getSeconds() - 1));
                 nextDate = new Date(value.setSeconds(value.getSeconds() + 2));
@@ -190,17 +190,17 @@ export function getDatePredicate(filterObject: FilterPredicates, type?: string, 
             prevObj.value = prevDate;
             nextObj.value = nextDate;
             if (filterObject.operator === 'equal') {
-                prevObj.operator = 'greaterthan';
-                nextObj.operator = 'lessthan';
+                prevObj.operator = 'greaterThan';
+                nextObj.operator = 'lessThan';
             } else {
-                prevObj.operator = 'lessthanorequal';
-                nextObj.operator = 'greaterthanorequal';
+                prevObj.operator = 'lessThanOrEqual';
+                nextObj.operator = 'greaterThanOrEqual';
             }
             const predicateSt: Predicate = new Predicate(prevObj.field, prevObj.operator, prevObj.value, false);
             const predicateEnd: Predicate = new Predicate(nextObj.field, nextObj.operator, nextObj.value, false);
             datePredicate = filterObject.operator === 'equal' ? predicateSt.and(predicateEnd) : predicateSt.or(predicateEnd);
         } else {
-            if (type === 'date' && (filterObject.operator === 'lessthanorequal' || filterObject.operator === 'greaterthan')) {
+            if (type === 'date' && (filterObject.operator === 'lessThanOrEqual' || filterObject.operator === 'greaterThan')) {
                 prevObj.value = new Date(value.setHours(24) - 1);
             }
             if (typeof (prevObj.value) === 'string') {

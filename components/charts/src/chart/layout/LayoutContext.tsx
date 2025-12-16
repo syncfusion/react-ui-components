@@ -1,13 +1,14 @@
 //LayoutContext.tsx
+import * as React from 'react';
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ChartRenderer } from '../renderer/ChartRenderer';
-import { AxisLabelClickEvent, ChartMouseEvent, PointClickEvent, ResizeEvent, ChartSeriesProps, ChartLocationProps, ChartStripLineProps } from '../base/interfaces';
+import { AxisLabelClickEvent, ChartMouseEvent, PointClickEvent, ResizeEvent, ChartSeriesProps, ChartLocationProps, ChartStripLineProps, ChartAnnotationProps, BaseSelection } from '../base/interfaces';
 import { ChartTitleRenderer } from '../renderer/ChartTitleRenderer';
 import { ChartSubTitleRenderer } from '../renderer/ChartSubtitleRender';
 import { ChartLegendRenderer, CustomLegendRenderer } from '../renderer/LegendRenderer/ChartLegendRenderer';
 import { ChartAreaRenderer } from '../renderer/ChartAreaRender';
 import { AxisRenderer } from '../renderer/AxesRenderer/AxisRender';
-import { SeriesRenderer } from '../renderer/SeriesRenderer/SeriesRenderer';
+import { dataLabelOptionsByChartId, SeriesRenderer } from '../renderer/SeriesRenderer/SeriesRenderer';
 import { ChartContext } from './ChartProvider';
 import { doPan, performZoomRedraw, redrawOnZooming, reset, ZoomContent, zoomInOutCalculation } from '../renderer/Zooming/zooming';
 import { ZoomToolkit } from '../renderer/Zooming/zoom-toolbar';
@@ -26,6 +27,11 @@ import { ZoomMode } from '../base/enum';
 import { StripLineBeforeRenderer } from '../renderer/AxesRenderer/ChartStripLinesRender';
 import { StripLineAfterRenderer } from '../renderer/AxesRenderer/ChartStripLinesRender';
 import { LayoutContextType } from '../common/base';
+import { SelectionRenderer } from '../renderer/SelectionRenderer';
+import { highlightChart, HighlightRenderer } from '../renderer/HighlightRenderer';
+import { renderDataLabelTemplates } from '../renderer/SeriesRenderer/DataLabelRender';
+import ChartCrosshairRenderer from '../renderer/ChartCrosshairRenderer';
+import ChartAnnotationRenderer, { renderChartAnnotations, isHtmlContent } from '../renderer/ChartAnnotationRenderer';
 
 /**
  * Represents a mapping between layout keys and their corresponding layout state or chart instance.
@@ -49,7 +55,8 @@ const LayoutContext: React.Context<LayoutContextType | null> = createContext<Lay
 export const LayoutProvider: React.FC = () => {
     const [phase, setPhase] = useState<'measuring' | 'rendering'>('measuring');
     const { render, chartProps, chartTitle, chartSubTitle, chartArea, chartLegend, chartZoom,
-        parentElement, rows, columns, chartSeries, chartStackLabels, axisCollection, chartTooltip } = useContext(ChartContext);
+        parentElement, rows, columns, chartSeries, chartStackLabels, axisCollection, chartSelection, chartHighlight
+        , chartTooltip, chartCrosshair, chartAnnotation } = useContext(ChartContext);
     const measuredKeysRef: React.RefObject<Set<string>> = useRef<Set<string>>(new Set());
     const layoutRef: React.RefObject<LayoutMap> = useRef<LayoutMap>({});
     const striplineVisibility: boolean = axisCollection.some(
@@ -89,7 +96,9 @@ export const LayoutProvider: React.FC = () => {
         chartZoom.selectionZoom,
         chartZoom.mouseWheelZoom,
         chartZoom.pinchZoom,
-        chartStackLabels.visible
+        chartStackLabels.visible,
+        chartSelection.mode,
+        chartHighlight.mode
     ]);
 
     const setLayoutValue: (key: string, value: Partial<Rect>) => void = useCallback((key: string, value: Partial<Rect>) => {
@@ -511,7 +520,7 @@ export const LayoutProvider: React.FC = () => {
             }
         }
         else if ((e.code === 'Enter' || e.code === 'Space') && ((targetId.indexOf('_chart_legend_') > -1) ||
-            (targetId.indexOf('_Point_') > -1))) {
+            (targetId.indexOf('_Point_') > -1) || layoutRef.current.chartSelection)) {
             targetId = (targetId.indexOf('_chart_legend_page') > -1) ? targetId : ((targetId.indexOf('_chart_legend_') > -1) ?
                 targetElement.children[1]?.id : targetId);
             actionKey = 'Enter';
@@ -558,7 +567,7 @@ export const LayoutProvider: React.FC = () => {
                         (seriesType.indexOf('StackingColumn') > -1 ?
                             chart.visibleSeries[seriesIndex as number].marker?.height as number / 2 : 0);
 
-                    if (chart.tooltipModule?.enable) {
+                    if (chart.tooltipModule?.enable || layoutRef.current.chartHighlight) {
                         const mouseEvent: MouseEvent = new MouseEvent('mousemove', {
                             bubbles: true,
                             cancelable: true,
@@ -567,12 +576,21 @@ export const LayoutProvider: React.FC = () => {
                             clientY: chart.mouseY
                         });
                         callChartEventHandlers('mouseMove', mouseEvent, chart, chart.mouseX, chart.mouseY);
+                        if (layoutRef.current.chartHighlight) {
+                            const targetElement: HTMLElement | null = document.getElementById(targetId);
+                            const chartHighlight: BaseSelection = layoutRef.current?.chartHighlight as BaseSelection;
+                            if (chartHighlight && chart) {
+                                highlightChart(chart, chartHighlight, targetElement as Element,
+                                               legendRef, seriesRef, layoutRef.current?.chartSelection &&
+                                    (layoutRef.current?.chartSelection as BaseSelection).chartSelectedDataIndexes?.length as number > 0);
+                            }
+                        }
                     }
                 }
                 break;
             case 'Enter':
             case 'Space':
-                if (targetId?.indexOf('_chart_legend_') > -1) {
+                if (targetId?.indexOf('_chart_legend_') > -1 || layoutRef.current.chartSelection) {
                     chart.isLegendClicked = true;
                     (chartSeries as unknown as SeriesProperties).visible = false;
 
@@ -581,10 +599,16 @@ export const LayoutProvider: React.FC = () => {
                         cancelable: true,
                         view: window
                     });
-
-                    document.getElementById(targetId)?.dispatchEvent(clickEvent);
-                    focusChild(document.getElementById(targetId)?.parentElement as HTMLElement);
-                    setNavigationStyle(document.getElementById(targetId)?.parentElement as HTMLElement);
+                    const targetElement: HTMLElement | null = document.getElementById(targetId);
+                    targetElement?.dispatchEvent(clickEvent);
+                    if (targetId?.indexOf('_chart_legend_') > -1) {
+                        focusChild(targetElement?.parentElement as HTMLElement);
+                        setNavigationStyle(targetElement?.parentElement as HTMLElement);
+                    }
+                    else {
+                        focusChild(targetElement as HTMLElement);
+                        setNavigationStyle(targetElement as HTMLElement);
+                    }
 
                 } else {
                     setNavigationStyle(e.target as HTMLElement);
@@ -592,6 +616,7 @@ export const LayoutProvider: React.FC = () => {
                 break;
             case 'ESC':
                 chart.tooltipRef?.current?.fadeOut();
+                callChartEventHandlers('mouseLeave', new MouseEvent('mouseleave'), chart);
                 if (trackballRef && trackballRef.current) {
                     const childElements: HTMLCollection = trackballRef.current.children as HTMLCollection;
                     for (let i: number = 0; i < childElements.length; i++) {
@@ -875,8 +900,26 @@ export const LayoutProvider: React.FC = () => {
     return (
         render && <LayoutContext.Provider value={{
             setLayoutValue, layoutRef, phase, availableSize, triggerRemeasure, reportMeasured, disableAnimation,
-            setDisableAnimation, animationProgress, setAnimationProgress
+            setDisableAnimation, animationProgress, setAnimationProgress, seriesRef, legendRef
         }}>
+            <div
+                id={`${parentElement?.element?.id}_Secondary_Element`}
+            >
+                {renderDataLabelTemplates(layoutRef.current.chart as Chart, dataLabelOptionsByChartId, animationProgress)}
+                {chartAnnotation.length > 0 &&
+                    renderChartAnnotations(
+                        layoutRef.current.chart as Chart,
+                        (chartAnnotation as ChartAnnotationProps[]).filter(
+                            (annotation: ChartAnnotationProps) => isHtmlContent(annotation.content as string)),
+                        animationProgress
+                    )
+                }
+                {chartTooltip.template && chartTooltip.enable && (
+                    <div id={`${parentElement?.element?.id}_tooltip`}>
+                        <TooltipRenderer {...chartTooltip} />
+                    </div>
+                )}
+            </div>
             <svg id={parentElement?.element?.id + '_svg'} width={availableSize.width} height={availableSize.height}>
                 <ChartRenderer {...chartProps} />
                 {chartTitle.text &&
@@ -914,12 +957,20 @@ export const LayoutProvider: React.FC = () => {
                 {chartLegend.visible &&
                     < CustomLegendRenderer ref={legendRef}  {...chartLegend}></CustomLegendRenderer >
                 }
+                {chartCrosshair.enable &&
+                    <ChartCrosshairRenderer {...chartCrosshair} />
+                }
+                {chartAnnotation.length > 0 &&
+                    <ChartAnnotationRenderer {...chartAnnotation} />
+                }
                 {chartTooltip.enable &&
                     <TrackballRenderer ref={trackballRef}  {...chartTooltip} />
                 }
-                {chartTooltip.enable &&
+                {!chartTooltip.template && chartTooltip.enable &&
                     <TooltipRenderer {...chartTooltip} />
                 }
+                <SelectionRenderer {...chartSelection}></SelectionRenderer>
+                <HighlightRenderer {...chartHighlight}></HighlightRenderer>
             </svg>
         </LayoutContext.Provider>
     );

@@ -1,3 +1,5 @@
+@use '../themes/variables' as *;
+
 @include export-module('base-layout') {
 
   // Positioning utilities
@@ -35,13 +37,13 @@
     align-items: center;
   }
   .sf-title {
-    font-size: $font-size-24;
-    line-height: $leading-small;
+    font-size: $font-size-2xl;
+    line-height: $line-height-xs;
   }
   .sf-content {
     outline: 0;
-    font-size: $font-size-14;
-    line-height: $leading-medium;
+    font-size: $font-size-sm;
+    line-height: $line-height-sm;
     height: 100%;
     white-space: normal;
     width: 100%;
@@ -59,23 +61,16 @@
   .sf-icon-size {
     width: 1em;
     height: 1em;
-    font-size: $font-size-16;
+    font-size: $font-size-base;
   }
 
   // FONT SIZE VARIANTS
-  .sf-font-size-11 { font-size: $font-size-11; }
-  .sf-font-size-12 { font-size: $font-size-12; }
-  .sf-font-size-13 { font-size: $font-size-13; }
-  .sf-font-size-14 { font-size: $font-size-14; }
-  .sf-font-size-15 { font-size: $font-size-15; }
-  .sf-font-size-16 { font-size: $font-size-16; }
-  .sf-font-size-18 { font-size: $font-size-18; }
-  .sf-font-size-20 { font-size: $font-size-20; }
-  .sf-font-size-24 { font-size: $font-size-24; }
-  .sf-font-size-26 { font-size: $font-size-26; }
-  .sf-font-size-28 { font-size: $font-size-28; }
-  .sf-font-size-30 { font-size: $font-size-30; }
-  .sf-font-size-32 { font-size: $font-size-32; }
+  .sf-font-size-xs { font-size: $font-size-xs; }
+  .sf-font-size-sm { font-size: $font-size-sm; }
+  .sf-font-size-base { font-size: $font-size-base; }
+  .sf-font-size-lg { font-size: $font-size-lg; }
+  .sf-font-size-xl { font-size: $font-size-xl; }
+  .sf-font-size-2xl { font-size: $font-size-2xl; }
   
   // RTL support
   .sf-rtl {
@@ -159,17 +154,23 @@
   }
 
   // Border radius utility classes module
-  @each $key, $value in $border-radius {
-    .sf-rounded-#{$key} {
-      border-radius: $value;
-    }
-  }
+  .sf-radius-0 { border-radius: $radius-0 };
+  .sf-radius-2 { border-radius: $radius-2 };
+  .sf-radius-4 { border-radius: $radius-4 };
+  .sf-radius-6 { border-radius: $radius-6 };
+  .sf-radius-8 { border-radius: $radius-8 };
+  .sf-radius-12 { border-radius: $radius-12 };
+  .sf-radius-16 { border-radius: $radius-16 };
+  .sf-radius-20 { border-radius: $radius-20 };
+  .sf-radius-24 { border-radius: $radius-24 };
+  .sf-radius-28 { border-radius: $radius-28 };
+  .sf-radius-full { border-radius: $radius-full };
 
   // other common utility classes
   .sf-align-center { 
     display: flex;
     align-items: center;
-    line-height: normal;
+    line-height: $line-height-base;
   }
   .sf-ellipsis {
     overflow: hidden;
