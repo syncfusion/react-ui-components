@@ -1,5 +1,13 @@
 # Changelog
 
+## 32.1.19 (2025-12-16)
+
+### NumericTextBox
+
+#### Breaking Changes
+
+- The `currency` property is deprecated and has been replaced by `currencyCode` property in Provider. Use ISO 4217 codes (e.g., 'USD', 'EUR') via currencyCode for currency formatting.
+
 ## 31.1.17 (2025-09-05)
 
 ### Form

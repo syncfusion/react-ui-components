@@ -1,4 +1,5 @@
 @use "sass:map";
+@use 'theme-variables' as *;
 
 @mixin position-ripple() {
   left: auto;
@@ -27,25 +28,38 @@
   }
 
   .sf-checkbox-frame-sm {
-    height: $cbox-small-dimension;
-    width: $cbox-small-dimension;
+    font-size: $cbox-small-font-size;
+
+    svg {
+        font-size: $cbox-icon-small-size;
+      }
   }
 
   .sf-checkbox-frame-la {
-    height: $cbox-large-dimension;
-    width: $cbox-large-dimension;
+    font-size: $cbox-large-font-size;
+
+    svg {
+        font-size: $cbox-icon-large-size;
+      }
   }
 
   .sf-checkbox-frame-me {
-    width: $cbox-size;
-    height: $cbox-size;
+    font-size: $cbox-font-size;
+
+    svg {
+        font-size: $cbox-icon-size;
+      }
   }
 
   .sf-checkbox-icons {
     border: $cbox-border;
     border-radius: $cbox-border-radius;
     display: flex;
+    align-items: center;
+    justify-content: center;
     flex-direction: inherit;
+    height: $cbox-frame-dimension;
+    width: $cbox-frame-dimension;
   }
 
   .sf-checkbox-checked,
@@ -60,7 +74,6 @@
     position: relative;
     display: flex;
     align-items: center;
-    line-height: 0;
     color: $cbox-color;
     gap: $cbox-margin;
 
@@ -71,16 +84,18 @@
     &.sf-top {
       align-items: flex-start;
       flex-direction: column;
+      line-height: $cbox-vertical-line-height;
     }
 
     &.sf-bottom {
       align-items: flex-start;
       flex-direction: column-reverse;
+      line-height: $cbox-vertical-line-height;
     }
   }
 
   .sf-checkbox-ripple {
-    border-radius: $border-radius-50;
+    border-radius: $radius-full;
     position: absolute;
     z-index: 5;
     pointer-events: none;
@@ -101,18 +116,15 @@
   }
 
   .sf-checkbox-ripple-me {
-    width: $cbox-ripple-dimension;
-    height: $cbox-ripple-dimension;
+    padding: $cbox-ripple-padding;
   }
 
   .sf-checkbox-ripple-sm {
-    width: $cbox-ripple-small-dimension;
-    height: $cbox-ripple-small-dimension;
+    padding: $cbox-ripple-small-padding;
   }
 
   .sf-checkbox-ripple-la {
-    width: $cbox-ripple-large-dimension;
-    height: $cbox-ripple-large-dimension;
+    padding: $cbox-ripple-large-padding;
   }
 
   .sf-rtl .sf-right .sf-checkbox-ripple {
@@ -149,5 +161,14 @@
         }
       }
     }
+  }
+
+  .sf-checkbox-small,
+  .sf-checkbox-medium {
+    line-height: $cbox-sm-line-height;
+  }
+
+  .sf-checkbox-large {
+    line-height: $cbox-la-line-height;
   }
 }

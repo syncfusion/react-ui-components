@@ -1,5 +1,5 @@
 import { ChartLocationProps, EmptyPointSettings } from '../../base/interfaces';
-import { drawSymbol, getPoint, withInRange } from '../../utils/helper';
+import { applyPointRenderCallback, drawSymbol, getPoint, withInRange } from '../../utils/helper';
 import { LineBase, LineBaseReturnType } from './LineBase';
 import { ChartMarkerShape } from '../../base/enum';
 import { MarkerElementData, MarkerOptions, MarkerProperties, PointRenderingEvent, Points, RenderOptions, ScatterSeriesType, SeriesProperties } from '../../chart-area/chart-interfaces';
@@ -9,10 +9,42 @@ export const SCATTER_MARKER_SHAPES: ChartMarkerShape[] = [
     'Circle', 'Triangle', 'Diamond', 'Rectangle',
     'Pentagon', 'InvertedTriangle', 'VerticalLine',
     'Cross', 'Plus', 'HorizontalLine', 'Star'] as const;
-const isLineShapeMarker: (shape: string) => boolean =  (shape: string) =>
+const isLineShapeMarker: (shape: string) => boolean = (shape: string) =>
     shape === 'HorizontalLine' || shape === 'VerticalLine' || shape === 'Cross';
 
 const lineBaseInstance: LineBaseReturnType = LineBase;
+
+/**
+ * To build an invisible “anchor” path so SeriesRenderer can recover seriesIndex reliably.
+ *
+ * @param {SeriesProperties} series - series associated for containing assigning anchor.
+ * @returns {RenderOptions[]} A single invisible anchor path so SeriesRenderer derives the correct index.
+ * @private
+ */
+function createInvisibleAnchorPath(series: SeriesProperties): RenderOptions[] {
+    const id: string = `${series.chart.element.id}_Series_${series.index}_anchor_0`;
+    return [{
+        id,
+        fill: 'none',
+        stroke: 'transparent',
+        strokeWidth: 0,
+        opacity: 0,
+        dashArray: '',
+        d: 'M 0 0'
+    } as RenderOptions];
+}
+
+/**
+ * Animation state interface for series animations
+ */
+interface AnimationState {
+    previousPathLengthRef: React.RefObject<number[]>;
+    isInitialRenderRef: React.RefObject<boolean[]>;
+    renderedPathDRef: React.RefObject<string[]>;
+    animationProgress: number;
+    isFirstRenderRef: React.RefObject<boolean>;
+    previousSeriesOptionsRef: React.RefObject<RenderOptions[][]>;
+}
 
 const ScatterSeriesRenderer: ScatterSeriesType = {
     /**
@@ -22,8 +54,7 @@ const ScatterSeriesRenderer: ScatterSeriesType = {
      * @param {boolean} isInverted - Specifies whether the chart is inverted.
      * @returns {Object} Returns the final series with assigned data point properties.
      */
-    render: (series: SeriesProperties, isInverted: boolean):
-    { options: RenderOptions[]; marker: MarkerProperties } => {
+    render: (series: SeriesProperties, isInverted: boolean): { options: RenderOptions[]; marker: MarkerProperties } => {
         series.isRectSeries = false;
         const marker: MarkerProperties = series.marker as MarkerProperties;
 
@@ -42,7 +73,7 @@ const ScatterSeriesRenderer: ScatterSeriesType = {
         const markerShape: ChartMarkerShape = marker?.shape || SCATTER_MARKER_SHAPES[series.index % SCATTER_MARKER_SHAPES.length];
         if (!visiblePoints || visiblePoints?.length === 0) {
             return {
-                options: [],
+                options: createInvisibleAnchorPath(series),
                 marker: {}
             };
         }
@@ -97,7 +128,7 @@ const ScatterSeriesRenderer: ScatterSeriesType = {
             }
         }
 
-        const pathOptions: RenderOptions[] = [];
+        const pathOptions: RenderOptions[] = createInvisibleAnchorPath(series);
         return {
             options: pathOptions,
             marker: {
@@ -172,22 +203,24 @@ const ScatterSeriesRenderer: ScatterSeriesType = {
         };
 
         fill = argsData.fill;
-        border = argsData.border as {
-            color: string;
-            width: number;
-        };
-
+        border = argsData.border as { color: string; width: number; };
         height = argsData.markerHeight as number;
         width = argsData.markerWidth as number;
         shape = argsData.markerShape as ChartMarkerShape;
 
+        const customizedValues: string = applyPointRenderCallback(({
+            seriesIndex: series.index as number, color: fill,
+            xValue: point.xValue as  number | Date | string | null,
+            yValue: point.yValue as  number | Date | string | null
+        }), series.chart);
+
         point.marker = {
-            border: argsData.border, fill: argsData.fill,
+            border: argsData.border, fill: customizedValues,
             height: argsData.markerHeight, visible: true,
             width: argsData.markerWidth, shape: argsData.markerShape, imageUrl: marker.imageUrl
         };
 
-        point.color = argsData.fill;
+        point.color = customizedValues;
 
         (point.symbolLocations as ChartLocationProps[])?.push(location);
 
@@ -207,7 +240,7 @@ const ScatterSeriesRenderer: ScatterSeriesType = {
             { width: width as number, height: height as number },
             marker.imageUrl as string,
             {
-                fill: fill,
+                fill: customizedValues,
                 stroke: border.color,
                 id: pointId,
                 strokeWidth: border.width as number,
@@ -220,7 +253,7 @@ const ScatterSeriesRenderer: ScatterSeriesType = {
         return {
             ...shapeOpts,
             shape: shape,
-            fill: fill,
+            fill: customizedValues,
             border: border,
             opacity: series.opacity as number,
             cx: location.x,
@@ -234,12 +267,12 @@ const ScatterSeriesRenderer: ScatterSeriesType = {
     },
 
     /**
-     * Animates the scatter points.
+     * Animates the scatter points from zero to its size.
      *
      * @param {SeriesProperties} series - Series which should be animated.
      * @returns {Function} Returns the animated points.
      */
-    doAnimation: (series: SeriesProperties) => {
+    doPointAnimation: (series: SeriesProperties) => {
         const duration: number = series.animation?.duration as number;
         const delay: number = series.animation?.delay as number;
         const rectElements: NodeList = series?.seriesElement?.childNodes;
@@ -274,6 +307,34 @@ const ScatterSeriesRenderer: ScatterSeriesType = {
             markerAnimate(markerData, delay as number, duration as number);
             count++;
         }
+    },
+
+    /**
+     * This matches what SeriesRenderer calls (path-based doAnimation) and returns neutral values.
+     * It does NOT change how scatter markers animate (that already happens in MarkerRenderer).
+     *
+     * @param {RenderOptions} _pathOptions - Current render options for the path
+     * @param {number} _seriesIndex - Index of the current series
+     * @param {AnimationState} _animationState - Complete animation state including refs and progress
+     * @param {boolean} _enableAnimation - Flag to enable/disable animations
+     * @param {SeriesProperties} _currentSeries - Series being animated
+     * @param {Points | undefined} _currentPoint - Point being animated (optional)
+     * @param {number} _pointIndex - Index of the current point
+     * @param {SeriesProperties[]} _visibleSeries - current series for animation property.
+     * @returns {Object} - Non-conflicting default values for expected legend click behavior.
+     * @private
+     */
+    doAnimation(
+        _pathOptions: RenderOptions,
+        _seriesIndex: number,
+        _animationState: AnimationState,
+        _enableAnimation: boolean,
+        _currentSeries: SeriesProperties,
+        _currentPoint?: Points,
+        _pointIndex?: number,
+        _visibleSeries?: SeriesProperties[]
+    ): { strokeDasharray: string | number; strokeDashoffset: number; interpolatedD?: string | undefined } {
+        return { strokeDasharray: 'none', strokeDashoffset: 0 };
     }
 };
 

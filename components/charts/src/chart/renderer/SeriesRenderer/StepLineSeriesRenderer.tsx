@@ -1,6 +1,6 @@
 import { EmptyPointSettings, ChartMarkerProps, ChartLocationProps } from '../../base/interfaces';
 import { StepPosition } from '../../base/enum';
-import { getPoint } from '../../utils/helper';
+import { applyPointRenderCallback, getPoint } from '../../utils/helper';
 import { LineBase, LineBaseReturnType } from './LineBase';
 import MarkerRenderer from './MarkerRenderer';
 import { calculatePathAnimation } from './SeriesAnimation';
@@ -59,6 +59,7 @@ const StepLineSeriesRenderer: StepLineSeriesType = {
         const getCoordinate: Function = getPoint;
         const isDrop: boolean = ((series.emptyPointSettings as EmptyPointSettings).mode === 'Drop') as boolean;
         const visiblePoints: Points[] = lineBaseInstance.enableComplexProperty(series);
+        let seriesStroke: string | undefined;
 
         for (const point of visiblePoints) {
             point.regions = [];
@@ -87,6 +88,15 @@ const StepLineSeriesRenderer: StepLineSeriesType = {
                 prevPoint = point;
                 lineBaseInstance.storePointLocation(point, series, isInverted, getCoordinate);
 
+                const customizedValues: string = applyPointRenderCallback(({
+                    seriesIndex: series.index as number, color: series.interior as string,
+                    xValue: point.xValue as number | Date | string | null,
+                    yValue: point.yValue as number | Date | string | null
+                }), series.chart);
+                point.interior = customizedValues;
+
+                if (!seriesStroke) { seriesStroke = customizedValues; }
+
                 if (direction === '') {
                     direction = 'M ' + point.symbolLocations[0].x + ' ' + point.symbolLocations[0].y;
                 }
@@ -103,7 +113,7 @@ const StepLineSeriesRenderer: StepLineSeriesType = {
             id: name,
             fill: 'none',
             strokeWidth: series.width,
-            stroke: series.interior,
+            stroke: seriesStroke ?? series.interior,
             opacity: series.opacity,
             dashArray: series.dashArray,
             d: direction

@@ -32,7 +32,7 @@ export type ILicenseValidator = {
  */
 export function LicenseValidator(key: string = ''): ILicenseValidator {
     let isLicensed: boolean = true;
-    const version: string = '{syncfusionReleaseversion}';
+    const version: string = '32';
     const platform: RegExp = /JavaScript|ASPNET|ASPNETCORE|ASPNETMVC|FileFormats|essentialstudio/i;
     const prefixRegex: RegExp = /essentialui|pdfviewersdk|spreadsheeteditorsdk|docxeditorsdk/i;
     const incorrectPlatform: RegExp = /JavaScript|ASPNET|ASPNETCORE|ASPNETMVC|FileFormats/i;

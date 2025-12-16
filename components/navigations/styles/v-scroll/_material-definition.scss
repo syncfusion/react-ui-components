@@ -1,0 +1,15 @@
+@use '../../../base/styles/themes/variables' as *;
+
+$vscroll-nav-height: $spacing-40 !default;
+$vscroll-padding: $vscroll-nav-height $spacing-0 !default;
+$vscroll-arrow-font-size: $font-size-xl !default;
+$vscroll-arrow-icon-color: rgba($icon-color) !default;
+
+$vscroll-bg: $transparent !default;
+$vscroll-bg-hover: $content-bg-color-hover !default;
+$vscroll-bg-focus: $content-bg-color-focus !default;
+$vscroll-bg-pressed: $content-bg-color-pressed !default;
+
+$vscroll-border-size: 1px !default;
+$vscroll-border-type: solid !default;
+$vscroll-border-color: rgba($border-light) !default;

@@ -1,9 +1,9 @@
 
-import { useState, useCallback, useEffect, forwardRef, useImperativeHandle, useRef } from 'react';
-import { getUniqueID, preRender, useProviderContext, Variant } from '@syncfusion/react-base';
-import { CLASS_NAMES, LabelMode, InputBase, renderClearButton, renderFloatLabelElement } from '../common/inputbase';
+import { useState, useCallback, useEffect, forwardRef, useImperativeHandle, useRef, useId } from 'react';
+import { preRender, useProviderContext, Variant, Size } from '@syncfusion/react-base';
+import { CLASS_NAMES, LabelMode, InputBase, renderClearButton, renderFloatLabelElement, inputBaseProps } from '../common/inputbase';
 import * as React from 'react';
-export { LabelMode, Variant };
+export { LabelMode, Variant, Size };
 
 export interface TextBoxChangeEvent {
     /**
@@ -15,19 +15,6 @@ export interface TextBoxChangeEvent {
      * Specifies the current value of the TextBox.
      */
     value?: string;
-}
-
-
-/**
- * Specifies the available size options for the TextBox component.
- *
- * @enum {string}
- */
-export enum Size {
-    /** Specifies the small-sized TextBox with reduced dimensions */
-    Small = 'Small',
-    /** Specifies the medium-sized TextBox with reduced dimensions */
-    Medium = 'Medium',
 }
 
 /**
@@ -44,7 +31,7 @@ export enum Color {
     Error = 'Error'
 }
 
-export interface TextBoxProps {
+export interface TextBoxProps extends inputBaseProps {
     /**
      * Specifies the value of the component. When provided, the component will be controlled.
      *
@@ -89,20 +76,6 @@ export interface TextBoxProps {
      * @returns {void}
      */
     onChange?: (event: TextBoxChangeEvent) => void;
-
-    /**
-     * Specifies the visual style variant of the component.
-     *
-     * @default Variant.Standard
-     */
-    variant?: Variant;
-
-    /**
-     * Specifies the size style of the TextBox. Options include 'Small' and 'Medium'.
-     *
-     * @default Size.Medium
-     */
-    size?: Size;
 
     /**
      * Specifies the Color style of the TextBox. Options include 'Warning', 'Success' and 'Error'.
@@ -171,7 +144,7 @@ forwardRef<ITextBox, ITextBoxProps>((props: ITextBoxProps, ref: React.ForwardedR
         suffix,
         ...rest
     } = props;
-    const stableIdRef: React.RefObject<string> = useRef(id || getUniqueID('default_'));
+    const stableIdRef: React.RefObject<string> = useRef(id || `default_${useId()}`);
     const stableId: string = stableIdRef.current;
     const isControlled: boolean = value !== undefined;
     const [inputValue, setValue] = useState<string | undefined>(
@@ -179,10 +152,6 @@ forwardRef<ITextBox, ITextBoxProps>((props: ITextBoxProps, ref: React.ForwardedR
     );
 
     const [isFocused, setIsFocused] = useState(false);
-    const [previousValue, setPreviousValue] = useState(
-        isControlled ? value : (defaultValue || '')
-    );
-
     const inputRef: React.RefObject<HTMLInputElement | null> = useRef<HTMLInputElement>(null);
     const { locale, dir } = useProviderContext();
     const publicAPI: Partial<ITextBoxProps> = {
@@ -208,7 +177,9 @@ forwardRef<ITextBox, ITextBoxProps>((props: ITextBoxProps, ref: React.ForwardedR
             ((inputValue) !== '') ? CLASS_NAMES.VALIDINPUT : '',
             variant && variant.toLowerCase() !== 'standard'  ? variant.toLowerCase() === 'outlined' ? 'sf-outline' : `sf-${variant.toLowerCase()}` : '',
             size && size.toLowerCase() !== 'small' ? `sf-${size.toLowerCase()}` : '',
-            color ? `sf-${color.toLowerCase()}` : ''
+            color ? `sf-${color.toLowerCase()}` : '',
+            prefix ? 'sf-has-prefix' : '',
+            'sf-control'
         );
     };
 
@@ -234,24 +205,20 @@ forwardRef<ITextBox, ITextBoxProps>((props: ITextBoxProps, ref: React.ForwardedR
     }));
 
     const updateValue: (newValue: string, event?: React.ChangeEvent<HTMLInputElement>) => void =
-     useCallback((newValue: string, event?: React.ChangeEvent<HTMLInputElement>) => {
-         if (!isControlled) {
-             setValue(newValue);
-             setPreviousValue(newValue);
-         }
-         if (onChange) {
-             onChange({ event: event, value: newValue });
-         }
-     }, [previousValue, onChange, isControlled]);
+    useCallback((newValue: string, event?: React.ChangeEvent<HTMLInputElement>) => {
+        if (!isControlled) {
+            setValue(newValue);
+        }
+        if (onChange) {
+            onChange({ event: event, value: newValue });
+        }
+    }, [onChange, isControlled]);
 
     const changeHandler: (event: React.ChangeEvent<HTMLInputElement>) => void =
     useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
         const newValue: string = event.target.value;
-        if (previousValue !== newValue) {
-            updateValue(newValue, event);
-        }
-        setPreviousValue(newValue);
-    }, [previousValue, updateValue]);
+        updateValue(newValue, event);
+    }, [updateValue]);
 
     const handleFocus: (event: React.FocusEvent<HTMLInputElement>) => void =
     useCallback((event: React.FocusEvent<HTMLInputElement>) => {
@@ -265,6 +232,9 @@ forwardRef<ITextBox, ITextBoxProps>((props: ITextBoxProps, ref: React.ForwardedR
         const newValue: string = '';
         if (!isControlled) {
             setValue(newValue);
+            if (inputRef.current) {
+                inputRef.current.value = newValue;
+            }
         }
         if (onChange) {
             onChange({ value: newValue, event: undefined });
@@ -280,14 +250,13 @@ forwardRef<ITextBox, ITextBoxProps>((props: ITextBoxProps, ref: React.ForwardedR
     }, [onBlur]);
 
     const displayValue: string | undefined = isControlled ? value : inputValue;
-    const defaultInputValue: string | undefined = !isControlled ? defaultValue : undefined;
 
     return (
         <div
             className={containerClassNames}
             style={{ width: width || '100%' }}
         >
-            {prefix}
+            {prefix && <span className='sf-input-icon sf-no-hover'>{prefix}</span>}
             <InputBase
                 id={stableId}
                 floatLabelType={labelMode}
@@ -295,10 +264,10 @@ forwardRef<ITextBox, ITextBoxProps>((props: ITextBoxProps, ref: React.ForwardedR
                 {...rest}
                 readOnly={readOnly}
                 value={isControlled ? (displayValue) : undefined}
-                defaultValue={!isControlled ? (defaultInputValue) : undefined}
+                defaultValue={!isControlled ? (inputValue || '') : undefined}
                 disabled={disabled}
                 placeholder={labelMode === 'Never' ? placeholder : undefined}
-                className={'sf-control sf-textbox sf-lib sf-input'}
+                className={'sf-textbox sf-lib sf-ellipsis'}
                 onChange={changeHandler}
                 aria-label={labelMode === 'Never' ? 'textbox' : undefined}
                 onFocus={handleFocus}
@@ -311,8 +280,9 @@ forwardRef<ITextBox, ITextBoxProps>((props: ITextBoxProps, ref: React.ForwardedR
                 placeholder,
                 stableId
             )}
-            {clearButton && renderClearButton((displayValue as string), clearInput, clearButton, 'textbox', locale)}
-            {suffix}
+            {clearButton && renderClearButton((isFocused ? displayValue as string : ''), clearInput, clearButton, 'textbox', locale)}
+            {suffix && <span className='sf-input-icon sf-no-hover'>{suffix}</span>}
+
         </div>
     );
 });

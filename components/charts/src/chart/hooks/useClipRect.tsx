@@ -11,6 +11,12 @@ export const useRegisterClipRectSetter: () => (fn: (clipRect: Rect) => void) => 
     };
 };
 
+export const useUnregisterClipRectSetter: () => () => void = () => {
+    return () => {
+        clipRectRef.current = null;
+    };
+};
+
 export const useClipRectSetter: () => ((clipRect: Rect) => void) | null = () => {
     return clipRectRef.current;
 };
@@ -202,18 +208,21 @@ export function registerChartEventHandler(
 
 /**
  * Defines the value type for chart event, loaction and target.
+ *
  * @private
  */
 export type ChartEventArg = number | string | boolean | null | undefined;
 
 /**
  * Represents a location in chart coordinate space.
+ *
  * @private
  */
 export type ChartLocationArg = { x: number; y: number };
 
 /**
  * Represents a reference to a chart target element.
+ *
  * @private
  */
 export type ChartTargetArg = { targetId: string };

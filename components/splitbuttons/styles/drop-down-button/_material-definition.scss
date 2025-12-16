@@ -1,0 +1,46 @@
+@use '../../../base/styles/themes/variables' as *;
+
+// Base dropdown button variables
+$drop-down-btn-box-shadow: $shadow-sm !default;
+$drop-down-btn-parent-ul-box-shadow: $shadow-md !default;
+$drop-down-btn-parent-ul-margin: $spacing-0 !default;
+$drop-down-btn-no-shadow: none !default;
+$drop-down-btn-separator-padding: $spacing-8 $spacing-0 !default;
+$drop-down-btn-li-border-width: 1px !default;
+$drop-down-btn-li-border-style: solid !default;
+$drop-down-btn-ul-border-radius: $radius-4 !default;
+$drop-down-btn-border-color: rgb($border-light) !default;
+$drop-down-btn-color: rgb($content-text-color) !default;
+$drop-down-btn-li-bgcolor: $flyout-bg-color-hover !default;
+$drop-down-btn-ul-bgcolor: $flyout-bg-color !default;
+$drop-down-btn-selected-color: rgb($flyout-text-color-selected) !default;
+$drop-down-btn-li-focus-bgcolor: $flyout-bg-color-focus !default;
+$drop-down-btn-li-selection-bgcolor: $flyout-bg-color-selected !default;
+$drop-down-btn-li-selection-font-color: rgb($flyout-text-color-hover) !default;
+$drop-down-btn-menu-icon-color: rgb($icon-color) !default;
+
+// Small size variables
+$drop-down-btn-sm-li-height: $spacing-32 !default;
+$drop-down-btn-sm-li-padding: $spacing-0 $spacing-16 !default;
+$drop-down-btn-sm-min-width: calc(var(--sf-spacing) * 7.5) !default;
+$drop-down-btn-sm-ul-padding: $spacing-8 $spacing-0 !default;
+$drop-down-btn-sm-icon-margin-right: $spacing-12 !default;
+$drop-down-btn-sm-font-size: $font-size-sm !default;
+$drop-down-btn-sm-icon-size: $font-size-xs !default;
+
+// Medium size variables (default)
+$drop-down-btn-me-li-height: $spacing-40 !default;
+$drop-down-btn-me-li-padding: $spacing-0 $spacing-20 !default;
+$drop-down-btn-me-min-width: calc(var(--sf-spacing) * 10) !default;
+$drop-down-btn-me-ul-padding: $spacing-8 $spacing-0 !default;
+$drop-down-btn-me-icon-margin-right: $spacing-12 !default;
+$drop-down-btn-me-font-size: $font-size-base !default;
+
+// Large size variables
+$drop-down-btn-la-li-height: $spacing-48 !default;
+$drop-down-btn-la-li-padding: $spacing-0 $spacing-24 !default;
+$drop-down-btn-la-min-width: calc(var(--sf-spacing) * 11.25) !default;
+$drop-down-btn-la-ul-padding: $spacing-12 $spacing-0 !default;
+$drop-down-btn-la-icon-margin-right: $spacing-16 !default;
+$drop-down-btn-la-font-size: $font-size-lg !default;
+$drop-down-btn-la-icon-size: $font-size-2xl !default;

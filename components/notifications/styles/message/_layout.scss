@@ -1,4 +1,5 @@
 @use "sass:map";
+@use 'theme-variables' as *;
 
 $severities: (
   success: (
@@ -111,10 +112,10 @@ $severities-filled: (
     .sf-msg-close-icon {
       color: $close-icon-color;
 
-      &:hover,
-      &:focus {
+      &:hover > svg,
+      &:focus > svg  {
         background-color: $shadow;
-        box-shadow: 0 0 0 2px $shadow;
+        box-shadow: 0 0 0 4px $shadow;
       }
     }
   }
@@ -122,8 +123,10 @@ $severities-filled: (
 
 @include export-module('message-layout') {
   .sf-message {
+    border-radius: $msg-border-radius;
     border: 1px solid;
     padding: $msg-padding;
+    letter-spacing: $letter-spacing-wide;
     @include sf-fill($msg-color, $msg-bg-color, null, null, $msg-border-color);
   }
 
@@ -138,13 +141,12 @@ $severities-filled: (
     border-width: 0; // Overriding button style
     margin: $msg-close-icon-margin;
     padding: $msg-close-icon-padding; // Overriding button style
-    height: $msg-close-icon-height; // For multi-line text
 
-    &:hover,
-    &:focus {
+    &:hover > svg,
+    &:focus > svg {
       background-color: $msg-close-icon-hover-bg-color;
-      box-shadow: 0 0 0 2px $msg-close-icon-hover-bg-color;
-      border-radius: 50%;
+      box-shadow: 0 0 0 4px $msg-close-icon-hover-bg-color;
+      border-radius: $radius-full;
     }
   }
 
@@ -161,7 +163,7 @@ $severities-filled: (
 
     &.sf-content-right .sf-msg-close-icon,
     &.sf-content-center .sf-msg-close-icon {
-      margin: 0 4px;
+      margin: $msg-content-icon-margin;
     }
   }
 
@@ -181,7 +183,7 @@ $severities-filled: (
 
   .sf-msg-outlined {
     background: $msg-outline-bg-color;
-    border-image: none;
+    border-image: unset;
 
     @include severity(
       $msg-outline-border-color,
@@ -208,7 +210,7 @@ $severities-filled: (
 
   .sf-msg-filled {
     background: $msg-filled-bg-color;
-    border-image: none;
+    border-image: unset;
 
     @include severity(
       $msg-filled-border-color,

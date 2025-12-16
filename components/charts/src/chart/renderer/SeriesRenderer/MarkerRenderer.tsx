@@ -1,4 +1,3 @@
-// Import necessary types and modules
 import { ChartBorderProps,  ChartLocationProps,  ChartSeriesProps } from '../../base/interfaces';
 import { createRectOption, drawSymbol, setBorderColor, setPointColor } from '../../utils/helper';
 import { createMarkerPathOption } from './MarkerBase';
@@ -447,7 +446,7 @@ export function formatAccessibilityDescription(point: Points, series: ChartSerie
  * proper positioning, animation, and transitions between states.
  *
  * @param {MarkerProperties[]} marker - Array of marker configuration objects
- * @param {number} _seriesIndexes - Index of the series in the chart
+ * @param {number} seriesIndexes - Index of the series in the chart
  * @param {number} [animationProgress=1] - Animation progress value between 0 and 1
  * @param {string} [seriesType] - Type of series (Line, Bar, Scatter, etc.)
  * @param {string} [chartElementId] - Unique identifier of the chart element
@@ -470,7 +469,7 @@ export const renderMarkerJSX: (
     removeProgress?: number
 ) => JSX.Element | null = (
     marker: MarkerProperties[],
-    _seriesIndexes: number,
+    seriesIndexes: number,
     animationProgress: number = 1,
     seriesType?: string,
     chartElementId?: string,
@@ -481,6 +480,25 @@ export const renderMarkerJSX: (
 ): JSX.Element | null => {
     if (!marker || marker.length === 0 ) { return null; }
     if (!series?.marker?.visible && seriesType !== 'Bubble' && seriesType !== 'Scatter') {
+        return null;
+    }
+    // Filter markers to only include those for the current series
+    const filteredMarkers: MarkerProperties[] = marker.filter((markerData: MarkerProperties) => {
+        if (!markerData || !markerData.markerOptionsList || markerData.markerOptionsList.length === 0) {
+            return false;
+        }
+        const firstOption: MarkerOptions = markerData.markerOptionsList[0];
+        if (!firstOption || !firstOption.id) {
+            return false;
+        }
+        const match: RegExpMatchArray | null = firstOption.id.match(/_Series_(\d+)_/);
+        if (!match) {
+            return false;
+        }
+        const markerSeriesIndex: number = parseInt(match[1], 10);
+        return markerSeriesIndex === seriesIndexes;
+    });
+    if (filteredMarkers.length === 0) {
         return null;
     }
     // Get or initialize positions map for this chart
@@ -495,10 +513,10 @@ export const renderMarkerJSX: (
 
     return (
         <>
-            {marker.map((markerData: MarkerProperties, seriesIndex: number) => {
+            {filteredMarkers.map((markerData: MarkerProperties, markerLoopIndex: number) => {
                 if (!markerData) { return null; }
                 const clipPathUrl: string = seriesType === 'Bubble'
-                    ? `url(#${chartElementId}_ChartSeriesClipRect_${seriesIndex})`
+                    ? `url(#${chartElementId}_ChartSeriesClipRect_${seriesIndexes})`
                     : `url(#${markerData.options?.id})`;
 
                 // Get the current series to check for marker animation progress
@@ -509,7 +527,7 @@ export const renderMarkerJSX: (
                     !currentSeries?.skipMarkerAnimation;
 
                 return (
-                    <g key={seriesIndex} id={markerData.symbolGroup?.id}
+                    <g key={markerLoopIndex} id={markerData.symbolGroup?.id}
                         transform={markerData.symbolGroup?.transform}
                         clipPath={clipPathUrl}
                         style={{
@@ -541,17 +559,17 @@ export const renderMarkerJSX: (
                             const lastMarkerOption: MarkerOptions | undefined = markerData.markerOptionsList?.[markerOptionsLength - 1];
                             const shape: string = typeof lastMarkerOption === 'string' ? lastMarkerOption :
                                 (lastMarkerOption?.shape as string);
-                            let seriesIndexes: number = seriesIndex; // fallback to loop index
+                            let extractedSeriesIndex: number = markerLoopIndex; // fallback to loop index
                             let pointIndex: number = markerIndex; // fallback to marker index
                             if (option.id) {
                                 const match: RegExpMatchArray = option.id.match(/_Series_(\d+)_Point_(\d+)_/) as RegExpMatchArray;
                                 if (match) {
-                                    seriesIndexes = parseInt(match[1], 10);
+                                    extractedSeriesIndex = parseInt(match[1], 10);
                                     pointIndex = parseInt(match[2], 10);
                                 }
                             }
                             // Create a unique key for the marker to track its position using extracted indices
-                            const markerKey: string = `${seriesIndexes}_${pointIndex}`;
+                            const markerKey: string = `${extractedSeriesIndex}_${pointIndex}`;
 
 
                             // Get current position
@@ -597,14 +615,14 @@ export const renderMarkerJSX: (
 
                                     if (pos.cx === undefined && pos.cy === undefined && series?.isPointAdded) {
                                         series.isPointRemoved = false;
-                                        if (marker && marker[seriesIndex as number] &&
-                                            (marker[seriesIndex as number] as
+                                        if (marker && marker[extractedSeriesIndex as number] &&
+                                            (marker[extractedSeriesIndex as number] as
                                                 { markerOptionsList: MarkerOptions[] }).markerOptionsList) {
                                             const markerObj: {
                                                 markerOptionsList: MarkerOptions[];
-                                            } = marker[seriesIndex as number] as { markerOptionsList: MarkerOptions[] };
+                                            } = marker[extractedSeriesIndex as number] as { markerOptionsList: MarkerOptions[] };
                                             if (markerObj.markerOptionsList && markerObj.markerOptionsList.length >= 3) {
-                                                const seriesPositionsAdd: MarkerPosition[] = chartPositions.get(`${seriesIndex}_${pointIndex - 1}`) as MarkerPosition[];
+                                                const seriesPositionsAdd: MarkerPosition[] = chartPositions.get(`${extractedSeriesIndex}_${pointIndex - 1}`) as MarkerPosition[];
                                                 previousCx = shape === 'Circle' ? seriesPositionsAdd[pointIndex - 1]?.cx as number : 0;
                                                 previousCy =
                                                    shape === 'Circle' ?  seriesPositionsAdd[pointIndex - 1]?.cy as number : 0;
@@ -613,7 +631,7 @@ export const renderMarkerJSX: (
                                     }
                                     else if (series?.isPointRemoved) {
                                         series.isPointAdded = false;
-                                        const seriesIdx: number = seriesIndex;
+                                        const seriesIdx: number = extractedSeriesIndex;
                                         const markerList: MarkerOptionsList | undefined = marker && marker[seriesIdx as number] &&
                                         (marker[seriesIdx as number]).markerOptionsList;
                                         const markerOpt: MarkerOptions | undefined = markerList &&

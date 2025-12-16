@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, forwardRef, useImperativeHandle, createContext, useContext, useRef } from 'react';
-import { getUniqueID, IAnimation, preRender, SvgIcon, useProviderContext } from '@syncfusion/react-base';
+import { useState, useEffect, useCallback, forwardRef, useImperativeHandle, createContext, useContext, useRef, useId } from 'react';
+import { IAnimation, preRender, SvgIcon, useProviderContext } from '@syncfusion/react-base';
 import { AnimationOptions, Animation, Severity } from '@syncfusion/react-base';
 
 /**
@@ -329,7 +329,7 @@ export const Toast: React.ForwardRefExoticComponent<IToastProps & React.RefAttri
          width = 'auto',
          height = 'auto',
          open = false,
-         id = getUniqueID('toast_'),
+         id = `toast_${useId()}`,
          title,
          icon,
          className = '',
@@ -367,8 +367,6 @@ export const Toast: React.ForwardRefExoticComponent<IToastProps & React.RefAttri
      const [interactionToasts, setInteractionToasts] = useState<Record<string, boolean>>({});
      const { dir } = useProviderContext();
      const closeIcon: string = 'M10.5858 12.0001L2.58575 4.00003L3.99997 2.58582L12 10.5858L20 2.58582L21.4142 4.00003L13.4142 12.0001L21.4142 20L20 21.4142L12 13.4143L4.00003 21.4142L2.58581 20L10.5858 12.0001Z';
-     const progressWidth: string = progressDirection === 'Rtl' ? '100%' : '0%';
-     const progressRefs: React.RefObject<Map<string, HTMLDivElement>> = useRef<Map<string, HTMLDivElement>>(new Map());
      const publicAPI: Partial<IToastProps> = {
          open,
          animation,
@@ -380,16 +378,6 @@ export const Toast: React.ForwardRefExoticComponent<IToastProps & React.RefAttri
          ...publicAPI as IToast,
          element: toastRef.current
      }));
-
-     useEffect(() => {
-         progressRefs.current.forEach((bar: HTMLDivElement) => {
-             if (bar) {
-                 requestAnimationFrame(() => {
-                     bar.style.width = progressDirection === 'Rtl' ? '0%' : '100%';
-                 });
-             }
-         });
-     }, [toasts]);
 
      useEffect(() => {
          if (!open && initialOpenState.current === open) {
@@ -498,6 +486,7 @@ export const Toast: React.ForwardRefExoticComponent<IToastProps & React.RefAttri
          }
      }, [onClick, closeButton, hide]);
      const containerPosition: string = `sf-toast-${position?.yAxis?.toLowerCase()}-${position?.xAxis?.toLowerCase()}`;
+     const progressAnimationDelayMs: number = Math.max(0, animation?.show?.duration ?? 0);
      return (
          <div
              ref={toastRef}
@@ -533,17 +522,12 @@ export const Toast: React.ForwardRefExoticComponent<IToastProps & React.RefAttri
                      )}
                      {progressBar && (
                          <div className="sf-toast-progress">
-                             <div ref={(el: HTMLDivElement | null) => {
-                                 if (el) {
-                                     progressRefs.current.set(id, el);
-                                 } else {
-                                     progressRefs.current.delete(id);
-                                 }
-                             }} className={`sf-toast-progress-bar ${progressDirection === 'Rtl' ? 'sf-toast-progress-rtl' : ''}`}
-                             style={{
-                                 width: progressWidth,
-                                 transition: `width ${timeout}ms linear`
-                             }}
+                             <div
+                                 className={`sf-toast-progress-bar ${progressDirection === 'Rtl' ? 'sf-toast-progress-rtl' : 'sf-toast-progress-ltr'}`}
+                                 style={{
+                                     animationDuration: `${timeout}ms`,
+                                     animationDelay: `${progressAnimationDelayMs}ms`
+                                 }}
                              />
                          </div>
                      )}
@@ -622,7 +606,8 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             extendedTimeout,
             position,
             closeButton,
-            title
+            title,
+            ...options
         });
 
         return toastRef.current ? toastRef.current.show(content) : '';

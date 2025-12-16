@@ -1,6 +1,6 @@
 
 import { ChartMarkerProps, ChartLocationProps } from '../../base/interfaces';
-import { getPoint } from '../../utils/helper';
+import { applyPointRenderCallback, getPoint } from '../../utils/helper';
 import { LineBase, LineBaseReturnType } from './LineBase';
 import { calculatePathAnimation } from './SeriesAnimation';
 import MarkerRenderer from './MarkerRenderer';
@@ -20,7 +20,7 @@ const lineBaseInstance: LineBaseReturnType = LineBase;
  * @param {string} startPoint - SVG path command for the starting point (typically 'M' for move or 'L' for line)
  * @returns {string} SVG path string representing the line direction between the two points
  */
-const getLineDirection: (
+export const getLineDirection: (
     firstPoint: Points,
     secondPoint: Points,
     series: SeriesProperties,
@@ -126,6 +126,7 @@ const render: (
     const getCoordinate: typeof getPoint = getPoint;
     const isDrop: boolean = Boolean(series.emptyPointSettings && series.emptyPointSettings.mode === 'Drop');
     const visiblePoints: Points[] = lineBaseInstance.enableComplexProperty(series) || [];
+    let seriesStroke: string | undefined;
 
     for (const point of visiblePoints) {
         point.regions = [];
@@ -136,6 +137,14 @@ const render: (
             startPoint = prevPoint ? 'L' : startPoint;
             prevPoint = point;
             lineBaseInstance.storePointLocation(point, series, isInverted, getCoordinate);
+
+            const customizedValues: string = applyPointRenderCallback(({
+                seriesIndex: series.index as number, color: series.interior as string,
+                xValue: point.xValue as  number | Date | string | null,
+                yValue: point.yValue as  number | Date | string | null
+            }), series.chart);
+            point.interior = customizedValues;
+            if (!seriesStroke) { seriesStroke = customizedValues; }
 
             if (direction === '' && visiblePoints.length === 1) {
                 direction = 'M ' + point.symbolLocations[0].x + ' ' + point.symbolLocations[0].y;
@@ -152,7 +161,7 @@ const render: (
         id: name,
         fill: 'none',
         strokeWidth: series.width,
-        stroke: series.interior,
+        stroke: seriesStroke,
         opacity: series.opacity,
         dashArray: series.dashArray,
         d: direction

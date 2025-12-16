@@ -1,8 +1,9 @@
+@use 'theme-variables' as *;
+
 @include export-module('tooltip-theme') {
 
   .sf-tooltip-wrap {
     background-color: $tooltip-content-bg-color;
-    border: $tooltip-wrapper-border;
     border-radius: $tooltip-wrapper-border-radius;
     box-shadow: $tooltip-wrapper-drop-shadow;
   }
@@ -58,5 +59,6 @@
     border-radius: inherit;
     color: $tooltip-content-font-color;
     font-size: $tooltip-content-font-size;
+    line-height: $tooltip-content-line-height;
   }
 }

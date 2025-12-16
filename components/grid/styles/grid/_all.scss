@@ -1,3 +1,3 @@
-@import 'mixin.scss';
-@import 'layout.scss';
-@import 'theme.scss';
+@forward 'mixin.scss';
+@forward 'layout.scss';
+@forward 'theme.scss';

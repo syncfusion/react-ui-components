@@ -37,7 +37,9 @@ import {
     DataChangeRequestEvent,
     PendingState,
     FilterPredicates,
-    ValueType
+    ValueType,
+    SelectionMode,
+    UseCommandColumnResult
 } from '../types';
 import { selectionModule, SelectionSettings } from '../types/selection.interfaces';
 import { SortDescriptor, SortSettings, SortModule } from '../types/sort.interfaces';
@@ -58,6 +60,7 @@ import {
 import { useData } from '../models';
 import { iterateArrayOrObject } from '../utils';
 import { ITooltip } from '@syncfusion/react-popups';
+import { useCommandColumn } from './useCommandColumn';
 
 /**
  * Default localization strings for the grid
@@ -73,12 +76,43 @@ const defaultLocale: Record<string, string> = {
     cancelButtonLabel: 'Cancel',
     updateButtonLabel: 'Update',
     deleteButtonLabel: 'Delete',
+    editRowLabel: 'Edit this row',
+    deleteRowLabel: 'Delete this row',
+    updateRowLabel: 'Save changes to this row',
+    cancelRowLabel: 'Cancel editing this row',
+    commandActionsLabel: 'Command actions',
     searchButtonLabel: 'Search',
     unsavedChangesConfirmation: 'Unsaved changes will be lost. Are you sure you want to continue?',
     noRecordsEditMessage: 'No records selected for edit operation',
     noRecordsDeleteMessage: 'No records selected for delete operation',
     okButtonLabel: 'OK',
-    confirmDeleteMessage: 'Are you sure you want to delete the record?'
+    confirmDeleteMessage: 'Are you sure you want to delete the record?',
+    SelectAllRows: 'Select all rows',
+    SelectRow: 'Select row',
+    startsWith: 'Starts With',
+    doesNotStartWith: 'Does Not Start With',
+    like: 'Like',
+    endsWith: 'Ends With',
+    doesNotEndWith: 'Does Not End With',
+    contains: 'Contains',
+    doesNotContain: 'Does Not Contain',
+    isNull: 'Null',
+    isNotNull: 'Not Null',
+    isEmpty: 'Empty',
+    isNotEmpty: 'Not Empty',
+    equal: 'Equal',
+    notEqual: 'Not Equal',
+    lessThan: 'Less Than',
+    lessThanOrEqual: 'Less Than Or Equal',
+    greaterThan: 'Greater Than',
+    greaterThanOrEqual: 'Greater Than Or Equal',
+    in: 'In',
+    notIn: 'Not In',
+    saveButtonLabel: 'Save',
+    addNewRecordLabel: 'Add New Record',
+    detailsOfLabel: 'Details of',
+    recordFormLabel: 'Record Form',
+    columnHeaderLabel: 'Column header'
 };
 
 /**
@@ -135,6 +169,7 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         locator.register('valueFormatter', valueFormatterService);
         return locator;
     }, [localeObj, valueFormatterService]);
+    const dataState: RefObject<PendingState> = useRef({isPending: false, resolver: undefined, isEdit: false});
     const dataSource: DataManager | DataResult = useMemo(() => {
         if (props.dataSource instanceof DataManager) {
             return props.dataSource;
@@ -143,6 +178,7 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
             return new DataManager(props.dataSource);
         }
         else if (props.dataSource && props.dataSource.result) {
+            dataState.current.isPending = true;
             return props.dataSource;
         }
         return new DataManager([]);
@@ -160,9 +196,7 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
     const tooltipContent: RefObject<string> = useRef('');
     const aggregates: AggregateRowProps[] = useAggregates<T>(props, gridRef);
 
-    const dataState: RefObject<PendingState> = useRef({isPending: false, resolver: undefined, isEdit: false});
-
-    const { columns: preparedColumns, children, headerRowDepth, colElements, uiColumns } =
+    const { columns: preparedColumns, children, headerRowDepth, colElements, uiColumns, isCheckBoxColumn } =
         useColumns<T>({ ...props }, gridRef, dataState, isInitialBeforePaint);
 
     // Initialize search settings based on props or use default values
@@ -181,6 +215,7 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
     // Initialize filter settings based on props or use default values
     const defaultFilterSettings: FilterSettings = {
         enabled: props.filterSettings?.enabled || false,
+        enableFilterBarOperator: props.filterSettings?.enableFilterBarOperator || false,
         columns: props.filterSettings?.columns || [],
         type: props.filterSettings?.type || 'FilterBar',
         mode: props.filterSettings?.mode || 'Immediate',
@@ -265,11 +300,17 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         props.enableHover !== false, [props.enableHover]);
     const allowKeyboard: boolean = useMemo(() =>
         props.allowKeyboard !== false, [props.allowKeyboard]);
-    const selectionSettings: SelectionSettings = useMemo(() =>
-        ({
-            ... { enabled: true, mode: 'Single', type: 'Row', enableToggle: false },
+    const selectionSettings: SelectionSettings = useMemo(() => {
+        return {
+            enabled: true,
+            mode: isCheckBoxColumn ? SelectionMode.Multiple : SelectionMode.Single,
+            type: 'Row',
+            enableToggle: isCheckBoxColumn,
+            headerCheckbox: true,
+            persistSelection: isCheckBoxColumn,
             ...(props.selectionSettings || {})
-        }), [props.selectionSettings]);
+        };
+    }, [columns, props.selectionSettings]);
     const pageSettings: PageSettings = useMemo(() =>
         defaultPageSettings, [props.pageSettings]);
     const textWrapSettings: TextWrapSettings = useMemo(() => {
@@ -384,26 +425,28 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
      * gridRef.current.getData();
      * ```
      */
-    const getData: (skipPage?: boolean, requiresCount?: boolean) => Object[] | Promise<Response | DataReturnType> =
-        useCallback((skipPage?: boolean, requiresCount?: boolean): Object[] | Promise<Response | DataReturnType> => {
-            const query: Query = dataModule.generateQuery();
-            if (requiresCount) {
-                query.requiresCount();
-            }
-            if (skipPage) {
-                query.queries = query.queries.filter((query: QueryOptions) => query.fn !== 'onPage');
-            }
-            if (dataSource && dataModule.isRemote() && dataSource instanceof DataManager) {
-                // Especially usefull for edit update whole data based aggregate
-                return dataOperations?.getData?.({}, query) as Promise<DataReturnType>;
+    const getData: (skipPage?: boolean, requiresCount?: boolean, data?: Object[] | DataManager) => Object[] | Promise<Response
+    | DataReturnType> = useCallback((skipPage?: boolean, requiresCount?: boolean, data?: Object[] | DataManager): Object[] |
+    Promise<Response | DataReturnType> => {
+        const finalDataSource: Object[] | DataManager | DataResult = data ?? dataSource;
+        const query: Query = dataModule.generateQuery();
+        if (requiresCount) {
+            query.requiresCount();
+        }
+        if (skipPage) {
+            query.queries = query.queries.filter((query: QueryOptions) => query.fn !== 'onPage');
+        }
+        if (finalDataSource && dataModule.isRemote() && finalDataSource instanceof DataManager) {
+            // Especially usefull for edit update whole data based aggregate
+            return dataOperations?.getData?.({}, query) as Promise<DataReturnType>;
+        } else {
+            if (finalDataSource instanceof DataManager) {
+                return (finalDataSource as DataManager).executeLocal(query);
             } else {
-                if (dataSource instanceof DataManager) {
-                    return (dataSource as DataManager).executeLocal(query);
-                } else {
-                    return new DataManager(dataSource as DataManager, query).executeLocal(query);
-                }
+                return new DataManager(finalDataSource as DataManager, query).executeLocal(query);
             }
-        }, [dataSource, currentViewData]);
+        }
+    }, [dataSource, currentViewData]);
 
     /**
      * Retrieves an array of all hidden columns in the Grid.
@@ -634,14 +677,6 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
 
     const searchModule: searchModule = useSearch(gridRef, searchSettings, setGridAction);
 
-    const selectionModule: selectionModule<T> = useSelection<T>(gridRef);
-
-    useMemo(() => {
-        if (!selectionSettings.enabled) {
-            selectionModule.clearSelection();
-        }
-    }, [selectionSettings.enabled]);
-
     const sortModule: SortModule = useSort(gridRef, sortSettings, setGridAction);
 
     useMemo(() => {
@@ -667,6 +702,8 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
             }
         }
     }, [columns]);
+
+    const commandColumnModule: UseCommandColumnResult = useCommandColumn();
 
     // Initialize focus strategy - single source of truth for focus state
     const focusModule: ReturnType<typeof useFocusStrategy> = useFocusStrategy(
@@ -706,7 +743,8 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
                     props.onCellFocusStart(args);
                 }
             }
-        }
+        },
+        commandColumnModule
     );
 
     const keyDownHandler: (e: React.KeyboardEvent | KeyboardEvent) => void = useCallback((e: React.KeyboardEvent | KeyboardEvent) => {
@@ -772,6 +810,14 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
     const dataOperations: UseDataResult<T> = useData<T>(gridInstance, gridAction, dataState);
     const dataModule: UseDataResult<T> = dataOperations;
 
+    const selectionModule: selectionModule<T> = useSelection<T>(gridRef, currentViewData, totalRecordsCount, isCheckBoxColumn, dataModule);
+
+    useMemo(() => {
+        if (!selectionSettings.enabled) {
+            selectionModule.clearSelection();
+        }
+    }, [selectionSettings.enabled]);
+
     const editModule: editModule<T> = useEdit<T>(
         gridRef,
         serviceLocator,
@@ -783,7 +829,8 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         props.editSettings as EditSettings<T>,
         setGridAction,
         setCurrentPage,
-        setResponseData
+        setResponseData,
+        commandColumnModule
     );
 
     // Initialize toolbar module if toolbar is configured
@@ -798,7 +845,8 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         editModule,
         selectionModule,
         currentViewData,
-        searchSettings?.enabled
+        searchSettings?.enabled,
+        commandColumnModule
     );
 
     const isStopPropagationPreventDefault:
@@ -809,13 +857,15 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
 
     const handleGridClick: (e: MouseEvent) => void = useCallback(async (e: MouseEvent<HTMLDivElement>) => {
         props?.onClick?.(e);
+        const target: HTMLElement = e.target as HTMLElement;
         const toolbarAction: boolean = props?.toolbar?.length
             && (e.target as HTMLElement)?.closest('.sf-toolbar')?.parentElement === gridRef.current.element;
         const datePicker: boolean = (e.target as HTMLElement)?.closest('.sf-datepicker')?.classList.contains('sf-popup-open');
+        const checkbox: boolean = (e.target as HTMLElement)?.tagName === 'INPUT' && (e.target as HTMLElement)?.classList.contains('sf-grid-checkselect');
         // Ensure grid is fully initialized before handling clicks
         // This fixes the initial rendering click issue
         if (isInitialLoad || !gridRef.current?.element || !currentViewData?.length || toolbarAction || datePicker ||
-            editModule?.isDialogOpen) {
+            editModule?.isDialogOpen || checkbox || selectionSettings?.checkboxOnly) {
             if (toolbarAction) {
                 focusModule.setGridFocus(false);
             }
@@ -825,6 +875,14 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         editModule?.handleGridClick?.(e);
 
         if (e.defaultPrevented || e.isPropagationStopped()) {
+            return;
+        }
+        if (target?.closest('.sf-grid-popup-edit')) {
+            if (target.closest('.sf-grid-popup-edit-save')) {
+                editModule.saveDataChanges();
+            } else if (target.closest('.sf-grid-popup-edit-cancel') || target.closest('.sf-dlg-closeicon-btn')) {
+                editModule.cancelDataChanges();
+            }
             return;
         }
         // Handle selection FIRST and IMMEDIATELY, regardless of focus state
@@ -1049,15 +1107,16 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         props?.onFocus?.(e);
         if ((pageSettings?.enabled && e.target?.closest('.sf-pager') && e.target.closest('.sf-pager').parentElement === gridRef.current.element)
         || (props?.toolbar?.length && e.target?.closest('.sf-toolbar')?.parentElement === gridRef.current.element) || isStopPropagationPreventDefault(e)
-        || e.target.closest('#' + id + 'EditAlert')) {
+        || e.target.closest('#' + id + 'EditAlert') || e.target.closest('.sf-filterbar-dropdown')) {
             return;
         }
         // Check if grid is in edit mode to prevent focus interference
-        const isGridInEditMode: boolean = editModule?.isEdit || false;
-
+        const isGridInEditMode: boolean = (editModule?.isEdit && !commandColumnModule.commandEdit.current) || false;
+        const commandEditForm: boolean = commandColumnModule.commandEdit.current && e?.target?.closest('.sf-grid-edit-form')
+            ? true : false;
         // If grid is in edit mode, don't interfere with edit focus management
         // This prevents the focus from jumping to header cell when edit form regains focus
-        if (isGridInEditMode) {
+        if (isGridInEditMode || commandEditForm) {
             // Just set grid focus state but don't move focus around
             if (focusModule && !focusModule.isGridFocused) {
                 focusModule.setGridFocus(true);
@@ -1111,7 +1170,7 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
                         lastCell = matrix.findCellIndex(lastCell, false);
                     }
                     matrix.current = lastCell;
-                    focusModule.focus();
+                    focusModule.focus(undefined, commandColumnModule.commandEdit.current ? e : undefined);
                     return;
                 } else {
                     // When tabbing forward into grid, focus first header cell
@@ -1143,7 +1202,7 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
             return;
         }
         // Check if grid is in edit mode to prevent focus interference
-        const isGridInEditMode: boolean = editModule?.isEdit || false;
+        const isGridInEditMode: boolean = (editModule?.isEdit && !commandColumnModule.commandEdit.current) || false;
 
         // If grid is in edit mode, don't interfere with edit focus management
         // This prevents the focus from jumping to header cell when edit form regains focus
@@ -1202,10 +1261,20 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
                                       (target?.closest('.sf-ddl') || target?.closest('.sf-datepicker')) &&
                                       e.altKey &&
                                       e.code === 'ArrowDown';
-        if (isStopPropagationPreventDefault(e) || isDropdownOpenCondition || editModule?.isDialogOpen) {
+        const popupKeyDown: boolean = target?.closest('.sf-datepicker') && target?.closest('.sf-datepicker').classList.contains('sf-popup');
+        if (isStopPropagationPreventDefault(e) || isDropdownOpenCondition || editModule?.isDialogOpen || popupKeyDown) {
             e.preventDefault();
             e.stopPropagation();
             return; // Early return to prevent further processing
+        }
+        if (target?.closest('.sf-grid-popup-edit')) {
+            if (e.key === 'Enter' && target.closest('.sf-dlg-content')
+                && !(target.classList.contains('sf-dropdownlist') && target.getAttribute('aria-expanded') === 'true')) {
+                editModule.saveDataChanges();
+            } else if (e.key === 'Escape') {
+                editModule.cancelDataChanges();
+            }
+            return;
         }
         sortModule?.keyUpHandler?.(e as React.KeyboardEvent);
         if (sortModule && e.keyCode === 13 && closest(e.target as Element, '.sf-grid-header-row .sf-cell')) {
@@ -1215,7 +1284,8 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
             && (e.target as HTMLElement).closest('.sf-pager').parentElement === gridRef.current.element;
         const toolbarAction: boolean = props?.toolbar?.length &&
             (e.target as HTMLElement)?.closest('.sf-toolbar')?.parentElement === gridRef.current.element;
-        if ((e.key === 'Shift' && e.shiftKey) || (e.key === 'Control' && e.ctrlKey) || pageAction || toolbarAction) { return; }
+        const commandItemEnter: boolean = (e.target as HTMLElement)?.closest('.sf-grid-command-cell') && e.key === 'Enter';
+        if ((e.key === 'Shift' && e.shiftKey) || (e.key === 'Control' && e.ctrlKey) || pageAction || toolbarAction || commandItemEnter) { return; }
 
         // Enhanced keyboard action handling based on original TypeScript implementation
         // This implements comprehensive keyboard actions including Insert and Delete keys
@@ -1224,17 +1294,19 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         const editForm: HTMLElement | null = (e.target as HTMLElement)?.closest('.sf-grid-edit-form');
         // Handle edit-specific keyboard events first
         if (props.editSettings?.allowEdit || props.editSettings?.allowAdd || props.editSettings?.allowDelete) {
-
+            const commandEdit: boolean = commandColumnModule.commandEdit.current;
+            const row: HTMLTableRowElement = target?.closest('.sf-grid-content-row');
+            const uid: string = row?.getAttribute('data-uid');
             // Insert key or Mac Cmd+Enter to add record
             if ((e.key === 'Insert' || (isMacLike && e.metaKey && e.key === 'Enter')) &&
-                props.editSettings?.allowAdd && !editModule?.isEdit) {
+                props.editSettings?.allowAdd && (!editModule?.isEdit || commandEdit)) {
                 e.preventDefault();
                 editModule?.addRecord?.();
                 return;
             }
 
             // Delete key to delete selected record
-            if (e.key === 'Delete' && props.editSettings?.allowDelete && !editModule?.isEdit) {
+            if (e.key === 'Delete' && props.editSettings?.allowDelete && (!editModule?.isEdit || commandEdit)) {
                 const target: HTMLElement = e.target as HTMLElement;
                 // Safety checks: ignore if focus is on input elements (except checkboxes)
                 const isInputFocused: boolean = target.tagName === 'INPUT' && !target.classList.contains('sf-checkselect');
@@ -1248,35 +1320,35 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
             }
 
             // F2 key to start editing
-            if (e.key === 'F2' && !editModule?.isEdit) {
+            if (e.key === 'F2' && (!editModule?.isEdit || commandEdit)) {
                 e.preventDefault();
-                editModule?.editRecord?.();
+                editModule?.editRecord?.(commandEdit ? row : undefined);
                 return;
             }
 
             // Enter key to save changes (when in edit mode)
-            if (e.key === 'Enter' && editModule?.isEdit) {
+            if (e.key === 'Enter' && (editModule?.isEdit || commandEdit)) {
                 const target: HTMLElement = e.target as HTMLElement;
                 // Only handle if not in input field or specific grid context
                 if (!target.closest('.sf-unboundcelldiv') &&
                     (target.closest('.sf-grid-content-container') || target.closest('.sf-grid-header-content')) && editForm) {
                     e.preventDefault();
                     editModule.escEnterIndex.current = parseInt((e.target as HTMLElement)?.closest('td')?.getAttribute('aria-colindex'), 10) - 1;
-                    (editModule?.saveDataChanges as Function)?.(undefined, undefined, 'Key');
+                    (editModule?.saveDataChanges as Function)?.(undefined, undefined, 'Key', commandEdit ? uid : undefined);
                     return;
                 }
             }
 
             // Escape key to cancel editing
-            if (e.key === 'Escape' && editModule?.isEdit && editForm) {
+            if (e.key === 'Escape' && (editModule?.isEdit || commandEdit) && editForm) {
                 e.preventDefault();
                 editModule.escEnterIndex.current = parseInt((e.target as HTMLElement)?.closest('td')?.getAttribute('aria-colindex'), 10) - 1;
-                (editModule?.cancelDataChanges as Function)?.('Key');
+                (editModule?.cancelDataChanges as Function)?.('Key', commandEdit ? uid : undefined);
                 return;
             }
         }
 
-        const isGridInEditMode: boolean = editModule?.isEdit || false;
+        const isGridInEditMode: boolean = editModule?.isEdit || commandColumnModule.commandEdit.current || false;
         if (isGridInEditMode && e.key === 'Tab' && editForm) {
             if (editForm) {
                 const tabEvent: CustomEvent = new CustomEvent('editCellTab', {
@@ -1304,7 +1376,7 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         // Check if we're on the last content cell and pressing Tab
         const isLastContentCell: boolean = !focusedCell.isHeader && !aggregates?.length &&
             focusedCell.rowIndex === focusModule.lastFocusableContentCellIndex?.[0] &&
-            focusedCell.colIndex === focusModule.lastFocusableContentCellIndex?.[1];
+            focusedCell.colIndex === focusModule.lastFocusableContentCellIndex?.[1] && !focusModule.isNextCommandItem(e);
         const isLastAggregateCell: boolean = focusedCell.isAggregate &&
             focusedCell.rowIndex === focusModule.lastFocusableAggregateCellIndex?.[0] &&
             focusedCell.colIndex === focusModule.lastFocusableAggregateCellIndex?.[1];
@@ -1502,10 +1574,12 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         cssClass,
         responseData,
         setResponseData,
-        dataModule
+        dataModule,
+        commandColumnModule
     }), [currentViewData, columnsDirective, headerRowDepth, colElements, isInitialLoad, focusModule, selectionModule, getParentElement,
         sortModule, searchModule, filterModule, editModule, sortSettings, searchSettings, evaluateTooltipStatus, uiColumns,
-        currentPage, totalRecordsCount, gridAction, isInitialBeforePaint, cssClass, responseData, setResponseData, dataModule]);
+        currentPage, totalRecordsCount, gridAction, isInitialBeforePaint, cssClass, responseData, setResponseData, dataModule,
+        commandColumnModule]);
 
     useEffect(() => {
         gridRef.current = {

@@ -36,7 +36,7 @@ export interface SearchSettings {
     value?: string;
 
     /**
-     * Specifies the operator used for search operations, such as 'contains', 'startswith', 'endswith', 'equal', or 'notequal'.
+     * Specifies the operator used for search operations, such as 'contains', 'startsWith', 'endsWith', 'equal', or 'notEqual'.
      * Determines how the search value is matched against column data, affecting search precision.
      * Must be compatible with the data types of the searched fields.
      *

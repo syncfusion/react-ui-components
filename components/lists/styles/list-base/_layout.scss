@@ -1,112 +1,175 @@
+@use 'theme-variables' as *;
+
 @include export-module('listbase-layout') {
   .sf-list-container {
     overflow: hidden;
     position: relative;
+    display: flex;
+    flex-direction: column;
   }
 
   .sf-list-parent {
-    margin: 0;
-    padding: 0;
-    
-    & .sf-list-item {
-      height: $list-item-height;
-      line-height: $list-item-line-height;
-      position: relative;
-      padding: $list-item-padding;
-      cursor: pointer;
-      border-radius: $list-item-radius;
-      margin: $list-item-margin-bottom;
-  
-      &.sf-disabled,
-      &.sf-disabled * {
-        cursor: default;
+    margin: $spacing-0;
+    padding: $spacing-0;
+    overflow: auto;
+    max-height: inherit;
+  }
+
+  .sf-list-item {
+    display: flex;
+    align-items: center;
+    position: relative;
+    padding: $list-item-padding;
+    cursor: pointer;
+    border-radius: $list-item-radius;
+    margin-bottom: $list-item-margin-bottom;
+    font-size: $list-text-size;
+    border-block-end: $list-item-border-bottom solid $list-item-border-bottom-color;
+    border-inline-start: $list-item-border-left solid $list-item-border-left-color;
+    border-inline-end: $list-item-border-right solid $list-item-border-right-color;
+    border-block-start: $list-item-border-top solid $list-item-border-top-color;
+    background-color: $list-item-background;
+    color: $list-item-text-color;
+    line-height: $list-item-line-height;
+
+    &.sf-hover,
+    &:hover {
+      background-color: $list-item-hover-bg;
+      color: $list-item-text-hover-color;
+      border-color: $list-item-hover-border-color;
+
+      .sf-list-item-header,
+      .sf-list-content {
+        color: $list-item-text-hover-color;
       }
-  
-      & .sf-list-icon + .sf-list-text {
-        width: calc(100% - 60px);
+
+      &.sf-active .sf-list-item-header,
+      &.sf-active .sf-list-content {
+        color: $list-item-text-active-color;
       }
     }
 
-    & .sf-list-group-item {
-      border-bottom: $list-group-item-border-bottom;
-      border-top: $list-group-item-border-top;
-      height: $list-groupheader-item-height;
-      line-height: $list-groupheader-item-line-height;
-      font-weight: 600;
-      padding: $list-group-item-header-padding;
-      margin: $list-item-margin-bottom;
-  
-      .sf-list-text {
-        cursor: default;
-        padding: 0;
-        font-weight: 600;
-      }
-  
-      &:first-child {
-        border: 0;
-        border-bottom: $list-group-first-border-bottom solid $list-item-border-bottom-color;
+    &.sf-active,
+    &:active {
+      background-color: $list-item-active-bg;
+      color: $list-item-text-active-color;
+
+      &.sf-checklist {
+        background-color: $list-item-background;
+        color: $list-item-text-color;
       }
     }
 
-    & .sf-text-content {
-      height: 100%;
-      position: relative;
-      vertical-align: middle;
-  
-      &.sf-checkbox {
-        .sf-list-text {
-          width: calc(100% - 40px);
-        }
-  
-        &.sf-checkbox-left .sf-list-icon+.sf-list-text {
-          width: calc(100% - 90px);
-        }
-  
-        &.sf-checkbox-right .sf-list-icon+.sf-list-text {
-          width: calc(100% - 80px);
-        }
-      }
-
-      & .sf-list-text {
-        cursor: pointer;
-        display: inline-block;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        vertical-align: middle;
-        white-space: nowrap;
-        width: 100%;
-        padding: $list-item-list-text-padding;
-      }
-
-      & .sf-list-icon {
-        margin-right: $list-icon-margin-right;
-        height: $list-icon-size;
-        width: $list-icon-size;
-        margin-bottom: $list-icon-margin-bottom;
-      }
-    }
-  
-    & .sf-text-content * {
-      display: inline-block;
-      vertical-align: middle;
+    &.sf-focused,
+    &.sf-focused.sf-active.sf-checklist {
+      background-color: $list-focus-bg-color;
+      color: $list-item-text-active-color;
     }
 
-    & .sf-checkbox {
-      & .sf-checkbox-left {
-        margin: $list-checkbox-left-margin;
-      }
-  
-      & .sf-checkbox-right {
-        margin: $list-checkbox-right-margin;
-      }
+    &.sf-item-focus {
+      background: $list-focus-bg-color;
     }
   }
 
-  .sf-list-item.sf-checklist.sf-has-child {
-    .sf-text-content.sf-checkbox.sf-checkbox-right {
-      .sf-list-icon+.sf-list-text {
-        width: calc(100% - 92px);
-      }
+  .sf-list-group-item {
+    border-bottom: $list-group-item-border-bottom;
+    line-height: $list-groupheader-item-line-height;
+    font-weight: $font-weight-semibold;
+    font-size: $list-groupheader-font-size;
+    padding: $list-group-item-header-padding;
+    margin-bottom: $list-item-margin-bottom;
+    display: flex;
+    align-items: center;
+    cursor: default;
+    background: $list-item-groupheader-bg;
+    color: $list-item-groupheader-text-color;
+    border-color: $list-header-border;
+    position: sticky;
+    z-index: 1;
+    top: 0;
+
+    .sf-list-text {
+      cursor: default;
+      padding: $spacing-0;
+      flex-grow: 1;
+    }
+
+    &:not(:first-child) {
+      border-top: $list-group-item-border-top;
+    }
+  }
+
+  .sf-checklist {
+    .sf-list-text {
+      padding-inline: $spacing-10;
+    }
+  }
+
+  .sf-list-text-content {
+    display: flex;
+    align-items: center;
+    flex-grow: 1;
+    position: relative;
+  }
+
+  .sf-list-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex-grow: 1;
+    padding: $list-item-list-text-padding;
+
+    .sf-anchor-wrap {
+      display: flex;
+      align-items: center;
+    }
+  }
+
+  .sf-list-icon {
+    margin-inline-end: $list-icon-margin-right;
+    margin-bottom: $list-icon-margin-bottom;
+    flex-shrink: 0;
+  }
+
+  .sf-small .sf-list-item {
+    padding: $small-list-item-padding;
+    font-size: $small-list-text-size;
+    line-height: $small-list-item-line-height;
+  }
+
+  .sf-large .sf-list-item {
+    padding: $large-list-item-padding;
+    line-height: $large-list-item-line-height;
+  }
+
+  @keyframes sf-shimmer-wave {
+    to {
+      transform: $list-skeleton-shimmer-transform;
+    }
+  }
+
+  .sf-list-skeleton {
+    display: inline-block;
+    position: relative;
+    overflow: hidden;
+    border: $list-skeleton-border;
+    border-radius: $list-skeleton-border-radius;
+    background: $list-skeleton-background-color;
+
+    &::after {
+      animation: sf-shimmer-wave $list-skeleton-shimmer-effect-duration $list-skeleton-shimmer-effect-timing-function infinite;
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      right: 0;
+      width: calc(200% + $list-skeleton-shimmer-wave-width);
+      $wave-start: calc(#{$list-skeleton-shimmer-wave-pos} - #{$list-skeleton-shimmer-wave-length});
+      $wave-end: calc(#{$list-skeleton-shimmer-wave-pos} + #{$list-skeleton-shimmer-wave-length});
+      background-image: linear-gradient($list-skeleton-shimmer-wave-angle,
+          $list-skeleton-shimmer-background-color $wave-start,
+          $list-skeleton-shimmer-wave-color $list-skeleton-shimmer-wave-pos,
+          $list-skeleton-shimmer-background-color $wave-end );
     }
   }
 }

@@ -1,828 +1,325 @@
 @use 'sass:color';
-@import 'mixin.scss';
+@use 'theme-variables' as *;
+
 @include export-module('button-theme') {
-
   .sf-btn {
-    background: $btn-bg-color;
-    box-shadow: $btn-flat-box-shadow;
     color: $btn-color;
-    @at-root {
-      &:hover {
-        background: $btn-hover-bg-color;
-        border-image: $btn-hover-border-color;
-        box-shadow: $btn-hover-focus-box-shadow;
-        color: $btn-hover-color;
-      }
+    &:active {
+     box-shadow: $btn-active-box-shadow;
+    }
+  }
+  .sf-btn-primary {
+    background: $btn-primary-bg-color;
+    border-color: $btn-primary-border-color;
+    color: $btn-primary-text-color;
+    &:hover {
+      background: $btn-primary-focus-filled-bg-color;
+      box-shadow: $btn-hover-focus-box-shadow;
+    }
 
-      &:focus-visible {
-        @include focus-visible-styles;
-        background: $btn-active-bg-color;
-      }
+    &:focus {
+      outline: $btn-focus-outline-round;
+    }
 
+    &:focus-visible {
+      box-shadow: $btn-keyboard-focus-box-shadow;
+      background: $btn-primary-focus-filled-bg-color;
+    }
+
+    &.sf-active,
+    &:active {
+      background: $btn-primary-active-filled-bg-color;
+      box-shadow: $btn-active-box-shadow;
+    }
+  }
+
+  .sf-btn-outlined {
+    background: $btn-link-bg-color;
+    &:hover {
+      background: $btn-outline-focus-background-color;
+      border-color: $btn-outline-border-color;
+      box-shadow: none;
+    }
+
+    &:focus {
+      background: $btn-outline-focus-background-color;
+      border: 1px solid $btn-outline-border-color;
+    }
+
+    &:focus-visible {
+      box-shadow: $btn-keyboard-focus-box-shadow;
+      background: $btn-outline-focus-background-color;
+    }
+
+    &.sf-active,
+    &:active {
+      background: $btn-outline-focus-background-color;
+      box-shadow: none;
+    }
+  }
+
+  .sf-btn-standard {
+    background: $btn-link-bg-color;
+    border-color: $btn-link-bg-color;
+    &:hover {
+      background: $btn-flat-hover-bg-color;
+      box-shadow: $btn-flat-hover-border-color;
+    }
+
+    &:focus {
+      background: $btn-flat-hover-bg-color;
+    }
+
+    &:focus-visible {
+      box-shadow: $btn-keyboard-focus-box-shadow;
+      background: $btn-flat-hover-bg-color;
+    }
+
+    &:active,
+    &.sf-active {
+      box-shadow: none;
+      background: $btn-flat-hover-bg-color;
+    }
+  }
+
+  .sf-btn-primary {
+    &.sf-btn-standard,
+    &.sf-btn-outlined {
+      color: $btn-primary-color
+    }
+  }
+
+  .sf-btn-secondary {
+    background-color: $btn-bg-color;
+    &:focus-visible {
+      box-shadow: $btn-keyboard-focus-box-shadow;
+    }
+    &:active,
+    &.sf-active {
+      background: $btn-bg-active-color;
+    }
+    &.sf-btn-standard {
       &:active,
       &.sf-active {
-        background: $btn-active-bg-color;
-        border-image: $btn-active-border-color;
-        box-shadow: $btn-active-box-shadow;
-        color: $btn-active-color;
-      }
-
-      &:disabled,
-      &.sf-disabled {
-        background: $btn-disabled-bg-color;
-        border-color: $btn-disabled-border-color;
-        box-shadow: $btn-flat-box-shadow;
-        color: $btn-disabled-color;
-        cursor: default;
-      }
-
-      & .sf-ripple-element {
-        background: $btn-ripple-bg-color;
-      }
-
-      &.sf-round {
-        background: $btn-round-bg-color;
-        border-color: $btn-round-border-color;
-
-        &:hover {
-          background: $btn-round-hover-bg-color;
-          border-color: $btn-round-hover-border-color;
-        }
-
-        &:focus {
-          background: $btn-focus-bg-color;
-          border-image: $btn-focus-border-color;
-          box-shadow: $btn-box-shadow;
-          outline: $btn-focus-outline-round;
-          outline-offset: $btn-active-outline-offset;
-        }
-
-        &:focus-visible {
-          @include focus-visible-styles;
-          background: $btn-active-bg-color;
-        }
-
-        &:active {
-          background: $btn-active-bg-color;
-          border-image: $btn-active-border-color;
-          box-shadow: $btn-active-box-shadow;
-          outline: $btn-active-outline;
-          outline-offset: $btn-active-outline-offset;
-        }
-
-        &:disabled,
-        &.sf-disabled {
-          background: $btn-disabled-bg-color;
-          border-color: $btn-disabled-border-color;
-          box-shadow: $btn-flat-box-shadow;
-          color: $btn-disabled-color;
-        }
-
-        &.sf-primary,
-        &.sf-filled {
-          &:hover {
-            border-color: $btn-primary-bg-color;
-          }
-
-          &:focus {
-            outline: $btn-focus-outline-round;
-          }
-
-          &:focus-visible {
-            @include focus-visible-styles;
-            background: $btn-primary-active-bg-color;
-          }
-        }
-
-        &.sf-success {
-          &:hover {
-            border-color: $btn-success-bg-color;
-          }
-
-          &:focus {
-            outline: $btn-focus-outline-round;
-          }
-
-          &:focus-visible {
-            @include focus-visible-styles;
-            background: $btn-success-active-bg-color;
-          }
-        }
-
-        &.sf-info {
-          &:hover {
-            border-color: $btn-info-bg-color;
-          }
-
-          &:focus {
-            outline: $btn-focus-outline-round;
-          }
-
-          &:focus-visible {
-            @include focus-visible-styles;
-            background: $btn-info-active-bg-color;
-          }
-        }
-
-        &.sf-warning {
-          &:hover {
-            border-color: $btn-warning-bg-color;
-          }
-
-          &:focus {
-            outline: $btn-focus-outline-round;
-          }
-
-          &:focus-visible {
-            @include focus-visible-styles;
-            background: $btn-warning-active-bg-color;
-          }
-        }
-
-        &.sf-error {
-          &:hover {
-            border-color: $btn-danger-bg-color;
-          }
-
-          &:focus {
-            outline: $btn-focus-outline-round;
-          }
-
-          &:focus-visible {
-            @include focus-visible-styles;
-            background: $btn-danger-active-bg-color;
-          }
-        }
-      }
-
-      &.sf-filled {
-        background: $btn-primary-bg-color;
-        border-color: $btn-primary-border-color;
-        color: $btn-primary-color;
-        &:hover {
-          background: $btn-primary-hover-bg-color;
-        }
-
-        &:focus {
-          @include primary-focus;
-        }
-
-        &:focus-visible {
-          @include focus-visible-styles;
-          background: $btn-primary-active-bg-color;
-        }
-
-        &:active {
-          @include primary-active;
-        }
-
-        &.sf-active {
-          background: $btn-primary-active-bg-color;
-          border-color: $btn-primary-active-border-color;
-          box-shadow: $btn-active-box-shadow;
-          color: $btn-primary-active-color;
-        }
-
-        &:disabled,
-        &.sf-disabled {
-          @include primary-disabled;
-        }
-
-        & .sf-ripple-element {
-          background: $btn-ripple-primary-bg-color;
-        }
-      }
-
-      &.sf-success {
-        background: $btn-success-bg-color;
-        border-color: $btn-success-border-color;
-        color: $btn-success-color;
-        &:hover {
-          background: $btn-success-hover-bg-color;
-          color: $btn-success-hover-color;
-        }
-
-        &:focus {
-          @include success-focus;
-        }
-
-        &:focus-visible {
-          @include focus-visible-styles;
-          background: $btn-success-active-bg-color;
-        }
-
-        &:active,
-        &.sf-active {
-          @include success-active;
-        }
-
-        &:disabled,
-        &.sf-disabled {
-          @include success-disabled;
-        }
-
-        & .sf-ripple-element {
-          background: $btn-ripple-success-bg-color;
-        }
-      }
-
-      &.sf-info {
-        background: $btn-info-bg-color;
-        border-color: $btn-info-border-color;
-        color: $btn-info-color;
-        &:hover {
-          background: $btn-info-hover-bg-color;
-          color: $btn-info-hover-color;
-        }
-
-        &:focus {
-          @include info-focus;
-        }
-
-        &:focus-visible {
-          @include focus-visible-styles;
-          background: $btn-info-active-bg-color;
-        }
-
-        &:active,
-        &.sf-active {
-          @include info-active;
-        }
-
-        &:disabled,
-        &.sf-disabled {
-          @include info-disabled;
-        }
-
-        & .sf-ripple-element {
-          background: $btn-ripple-info-bg-color;
-        }
-      }
-
-      &.sf-warning {
-        background: $btn-warning-bg-color;
-        border-color: $btn-warning-border-color;
-        color: $btn-warning-color;
-
-        &:hover {
-          background: $btn-warning-hover-bg-color;
-          color: $btn-warning-hover-color;
-        }
-
-        &:focus {
-          @include warning-focus;
-        }
-
-        &:focus-visible {
-          @include focus-visible-styles;
-          background: $btn-warning-active-bg-color;
-        }
-
-        &:active,
-        &.sf-active {
-          @include warning-active;
-        }
-
-        &:disabled,
-        &.sf-disabled {
-          @include warning-disabled;
-        }
-
-        & .sf-ripple-element {
-          background: $btn-ripple-warning-bg-color;
-        }
-      }
-
-      &.sf-error {
-        background: $btn-danger-bg-color;
-        border-color: $btn-danger-border-color;
-        color: $btn-danger-color;
-        &:hover {
-          background: $btn-danger-hover-bg-color;
-          color: $btn-danger-hover-color;
-        }
-
-        &:focus {
-          @include danger-focus;
-        }
-
-        &:focus-visible {
-          @include focus-visible-styles;
-          background: $btn-danger-active-bg-color;
-        }
-
-        &:active {
-          @include danger-active;
-        }
-
-        &.sf-active {
-          background: $btn-danger-active-bg-color;
-          border-color: $btn-danger-bg-color;
-          box-shadow: $btn-active-box-shadow;
-          color: $btn-danger-active-color;
-        }
-
-        &:disabled,
-        &.sf-disabled {
-          @include danger-disabled;
-        }
-
-        & .sf-ripple-element {
-          background: $btn-ripple-danger-bg-color;
-        }
-      }
-
-      &.sf-standard {
-        background: $btn-link-bg-color;
-        border-color: $btn-link-bg-color;
-        &:hover {
-          background: $btn-flat-hover-bg-color;
-          box-shadow: $btn-flat-hover-border-color;
-        }
-
-        &:focus {
-          background: $btn-flat-focus-bg-color;
-          border-color: $btn-flat-focus-border-color;
-        }
-
-        &:focus-visible {
-          @include focus-visible-styles;
-          background: $btn-active-bg-color;
-        }
-
-        &:active,
-        &.sf-active {
-          background: $btn-flat-active-bg-color;
-          border-color: $btn-flat-active-border-color;
-        }
-
-        &:disabled,
-        &.sf-disabled {
-          background: $btn-link-bg-color;
-          border-color: $btn-link-bg-color;
-          box-shadow: $btn-flat-box-shadow;
-          color: $btn-flat-disabled-color;
-        }
-
-        & .sf-ripple-element {
-          background: $btn-ripple-bg-color;
-        }
-
-        &.sf-primary,
-        &.sf-filled {
-          border-color: $btn-flat-primary-border-color;
-          color: $btn-flat-primary-color;
-
-          &:hover {
-            background: $btn-flat-primary-hover-bg-color;
-            box-shadow: $btn-flat-hover-border-color;
-            color: $btn-flat-primary-hover-color;
-          }
-
-          &:focus {
-            background: $btn-flat-primary-focus-bg-color;
-            border-color: $btn-flat-primary-focus-border-color;
-            color: $btn-flat-primary-focus-color;
-          }
-
-          &:focus-visible {
-            @include focus-visible-styles;
-            background: $btn-flat-primary-focus-bg-color;
-            color: $btn-flat-primary-focus-color;
-          }
-
-          &:active,
-          &.sf-active {
-            box-shadow: none;
-            background: $btn-flat-primary-focus-bg-color;
-            border-color: $btn-link-bg-color;
-            color: $btn-flat-primary-active-color;
-          }
-
-          &:disabled,
-          &.sf-disabled {
-            background: $btn-link-bg-color;
-            border-color: $btn-link-bg-color;
-            color: $btn-flat-primary-disabled-color;
-          }
-
-          & .sf-ripple-element {
-            background: $btn-ripple-flat-primary-bg-color;
-          }
-        }
-
-        &.sf-success {
-          color: $btn-success-bg-color;
-
-          &:hover {
-            background: $btn-flat-success-hover-bg-color;
-            border-color: $btn-link-bg-color;
-            color: $btn-success-bg-color;
-          }
-
-          &:focus {
-            background: $btn-flat-success-active-bg-color;
-            border-color: $btn-link-bg-color;
-            color: $btn-success-bg-color;
-          }
-
-          &:focus-visible {
-            @include focus-visible-styles;
-            background: $btn-success-active-bg-color;
-            color: $btn-success-color;
-          }
-
-          &:active,
-          &.sf-active {
-            background: $btn-flat-success-active-bg-color;
-            border-color: $btn-link-bg-color;
-            color: $btn-success-bg-color;
-          }
-
-          &:disabled,
-          &.sf-disabled {
-            background: $btn-link-bg-color;
-            border-color: $btn-link-bg-color;
-            color: $btn-flat-success-disabled-color;
-          }
-
-          & .sf-ripple-element {
-            background: $btn-ripple-flat-success-bg-color;
-          }
-        }
-
-        &.sf-info {
-          border-color: $btn-flat-info-border-color;
-          color: $btn-flat-info-color;
-
-          &:hover {
-            background: $btn-flat-info-hover-bg-color;
-            border-color: $btn-flat-info-hover-border-color;
-            color: $btn-flat-info-hover-color;
-          }
-
-          &:focus {
-            background: $btn-flat-info-focus-bg-color;
-            border-color: $btn-flat-info-focus-border-color;
-            color: $btn-flat-info-focus-color;
-          }
-
-          &:focus-visible {
-            @include focus-visible-styles;
-            background: $btn-info-active-bg-color;
-            color: $btn-info-color;
-          }
-
-          &:active,
-          &.sf-active {
-            background: $btn-flat-info-focus-bg-color;
-            border-color: $btn-flat-info-active-border-color;
-            color: $btn-flat-info-active-color;
-          }
-
-          &:disabled,
-          &.sf-disabled {
-            background: $btn-link-bg-color;
-            border-color: $btn-flat-info-disabled-border-color;
-            color: $btn-flat-info-disabled-color;
-          }
-
-          & .sf-ripple-element {
-            background: $btn-ripple-flat-info-bg-color;
-          }
-        }
-
-        &.sf-warning {
-          background: $btn-link-bg-color;
-          border-color: $btn-flat-warning-border-color;
-          color: $btn-flat-warning-color;
-
-          &:hover {
-            background: $btn-flat-warning-hover-bg-color;
-            border-color: $btn-flat-warning-hover-border-color;
-            color: $btn-flat-warning-hover-color;
-          }
-
-          &:focus {
-            background: $btn-flat-warning-focus-bg-color;
-            border-color: $btn-flat-warning-focus-border-color;
-            color: $btn-flat-warning-focus-color;
-          }
-
-          &:focus-visible {
-            @include focus-visible-styles;
-            background: $btn-warning-active-bg-color;
-            color: $btn-warning-color;
-          }
-
-          &:active,
-          &.sf-active {
-            background: $btn-flat-warning-focus-bg-color;
-            border-color: $btn-flat-warning-active-border-color;
-            color: $btn-flat-warning-active-color;
-          }
-
-          &:disabled,
-          &.sf-disabled {
-            background: $btn-link-bg-color;
-            border-color: $btn-flat-warning-disabled-border-color;
-            color: $btn-flat-warning-disabled-color;
-          }
-
-          & .sf-ripple-element {
-            background: $btn-ripple-flat-warning-bg-color;
-          }
-        }
-
-        &.sf-error {
-          border-color: $btn-flat-danger-border-color;
-          color: $btn-danger-bg-color;
-
-          &:hover {
-            background: $btn-flat-danger-hover-bg-color;
-            border-color: $btn-flat-danger-hover-border-color;
-            color: $btn-danger-bg-color;
-          }
-
-          &:focus {
-            background: $btn-flat-danger-focus-bg-color;
-            border-color: $btn-flat-danger-focus-border-color;
-            color: $btn-danger-bg-color;
-          }
-
-          &:focus-visible {
-            @include focus-visible-styles;
-            background: $btn-danger-active-bg-color;
-            color: $btn-danger-color;
-          }
-
-          &:active,
-          &.sf-active {
-            background: $btn-flat-danger-focus-bg-color;
-            border-color: $btn-flat-danger-active-border-color;
-            color: $btn-danger-bg-color;
-          }
-
-          &:disabled,
-          &.sf-disabled {
-            background: $btn-link-bg-color;
-            border-color: $btn-flat-danger-disabled-border-color;
-            color: $btn-flat-danger-disabled-color;
-          }
-
-          & .sf-ripple-element {
-            background: $btn-ripple-flat-danger-bg-color;
-          }
-        }
-      }
-
-      &.sf-outlined {
-        background: $btn-link-bg-color;
-        border-color: $btn-outline-border-color;
-        color: $btn-outline-color;
-        border: 1px solid;
-
-        &:hover {
-          background: $btn-outline-hover-bg-color;
-          border-color: $btn-outline-hover-border-color;
-          color: $btn-outline-hover-color;
-          box-shadow: none;
-        }
-
-        &:focus {
-          @include outline-focus;
-        }
-
-        &:active {
-          @include outline-active;
-        }
-
-        &:focus-visible {
-          @include focus-visible-styles;
-          background: $btn-active-bg-color;
-        }
-
-        &:disabled,
-        &.sf-disabled {
-          @include outline-disabled;
-        }
-
-        &.sf-primary,
-        &.sf-filled {
-          background: $btn-link-bg-color;
-          border: 1px solid $btn-outline-border-color;
-          color: rgba($btn-outline-primary-color);
-
-          &:hover {
-            background: $btn-outline-primary-hover-bg-color;
-            border: 1px solid $btn-outline-border-color;
-            color: rgba($btn-outline-primary-color);
-          }
-
-          &:focus {
-            @include outline-primary-focus;
-          }
-
-          &:focus-visible {
-            @include focus-visible-styles;
-            background: $btn-outline-primary-active-bg-color;
-            color: rgba($btn-outline-primary-color);
-          }
-
-          &:active {
-            @include outline-primary-active;
-          }
-
-          &:disabled,
-          &.sf-disabled {
-            @include outline-primary-disabled;
-          }
-        }
-
-        &.sf-success {
-          background: $btn-link-bg-color;
-          border: 1px solid $btn-outline-border-color;
-          color: rgba($btn-outline-success-color);
-          &:hover {
-            background: $btn-outline-success-hover-bg-color;
-            border: 1px solid $btn-outline-border-color;
-            color: rgba($btn-outline-success-color);
-          }
-
-          &:focus {
-            @include outline-success-focus;
-          }
-
-          &:focus-visible {
-            @include focus-visible-styles;
-            background: $btn-success-active-bg-color;
-            color: $btn-success-color;
-          }
-
-          &:active {
-            @include outline-success-active;
-          }
-
-          &:disabled,
-          &.sf-disabled {
-            @include outline-success-disabled;
-          }
-        }
-
-        &.sf-info {
-          background: $btn-link-bg-color;
-          border: 1px solid $btn-outline-border-color;
-          color: rgba($btn-outline-info-color);
-          &:hover {
-            background: $btn-outline-info-hover-bg-color;
-            border: 1px solid $btn-outline-border-color;
-            color: rgba($btn-outline-info-color);
-          }
-
-          &:focus {
-            @include outline-info-focus;
-          }
-
-          &:focus-visible {
-            @include focus-visible-styles;
-            background: $btn-info-active-bg-color;
-            color: $btn-info-color;
-          }
-
-          &:active {
-            @include outline-info-active;
-          }
-
-          &:disabled,
-          &.sf-disabled {
-            @include outline-info-disabled;
-          }
-        }
-
-        &.sf-warning {
-          background: $btn-link-bg-color;
-          border: 1px solid $btn-outline-border-color;
-          color: rgba($btn-outline-warning-color);
-
-          &:hover {
-            background: $btn-outline-warning-hover-bg-color;
-            border: 1px solid $btn-outline-border-color;
-            color: rgba($btn-outline-warning-color);
-          }
-
-          &:focus {
-            @include outline-warning-focus;
-          }
-
-          &:focus-visible {
-            @include focus-visible-styles;
-            background: $btn-warning-active-bg-color;
-            color: $btn-warning-color;
-          }
-
-          &:active {
-            @include outline-warning-active;
-          }
-
-          &:disabled,
-          &.sf-disabled {
-            @include outline-warning-disabled;
-          }
-        }
-
-        &.sf-error {
-          background: $btn-link-bg-color;
-          border: 1px solid $btn-outline-border-color;
-          color: rgba($btn-outline-danger-color);
-          &:hover {
-            background: $btn-outline-danger-hover-bg-color;
-            border: 1px solid $btn-outline-border-color;
-            color: rgba($btn-outline-danger-color);
-          }
-
-          &:focus {
-            @include outline-danger-focus;
-          }
-
-          &:focus:not(:focus-visible) {
-            background: $btn-outline-danger-hover-bg-color;
-            border: 1px solid $btn-outline-border-color;
-            color: rgba($btn-outline-danger-color);
-          }
-
-          &:focus-visible {
-            @include focus-visible-styles;
-            background: $btn-danger-active-bg-color;
-            color: $btn-danger-color;
-          }
-
-          &:active {
-            @include outline-danger-active;
-          }
-
-          &:disabled,
-          &.sf-disabled {
-            @include outline-danger-disabled;
-          }
-        }
-      }
-
-      &.sf-link {
-        :not(.sf-filled) {
-          color: $btn-link-color;
-          background: $btn-link-bg-color;
-          border-color: $btn-link-bg-color;
-          border-radius: 0;
-          box-shadow: none;
-        }
-
-        &:hover,
-        &:focus {
-          @include link-focus;
-        }
-
-        &:focus-visible {
-          @include focus-visible-styles;
-        }
-
-        &:disabled {
-          @include link-disabled;
-        }
-
-        &:focus:not(:focus-visible) {
-          outline: none;
-        }
-      }
-
-      &.sf-link.sf-filled {
-        border-radius: 4px;
-      }
-
-      &.sf-inherit {
-        color: inherit;
-        background: inherit;
-        border-color: transparent;
+        background: $btn-flat-pressed-bg-color;
         box-shadow: none;
-
-        &:hover,
-        &:focus,
-        &:active,
-        &.sf-active {
-          background: rgba(transparent, .056);
-          border-color: transparent;
-          box-shadow: none;
-          color: inherit;
-          outline: none;
-        }
-
-        &:disabled {
-          background: inherit;
-          color: inherit;
-          border-color: transparent;
-          box-shadow: none;
-          opacity: .5;
-        }
+      }
+    }
+    &.sf-btn-filled {
+      &:hover {
+        box-shadow: $btn-hover-focus-box-shadow;
+        background: $btn-bg-active-color;
+      }
+      &:active,
+      &.sf-active {
+        box-shadow: $btn-active-box-shadow;
       }
     }
   }
+
+  .sf-btn-success {
+    color: $btn-success-color;
+    &:hover {
+      background: $btn-success-hover-flat-bg-color;
+    }
+
+    &:focus {
+      background: $btn-success-hover-flat-bg-color;
+    }
+
+    &:focus-visible {
+      box-shadow: $btn-keyboard-focus-box-shadow;
+    }
+
+    &:active,
+    &.sf-active {
+      background: $btn-success-focus-flat-bg-color;
+      box-shadow: none;
+    }
+    
+    &.sf-btn-outlined {
+      border-color: $btn-success-border-color;
+      &.sf-active,
+      &:active {
+        background: $btn-success-focus-flat-bg-color;
+      }
+    }
+
+    &.sf-btn-filled {
+      color: $btn-primary-text-color;
+      background: $btn-success-bg-color;
+      border-color: $btn-success-bg-color;
+      &:hover {
+        background: $btn-success-focus-filled-bg-color;
+        color: $btn-success-hover-color;
+        box-shadow: $btn-hover-focus-box-shadow;
+      }
+      &:focus {
+        background: $btn-success-focus-filled-bg-color;
+      }
+      &.sf-active,
+      &:active {
+        background: $btn-success-active-filled-bg-color;
+        box-shadow: $btn-active-box-shadow;
+      }
+    }
+  }
+
+  .sf-btn-info {
+    color: $btn-info-color;
+    &:hover {
+      background: $btn-info-hover-flat-bg-color;
+    }
+
+    &:focus {
+      background: $btn-info-hover-flat-bg-color;
+    }
+
+    &:focus-visible {
+      box-shadow: $btn-keyboard-focus-box-shadow;
+    }
+
+    &:active,
+    &.sf-active {
+      background: $btn-info-focus-flat-bg-color;
+      box-shadow: none;
+    }
+
+    &.sf-btn-outlined {
+      border-color: $btn-info-border-color;
+      &.sf-active,
+      &:active {
+        background: $btn-info-focus-flat-bg-color;
+      }
+    }
+
+    &.sf-btn-filled {
+      color: $btn-primary-text-color;
+      background: $btn-info-bg-color;
+      border-color: $btn-info-bg-color;
+      &:hover {
+        background: $btn-info-focus-filled-bg-color;
+        color: $btn-info-hover-color;
+        box-shadow: $btn-hover-focus-box-shadow;
+      }
+      &:focus {
+        background: $btn-info-focus-filled-bg-color;
+      }
+      &.sf-active,
+      &:active {
+        background: $btn-info-active-filled-bg-color;
+        box-shadow: $btn-active-box-shadow;
+      }
+    }
+  }
+
+  .sf-btn-warning {
+    color: $btn-warning-color;
+    &:hover {
+      background: $btn-warning-hover-flat-bg-color;
+    }
+
+    &:focus {
+      box-shadow: none;
+      background: $btn-warning-hover-flat-bg-color;
+    }
+
+    &:focus-visible {
+      box-shadow: $btn-keyboard-focus-box-shadow;
+    }
+
+    &.sf-active,
+    &:active {
+      background: $btn-warning-focus-flat-bg-color;
+      box-shadow: none;
+    }
+
+    &.sf-btn-outlined {
+      border-color: $btn-warning-border-color;
+      &.sf-active,
+      &:active {
+        background: $btn-warning-focus-flat-bg-color;
+      }
+    }
+
+    &.sf-btn-filled {
+      color: $btn-primary-text-color;
+      background: $btn-warning-bg-color;
+      border-color: $btn-warning-bg-color;
+      &:hover {
+        background: $btn-warning-focus-filled-bg-color;
+        color: $btn-warning-hover-color;
+        box-shadow: $btn-hover-focus-box-shadow;
+      }
+      &:focus {
+        background: $btn-warning-focus-filled-bg-color;
+      }
+      &.sf-active,
+      &:active {
+        background: $btn-warning-active-filled-bg-color;
+        box-shadow: $btn-active-box-shadow;
+      }
+    }
+  }
+
+  .sf-btn-error {
+    color: $btn-danger-color;
+    &:hover {
+        background: $btn-error-hover-flat-bg-color;
+    }
+
+    &:focus {
+      background: $btn-error-hover-flat-bg-color;
+    }
+
+    &:focus-visible {
+      box-shadow: $btn-keyboard-focus-box-shadow;
+    }
+
+    &:active,
+    &.sf-active {
+      background: $btn-error-focus-flat-bg-color;
+      box-shadow: none;
+    }
+
+    &.sf-btn-outlined {
+      border-color: $btn-danger-border-color;
+      &.sf-active,
+      &:active {
+        background: $btn-error-focus-flat-bg-color;
+      }
+    }
+
+    &.sf-btn-filled {
+      color: $btn-primary-text-color;
+      background: $btn-danger-bg-color;
+      border-color: $btn-danger-bg-color;
+      &:hover {
+        background: $btn-error-focus-filled-bg-color;
+        color: $btn-danger-hover-color;
+        box-shadow: $btn-hover-focus-box-shadow;
+      }
+      &:focus {
+        background: $btn-error-focus-filled-bg-color;
+      }
+      &.sf-active,
+      &:active {
+        background: $btn-error-active-filled-bg-color;
+        box-shadow: $btn-active-box-shadow;
+      }
+    }
+  }
+
+  .sf-btn:disabled {
+    background: $btn-link-bg-color;
+    border-color: $btn-disabled-border-color;
+    color: $btn-disabled-color;
+    pointer-events: none;
+    box-shadow: none;
+  }
+
+  .sf-btn-link:hover {
+    text-decoration: underline;
+  }
+
 }

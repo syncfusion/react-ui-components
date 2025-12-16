@@ -1,6 +1,5 @@
 import { ChartAxisTitleProps } from './base';
 
-
 /**
  * ChartAxisTitle component for configuring the style of axis titles in the chart.
  * This is a configuration-only component and does not render any visual output.

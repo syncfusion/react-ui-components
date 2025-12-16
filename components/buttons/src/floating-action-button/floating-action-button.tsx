@@ -130,7 +130,7 @@ type IFabProps = FabButtonProps & ButtonHTMLAttributes<HTMLButtonElement>;
 
 export const Fab: React.ForwardRefExoticComponent<IFabProps & React.RefAttributes<IFabButton>> =
     forwardRef<IFabButton, IFabProps>((props: IFabProps, ref: Ref<IFabButton>) => {
-        const buttonRef: any = useRef<IButton>(null);
+        const buttonRef: React.RefObject<IButton | null> = useRef<IButton | null>(null);
         const { dir } = useProviderContext();
         const {
             disabled = false,

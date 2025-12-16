@@ -1,6 +1,6 @@
 import { extend, HorizontalAlignment, VerticalAlignment } from '@syncfusion/react-base';
 import { ChartBorderProps,  ChartLegendProps, ChartFontProps, LegendClickEvent, ChartLocationProps } from '../../base/interfaces';
-import { ChartSeriesType, LegendPosition, LegendShape, TextOverflow } from '../../base/enum';
+import { ChartSeriesType, LegendShape } from '../../base/enum';
 import { BaseLegend, createLegendOption, createPathOption, createRectOption, RectOption } from '../../base/Legend-base';
 import { LegendOptions } from '../../base/Legend-base';
 import { calculateLegendShapes, calculateShapes, getTitle, measureText, stringToNumber, titlePositionX, useTextTrim, useTextWrap } from '../../utils/helper';
@@ -8,6 +8,7 @@ import { subtractThickness } from '../AxesRenderer/CartesianLayoutRender';
 import { AxisTextStyle } from '../../chart-axis/base';
 import { useRegisterAxisRender, useRegisterSeriesRender } from '../../hooks/useClipRect';
 import { AxisModel, Chart, PathOptions, Rect, SeriesProperties, ChartSizeProps, TextOption, TextStyleModel } from '../../chart-area/chart-interfaces';
+import { LegendPosition, TextOverflow } from '../../../common';
 
 // === LEGEND INITIALIZATION & CONFIGURATION ===
 

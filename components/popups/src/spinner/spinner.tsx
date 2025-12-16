@@ -1,416 +1,458 @@
-import { preRender } from '@syncfusion/react-base';
 import * as React from 'react';
-import { useState, useEffect, useRef, useImperativeHandle, forwardRef, useMemo } from 'react';
-import * as ReactDOM from 'react-dom';
-
-const DEFT_WIDTHS: Record<SpinnerType, number> = {
-    Material3: 30,
-    Fluent2: 30,
-    Bootstrap5: 36,
-    Tailwind3: 30
-};
-
-const CLS_MAPPINGS: Record<SpinnerType, string> = {
-    Material3: 'sf-spin-material3',
-    Fluent2: 'sf-spin-fluent2',
-    Bootstrap5: 'sf-spin-bootstrap5',
-    Tailwind3: 'sf-spin-tailwind3'
-};
-
-const CLS_SPINWRAP: string = 'sf-spinner-pane';
-const CLS_SPININWRAP: string = 'sf-spinner-inner';
-const CLS_SPINCIRCLE: string = 'sf-path-circle';
-const CLS_SPINARC: string = 'sf-path-arc';
-const CLS_SPINLABEL: string = 'sf-spin-label';
-const CLS_SPINTEMPLATE: string = 'sf-spin-template';
+import { forwardRef, useImperativeHandle, useMemo, useEffect, useRef} from 'react';
+import { Color, preRender, formatUnit } from '@syncfusion/react-base';
+export { Color };
 
 /**
- * Defines the available design systems for spinner appearance.
- * Each option represents a different visual style based on popular UI frameworks.
+ * Specifies the visual style of the spinner animation.
  */
 export enum SpinnerType {
     /**
-     * Material Design 3 spinner style with circular animation following
-     * Google's Material Design guidelines.
+     * Specifies a circular stroke animation (default).
+     * Suitable for most use cases and provides a smooth rotating effect.
      */
-    Material3 = 'Material3',
+    Circular = 'Circular',
 
     /**
-     * Bootstrap 5 spinner style following the Bootstrap framework's
-     * visual design patterns.
+     * Specifies a Cupertino-style spinner with 12 fading dots.
+     * Inspired by iOS loading indicators.
      */
-    Bootstrap5 = 'Bootstrap5',
+    Cupertino = 'Cupertino',
 
     /**
-     * Fluent Design 2 spinner style following Microsoft's Fluent design
-     * system guidelines.
+     * Specifies a single circular stroke animation.
+     * This is a slight variation of the default Circular type.
      */
-    Fluent2 = 'Fluent2',
+    SingleCircle = 'SingleCircle',
 
     /**
-     * Tailwind CSS 3 spinner style following the Tailwind design
-     * aesthetic and principles.
+     * Specifies a double circle animation with two concentric strokes.
+     * Each circle animates with alternating dash segments.
      */
-    Tailwind3 = 'Tailwind3'
+    DoubleCircle = 'DoubleCircle'
 }
 
-/**
- * Interface for the Spinner component props
- *
- * @public
- */
+
 export interface SpinnerProps {
     /**
-     * Defines the type/style of the Spinner
-     *
-     * @default SpinnerType.Material3
-     */
-    type?: SpinnerType;
-
-    /**
-     * Text to be displayed below the Spinner
+     * Specifies optional text displayed next to the spinner.
+     * Recommended for accessibility when the surrounding UI lacks context.
      *
      * @default -
      */
     label?: string;
 
     /**
-     * Width of the Spinner in pixels or as string with units
+     * Specifies whether the spinner is visible.
+     * When set to false, renders null.
      *
-     * @default Based on the type selected (DEFT_WIDTHS mapping)
-     */
-    width?: string | number;
-
-    /**
-     * Controls the visibility state of the component.
-     *
-     * When true, the component will be rendered and displayed.
-     * When false, the component will be hidden but may remain in the DOM based on implementation.
-     * If not specified, the component will follow its default visibility behavior.
-     *
-     * @default false
+     * @default true
      */
     visible?: boolean;
 
     /**
-     * Custom HTML template for the Spinner
+     * Specifies the stroke thickness for circular variants.
+     * Accepts any valid CSS length (e.g., '3px').
      *
-     * @default -
+     * @default '3px'
      */
-    template?: string;
+    thickness?: string;
 
     /**
-     * Target element where the Spinner should be rendered
+     * Specifies the animation duration for spinner effects such as rotation, fade, or pulse.
+     * Accepts values like '1s' or '800ms'.
      *
-     * @default -
+     * @default '1s'
      */
-    target?: HTMLElement | string;
-}
+    animationDuration?: string;
 
+    /**
+     * Specifies whether the spinner should render as a fullscreen fixed overlay with a dimmed backdrop.
+     *
+     * @default false
+     */
+    overlay?: boolean;
+
+    /**
+     * Specifies the visual style of the spinner.
+     * Available options (SpinnerType):
+     * - Circular: Single circular stroke with continuous rotation
+     * - Cupertino: Fading tick marks around a circle (iOS-style)
+     * - SingleCircle: Dashed single circle rotating
+     * - DoubleCircle: Two concentric dashed circles animating
+     *
+     * @default SpinnerType.Circular
+     */
+    type?: SpinnerType;
+
+    /**
+     * Specifies the spinner size.
+     * - number: interpreted as pixels (e.g., 40 → 40px)
+     * - string: supports 'px' and 'em' units (e.g., '40px', '2em')
+     *
+     * @default 36px
+     */
+    size?: string | number;
+
+    /**
+     *Specifies the Color style of the spinner. Options include 'Primary', 'Secondary', 'Warning', 'Success', 'Error', and 'Info'.
+     *
+     * @default Color.Primary
+     */
+    color?: Color;
+}
 /**
- * Interface for Spinner component with additional method.
+ * Renders the default circular spinner SVG graphic.
+ *
+ * @param props - Spinner visualization settings.
  */
 export interface ISpinner extends SpinnerProps {
     /**
-     * This is spinner component element.
+     * Ref to the rendered root element. Exposed via forwardRef/useImperativeHandle.
      *
      * @private
-     * @default null
      */
-    element?: HTMLElement | null;
+    element?: HTMLDivElement | null;
 }
-
-type ISpinnerProps = SpinnerProps & Omit<React.InputHTMLAttributes<HTMLDivElement>, keyof SpinnerProps>;
-
-
-const globalTemplate: string | null = null;
-const globalCssClass: string | null = null;
-const globalType: SpinnerType | null = null;
-const spinnerInstances: React.RefObject<ISpinner>[] = [];
+type SpinnerComponentProps = SpinnerProps & React.HTMLAttributes<HTMLDivElement>;
 
 /**
- * A versatile Spinner component that provides visual feedback for loading states.
+ * Spinner shows a lightweight loading indicator for pending operations. It supports multiple styles
+ * (Circular, Cupertino, SingleCircle, DoubleCircle), configurable size and thickness, theme colors, and a fullscreen overlay mode.
  *
- * The Spinner supports multiple design systems through the SpinnerType enum
- * and can be customized with various properties for size, color, and behavior.
- *
+ * Example
  * ```typescript
- * import { Spinner } from "@syncfusion/react-popups";
+ * import { Spinner, SpinnerType, Color } from "@syncfusion/react-popups";
  *
- * <Spinner
- *   type={SpinnerType.Material3}
- *   visible={true}
- * />
+ * export default function App() {
+ *   return (<Spinner label="Loading data…" type={SpinnerType.Circular} size={36} color={Color.Primary} />);
+ * }
  * ```
  */
-export const Spinner: React.ForwardRefExoticComponent<
-ISpinnerProps & React.RefAttributes<ISpinner>
-> = forwardRef<ISpinner, ISpinnerProps & React.HTMLAttributes<HTMLDivElement>>(
-    (props: ISpinnerProps, ref: React.Ref<ISpinner>) => {
-        const animationFrameRef: React.RefObject<number | null> = useRef<number | null>(null);
-        const {
-            className = '',
-            label,
-            width,
-            visible = false,
-            template,
-            target,
-            type: propType,
-            ...restProps
-        } = props;
-
-        const [show, setIsVisible] = useState(visible);
-        const type: SpinnerType | null = propType || globalType || null;
-        const spinnerRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
-        const targetRef: React.RefObject<HTMLElement | null> = useRef<HTMLElement | null>(null);
-        useImperativeHandle(ref, () => ({
-            element: spinnerRef.current
-        }));
-        useEffect(() => {
-            spinnerInstances.push(ref as React.RefObject<ISpinner>);
-            return () => {
-                const index: number = spinnerInstances.indexOf(ref as React.RefObject<ISpinner>);
-                if (index > -1) {
-                    spinnerInstances.splice(index, 1);
-                }
-            };
-        }, [ref]);
-
-        useEffect(() => {
-            preRender('spinner');
-        }, []);
-
-        useEffect(() => {
-            setIsVisible(visible);
-        }, [visible]);
-
-        useEffect(() => {
-            if (target) {
-                targetRef.current = typeof target === 'string' ? document.querySelector(target) : target;
-            }
-        }, [target]);
-
-        const calculateRadius: number = useMemo(() => {
-            const baseWidth: number = DEFT_WIDTHS[type || 'Material3'];
-            const parsedWidth: number = width !== undefined ? parseFloat(width.toString()) : baseWidth;
-            return parsedWidth / (2);
-        }, [width, type]);
-
-        const getSpinnerClassNames: () => string = () => {
-            return [
-                CLS_SPINWRAP,
-                className || globalCssClass,
-                show ? 'sf-spin-show' : 'sf-spin-hide',
-                template || globalTemplate ? CLS_SPINTEMPLATE : ''
-            ].filter(Boolean).join(' ');
-        };
-        const useAnimatedRotation: (deps?: never[]) => number = (deps: never[] | undefined = []): number => {
-            const [rotation, setRotation] = useState(0);
-            useEffect(() => {
-                if (!show) { return; }
-                const interval: NodeJS.Timeout = setInterval(() => {
-                    setRotation((prev: number) => (prev + 45) % 360);
-                }, 100);
-
-                return () => clearInterval(interval);
-            }, [show, ...deps]);
-
-            return rotation;
-        };
-        const randomGenerator: () => string = () => {
-            const combine: string = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-            return Array.from({ length: 5 }, () => combine.charAt(Math.floor(Math.random() * combine.length))).join('');
-        };
-
-        const getStrokeSize: (diameter: number) => number = (diameter: number) => {
-            return (10 / 100) * diameter;
-        };
-        const drawArc: (diameter: number, strokeSize: number) => string = (diameter: number, strokeSize: number) => {
-            const radius: number = diameter / 2;
-            const offset: number = strokeSize / 2;
-            return `M${radius},${offset}A${radius - offset},${radius - offset} 0 1 1 ${offset},${radius}`;
-        };
-        const defineCircle: (x: number, y: number, radius: number) => string = (x: number, y: number, radius: number) => {
-            return `M ${x} ${y} m ${-radius} 0 a ${radius} ${radius} 0 1 0 ${radius * 2} 0 a ${radius} ${radius} 0 1 0 ${-radius * 2} 0`;
-        };
-
-        const defineArc: (x: number, y: number, radius: number, startArc: number, endArc: number) => string =
-            (x: number, y: number, radius: number, startArc: number, endArc: number) => {
-                const start: { x: number; y: number; } = defineArcPoints(x, y, radius, endArc);
-                const end: { x: number; y: number; } = defineArcPoints(x, y, radius, startArc);
-                return `M ${start.x} ${start.y} A ${radius} ${radius} 0 0 0 ${end.x} ${end.y}`;
-            };
-
-        const defineArcPoints: (centerX: number, centerY: number, radius: number, angle: number) => { x: number; y: number } =
-            (centerX: number, centerY: number, radius: number, angle: number) => {
-                const radians: number = (angle - 90) * Math.PI / 180.0;
-                return {
-                    x: centerX + (radius * Math.cos(radians)),
-                    y: centerY + (radius * Math.sin(radians))
-                };
-            };
-
-        const renderBootstrapLikeSpinner: (spinnerType: 'Bootstrap5') => React.ReactNode =
-            (spinnerType: 'Bootstrap5') => {
-                const uniqueID: string = useRef(randomGenerator()).current;
-                const rotation: number = useAnimatedRotation();
-                const className: string = spinnerType;
-                return show ? (
-                    <svg
-                        id={uniqueID}
-                        className={CLS_MAPPINGS[className as SpinnerType]}
-                        viewBox={`0 0 ${calculateRadius * 2} ${calculateRadius * 2}`}
+export const Spinner: React.ForwardRefExoticComponent<SpinnerComponentProps & React.RefAttributes<ISpinner>> =
+forwardRef<ISpinner, SpinnerComponentProps>((props: SpinnerComponentProps, ref: React.Ref<ISpinner>) => {
+    const {
+        className,
+        label = '',
+        visible = true,
+        thickness = '3px',
+        animationDuration = '1s',
+        color = Color.Primary,
+        size = '36px',
+        overlay = false,
+        type = SpinnerType.Circular,
+        children,
+        ...rest
+    } = props;
+    const elRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        preRender('spinner');
+    }, []);
+    const spinnerSize: number = 36;
+    const publicAPI: Partial<ISpinner> = useMemo(() => ({
+        label,
+        visible,
+        thickness,
+        animationDuration,
+        color,
+        size,
+        overlay,
+        type
+    }), [label, visible, thickness, animationDuration, color, size, overlay, type]);
+    useImperativeHandle(
+        ref,
+        () => ({ ...(publicAPI as ISpinner), element: elRef.current }),
+        [publicAPI]
+    );
+    /**
+     * Renders a circular SVG spinner.
+     *
+     * @param {Object} props - Component props.
+     * @param {number} props.thickness - Thickness of the spinner stroke.
+     * @param {string} props.duration - Duration of the rotation animation.
+     * @returns {React.JSX.Element} - SVG spinner element.
+     */
+    const CircularSVG: React.FC<{
+        thickness: number;
+        duration: string;
+    }> = ({
+        thickness,
+        duration
+    }: {
+        thickness: number;
+        duration: string;
+    }): React.JSX.Element => {
+        const memoizedSVG: React.JSX.Element = useMemo(() => {
+            const radius: number = (spinnerSize - thickness) / 2;
+            const circumference: number = 2 * Math.PI * radius;
+            return (
+                <svg viewBox={`0 0 ${spinnerSize} ${spinnerSize}`} >
+                    <circle
+                        cx={spinnerSize / 2}
+                        cy={spinnerSize / 2}
+                        r={(spinnerSize - thickness) / 2}
+                        strokeWidth={thickness}
+                        strokeDasharray={circumference}
+                        strokeDashoffset={circumference * 0.25}
+                        strokeLinecap="round"
+                        fill="none"
+                        className={'sf-spinner-circle-inner'}
                         style={{
-                            width: `${calculateRadius * 2}px`,
-                            height: `${calculateRadius * 2}px`,
-                            transform: `rotate(${rotation}deg)`,
-                            transition: 'transform 0.1s linear'
+                            animation: `spinner-rotate ${duration} linear infinite`
                         }}
-                    >
-                        <path
-                            className={CLS_SPINCIRCLE}
-                            d={drawArc(calculateRadius * 2, getStrokeSize(calculateRadius * 2))}
-                            strokeWidth={getStrokeSize(calculateRadius * 2)}
-                            fill="none"
-                        />
-                    </svg>
-                ) : null;
-            };
-        const getDashOffset: (
-            diameter: number,
-            strokeSize: number,
-            value: number,
-            max: number
-        ) => number = (diameter: number, strokeSize: number, value: number, max: number) => {
-            return (diameter - strokeSize) * Math.PI * ((3 * (max) / 100) - (value / 100));
-        };
-        const easeAnimation: (current: number, start: number, change: number, duration: number) => number =
-            (current: number, start: number, change: number, duration: number) => {
-                const timestamp: number = (current /= duration) * current;
-                const timecount: number = timestamp * current;
-                return start + change * (6 * timecount * timestamp + -15 * timestamp * timestamp + 10 * timecount);
-            };
-        const renderMaterialLikeSpinner: (spinnerType: SpinnerType, radius: number) => React.ReactNode =
-            (spinnerType: SpinnerType, radius: number) => {
-                const uniqueID: string = useRef(randomGenerator()).current;
-                const diameter: number = radius * 2;
-                const strokeSize: number = getStrokeSize(diameter);
-                const [offset, setOffset] = useState(getDashOffset(diameter, strokeSize, 1, 75));
-                const [rotation, setRotation] = useState(0);
-                const startTimeRef: React.RefObject<number | null> = useRef<number | null>(null);
-                const rotationCountRef: React.RefObject<number> = useRef(0);
-                useEffect(() => {
-                    if (!show) { return; }
-                    const animate: (timestamp: number) => void = (timestamp: number) => {
-                        if (!startTimeRef.current) { startTimeRef.current = timestamp; }
-                        const elapsed: number = timestamp - startTimeRef.current;
-                        const duration: number = 1333;
-                        const progress: number = (elapsed % duration) / duration;
-                        const easedProgress: number = easeAnimation(progress, 0, 1, 1);
-                        const start: number = 1;
-                        const end: number = 149;
-                        const max: number = 75;
-                        const currentValue: number = start + (end - start) * easedProgress;
-                        setOffset(getDashOffset(diameter, strokeSize, currentValue, max));
-                        if (elapsed >= duration) {
-                            rotationCountRef.current += 1;
-                            setRotation(rotationCountRef.current * -90);
-                            startTimeRef.current = timestamp;
-                        }
-                        animationFrameRef.current = requestAnimationFrame(animate);
-                    };
-                    animationFrameRef.current = requestAnimationFrame(animate);
-                    return () => {
-                        if (animationFrameRef.current !== null) {
-                            cancelAnimationFrame(animationFrameRef.current);
-                        }
-                    };
-                }, [show, diameter, strokeSize]);
-                let className: string;
-                switch (spinnerType) {
-                case 'Tailwind3':
-                    className = CLS_MAPPINGS['Tailwind3'];
-                    break;
-                default:
-                    className = CLS_MAPPINGS['Material3'];
-                }
-                return  show ? (
-                    <svg
-                        id={uniqueID}
-                        className={className}
-                        viewBox={`0 0 ${diameter} ${diameter}`}
-                        style={{
-                            width: `${diameter}px`,
-                            height: `${diameter}px`,
-                            transformOrigin: `${diameter / 2}px ${diameter / 2}px`
-                        }}
-                    >
-                        <path
-                            className={CLS_SPINCIRCLE}
-                            d={drawArc(diameter, strokeSize)}
-                            strokeWidth={strokeSize}
-                            strokeDasharray={((diameter - strokeSize) * Math.PI * 0.75).toString()}
-                            strokeDashoffset={offset}
-                            transform={`rotate(${rotation} ${diameter / 2} ${diameter / 2})`}
-                            fill="none"
-                        />
-                    </svg>
-                ) : null;
-            };
+                    />
+                </svg>
+            );
+        }, [thickness, duration, spinnerSize]);
+        return memoizedSVG;
+    };
+    /**
+     * Renders a Cupertino SVG spinner.
+     *
+     * @param {Object} props - Component props.
+     * @param {number} props.thickness - Thickness of the spinner stroke.
+     * @param {string} props.duration - Duration of the rotation animation.
+     * @returns {React.JSX.Element} - SVG spinner element.
+     */
+    const CupertinoSVG: React.FC<{
+        thickness: number;
+        duration: string;
+    }> = ({
+        duration,
+        thickness
+    }: {
+        thickness: number;
+        duration: string;
+    }): React.JSX.Element => {
+        const dotElements: React.JSX.Element[] = useMemo(() => {
+            const dotCount: number = 12;
+            const radius: number = spinnerSize / 2 - spinnerSize * 0.1;
+            const strokeWidth: number = thickness;
+            const lineLength: number = spinnerSize * 0.15;
+            const angleStep: number = 360 / dotCount;
 
-        const renderCommonSpinner: (spinnerType: SpinnerType) => React.ReactNode =
-            (spinnerType: SpinnerType) => {
-                const uniqueID: string = useRef(randomGenerator()).current;
-                const className: string = spinnerType;
+            return Array.from({ length: dotCount }, (_: unknown, i: number) => {
+                const angle: number = angleStep * i;
+                const opacity: number = (i + 1) / dotCount;
                 return (
-                    <svg
-                        id={uniqueID}
-                        className={CLS_MAPPINGS[className as SpinnerType]}
-                        viewBox={`0 0 ${calculateRadius * 2} ${calculateRadius * 2}`}
-                        style={{
-                            width: `${calculateRadius * 2}px`,
-                            height: `${calculateRadius * 2}px`,
-                            transformOrigin: 'center'
-                        }}
-                    >
-                        <path className={CLS_SPINCIRCLE} d={defineCircle(calculateRadius, calculateRadius, calculateRadius)} fill="none" />
-                        <path className={CLS_SPINARC} d={defineArc(calculateRadius, calculateRadius, calculateRadius, 315, 45)} fill="none" />
-                    </svg>
+                    <line
+                        key={i}
+                        x1={spinnerSize / 2}
+                        y1={spinnerSize / 2 - radius}
+                        x2={spinnerSize / 2}
+                        y2={spinnerSize / 2 - radius + lineLength}
+                        className="sf-spinner-cupertino-dots-inner"
+                        strokeWidth={strokeWidth}
+                        strokeLinecap="round"
+                        opacity={opacity}
+                        transform={`rotate(${angle} ${spinnerSize / 2} ${spinnerSize / 2})`}
+                    />
                 );
-            };
-        const renderSpinnerContent: () => React.ReactNode = () => {
-            const effectiveTemplate: string | null = template || globalTemplate;
-            if (effectiveTemplate) {
-                return <div dangerouslySetInnerHTML={{ __html: effectiveTemplate }} />;
-            }
-            const spinnerType: SpinnerType = type || SpinnerType.Material3;
-            const radius: number = calculateRadius;
-            switch (spinnerType) {
-            case 'Bootstrap5':
-                return renderBootstrapLikeSpinner(spinnerType);
-            case 'Fluent2':
-                return renderCommonSpinner(spinnerType);
-            case 'Material3':
-            case 'Tailwind3':
-            default:
-                return renderMaterialLikeSpinner(spinnerType, radius);
-            }
-        };
+            });
+        }, [thickness]);
 
-        const spinnerContent: React.JSX.Element = (
-            <div ref={spinnerRef} className={getSpinnerClassNames()} {...restProps}>
-                <div className={CLS_SPININWRAP} aria-disabled="true">
-                    {renderSpinnerContent()}
-                    {label && <div className={CLS_SPINLABEL}>{label}</div>}
-                </div>
-            </div>
+        return (
+            <svg
+                viewBox={`0 0 ${spinnerSize} ${spinnerSize}`}
+                className={'sf-spinner-cupertino-dots'}
+                style={{ animation: `spinner-rotate ${duration} linear infinite` }}
+            >
+                {dotElements}
+            </svg>
         );
+    };
+    /**
+     * Renders a DoubleCircle SVG spinner.
+     *
+     * @param {Object} props - Component props.
+     * @param {number} props.thickness - Thickness of the spinner stroke.
+     * @param {string} props.duration - Duration of the rotation animation.
+     * @returns {React.JSX.Element} - SVG spinner element.
+     */
+    const DoubleCircle: React.FC<{
+        thickness: number;
+        duration: string;
+    }> = ({
+        thickness,
+        duration
+    }: {
+        thickness: number;
+        duration: string;
+    }): React.JSX.Element => {
+        const {
+            outerCircleRadius,
+            innerCircleRadius,
+            outerDashLength,
+            innerDashLength
+        } = React.useMemo(() => {
+            const outerCircleRadius: number = (spinnerSize - thickness) / 2;
+            const innerCircleRadius: number = (spinnerSize - thickness * 5) / 2;
+            const outerCircleCircumference: number = 2 * Math.PI * outerCircleRadius;
+            const innerCircleCircumference: number = 2 * Math.PI * innerCircleRadius;
+            const dashSegmentPairs: number = 4;
+            const outerDashLength: number = outerCircleCircumference / (dashSegmentPairs * 2);
+            const innerDashLength: number = innerCircleCircumference / (dashSegmentPairs * 2);
+            return {
+                outerCircleRadius,
+                innerCircleRadius,
+                outerDashLength,
+                innerDashLength
+            };
+        }, [thickness, spinnerSize]);
 
-        if (targetRef.current) {
-            return ReactDOM.createPortal(spinnerContent, targetRef.current);
+        return (
+            <>
+                <svg
+                    viewBox={`0 0 ${spinnerSize} ${spinnerSize}`}
+                    className={'sf-spinner-doublecircle-inner'}
+                >
+                    <circle
+                        cx={spinnerSize / 2}
+                        cy={spinnerSize / 2}
+                        r={outerCircleRadius}
+                        strokeWidth={thickness}
+                        fill="none"
+                        strokeDasharray={`${outerDashLength} ${outerDashLength}`}
+                        strokeLinecap="round"
+                        style={{
+                            animation: `spinner-dash ${duration} linear infinite`
+                        }}
+                    />
+                </svg>
+                <svg
+                    viewBox={`0 0 ${spinnerSize} ${spinnerSize}`}
+                    className={'sf-spinner-doublecircle-second-inner'}
+                >
+                    <circle
+                        cx={spinnerSize / 2}
+                        cy={spinnerSize / 2}
+                        r={innerCircleRadius}
+                        strokeWidth={Math.max(1, thickness - 1)}
+                        fill="none"
+                        strokeDasharray={`${innerDashLength} ${innerDashLength}`}
+                        strokeLinecap="round"
+                        style={{
+                            animation: `spinner-dash ${duration} linear infinite`
+                        }}
+                    />
+                </svg>
+            </>
+        );
+    };
+    /**
+     * Renders a SingleCircle SVG spinner.
+     *
+     * @param {Object} props - Component props.
+     * @param {number} props.thickness - Thickness of the spinner stroke.
+     * @param {string} props.duration - Duration of the rotation animation.
+     * @returns {React.JSX.Element} - SVG spinner element.
+     */
+    const SingleCircle: React.FC<{
+        thickness: number;
+        duration: string;
+    }>  = ({
+        thickness,
+        duration
+    }: {
+        thickness: number;
+        duration: string;
+    }): React.JSX.Element => {
+        const svgContent: React.JSX.Element = React.useMemo(() => {
+            const radius: number = (spinnerSize - thickness) / 2;
+            const circumference: number = 2 * Math.PI * radius;
+            const segmentCount: number = 8;
+            const dashLength: number = circumference / (segmentCount * 2);
+
+            return (
+                <svg
+                    viewBox={`0 0 ${spinnerSize} ${spinnerSize}`}
+                >
+                    <circle
+                        cx={spinnerSize / 2}
+                        cy={spinnerSize / 2}
+                        r={radius}
+                        strokeWidth={thickness}
+                        fill="none"
+                        className={'sf-spinner-singlecircle-inner'}
+                        strokeDasharray={`${dashLength} ${dashLength}`}
+                        strokeLinecap="round"
+                        style={{
+                            animation: `spinner-rotate ${duration} linear infinite`
+                        }}
+                    />
+                </svg>
+            );
+        }, [thickness, duration]);
+
+        return svgContent;
+    };
+
+    const normalizeAnimationDuration: (input: string) => string = (input: string) => {
+        if (typeof input !== 'string') {return '1s'; }
+        const validUnits: string[] = ['ms', 's'];
+        for (const unit of validUnits) {
+            if (input.endsWith(unit)) {
+                const numberPart: string = input.slice(0, -unit.length);
+                const number: number = parseFloat(numberPart);
+                if (!isNaN(number)) {
+                    return `${number}${unit}`;
+                }
+            }
         }
+        return '1s';
+    };
 
-        return spinnerContent;
-    });
+    const colorValue: Color = color;
+    const thickValue: number = Math.max(1, parseFloat(thickness) || 3);
+    const durationValue: string = React.useMemo( () => normalizeAnimationDuration(animationDuration), [animationDuration] );
+    const spinnerNode: React.ReactNode = useMemo(() => {
+        if (children != null) {
+            return children;
+        }
+        switch (type) {
+        case SpinnerType.Cupertino:
+            return <CupertinoSVG  thickness={thickValue} duration={durationValue} />;
+        case SpinnerType.DoubleCircle:
+            return <DoubleCircle  thickness={thickValue} duration={durationValue} />;
+        case SpinnerType.SingleCircle:
+            return <SingleCircle  thickness={thickValue} duration={durationValue} />;
+        case SpinnerType.Circular:
+        default:
+            return <CircularSVG  thickness={thickValue} duration={durationValue} />;
+        }
+    }, [children, type, colorValue, thickValue, durationValue]);
+    const spinnerWidth: string = formatUnit(size);
+    const spinnerSizeStyle: React.CSSProperties = useMemo(() => ({
+        width: spinnerWidth,
+        height: spinnerWidth
+    }), [spinnerWidth]);
+    const rootClassName: string = useMemo(() => (
+        `sf-spinner${overlay ? ' sf-spinner-overlay' : ''} sf-control${className ? ' ' + className : ''} sf-spinner-${String(color).toLowerCase()}`
+    ), [overlay, className, color]);
+    const contentSpanClassName: string = useMemo(() => (
+        type === SpinnerType.DoubleCircle && !children ? 'sf-spinner-doublecircle' : ''
+    ), [type, children]);
+    if (!visible) {
+        return null;
+    }
+    return (
+        <div
+            ref={elRef}
+            className={rootClassName}
+            aria-live='polite'
+            role='status'
+            {...rest}
+        >
+            <div className={'sf-content-center sf-spinner-content '} >
+                <span className={contentSpanClassName}  style={spinnerSizeStyle}>
+                    {spinnerNode}
+                </span>
+                {label ? <div className="sf-spinner-label">{label}</div> : null}
+            </div>
+        </div>
+    );
+});
+
+Spinner.displayName = 'Spinner';
 
 export default Spinner;

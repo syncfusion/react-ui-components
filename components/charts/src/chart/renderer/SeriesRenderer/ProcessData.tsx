@@ -120,6 +120,24 @@ const getSeriesType: (series: SeriesProperties) => void = (series: SeriesPropert
     [series].filter(Boolean).forEach((s: SeriesProperties) => {
         const type: string = 'XY';
         s.seriesType = type;
+        const seriesType: string = series.type as string;
+        if (seriesType) {
+            switch (seriesType) {
+            case 'HiloOpenClose':
+            case 'Candle':
+                s.seriesType = 'HighLowOpenClose';
+                break;
+            case 'Hilo':
+            case 'RangeArea':
+            case 'SplineRangeArea':
+            case 'RangeColumn':
+                s.seriesType = 'HighLow';
+                break;
+            default:
+                s.seriesType = 'XY';
+            }
+        }
+        series.seriesType = s.seriesType;
     });
 };
 
@@ -266,7 +284,18 @@ export function createPoint(): Points {
         },
         size: {},
         originalY: 0,
-        textValue: ''
+        errorBarColor: '',
+        textValue: '',
+        /** Specifies the vertical error value for the point. */
+        verticalError: 1,
+        /** Specifies the horizontal error value for the point. */
+        horizontalError: 1,
+        /** Specifies the error value of the point. */
+        error: '',
+        high: {},
+        low: {},
+        open: {},
+        close: {}
     };
 }
 
@@ -439,6 +468,15 @@ const dataPoint: (i: number, textMappingName: string,
     point.text = getObjectValueByMappingString(textMappingName, currentViewData as DataRecord) as string;
     point.interior = getObjectValueByMappingString(series.colorField as string,
                                                    currentViewData as DataRecord) as string;
+    if (series.errorBar?.visible) {
+        point.verticalError = typeof series.errorBar.verticalError == 'string' ? getObjectValueByMappingString(series.errorBar.verticalError, currentViewData as DataRecord) as string : series.errorBar.verticalError as number;
+        point.horizontalError = typeof series.errorBar.horizontalError == 'string' ? getObjectValueByMappingString(series.errorBar.horizontalError, currentViewData as DataRecord) as string : series.errorBar.horizontalError as number;
+        point.errorBarColor = typeof series.errorBar.errorBarColorField == 'string' ? getObjectValueByMappingString(series.errorBar.errorBarColorField, currentViewData as DataRecord) as string : String(series.errorBar?.errorBarColorField);
+    }
+    point.high = getObjectValueByMappingString(series.high as string, currentViewData as DataRecord) as string;
+    point.low = getObjectValueByMappingString(series.low as string, currentViewData as DataRecord) as string;
+    point.open = getObjectValueByMappingString(series.open as string, currentViewData as DataRecord) as string;
+    point.close = getObjectValueByMappingString(series.close as string, currentViewData as DataRecord) as string;
     return point;
 };
 
@@ -481,11 +519,32 @@ export const setEmptyPoint: (point: Points, series: SeriesProperties, i: number)
     switch (mode) {
     case 'Zero':
         point.visible = true;
-        point.y = point.yValue = series.yData[i as number] = PROCESS_DATA_CONSTANTS.DEFAULT_RENDER_COUNT;
+        point.y = point.yValue = series.yData[i as number] = 0;
+        if (series.seriesType.indexOf('HighLow') > -1) {
+            point.high = point.low = 0;
+            if (series.seriesType.indexOf('HighLowOpenClose') > -1) {
+                point.open = point.close = 0;
+            }
+        } else {
+            point.y = point.yValue = series.yData[i as number] = 0;
+        }
         break;
     case 'Average':
-        point.y = point.yValue = series.yData[i as number] =
-        getAverage(series.yField as string, i as number, series, series.currentViewData as Object);
+        if (series.seriesType.indexOf('HighLow') > -1) {
+            point.high = (isNullOrUndefined(point.high) || isNaN(+point.high)) ?
+                getAverage(series.high as string, i as number, series, series.currentViewData as Object) : point.high;
+            point.low = (isNullOrUndefined(point.low) || isNaN(+point.low)) ?
+                getAverage(series.low as string, i as number, series, series.currentViewData as Object) : point.low;
+            if (series.seriesType.indexOf('HighLowOpenClose') > -1) {
+                point.open = (isNullOrUndefined(point.open) || isNaN(+point.open)) ?
+                    getAverage(series.open as string, i as number, series, series.currentViewData as Object) : point.open;
+                point.close = (isNullOrUndefined(point.close) || isNaN(+point.close)) ?
+                    getAverage(series.close as string, i as number, series, series.currentViewData as Object) : point.close;
+            }
+        } else {
+            point.y = point.yValue = series.yData[i as number] =
+                getAverage(series.yField as string, i as number, series, series.currentViewData as Object);
+        }
         point.visible = true;
         break;
     case 'Drop':
@@ -514,13 +573,28 @@ number = (member: string, i: number, series: SeriesProperties, data: any): numbe
 };
 
 const findVisibility: (point: Points, series: SeriesProperties) => boolean = (point: Points, series: SeriesProperties): boolean => {
-    setXYMinMax(point.yValue as number, series);
-    series.yData.push(point.yValue as number);
-    if (series.type === 'Bubble') {
-        series.sizeMax = Math.max(series.sizeMax, (isNullOrUndefined(point.size) || isNaN(+point.size)) ?
-            series.sizeMax : point.size as number);
+    const type: string = series.seriesType;
+    switch (type) {
+    case 'XY':
+        setXYMinMax(point.yValue as number, series);
+        series.yData.push(point.yValue as number);
+        if (series.type === 'Bubble') {
+            series.sizeMax = Math.max(series.sizeMax, (isNullOrUndefined(point.size) || isNaN(+point.size)) ?
+                series.sizeMax : point.size as number);
+        }
+        return isNullOrUndefined(point.x) || isNullOrUndefined(point.y) || isNaN(+point.y);
+    case 'HighLow':
+        setHiloMinMax(series, point.high as number, point.low as number);
+        return isNullOrUndefined(point.x) || (isNullOrUndefined(point.low) || isNaN(+point.low)) ||
+                (isNullOrUndefined(point.high) || isNaN(+point.high));
+    case 'HighLowOpenClose':
+        setHiloMinMax(series, point.high as number, point.low as number);
+        return isNullOrUndefined(point.x) || (isNullOrUndefined(point.low) || isNaN(+point.low)) ||
+                (isNullOrUndefined(point.open) || isNaN(+point.open)) || (isNullOrUndefined(point.close) || isNaN(+point.close))
+                || (isNullOrUndefined(point.high) || isNaN(+point.high));
+    default:
+        return true;
     }
-    return isNullOrUndefined(point.x) || isNullOrUndefined(point.y) || isNaN(+point.y);
 };
 
 /**
@@ -548,6 +622,21 @@ const setXYMinMax: (yValue: number, series: SeriesProperties) => void = (yValue:
     series.yMax = Math.max(series.yMax, yValue || series.yMax);
 };
 
+/**
+ * Sets the minimum and maximum values for the high and low values.
+ *
+ * @param {SeriesProperties} series - The series for which the yMin and yMax should be updated.
+ * @param {number} high - The high value used to determine the maximum value.
+ * @param {number} low - The low value used to determine the minimum value.
+ * @returns {void}
+ */
+const setHiloMinMax: (series: SeriesProperties, high: number, low: number) => void =
+(series: SeriesProperties, high: number, low: number): void => {
+    series.yMin = Math.min(series.yMin, Math.min((isNullOrUndefined(low) || isNaN(low)) ?
+        series.yMin : low, (isNullOrUndefined(high) || isNaN(high)) ? series.yMin : high));
+    series.yMax = Math.max(series.yMax, Math.max((isNullOrUndefined(low) || isNaN(low)) ?
+        series.yMax : low, (isNullOrUndefined(high) || isNaN(high)) ? series.yMax : high));
+};
 
 /**
  * Retrieves the value of the given mapping name from the data object.
@@ -599,7 +688,7 @@ export const calculateStackValues: (chart: Chart) => void = (chart: Chart): void
 export const calculateStackedValue: (chart: Chart) => void = (chart: Chart): void => {
     for (const columnItem of chart.columns) {
         for (const item of chart.rows) {
-            calculateStackingValues(findSeriesCollection(columnItem, item, true));
+            calculateStackingValues(findSeriesCollection(columnItem, item, true), chart);
         }
     }
 };
@@ -607,11 +696,12 @@ export const calculateStackedValue: (chart: Chart) => void = (chart: Chart): voi
 /**
  * Calculates stacking values for a collection of series.
  *
- * @param {Series[]} seriesCollection - Collection of series for which stacking values are calculated.
+ * @param  {SeriesProperties[]} seriesCollection - Collection of series for which stacking values are calculated.
+ * @param {Chart} chart - Chart instance used to store positive and negative stacked values.
  * @returns {void}
  */
-export const calculateStackingValues: (seriesCollection: SeriesProperties[]) => void
-    = (seriesCollection: SeriesProperties[]): void => {
+export const calculateStackingValues: (seriesCollection: SeriesProperties[], chart?: Chart) => void
+    = (seriesCollection: SeriesProperties[], chart?: Chart): void => {
         let startValues: number[];
         let endValues: number[];
         let yValues: number[] = [];
@@ -642,7 +732,23 @@ export const calculateStackingValues: (seriesCollection: SeriesProperties[]) => 
         groupingValues.forEach((seriesList: SeriesProperties[]) => {
             const stackingSeies: SeriesProperties[] = [];
             const stackedValues: number[] = [];
+            // calculate total (sum of absolute values) per xKey across all series in this group - 100% normalization
+            const stackedYTotalsByX: number[] = [];
+            for (const series of seriesList) {
+                if ((series.type?.indexOf('Stacking') !== -1 && series.type?.indexOf('100') !== -1) || ((series.drawType?.indexOf('Stacking') !== -1) && series.type?.indexOf('100') !== -1)) {
+                    const points: Points[] = useVisiblePoints(series);
+                    const yValues: number[] = series.yData;
+                    for (let j: number = 0; j < points.length; j++) {
+                        const valueX: number = points[j as number].xValue as number;
+                        const xKey: number = Number.isFinite(valueX) ? valueX : j;
+                        const value: number = +yValues[j as number];
+                        if (!Number.isFinite(value)) { continue; }
+                        stackedYTotalsByX[xKey as number] = (stackedYTotalsByX[xKey as number] || 0) + Math.abs(value);
+                    }
+                }
+            }
 
+            //Calculates per-series start/end positions using totals - Actual stacking rendering
             for (const series of seriesList) {
                 if (series.type?.indexOf('Stacking') !== -1 || (series.drawType?.indexOf('Stacking') !== -1)) {
 
@@ -696,27 +802,73 @@ export const calculateStackingValues: (seriesCollection: SeriesProperties[]) => 
 
                     }
 
-                    series.stackedValues = { startValues: startValues, endValues: endValues };
+                    // --- Calculate 100% stacked values separately for StackingColumn100 and StackingBar100 ---
+                    const isHundredStack: boolean = (series.type?.indexOf('100') ?? -1) > -1;
+                    const isBar: boolean = series.type?.indexOf('Bar') !== -1;
 
-                    const isLogAxis: boolean = series.yAxis.valueType === 'Logarithmic';
-                    const isColumnBarType: boolean = (series.type?.indexOf('Column') !== -1 || series.type?.indexOf('Bar') !== -1);
+                    if (isHundredStack) {
+                        const startPercentages: number[] = [];
+                        const endPercentages: number[] = [];
 
-                    series.yMin = isLogAxis && isColumnBarType && series.yMin < 1 ?
-                        series.yMin :
-                        (series.yAxis.startFromZero && series.yAxis.rangePadding === 'Auto' && series.yMin >= 0) ?
-                            PROCESS_DATA_CONSTANTS.DEFAULT_RENDER_COUNT :
-                            parseFloat((Math.min.apply(0, endValues)).toFixed(PROCESS_DATA_CONSTANTS.CHART_AREA_PADDING));
+                        for (let index: number = 0; index < endValues.length; index++) {
+                            const point: Points = visiblePoints[index as number];
+                            const xv: number = point?.xValue as number;
+                            const xKey: number = Number.isFinite(xv) ? xv : index;
 
-                    series.yMax = Math.max.apply(0, endValues);
+                            // Total value for this category (sum of absolute y values across all series)
+                            const totalForCategory: number = stackedYTotalsByX[xKey as number] || stackedValues[index as number] || 0;
 
-                    if (series.yMin > Math.min.apply(0, endValues)) {
-                        series.yMin = isLogAxis && isColumnBarType && series.yMin < 1 ? series.yMin : Math.min.apply(0, endValues);
+                            if (totalForCategory === 0) {
+                                startPercentages[index as number] = 0;
+                                endPercentages[index as number] = 0;
+                                continue;
+                            }
+
+                            if (isBar) {
+                                // Horizontal stacking (StackingBar100)
+                                startPercentages[index as number] = (startValues[index as number] / totalForCategory) * 100;
+                                endPercentages[index as number] = (endValues[index as number] / totalForCategory) * 100;
+                            } else {
+                                //  Vertical stacking (StackingColumn100)
+                                startPercentages[index as number] = (startValues[index as number] / totalForCategory) * 100;
+                                endPercentages[index as number] = (endValues[index as number] / totalForCategory) * 100;
+                            }
+                        }
+
+                        // Assign normalized stacked values
+                        series.stackedValues = { startValues: startPercentages, endValues: endPercentages };
+                        series.yMin = 0;
+                        series.yMax = 100;
                     }
 
-                    if (series.yMax < Math.max.apply(0, startValues)) {
-                        series.yMax = PROCESS_DATA_CONSTANTS.DEFAULT_RENDER_COUNT;
+                    else{
+                        series.stackedValues = { startValues: startValues, endValues: endValues };
+
+                        const isLogAxis: boolean = series.yAxis.valueType === 'Logarithmic';
+                        const isColumnBarType: boolean = (series.type?.indexOf('Column') !== -1 || series.type?.indexOf('Bar') !== -1);
+
+                        series.yMin = isLogAxis && isColumnBarType && series.yMin < 1 ?
+                            series.yMin :
+                            (series.yAxis.startFromZero && series.yAxis.rangePadding === 'Auto' && series.yMin >= 0) ?
+                                PROCESS_DATA_CONSTANTS.DEFAULT_RENDER_COUNT :
+                                parseFloat((Math.min.apply(0, endValues)).toFixed(PROCESS_DATA_CONSTANTS.CHART_AREA_PADDING));
+
+                        series.yMax = Math.max.apply(0, endValues);
+
+                        if (series.yMin > Math.min.apply(0, endValues)) {
+                            series.yMin = isLogAxis && isColumnBarType && series.yMin < 1 ? series.yMin : Math.min.apply(0, endValues);
+                        }
+
+                        if (series.yMax < Math.max.apply(0, startValues)) {
+                            series.yMax = PROCESS_DATA_CONSTANTS.DEFAULT_RENDER_COUNT;
+                        }
                     }
                 }
+            }
+            if ( chart)
+            {
+                chart.positiveStackedValues = lastPositive;
+                chart.negativeStackedValues = lastNegative;
             }
 
             findPercentageOfStacking(stackingSeies, stackedValues);
@@ -738,4 +890,5 @@ export const findPercentageOfStacking: (stackingSeies: SeriesProperties[], value
             }
         }
     };
+
 

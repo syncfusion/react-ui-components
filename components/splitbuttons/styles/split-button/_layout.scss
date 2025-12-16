@@ -1,3 +1,12 @@
+@use 'theme-variables' as *;
+
+@mixin split-button-bottom-radius ($start-start: 0, $start-end: 0, $end-end: 0, $end-start: 0) {
+  border-start-start-radius: $start-start;
+  border-start-end-radius: $start-end;
+  border-end-start-radius: $end-start;
+  border-end-end-radius: $end-end;
+}
+
 @include export-module('split-button-layout-and-theme') {
   .sf-split-btn-wrapper {
     display: inline-flex;
@@ -5,6 +14,11 @@
     width: min-content;
     border-radius: $split-btn-border-radius;
     box-shadow: none;
+    gap: $split-btn-gap;
+
+    .sf-btn-vertical+.sf-dropdown-btn {
+      height: auto;
+    }
 
     .sf-split-btn,
     .sf-dropdown-btn {
@@ -16,7 +30,6 @@
       }
 
       &:disabled {
-        border-image: none;
 
         &:focus,
         &:hover,
@@ -27,60 +40,77 @@
     }
 
     .sf-split-btn {
-      border-radius: $split-btn-border-radius 0 0 $split-btn-border-radius;
       text-transform: none;
       z-index: 1;
-      border-width: 0 1px 0 0;
-      border-image: $split-btn-seperator-border-color;
+
       &:focus,
       &:active {
         box-shadow: $split-btn-active-box-shadow;
         z-index: $split-btn-zindex;
-        border-right-color: $split-btn-active-border-color;
-      }
-
-      &.sf-outlined {
-        border-right: none !important;
-      }
-
-      &.sf-standard {
-        border-image: none;
-        border-color: transparent;
       }
     }
 
     .sf-dropdown-btn {
-      border-radius: 0 $split-btn-border-radius $split-btn-border-radius 0;
-      padding: $split-btn-dropdown-padding-default;
-    }
-
-    &.sf-rtl {
-      .sf-split-btn {
-        border-radius: 0 $split-btn-border-radius $split-btn-border-radius 0;
-        border-width: 0 0 0 1px;
-        border-left-color: $split-btn-seperator-border-color;
-
-        &:focus,
-        &:active {
-          border-left-color: $split-btn-active-border-color;
-        }
-
-        &.sf-filled {
-          border-image: $split-btn-seperator-border-color;
-        }
-      }
-
-      .sf-dropdown-btn {
-        border-radius: $split-btn-border-radius 0 0 $split-btn-border-radius;
-      }
+      transition: border-radius 0.25s ease-in;
     }
 
     &.sf-standard {
       box-shadow: none;
     }
 
-    &.sf-split-btn-sm .sf-dropdown-btn { padding: $split-btn-dropdown-padding-sm; }
-    &.sf-split-btn-me .sf-dropdown-btn { padding: $split-btn-dropdown-padding-me; }
-    &.sf-split-btn-la .sf-dropdown-btn { padding: $split-btn-dropdown-padding-la; }
+    &.sf-split-btn-sm {
+
+      .sf-split-btn {
+        padding-inline: $split-btn-sm-padding;
+        font-size: $split-btn-sm-font-size;
+        @include split-button-bottom-radius($split-btn-sm-border-radius, $split-btn-topleft-border-radius, $split-btn-topleft-border-radius, $split-btn-sm-border-radius);
+
+      }
+
+      .sf-dropdown-btn {
+        padding: $split-btn-dropdown-padding-sm;
+        @include split-button-bottom-radius($split-btn-topleft-border-radius, $split-btn-sm-border-radius, $split-btn-sm-border-radius, $split-btn-topleft-border-radius);
+
+        &.sf-active {
+          border-radius: $split-btn-sm-active-border-radius;
+        }
+      }
+    }
+
+    &.sf-split-btn-me {
+
+      .sf-split-btn {
+        padding-inline: $split-btn-padding;
+        padding-block: $split-btn-padding-block;
+        font-size: $split-btn-font-size;
+        @include split-button-bottom-radius($split-btn-border-radius, $split-btn-topleft-border-radius, $split-btn-topleft-border-radius, $split-btn-border-radius);
+      }
+
+      .sf-dropdown-btn {
+        padding: $split-btn-dropdown-padding-me;
+        @include split-button-bottom-radius($split-btn-topleft-border-radius, $split-btn-border-radius, $split-btn-border-radius, $split-btn-topleft-border-radius);
+
+        &.sf-active {
+          @include split-button-bottom-radius($radius-16, $radius-20, $radius-20, $radius-16);
+        }
+      }
+    }
+
+    &.sf-split-btn-la {
+      .sf-split-btn {
+        padding-inline: $split-btn-la-padding;
+        font-size: $split-btn-la-font-size;
+        @include split-button-bottom-radius($split-btn-la-border-radius, $split-btn-topleft-border-radius, $split-btn-topleft-border-radius, $split-btn-la-border-radius);
+      }
+
+      .sf-dropdown-btn {
+        padding: $split-btn-dropdown-padding-la;
+        @include split-button-bottom-radius($split-btn-topleft-border-radius, $split-btn-la-border-radius, $split-btn-la-border-radius, $split-btn-topleft-border-radius);
+
+        &.sf-active {
+          border-radius: $split-btn-la-active-border-radius;
+        }
+      }
+    }
   }
 }

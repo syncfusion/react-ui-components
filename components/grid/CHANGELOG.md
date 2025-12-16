@@ -1,5 +1,16 @@
 # Changelog
 
+## 32.1.19 (2025-12-16)
+
+### Data Grid
+
+**Features**
+
+- Added Command column line editing support, enabling CRUD actions directly through action buttons in the grid.
+- Introduced Popup editing and customizable Popup template editing, allowing CRUD operations within internal or external forms.
+- Enabled filter bar operator popup support, letting users select and apply different operators based on their needs.
+- Added Checkbox selection, making it possible to select multiple rows efficiently using checkboxes.
+
 ## 31.1.17 (2025-09-05)
 
 ### Data Grid

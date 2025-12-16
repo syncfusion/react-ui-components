@@ -1,6 +1,6 @@
 {
   "name": "@syncfusion/react-navigations",
-  "version": "31.2.12",
+  "version": "32.1.19",
   "description": "Syncfusion React Navigations with Toolbar and Context Menu for seamless page navigation",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
@@ -21,18 +21,18 @@
   "module": "./index.js",
   "readme": "README.md",
   "dependencies": {
-    "@syncfusion/react-base": "~31.2.12",
-    "@syncfusion/react-icons": "~31.2.12",
-    "@syncfusion/react-buttons": "~31.2.12",
-    "@syncfusion/react-inputs": "~31.2.12",
-    "@syncfusion/react-popups": "~31.2.12"
+    "@syncfusion/react-base": "~32.1.19",
+    "@syncfusion/react-buttons": "~32.1.19",
+    "@syncfusion/react-icons": "~32.1.19",
+    "@syncfusion/react-inputs": "~32.1.19",
+    "@syncfusion/react-popups": "~32.1.19"
   },
   "devDependencies": {
     "gulp": "4.0.2",
     "gulp-typescript": "5.0.1",
     "typescript": "5.7.2",
-    "gulp-sass": "5.1.0",
-    "sass": "1.83.1",
+    "gulp-sass": "6.0.1",
+    "sass": "1.92.1",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "@types/react": "19.0.1",
@@ -40,7 +40,7 @@
     "@types/node": "^22.15.17"
   },
   "scripts": {
-    "build": "gulp build"
+    "build": "gulp component-build"
   },
   "typings": "index.d.ts",
   "sideEffects": false

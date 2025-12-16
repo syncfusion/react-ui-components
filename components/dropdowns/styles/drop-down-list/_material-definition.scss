@@ -1,0 +1,7 @@
+@use '../../../base/styles/themes/variables' as *;
+
+$ddl-border-radius: $radius-4 !default;
+$ddl-popup-shadow: $shadow-md !default;
+$ddl-popup-margin: $spacing-2 !default;
+$ddl-bg-color: $flyout-bg-color !default;
+$ddl-border: 1px solid rgb($flyout-border) !default;

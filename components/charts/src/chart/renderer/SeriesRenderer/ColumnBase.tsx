@@ -1,6 +1,6 @@
 import { isNullOrUndefined } from '@syncfusion/react-base';
 import { ChartBorderProps, ChartLocationProps, ChartMarkerProps, ChartSeriesProps } from '../../base/interfaces';
-import { getPoint, getMinPointsDelta, findSeriesCollection, setPointColor, setBorderColor, StackValuesType } from '../../utils/helper';
+import { getPoint, getMinPointsDelta, findSeriesCollection, setPointColor, setBorderColor, StackValuesType, applyPointRenderCallback } from '../../utils/helper';
 import { createDoubleRange } from '../AxesRenderer/AxisTypeRenderer/DoubleAxisRenderer';
 import { DoubleRangeType, PointRenderingEvent, Points, Rect, RenderOptions, SeriesProperties } from '../../chart-area/chart-interfaces';
 
@@ -240,8 +240,7 @@ const updateXRegionHelper: (point: Points, rect: Rect, series: SeriesProperties)
     = (point: Points, rect: Rect, series: SeriesProperties): void => {
         point.symbolLocations?.push({
             x: rect.x + (rect.width) / 2,
-            y: (series.seriesType === 'BoxPlot' ||
-                (series.seriesType && series.seriesType.indexOf('HighLow') !== -1) ||
+            y: ((series.seriesValueType && series.seriesValueType.indexOf('HighLow') !== -1) ||
                 (point.yValue !== undefined && (point.yValue ?? 0) >= 0 === !series.yAxis.isAxisInverse)) ? rect.y : (rect.y + rect.height)
         });
 
@@ -258,8 +257,7 @@ const updateXRegionHelper: (point: Points, rect: Rect, series: SeriesProperties)
 const updateYRegionHelper: (point: Points, rect: Rect, series: SeriesProperties) => void
     = (point: Points, rect: Rect, series: SeriesProperties): void => {
         point.symbolLocations?.push({
-            x: (series.seriesType === 'BoxPlot' ||
-                (series.seriesType && series.seriesType.indexOf('HighLow') !== -1) ||
+            x: ((series.seriesValueType && series.seriesValueType.indexOf('HighLow') !== -1) ||
                 (point.yValue !== undefined && (point.yValue ?? 0) >= 0 === !series.yAxis.isAxisInverse)) ? rect.x + rect.width : rect.x,
             y: rect.y + rect.height / 2
         });
@@ -484,10 +482,14 @@ export function ColumnBase(): ColumnBaseReturnType {
 
             direction = calculateRoundedRectPath(rect, topLeft, topRight, bottomLeft, bottomRight);
         }
+        const customPointRendering: string = applyPointRenderCallback(({
+            seriesIndex: series.index as number, color: argsData.fill as string,
+            xValue: point.xValue as  number | Date | string | null, yValue: point.yValue as  number | Date | string | null
+        }), series.chart);
 
         return {
             id: name,
-            fill: argsData.fill,
+            fill: customPointRendering,
             strokeWidth: argsData.border?.width,
             stroke: argsData.border?.color,
             opacity: series.opacity,
@@ -515,7 +517,11 @@ export function ColumnBase(): ColumnBaseReturnType {
             border: setBorderColor(point, border),
             cornerRadius: series.cornerRadius
         };
-        point.color = argsData.fill;
+        const customPointRendering: string = applyPointRenderCallback(({
+            seriesIndex: series.index as number, color: argsData.fill as string,
+            xValue: point.xValue as  number | Date | string | null, yValue: point.yValue as  number | Date | string | null
+        }), series.chart);
+        point.color = customPointRendering;
         return argsData;
     };
 
@@ -526,6 +532,60 @@ export function ColumnBase(): ColumnBaseReturnType {
         calculateRoundedRectPath,
         drawRectangle,
         triggerEvent
+    };
+}
+
+/**
+ * Represents the type definition and contains parameters required for financial series types.
+ *
+ * @private
+ */
+export interface FinacialSeriesType {
+    /**
+     * Renders the complete series.
+     *
+     * @param {SeriesProperties} series - The series to be rendered.
+     * @param {boolean} isInverted - Specifies whether the chart is inverted.
+     * @returns {RenderOptions[] | { options: RenderOptions[]; marker: ChartMarkerProps }} The renderable options.
+     */
+    render: (series: SeriesProperties, isInverted: boolean) =>
+    RenderOptions[] | { options: RenderOptions[]; marker: ChartMarkerProps };
+
+    /**
+     * Animates the series during rendering or updates.
+     *
+     * @param {RenderOptions} pathOptions - The rendering options for the series body path.
+     * @param {number} index - The index of the current series in the chart.
+     * @param {object} animationState - Represents the state of animation and its properties.
+     * @param {boolean} enableAnimation - Flag indicating whether animation should be performed.
+     * @param {SeriesProperties} currentSeries - The current series being rendered.
+     * @param {Points | undefined} currentPoint - The current point being rendered.
+     * @param {number} pointIndex - The index of the current point.
+     * @param {SeriesProperties[]} [visibleSeries] - Optional list of visible series.
+     * @returns {object} The animated render options path data.
+     */
+    doAnimation: (
+        pathOptions: RenderOptions,
+        index: number,
+        animationState: {
+            previousPathLengthRef: React.RefObject<number[]>;
+            isInitialRenderRef: React.RefObject<boolean[]>;
+            renderedPathDRef: React.RefObject<string[]>;
+            animationProgress: number;
+            isFirstRenderRef: React.RefObject<boolean>;
+            previousSeriesOptionsRef: React.RefObject<RenderOptions[][]>;
+        },
+        enableAnimation: boolean,
+        currentSeries: SeriesProperties,
+        currentPoint: Points | undefined,
+        pointIndex: number,
+        visibleSeries?: SeriesProperties[]
+    ) => {
+        strokeDasharray: string | number;
+        strokeDashoffset: number;
+        interpolatedD?: string;
+        animatedDirection?: string;
+        animatedTransform?: string;
     };
 }
 

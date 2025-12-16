@@ -1,35 +1,40 @@
 {
   "compilerOptions": {
-    "allowUnreachableCode": false, // Disable unreachable code warnings.
-    "allowUnusedLabels": false, // Disable unused label warnings.
-    "declaration": true, // Generate .d.ts files.
-    "forceConsistentCasingInFileNames": true, // Enforce consistent file name casing.
-    "jsx": "react-jsx", // Enable JSX syntax support.
-    "module": "ESNext", // Use ESNext module system.
-    "moduleResolution": "Node", // Resolve modules using Node-style resolution.
-    "noEmitOnError": true, // Prevent emitting JS files if there are errors.
-    "noFallthroughCasesInSwitch": true, // Prevent fallthrough in switch cases.
-    "noImplicitAny": true, // Disallow implicit any types.
-    "noImplicitReturns": true, // Ensure functions return a value.
-    "noUnusedLocals": true, // Warn on unused local variables.
-    "noUnusedParameters": true, // Warn on unused function parameters.
-    "strict": true, // Enable all strict checks.
-    "strictBindCallApply": true, // Enable strict checking of bind, call, and apply methods.
-    "strictFunctionTypes": true, // Enable strict checking of function types.
-    "strictNullChecks": true, // Enable strict null checks.
-    "skipLibCheck": true, // Skip checking of declaration files.
-    "sourceMap": true, // Generate source maps.
-    "target": "ES2020", // Set ECMAScript version to ES2020.
-    "types": [
-      "node",
-      "react",
-      "react-dom"
-    ], // Include type declarations.
+    "declaration": true,
+    "noLib": false,
+    "experimentalDecorators": true,
+    "sourceMap": true,
+    "pretty": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+    "noImplicitAny": false,
+    "noImplicitReturns": true,
+    "noImplicitUseStrict": false,
+    "noFallthroughCasesInSwitch": true,
+    "allowJs": false,
+    "resolveJsonModule": true,
+    "noEmitOnError": true,
+    "forceConsistentCasingInFileNames": true,
+    "target": "ES2020",
+    "useDefineForClassFields": true,
     "lib": [
       "ES2020",
       "DOM",
       "DOM.Iterable"
-    ] // Include libraries for ES2020 and DOM.
+    ],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "Node",
+    "moduleDetection": "force",
+    "jsx": "react-jsx",
+    "strict": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "types": [
+      "node",
+      "react",
+      "react-dom"
+    ]
   },
   "exclude": [
     "node_modules",
@@ -37,6 +42,6 @@
     "public",
     "coverage",
     "test-report"
-  ], // Exclude these directories from compilation.
-  "compileOnSave": false // Disable Compile-on-Save.
+  ],
+  "compileOnSave": false
 }

@@ -1,6 +1,6 @@
 {
   "name": "@syncfusion/react-base",
-  "version": "31.2.12",
+  "version": "32.1.19",
   "description": "A common package of core React base, methods and class definitions",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
@@ -28,8 +28,8 @@
     "gulp": "4.0.2",
     "gulp-typescript": "5.0.1",
     "typescript": "5.7.2",
-    "gulp-sass": "5.1.0",
-    "sass": "1.83.1",
+    "gulp-sass": "6.0.1",
+    "sass": "1.92.1",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "@types/react": "19.0.1",
@@ -37,8 +37,9 @@
     "@types/node": "^22.15.17"
   },
   "scripts": {
-    "build": "gulp build"
+    "build": "gulp component-build"
   },
   "typings": "index.d.ts",
+  "dependencies": {},
   "sideEffects": false
 }

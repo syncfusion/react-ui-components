@@ -39,8 +39,8 @@ export default function App() {
 
 **Resources**
 
-- [Message Demo/Docs](https://react.syncfusion.com/message)
-- [Message API](https://react-api.syncfusion.com/message/overview)
+- [Message Demo/Docs](https://react.syncfusion.com/react-ui/message)
+- [Message API](https://react.syncfusion.com/api/message/overview)
 
 ## React Toast
 
@@ -73,8 +73,8 @@ export default function App() {
 
 **Resources**
 
-- [Toast Demo/Docs](https://react.syncfusion.com/toast)
-- [Toast API](https://react-api.syncfusion.com/toast/overview)
+- [Toast Demo/Docs](https://react.syncfusion.com/react-ui/toast)
+- [Toast API](https://react.syncfusion.com/api/toast/overview)
 
 ## React Skeleton
 
@@ -103,8 +103,8 @@ export default function App() {
 
 **Resources**
 
-- [Skeleton Demo/Docs](https://react.syncfusion.com/skeleton)
-- [Skeleton API](https://react-api.syncfusion.com/skeleton/overview)
+- [Skeleton Demo/Docs](https://react.syncfusion.com/react-ui/skeleton)
+- [Skeleton API](https://react.syncfusion.com/api/skeleton/overview)
 
 <p align="center">
 Trusted by the world's leading companies
@@ -132,4 +132,4 @@ Check the changelog [here](https://github.com/syncfusion/react-ui-components/blo
 
 See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campaign=notification) for more info.
 
-&copy; Copyright 2025 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential Studio® license and copyright applies to this distribution.
+&copy; Copyright 2026 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential Studio® license and copyright applies to this distribution.

@@ -1,3 +1,5 @@
+@use '../themes/variables' as *;
+
 ///
 /// @example scss - Basic component structure
 ///   <div class="sf-control sf-component">Component content</div>
@@ -10,9 +12,10 @@
   // Base control styles
   .sf-control {
     font-family: $font-family;
-    font-size: $font-size;
-    font-weight: $font-weight;
-    line-height: $leading-normal;
+    font-size: $font-size-base;
+    font-weight: $font-weight-normal;
+    line-height: $line-height-base;
+    letter-spacing: $letter-spacing-normal;
     &:focus,
     *:focus {
       outline: none;
@@ -20,23 +23,18 @@
   }
   
   .sf-size-small {
-    font-size: $font-size-12;
-    line-height: $leading-small;
+    font-size: $font-size-sm;
+    line-height: $line-height-sm;
   }
   
   .sf-size-medium {
-    font-size: $font-size-14;
-    line-height: $leading-medium;
+    font-size: $font-size-base;
+    line-height: $line-height-base;
   }
   
   .sf-size-large {
-    font-size: $font-size-16;
-    line-height: $leading-normal
-  }
-  
-  .sf-size-extra-large {
-    font-size: $font-size-24;
-    line-height: $leading-small;
+    font-size: $font-size-lg;
+    line-height: $line-height-lg;
   }
   
   // Box-sizing reset
@@ -59,7 +57,7 @@
   }
   
   .sf-ripple-element {
-    border-radius: 0;
+    border-radius: $radius-0;
     overflow: hidden;
     pointer-events: none;
     position: absolute;

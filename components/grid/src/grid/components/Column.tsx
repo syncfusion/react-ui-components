@@ -13,6 +13,7 @@ import {
     CellType,
     CellTypes,
     ColumnType,
+    SelectionMode,
     WrapMode
 } from '../types';
 import { IGrid } from '../types/grid.interfaces';
@@ -23,10 +24,11 @@ import {
     useGridMutableProvider
 } from '../contexts';
 import { useColumn } from '../hooks';
-import { isNullOrUndefined, SanitizeHtmlHelper } from '@syncfusion/react-base';
-import { Checkbox } from '@syncfusion/react-buttons';
+import { IL10n, isNullOrUndefined, SanitizeHtmlHelper } from '@syncfusion/react-base';
+import { Checkbox, CheckboxChangeEvent } from '@syncfusion/react-buttons';
 import { ArrowUpIcon, ArrowDownIcon } from '@syncfusion/react-icons';
 import { ColumnProps, IColumnBase, ColumnRef, CellClassProps } from '../types/column.interfaces';
+import { CommandColumnBase } from './CommandColumn';
 
 // CSS class constants following enterprise naming convention
 const CSS_HEADER_CELL_DIV: string = 'sf-grid-header-cell';
@@ -35,6 +37,7 @@ const CSS_SORT_ICON: string = 'sf-grid-sort-container sf-icons';
 const CSS_SORT_NUMBER: string = 'sf-grid-sort-order';
 const CSS_DESCENDING_SORT: string = 'sf-descending sf-icon-descending';
 const CSS_ASENDING_SORT: string = 'sf-ascending sf-icon-ascending';
+const CSS_COMMAND_CELL: string = 'sf-grid-command-cell';
 
 /**
  * ColumnBase component renders a table cell (th or td) with appropriate content
@@ -48,8 +51,10 @@ const CSS_ASENDING_SORT: string = 'sf-ascending sf-icon-ascending';
 const ColumnBase: <T>(props: Partial<IColumnBase<T>>) => JSX.Element = memo(<T, >(props: Partial<IColumnBase<T>>) => {
     const grid: Partial<IGrid<T>> & Partial<MutableGridSetter<T>> = useGridComputedProvider<T>();
     const { onHeaderCellRender, onCellRender, onAggregateCellRender, enableHtmlSanitizer, getColumnByField,
-        textWrapSettings, clipMode } = grid;
-    const { isInitialBeforePaint, cssClass, evaluateTooltipStatus, isInitialLoad } = useGridMutableProvider<T>();
+        textWrapSettings, clipMode, serviceLocator, selectionSettings } = grid;
+    const { isInitialBeforePaint, cssClass, evaluateTooltipStatus, isInitialLoad, currentViewData,
+        selectionModule } = useGridMutableProvider<T>();
+    const localization: IL10n = serviceLocator?.getService<IL10n>('localization');
 
     // Get column-specific APIs and properties
     const { publicAPI, privateAPI } = useColumn<T>(props);
@@ -200,6 +205,15 @@ const ColumnBase: <T>(props: Partial<IColumnBase<T>>) => JSX.Element = memo(<T, 
         }
     }, [getColumnByField]);
 
+    const rowCheckBoxOnChange: (event: CheckboxChangeEvent) => void = useCallback((event: CheckboxChangeEvent) : void => {
+        if (!selectionModule || props.row?.index === undefined) { return; }
+        if (event?.value) {
+            selectionModule.selectRow(props.row.index);
+        } else {
+            selectionModule.clearRowSelection([props.row.index]);
+        }
+    }, [props.row?.index, selectionModule]);
+
     /**
      * Memoized header cell content
      */
@@ -228,6 +242,31 @@ const ColumnBase: <T>(props: Partial<IColumnBase<T>>) => JSX.Element = memo(<T, 
         const finalClassName: string = [...new Set(classNames)].filter((cls: string) => cls).join(' ');
         const content: string | JSX.Element = !isNullOrUndefined(props.cell.column.headerTemplate) ? formattedValue as ReactElement
             : sanitizeContent(formattedValue as string || headerText || field);
+
+        // Special rendering for checkbox selection column (select-all)
+        if (column?.type === ColumnType.Checkbox && column?.headerCheckbox) {
+            return (
+                <th
+                    ref={cellRef.current.cellRef}
+                    {...customAttributes}
+                    className={finalClassName}
+                    aria-sort={'none'}
+                >
+                    <div className='sf-cell-inner'>
+                        <div className={CSS_HEADER_CELL_DIV} data-mappinguid={props.cell.column.uid} key={`header-cell-${props.cell?.column?.uid}`}>
+                            <Checkbox
+                                className="sf-grid-checkselectall"
+                                checked={props.row?.isSelected && (currentViewData?.length ?? 0) > 0}
+                                indeterminate={props.row?.isIntermediateState}
+                                onChange={selectionModule.headerCheckBoxOnChange.bind(null, props.row)}
+                                aria-label={localization?.getConstant('SelectAllRows')}
+                                disabled={!currentViewData?.length || selectionSettings.mode === SelectionMode.Single}
+                            />
+                        </div>
+                    </div>
+                </th>
+            );
+        }
 
         return (
             <th
@@ -271,7 +310,9 @@ const ColumnBase: <T>(props: Partial<IColumnBase<T>>) => JSX.Element = memo(<T, 
         headerText,
         disableHtmlEncode,
         props.row?.index,
-        grid.sortSettings
+        grid.sortSettings,
+        props.row,
+        currentViewData
     ]);
 
     /**
@@ -300,18 +341,46 @@ const ColumnBase: <T>(props: Partial<IColumnBase<T>>) => JSX.Element = memo(<T, 
 
         const content: string | JSX.Element = !isNullOrUndefined(props.cell.column.template) ? formattedValue as ReactElement
             : sanitizeContent(formattedValue as string);
-        classNames.push(content === '' || isNullOrUndefined(content) ? 'sf-empty-cell' : '');
+        classNames.push((column?.type !== ColumnType.Checkbox) && (content === '' || isNullOrUndefined(content) &&
+            !props.cell.column.getCommandItems) ? 'sf-empty-cell' : '');
         // Remove duplicates and join
         const finalClassName: string = [...new Set(classNames)].filter((cls: string) => cls).join(' ');
 
+        // Special rendering for checkbox selection column (row checkbox)
+        if (column.type === ColumnType.Checkbox) {
+            return (
+                <td
+                    ref={cellRef.current.cellRef}
+                    {...customAttributes}
+                    className={finalClassName}
+                >
+                    <Checkbox
+                        className="sf-grid-checkselect"
+                        checked={props.row?.isSelected}
+                        aria-label={localization?.getConstant('SelectRow')}
+                        {...(grid.selectionSettings?.checkboxOnly ? { onChange: rowCheckBoxOnChange } : {})}
+                    />
+                </td>
+            );
+        }
+
         return (
-            <td
-                ref={cellRef.current.cellRef}
-                {...customAttributes}
-                className={finalClassName}
-                {...(disableHtmlEncode || isNullOrUndefined(disableHtmlEncode) ?
-                    { children: content } :
-                    { dangerouslySetInnerHTML: { __html: content } })} />
+            props.cell.column.type === ColumnType.Command ?
+                <td
+                    ref={cellRef.current.cellRef}
+                    {...customAttributes}
+                    className={`${finalClassName} ${CSS_COMMAND_CELL}`}
+                >
+                    <CommandColumnBase row={props.row} column={props.cell.column} />
+                </td>
+                :
+                <td
+                    ref={cellRef.current.cellRef}
+                    {...customAttributes}
+                    className={finalClassName}
+                    {...(disableHtmlEncode || isNullOrUndefined(disableHtmlEncode) ?
+                        { children: content } :
+                        { dangerouslySetInnerHTML: { __html: content } })} />
         );
     }, [
         cellType,
@@ -322,7 +391,8 @@ const ColumnBase: <T>(props: Partial<IColumnBase<T>>) => JSX.Element = memo(<T, 
         formattedValue,
         index,
         disableHtmlEncode,
-        props.row?.index
+        props.row?.index,
+        props.row?.isSelected
     ]);
 
     /**

@@ -242,7 +242,6 @@ export class Query {
         fieldName: string | Predicate | Predicate[], operator?: string,
         value?: ValueType | null, ignoreCase?: boolean, ignoreAccent?: boolean, matchCase?: boolean): Query {
 
-        operator = operator ? (operator).toLowerCase() : null;
         let predicate: Predicate | QueryOptions = null;
         if (typeof fieldName === 'string') {
             predicate = new Predicate(fieldName, operator, value, ignoreCase, ignoreAccent, matchCase);
@@ -624,7 +623,7 @@ export class Predicate {
         ignoreCase: boolean = false, ignoreAccent?: boolean, matchCase?: boolean) {
         if (typeof field === 'string') {
             this.field = field;
-            this.operator = operator.toLowerCase();
+            this.operator = operator;
             this.value = value;
             this.matchCase = matchCase;
             this.ignoreCase = ignoreCase;

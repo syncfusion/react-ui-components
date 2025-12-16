@@ -1,0 +1,129 @@
+@use '../../../base/styles/themes/variables' as *;
+
+$input-line-height: $line-height-sm !default;
+$input-font-size: $font-size-sm !default;
+$input-transparent-background: $transparent !default;
+$input-content-color: rgb($content-text-color) !default;
+$input-border-color: rgb($border) !default;
+$input-line-bottom: $spacing-0 !default;
+$input-line-background: rgb($primary-bg-color) !default;
+$input-padding: $spacing-5 $spacing-0 !default;
+$input-select-background: rgb($primary) !default;
+$input-select-font-color: rgb($primary-text-color) !default;
+$input-placeholder-color: rgb($outline) !default;
+$input-margin-bottom: $spacing-4 !default;
+$input-border-hover-color: $transparent $transparent rgb($content-text-color) $transparent !default;
+$input-float-prefix-focus-left: $spacing-0 !default;
+$input-border-focus-color: rgb($primary) !default;
+
+$input-outlined-border-radius: $radius-4 !default;
+$input-outlined-padding: $spacing-5 $spacing-16 !default;
+$input-outlined-prefix-padding: $spacing-5 $spacing-0 !default;
+$input-outlined-focus-border-color: rgb($primary) !default;
+$input-outlined-border-hover-color: rgb($content-text-color) !default;
+
+$input-filled-background: rgb($series-1) !default;
+$input-filled-background-transition: opacity 15ms linear, background-color 15ms linear !default;
+$input-filled-border-radius: $radius-4 $radius-4 $radius-0 $radius-0 !default;
+$input-filled-padding: $spacing-7 $spacing-12 !default;
+$input-filled-prefix-padding: $spacing-7 $spacing-0 !default;
+$input-filled-float-padding: $spacing-13 $spacing-12 $spacing-1 $spacing-12 !default;
+$input-filled-prefix-float-padding: $spacing-11 $spacing-0 $spacing-1 $spacing-0 !default;
+
+$input-float-margin-top: $spacing-16 !default;
+$input-float-top: calc(var(--sf-spacing) * -0.6875) !default;
+$input-float-text-letter-spacing: $letter-spacing-wide !default;
+$input-float-line-height: $line-height-xs !default;
+$input-float-focus-height: $spacing-1 !default;
+$input-float-focus-line-width: $spacing-0 !default;
+$input-float-focus-color: rgb($primary) !default;
+$input-float-focus-font-size: $font-size-xs !default;
+$input-float-focus-transition: translate3d(0, calc(var(--sf-spacing) * -0.3125), 0) !default;
+$input-float-prefix-focus-transition: translate3d(0, calc(var(--sf-spacing) * -0.3125), 0) !default;
+$input-float-transform: translate3d(0, $spacing-16, 0) scale(1) !default;
+
+$input-outlined-float-top: calc(var(--sf-spacing) * -0.3125) !default;
+$input-outlined-float-left: $spacing-16 !default;
+$input-outlined-float-focus-left: $spacing-12 !default;
+$input-outlined-float-focus-transition: translate3d(0, $spacing-2, 0) !default;
+$input-outlined-float-focus-padding: $spacing-0 $spacing-4 !default;
+$input-outlined-float-focus-background: rgb($content-bg-color) !default;
+
+$input-filled-float-top: calc(var(--sf-spacing) * -0.6875) !default;
+$input-filled-float-left: $spacing-12 !default;
+$input-filled-float-focus-transition: translate3d(0, $spacing-11, 0) !default;
+$input-filled-font-size: $font-size-xs !default;
+$input-filled-line-height: $line-height-xs !default;
+
+$input-close-icon-box-size: $spacing-32 !default;
+$input-close-icon-box-padding: $spacing-8 !default;
+$input-close-icon-box-margin: calc(var(--sf-spacing) * -0.0625) !default;
+$input-close-icon-color: rgb($content-text-color-alt1) !default;
+$input-close-icon-hover-color: rgb($icon-color) !default;
+$input-close-icon-hover-background: rgba($content-text-color, .08) !default;
+$input-close-icon-active-background: rgba($content-text-color, .12) !default;
+$input-close-icon-active-color: rgb($content-text-color) !default;
+$input-close-icon-border-radius: $radius-full !default;
+
+$input-medium-line-height: $line-height-sm !default;
+$input-medium-font-size: $font-size-sm !default;
+$input-medium-letter-spacing: $letter-spacing-wider !default;
+$input-medium-padding: $spacing-9 $spacing-0 !default;
+$input-medium-close-icon-box-size: $spacing-40 !default;
+$input-medium-close-icon-box-padding: $spacing-10 !default;
+$input-medium-close-icon-font-size: $font-size-xl !default;
+$input-medium-float-prefix-focus-transition: translate3d(0, calc(var(--sf-spacing) * -0.625), 0) !default;
+$input-medium-float-focus-transition: translate3d(0, calc(var(--sf-spacing) * -0.5625), 0) !default;
+
+$input-medium-outlined-padding: $spacing-9 $spacing-16 !default;
+$input-medium-outlined-prefix-padding: $spacing-9 $spacing-0 !default;
+$input-medium-outlined-float-top: calc(var(--sf-spacing) * -0.4375) !default;
+$input-medium-outlined-float-prefix-focus-transition: translate3d(0, calc(var(--sf-spacing) * -0.125), 0) !default;
+$input-medium-outlined-float-focus-transition: translate3d(0, calc(var(--sf-spacing) * -0.125), 0) !default;
+
+$input-medium-filled-line-height: $line-height-sm !default;
+$input-medium-filled-padding: $spacing-9 $spacing-16 !default;
+$input-medium-filled-float-padding: calc(var(--sf-spacing) * 1.0625) $spacing-16 $spacing-1 $spacing-16 !default;
+$input-medium-filled-float-top: calc(var(--sf-spacing) * -0.4375) !default;
+$input-medium-filled-float-left: $spacing-16 !default;
+$input-medium-filled-float-focus-transition: translate3d(0, $spacing-7, 0) !default;
+$input-medium-filled-font-size: $font-size-sm !default;
+
+$input-large-line-height: $line-height-base !default;
+$input-large-font-size: $font-size-base !default;
+$input-large-letter-spacing: $letter-spacing-normal !default;
+$input-large-padding: $spacing-11 $spacing-0 !default;
+$input-large-close-icon-box-size: $spacing-40 !default;
+$input-large-close-icon-box-padding: $spacing-10 !default;
+$input-large-close-icon-font-size: $font-size-xl !default;
+$input-large-float-prefix-focus-transition: translate3d(0, calc(var(--sf-spacing) * -0.625), 0) !default;
+$input-large-float-focus-transition: translate3d(0, calc(var(--sf-spacing) * -0.5625), 0) !default;
+
+$input-large-outlined-padding: $spacing-11 $spacing-16 !default;
+$input-large-outlined-prefix-padding: $spacing-11 $spacing-0 !default;
+$input-large-outlined-float-top: calc(var(--sf-spacing) * -0.3125) !default;
+$input-large-outlined-float-prefix-focus-transition: translate3d(0, calc(var(--sf-spacing) * -0.125), 0) !default;
+$input-large-outlined-float-focus-transition: translate3d(0, calc(var(--sf-spacing) * -0.125), 0) !default;
+
+$input-large-filled-line-height: $line-height-base !default;
+$input-large-filled-padding: $spacing-11 $spacing-16 !default;
+$input-large-filled-float-padding: $spacing-20 $spacing-16 $spacing-2 $spacing-16 !default;
+$input-large-filled-float-prefix-padding: $spacing-20 $spacing-0 $spacing-2 $spacing-0 !default;
+$input-large-filled-float-top: calc(var(--sf-spacing) * -0.3125) !default;
+$input-large-filled-float-left: $spacing-16 !default;
+$input-large-filled-float-focus-transition: translate3d(0, $spacing-8, 0) !default;
+$input-large-filled-font-size: $font-size-base !default;
+$input-large-filled-prefix-padding: $spacing-11 $spacing-0 !default;
+
+$input-success-border-color: rgb($border-success) !default;
+$input-warning-border-color: rgb($border-warning) !default;
+$input-error-border-color: rgb($border-error) !default;
+
+$input-text-success-color: rgb($success) !default;
+$input-text-warning-color: rgb($warning) !default;
+$input-text-error-color: rgb($error) !default;
+
+$input-form-label-font-size: $font-size-base !default;
+$input-form-label-line-height: $line-height-xs !default;
+$input-form-error-font-size: $font-size-xs !default;
+$input-form-error-color: rgb($error-font-color) !default;

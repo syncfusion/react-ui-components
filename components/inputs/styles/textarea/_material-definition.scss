@@ -1,0 +1,7 @@
+@use '../../../base/styles/themes/variables' as *;
+
+$input-multiline-outlined-padding: $spacing-11 $spacing-16!default;
+$input-multiline-padding: $spacing-11 $spacing-0 !default;
+$input-multiline-min-height: calc(var(--sf-spacing) * 4.375) !default;
+$input-multiline-filled-min-height: calc(var(--sf-spacing) * 4.625) !default;
+$input-multiline-outlined-float-focus-transition: translate3d(0, calc(var(--sf-spacing) * -0.5), 0) !default;

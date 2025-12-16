@@ -2,7 +2,8 @@ import { Chart, Points, Rect, SeriesProperties } from '../chart-area/chart-inter
 import { withInBounds } from './helper';
 
 /**
- * Interface for point data result
+ * Interface for point data result.
+ *
  * @private
  */
 export interface PointData {
@@ -52,7 +53,7 @@ export function getData(chart: Chart): PointData {
 /**
  * Finds a point in the given rectangle
  *
- * @param {Series} series - The current series
+ * @param {SeriesProperties} series - The current series
  * @param {Rect} rect - The rectangle to search in
  * @param {number} x - X coordinate
  * @param {number} y - Y coordinate
@@ -99,7 +100,6 @@ function getRectPoint(
  * @param {Rect} rect - The chart rectangle
  * @param {number} x - X coordinate to check
  * @param {number} y - Y coordinate to check
- * @param {Chart} chart - The chart instance
  * @returns {boolean} True if point is in region
  * @private
  */
@@ -129,8 +129,7 @@ function checkRegionContainsPoint(
  * @param {number} y - The y-coordinate of the point to check
  * @param {Points} point - The data point
  * @param {Rect} rect - The rectangle representing the threshold region
- * @param {Series} series - The series to which the data point belongs
- * @param {Chart} chart - The chart instance
+ * @param {SeriesProperties} series - The series to which the data point belongs
  * @returns {boolean} True if the point is within the threshold region
  * @private
  */

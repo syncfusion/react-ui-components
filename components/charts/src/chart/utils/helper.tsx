@@ -1,10 +1,13 @@
-import { LabelPosition, TextOverflow, TitlePosition } from '../base/enum';
-import { ChartBorderProps, ChartSeriesProps, ChartFontProps, ChartLocationProps} from '../base/interfaces';
+import { LabelPosition } from '../base/enum';
+import { ChartBorderProps, ChartSeriesProps, ChartFontProps, ChartLocationProps, ChartDataLabelTemplateProps, ChartIndexesProps, PointRenderProps} from '../base/interfaces';
 import { getNumberFormat, HorizontalAlignment, isNullOrUndefined, merge, NumberFormatOptions } from '@syncfusion/react-base';
 import { AxisTextStyle } from '../chart-axis/base';
 import { extend } from '@syncfusion/react-base';
 import { RectOption } from '../base/Legend-base';
-import { AxisModel, Chart, ColumnProps, MarginModel, PathOptions, Points, Rect, RowProps, SeriesProperties, ChartSizeProps, TextOption, TextStyleModel, VisibleRangeProps } from '../chart-area/chart-interfaces';
+import { JSX } from 'react';
+import { PointData } from '../renderer/TooltipRenderer';
+import { AxisModel, Chart, ColumnProps, MarginModel, PathOptions, Points, Rect, RowProps, SeriesProperties, ChartSizeProps, TextOption, TextStyleModel, VisibleRangeProps, RenderOptions } from '../chart-area/chart-interfaces';
+import { TextOverflow, TitlePosition } from '../../common';
 
 /**
  * Measures the size of the given text using the specified font and theme font style.
@@ -748,7 +751,8 @@ type CreateRectOptionFn = (
 ) => RectOption;
 
 /**
- * Creates a rectangle option object with the specified properties
+ * Creates a rectangle option object with the specified properties.
+ *
  * @param {string} id - Unique identifier for the rectangle
  * @param {string} fill - Fill color of the rectangle
  * @param {Object} border - Border properties
@@ -806,6 +810,9 @@ export function setPointColor(
     point: Points,
     color: string
 ): string {
+    if (point?.isEmpty && (point.series as SeriesProperties)?.emptyPointSettings?.fill){
+        return (point.series as SeriesProperties).emptyPointSettings?.fill as string;
+    }
     color = point.interior || color;
     return color;
 }
@@ -831,7 +838,7 @@ export function setBorderColor(point: Points, border: ChartBorderProps): ChartBo
 /**
  * Calculates the shapes based on the specified parameters.
  *
- * @param {ChartLocation} location - The location for the shape.
+ * @param {ChartLocationProps} location - The location for the shape.
  * @param {Size} size - The size of the shape.
  * @param {string} shape - The type of shape.
  * @param {PathOptions} options - Additional options for the path.
@@ -1099,6 +1106,10 @@ export const calculateLegendShapes: (
                 merge(options, { 'd': dir });
                 break;
             case 'Area':
+            case 'SplineRangeArea':
+            case 'StackingArea':
+            case 'StackingArea100':
+            case 'RangeArea':
                 dir = 'M' + ' ' + (lx - (width / 2) - (padding / 4)) + ' ' + (ly + (height / 2))
                         + ' ' + 'L' + ' ' + (lx + (-width / 4) + (-padding / 8)) + ' ' + (ly - (height / 2))
                         + ' ' + 'L' + ' ' + (lx) + ' ' + (ly + (height / 4)) + ' ' + 'L' + ' ' + (lx
@@ -1145,8 +1156,29 @@ export function drawSymbol(
  * @private
  */
 export function areDataSourcesEqual(a: any, b: any): any {
-    if (!a || !b || a.length !== b.length) { return false; }
-    return a.every((point: Points, i: number) => point.x === b[i as number].x && point.y === b[i as number].y);
+    if (!a || !b || a.length !== b.length) {
+        return false;
+    }
+
+    return a.every((firstPoint: Points, i: number) => {
+        const secondPoint: Points = b[i as number];
+
+        if (firstPoint.x !== secondPoint.x) {
+            return false;
+        }
+
+        if ((firstPoint?.open !== null && firstPoint?.close !== null &&
+            firstPoint?.high !== null && firstPoint?.low !== null) &&
+            (firstPoint?.open !== undefined || firstPoint?.close !== undefined ||
+                firstPoint?.high !== undefined || firstPoint?.low !== undefined)) {
+            return firstPoint.open === secondPoint.open &&
+                   firstPoint.high === secondPoint.high &&
+                   firstPoint.low === secondPoint.low &&
+                   firstPoint.close === secondPoint.close;
+        } else {
+            return firstPoint.y === secondPoint.y;
+        }
+    });
 }
 
 /**
@@ -1373,10 +1405,56 @@ export function calculateRect(location: ChartLocationProps, textSize: ChartSizeP
  * @param {Points} currentPoint - The current data point.
  * @param {SeriesProperties} series - The properties of the series to which the point belongs.
  * @param {Chart} chart - The chart object for accessing locale and formatting options.
+ * @param {boolean} dataLabelTemplate - Indicates if a data label template is used.
  * @returns {string[]} An array of text strings for the data label(s) of the point.
  * @private
  */
 export function getDataLabelText(currentPoint: Points, series: SeriesProperties, chart: Chart): string[] {
+    if (series.marker?.dataLabel?.template) {
+
+        interface ReactElement {
+            props: {
+                children?: ReactElement | ReactElement[] | string | number | null;
+            };
+        }
+
+        const dataContext: ChartDataLabelTemplateProps = {
+            x: currentPoint.xValue,
+            y: currentPoint.yValue,
+            pointIndex: currentPoint.index,
+            seriesIndex: series.index,
+            label: currentPoint.text
+        } as ChartDataLabelTemplateProps;
+
+        const formatter: (data: ChartDataLabelTemplateProps) => JSX.Element | null =
+            series.marker?.dataLabel?.template as (data: ChartDataLabelTemplateProps) => JSX.Element | null;
+        const templateResult: JSX.Element  = formatter(dataContext) as JSX.Element ;
+        if (templateResult) {
+            const extractTextContents: (element: ReactElement | string | number | null) => string[] =
+            (element: ReactElement | string | number | null): string[] => {
+                if (!element) { return []; }
+
+                if (typeof element === 'string' || typeof element === 'number') {
+                    return [element.toString()];
+                }
+
+                if (typeof element === 'object' && 'props' in element) {
+                    const children: string | number | ReactElement | ReactElement[] | null | undefined  = element.props.children;
+                    if (Array.isArray(children)) {
+                        return children.reduce((acc: string[], child: ReactElement | string | number | null) => {
+                            return acc.concat(extractTextContents(child));
+                        }, []);
+                    }
+                    return extractTextContents(children || null);
+                }
+
+                return [];
+            };
+
+            return extractTextContents(templateResult as ReactElement);
+        }
+    }
+
     const labelFormat: string = (series.marker?.dataLabel?.format
         ? series.marker.dataLabel.format : series.yAxis.labelStyle.format) as string;
     const text: string[] = [];
@@ -1384,23 +1462,28 @@ export function getDataLabelText(currentPoint: Points, series: SeriesProperties,
     switch (series.seriesType) {
     case 'XY':
         text.push(currentPoint.text || (currentPoint.yValue as number).toString());
-        if ((labelFormat) && !currentPoint.text) {
-            const option: NumberFormatOptions = {
-                locale: chart.locale,
-                useGrouping: false,
-                format: customLabelFormat ? '' : labelFormat
-            };
-            series.yAxis.format = getNumberFormat(option);
-            for (let i: number = 0; i < text.length; i++) {
-                text[i as number] = customLabelFormat ? labelFormat.replace('{value}', series.yAxis.format(parseFloat(text[i as number]))) :
-                    series.yAxis.format(parseFloat(text[i as number]));
-            }
-        }
-        return text;
+        break;
+    case 'HighLow':
+        text.push(currentPoint.text || Math.max(currentPoint.high as number, currentPoint.low as number).toString());
+        text.push(currentPoint.text || Math.min(currentPoint.high as number, currentPoint.low as number).toString());
+        break;
     default:
         // Add default case to ensure all code paths return a value
         return text;
     }
+    if ((labelFormat) && !currentPoint.text) {
+        const option: NumberFormatOptions = {
+            locale: chart.locale,
+            useGrouping: false,
+            format: customLabelFormat ? '' : labelFormat
+        };
+        series.yAxis.format = getNumberFormat(option);
+        for (let i: number = 0; i < text.length; i++) {
+            text[i as number] = customLabelFormat ? labelFormat.replace('{value}', series.yAxis.format(parseFloat(text[i as number]))) :
+                series.yAxis.format(parseFloat(text[i as number]));
+        }
+    }
+    return text;
 }
 
 /**
@@ -1705,7 +1788,8 @@ export function findSeriesCollection(column: ColumnProps, row: RowProps, isStack
 export function isRectangularSeriesType(series: SeriesProperties, isStack: boolean): boolean {
     const type: string = (series.type ?? '').toLowerCase();
     return (
-        type.includes('column') || type.includes('bar') || isStack
+        type.includes('column') || type.includes('bar') || type.includes('candle') || type.includes('hilo') ||
+        type.includes('hiloopenclose') || isStack
     );
 }
 
@@ -1737,4 +1821,218 @@ export function checkTabindex(visibleSeries: ChartSeriesProps[], index: number):
         }
     }
     return false;
+}
+
+/**
+ * Finds the index associated with a particular element ID.
+ *
+ * @param {string} id - The ID of the element to find the index for.
+ * @returns {ChartIndexesProps} - The index associated with the element ID.
+ * @private
+ */
+export function indexFinder(id: string): ChartIndexesProps {
+    let ids: string[] = ['NaN', 'NaN'];
+
+    if (id.includes('SeriesGroup')) {
+        ids = id.split('SeriesGroup');
+        ids[0] = ids[1];
+    } else if (id.includes('_Point_')) {
+        ids = id.split('_Series_')[1].split('_Point_');
+    } else if (id.includes('_border_')) {
+        ids[0] = id.split('_border_')[1];
+    } else if (id.includes('_Series_')) {
+        ids[0] = id.split('_Series_')[1];
+    } else if (id.includes('SymbolGroup')) {
+        ids = id.split('SymbolGroup');
+        ids[0] = ids[1];
+    } else if (id.includes('_chart_legend_shape_marker_')) {
+        ids = id.split('_chart_legend_shape_marker_');
+        ids[0] = ids[1];
+    } else if (id.includes('_chart_legend_shape_')) {
+        ids = id.split('_chart_legend_shape_');
+        ids[0] = ids[1];
+    } else if (id.includes('_chart_legend_g_')) {
+        ids = id.split('_chart_legend_g_');
+        ids[0] = ids[1];
+    } else if (id.includes('_chart_legend_text_')) {
+        ids = id.split('_chart_legend_text_');
+        ids[0] = ids[1];
+    } else if (id.includes('TextGroup')) {
+        ids = id.split('TextGroup');
+        ids[0] = ids[1];
+    } else if (id.includes('ShapeGroup')) {
+        ids = id.split('ShapeGroup');
+        ids[0] = ids[1];
+    }
+    return {
+        seriesIndex: parseInt(ids[0], 10),
+        pointIndex: parseInt(ids[1], 10)
+    };
+}
+
+/**
+ * Converts an X coordinate to a value using the axis configuration.
+ *
+ * @param {number} value - The position value to convert.
+ * @param {number} size - The size of the plotting area.
+ * @param {AxisModel} axis - The axis containing the range and scaling information.
+ * @returns {number} The equivalent value on the axis.
+ * @private
+ */
+export function getValueXByPoint(value: number, size: number, axis: AxisModel): number {
+    const actualValue: number = !axis.isAxisInverse ? value / size : (1 - (value / size));
+    return actualValue * (axis.visibleRange.delta) + axis.visibleRange.minimum;
+}
+
+/**
+ * Converts a Y coordinate to a value using the axis configuration.
+ *
+ * @param {number} value - The position value to convert.
+ * @param {number} size - The size of the plotting area.
+ * @param {AxisModel} axis - The axis containing the range and scaling information.
+ * @returns {number} The equivalent value on the axis.
+ * @private
+ */
+export function getValueYByPoint(value: number, size: number, axis: AxisModel): number {
+    const actualValue: number = axis.isAxisInverse ? value / size : (1 - (value / size));
+    return actualValue * (axis.visibleRange.delta) + axis.visibleRange.minimum;
+}
+
+/**
+ * Finds the closest numeric value to a target within an array of `xData` values in the series.
+ *
+ * @param {SeriesProperties} series - The series within which to find the closest value.
+ * @param {number} value - The target value to find closest to.
+ * @param {number[]} [xvalues] - An optional array of X values to use for reference.
+ * @returns {number | null} The closest value or null if not found.
+ * @private
+ */
+export function getClosest(series: SeriesProperties, value: number, xvalues?: number[]): number | null {
+    let closest: number = 0; let data: number;
+    const xData: number[] = xvalues ? xvalues : series.xData;
+    const xLength: number = xData.length;
+    const leftSideNearest: number = 0.5;
+    const rightSideNearest: number = 0.5;
+    if (value >= series.xAxis.visibleRange.minimum - leftSideNearest && value <= series.xAxis.visibleRange.maximum + rightSideNearest) {
+        for (let i: number = 0; i < xLength; i++) {
+            data = xData[i as number];
+            if (closest == null || Math.abs(data - value) < Math.abs(closest - value)) {
+                closest = data;
+            }
+        }
+    }
+    const isDataExist: boolean = series.xData.indexOf(closest) !== -1;
+    if (isDataExist) {
+        return closest;
+    } else {
+        return null;
+    }
+}
+
+/**
+ * Helper function to get common X values across all visible series.
+ *
+ * @param {SeriesProperties[]} visibleSeries - The array of visible series in the chart.
+ * @returns {number[]} An array of common X values across the series.
+ * @private
+ */
+export function getCommonXValues(visibleSeries: SeriesProperties[]): number[] {
+    const commonXValues: number[] = [];
+    for (let j: number = 0; j < visibleSeries.length; j++) {
+        for (let i: number = 0; i < (visibleSeries[j as number].points && visibleSeries[j as number].points.length); i++) {
+            const point: Points = visibleSeries[j as number].points[i as number];
+            if (point && (point.index === 0 || point.index === visibleSeries[j as number].points.length - 1 ||
+                (point.symbolLocations && point.symbolLocations.length > 0))) {
+                void (point.xValue != null && commonXValues.push(point.xValue));
+            }
+        }
+    }
+    return commonXValues;
+}
+
+/**
+ * Finds the point closest to the current X position in the series.
+ *
+ * @param {Chart} chart - The chart object containing layout and data details.
+ * @param {SeriesProperties} series - The series within the chart to find the point in.
+ * @param {number[]} [xvalues] - Optional array of X values to consider.
+ * @returns {PointData | null} The closest PointData object or null if not found.
+ * @private
+ */
+export function getClosestX(chart: Chart, series: SeriesProperties, xvalues?: number[]): PointData | null {
+    let value: number = 0;
+    const rect: Rect = series.clipRect as Rect;
+
+    // Determine value based on axis inversion and mouse position
+    void (chart.mouseX <= rect.x + rect.width && chart.mouseX >= rect.x &&
+        (value = chart.requireInvertedAxis ?
+            getValueYByPoint(chart.mouseY - rect.y, rect.height, series.xAxis) :
+            getValueXByPoint(chart.mouseX - rect.x, rect.width, series.xAxis)));
+    // Get closest x value
+    const closest: number | null = getClosest(series, value, xvalues);
+
+    // Find the point with this X value using the closest result
+    const point: Points | undefined = closest !== null ? series.visiblePoints?.find((p: Points) => p.xValue === closest && p.visible)
+        : undefined;
+    // Return the point and series only if a point is found; otherwise, return null
+    return point ? { point, series } : null;
+}
+
+/**
+ * Resolve the correct data point and index for a rect-like element from its RenderOptions.id.
+ *
+ * @param {RenderOptions} pathOptions - Render options object created for the element.
+ * @param {SeriesProperties} series - The parent series that owns the element. Used to look up the point by the resolved index.
+ * @param {Points} fallbackPoint - A point to return when the id cannot be parsed or the resolved index is out of range.
+ * @param {number} fallbackIndex - Index to return when the id cannot be parsed or the resolved index is invalid.
+ * @returns {[Points, number]} A tuple `[point, index]` where:
+ *   - `point` is the resolved data point from `series.points[index]` (or `undefined` if not found),
+ *   - `index` is the resolved zero‑based point index.
+ * @private
+ */
+export function resolveRectPointFromId(
+    pathOptions: RenderOptions, series: SeriesProperties, fallbackPoint?: Points,
+    fallbackIndex?: number) : { point?: Points; index: number } {
+    // Prefer explicit private index if present (optional enhancement)
+    const pointIndexInSeries: number = (pathOptions as { pointIndex?: number })?.pointIndex as number;
+    if (typeof pointIndexInSeries === 'number' && Number.isFinite(pointIndexInSeries)) {
+        return { point: series?.points?.[pointIndexInSeries as number], index: pointIndexInSeries };
+    }
+    // Parse from id suffix "..._Point_{i}"
+    if (typeof pathOptions?.id === 'string') {
+        const regexMatchingArray: RegExpMatchArray = pathOptions.id.match(/_Point_(\d+)$/) as RegExpMatchArray;
+        if (regexMatchingArray) {
+            const parsedNumber: number = parseInt(regexMatchingArray[1], 10);
+            if (!Number.isNaN(parsedNumber)) {
+                return { point: series?.points?.[parsedNumber as number], index: parsedNumber };
+            }
+        }
+    }
+    // Fallback to what was passed in
+    return { point: fallbackPoint, index: fallbackIndex ?? -1 };
+}
+
+/**
+ * Invokes the pointRender callback (if provided) to allow customization of point appearance.
+ *
+ * @param {PointRenderProps} pointsProps - point rendering arguments.
+ * @param {Chart} chart - The chart instance that may include a pointRender event handler.
+ * @returns {string} The modified point color rendering arguments after applying the callback, or the original arguments.
+ *
+ * @private
+ */
+export function applyPointRenderCallback(pointsProps: PointRenderProps, chart: Chart): string {
+    const defaultProps: PointRenderProps = { seriesIndex: pointsProps.seriesIndex, color: pointsProps.color,
+        xValue: pointsProps.xValue, yValue: pointsProps.yValue };
+    const callback: ((args: PointRenderProps) =>
+    string) = chart.chartProps.pointRender as ((args: PointRenderProps) => string);
+
+    if (callback && typeof callback === 'function') {
+        try {
+            return callback(defaultProps);
+        } catch (error) {
+            return defaultProps.color;
+        }
+    }
+    return defaultProps.color;
 }

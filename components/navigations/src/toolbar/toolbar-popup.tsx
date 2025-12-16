@@ -149,7 +149,7 @@ ToolbarPopupRef, IToolbarPopupProps
                 cloneElement(child, { key: child.key || index })
             );
     }, []);
-
+    const memoizedItems: IToolbarItems[] = useMemo(() => getItems(children), [children, getItems]);
     const resizeObserverRef: RefObject<ResizeObserver | null> = useRef<ResizeObserver | null>(null);
     const previousChildrenCountRef: RefObject<number> = useRef<number>(Children.count(children));
     const itemsRef: RefObject<IToolbarItems[]> = useRef<IToolbarItems[]>(getItems(children));
@@ -516,18 +516,26 @@ ToolbarPopupRef, IToolbarPopupProps
     }, [isPopupRefresh, popupRefresh, setItems]);
 
     useLayoutEffect(() => {
-        const currentCount: number = Children.count(children);
-        if (hasInitialRenderCompleted && previousChildrenCountRef.current !== currentCount) {
-            previousChildrenCountRef.current = Children.count(children);
-            itemsRef.current = getItems(children);
-            toolbarItemsRef.current = [...itemsRef.current];
+        if (!hasInitialRenderCompleted) { return; }
+        const currentCount: number = memoizedItems.length;
+        const hasChildrenCountChanged: boolean = previousChildrenCountRef.current !== currentCount;
+        if (hasChildrenCountChanged) {
+            previousChildrenCountRef.current = currentCount;
+            itemsRef.current = memoizedItems;
+            toolbarItemsRef.current = [...memoizedItems];
             popupItemsRef.current = [];
-            setToolbarItems([...itemsRef.current]);
+            setToolbarItems([...toolbarItemsRef.current]);
             setPopupItems([]);
             setIsPopupOpen(false);
             setHasInitialRenderCompleted(false);
+            return;
         }
-    }, [children, hasInitialRenderCompleted, getItems]);
+        const newItemsMap: Map<string | null, IToolbarItems> = new Map(memoizedItems.map((item: IToolbarItems) => [item.key, item]));
+        const updateList: (currentItems: IToolbarItems[]) => IToolbarItems[] = (currentItems: IToolbarItems[]) =>
+            currentItems.map((item: IToolbarItems) => newItemsMap.get(item.key) || item);
+        setToolbarItems(updateList);
+        setPopupItems(updateList);
+    }, [memoizedItems, hasInitialRenderCompleted]);
 
     useImperativeHandle(ref, () => ({
         refreshOverflow
@@ -598,6 +606,7 @@ ToolbarPopupRef, IToolbarPopupProps
                     open={isPopupOpen}
                     onOpen={onPopupOpen}
                     onClose={onPopupClose}
+                    targetType='container'
                     collision={{ Y: collision ? CollisionType.None : CollisionType.None, X: CollisionType.None }}
                     position={dir === 'rtl' ? { X: 'left', Y: 'top' } : { X: 'right', Y: 'top' }}
                     width={

@@ -31,8 +31,8 @@ export default function App() {
 
 **Resources**
 
-- [Icons Demo/Docs](https://react.syncfusion.com/appearance/icons)
-- [Icons API](https://react-api.syncfusion.com/icons/overview)
+- [Icons Demo/Docs](https://react.syncfusion.com/react-ui/appearance/icons)
+- [Icons API](https://react.syncfusion.com/api/icons/overview)
 
 <p align="center">
 Trusted by the world's leading companies
@@ -56,4 +56,4 @@ Product support is available through following mediums.
 
 See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campaign=notification) for more info.
 
-&copy; Copyright 2025 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential Studio® license and copyright applies to this distribution.
+&copy; Copyright 2026 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential Studio® license and copyright applies to this distribution.

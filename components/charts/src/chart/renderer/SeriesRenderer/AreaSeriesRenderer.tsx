@@ -1,6 +1,6 @@
 import { ChartLocationProps, ChartMarkerProps } from '../../base/interfaces';
 import { AreaSeriesAnimateState, AreaSeriesRendererType, PathCommand, Points, RenderOptions, SeriesProperties } from '../../chart-area/chart-interfaces';
-import { getPoint } from '../../utils/helper';
+import { applyPointRenderCallback, getPoint } from '../../utils/helper';
 import { LineBase, LineBaseReturnType } from './LineBase';
 import MarkerRenderer from './MarkerRenderer';
 import { AnimationState, interpolatePathD } from './SeriesAnimation';
@@ -356,11 +356,12 @@ const AreaSeriesRenderer: AreaSeriesRendererType = {
     render: (series: SeriesProperties, isInverted: boolean) => {
         let startPoint: ChartLocationProps | null = null;
         let direction: string = '';
+        let seriesFill: string | undefined;
         const origin: number = Math.max(series.yAxis.visibleRange.minimum, 0);
         const getCoordinate: Function = getPoint;
         const isDropMode: boolean = (series.emptyPointSettings && series.emptyPointSettings.mode === 'Drop') as boolean;
         const borderWidth: number = series.border?.width as number;
-        const borderColor: string = series.border?.color ? series.border?.color : series.interior;
+        const borderColor: string = series.border?.color ? series.border?.color : seriesFill as string;
         const visiblePoints: Points[] = lineBaseInstance.enableComplexProperty(series);
         let point: Points;
         // First point for completing the area path
@@ -398,6 +399,15 @@ const AreaSeriesRenderer: AreaSeriesRendererType = {
                     'L'
                 );
 
+                const customizedValues: string = applyPointRenderCallback(({
+                    seriesIndex: series.index as number, color: series.interior as string,
+                    xValue: point.xValue as  number | Date | string | null,
+                    yValue: point.yValue as  number | Date | string | null
+                }), series.chart);
+                point.interior = customizedValues;
+
+                if (!seriesFill) { seriesFill = customizedValues; }
+
                 // Handle empty points
                 if (visiblePoints[i + 1] && !visiblePoints[i + 1].visible && !isDropMode) {
                     direction += AreaSeriesRenderer.getAreaEmptyDirection(
@@ -434,7 +444,7 @@ const AreaSeriesRenderer: AreaSeriesRendererType = {
         const name: string = series.chart.element.id + '_Series_' + series.index;
         const seriesOptions: RenderOptions = {
             id: name,
-            fill: series.interior,
+            fill: seriesFill as string,
             strokeWidth: 0,
             stroke: 'transparent',
             opacity: series.opacity,
@@ -470,7 +480,7 @@ const AreaSeriesRenderer: AreaSeriesRendererType = {
  * @returns {PathCommand[]} Array of structured command objects
  * @private
  */
-function parsePathCommands(path: string): PathCommand[] {
+export function parsePathCommands(path: string): PathCommand[] {
     const result: PathCommand[] = [];
     const commandRegex: RegExp = /([MLZ])([^MLZ]*)/g;
     let match: RegExpExecArray | null;

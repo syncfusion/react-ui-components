@@ -619,10 +619,15 @@ export function triggerLabelRender(tempInterval: number, text: string, labelStyl
  * @private
  */
 export function getFormat(axis: AxisModel): string {
-    if (axis.labelStyle.format) {
-        return axis.labelStyle.format;
+    const format: string = axis.labelStyle?.format || '';
+    const isStack100: boolean = axis.isStack100 || axis.series.some((series: SeriesProperties) => series.type?.includes('100'));
+    if (format) {
+        if (format.indexOf('p') === 0 && format.indexOf('{value}') === -1 && isStack100) {
+            return '{value}%';
+        }
+        return format;
     }
-    return '';
+    return isStack100 ? '{value}%' : '';
 }
 
 /**

@@ -1,6 +1,9 @@
+import { CheckboxChangeEvent } from '@syncfusion/react-buttons';
 import { useSelection } from '../hooks';
+import { ColumnProps } from './column.interfaces';
 import { SelectionMode } from './enum';
 import { CellFocusEvent } from './focus.interfaces';
+import { IRow } from './interfaces';
 
 /**
  * Configures selection behavior in the Data Grid component.
@@ -9,17 +12,18 @@ import { CellFocusEvent } from './focus.interfaces';
  */
 export interface SelectionSettings {
     /**
-     * Determines whether row selection is enabled in the grid.
-     * When set to true, allows to select rows via clicks or keyboard interactions. When false, disables all selection functionality.
-     * Affects the grid’s interactivity for row-based operations.
+     * Determines whether row selection is enabled in the grid by default.
+     * When set to false, all selection functionality is disabled.
+     * This property directly affects the grid’s interactivity for row-based operations.
      *
      * @default true
      */
     enabled?: boolean;
 
     /**
-     * Specifies whether selection toggling is permitted for a selected row.
-     * When set to true, a selected row can be deselected through interaction.
+     * Specifies whether row selection can be toggled.
+     * When set to true, clicking a selected row will deselect it, and clicking a deselected row will reselect it.
+     * When set to false, the selection state remains fixed once applied and cannot be toggled.
      *
      * @default false
      */
@@ -41,6 +45,23 @@ export interface SelectionSettings {
      * @private
      */
     type?: string;
+
+    /**
+     * When `checkboxOnly` is set to true, row selection is possible only through the checkbox.
+     * Clicking other row or cell elements does not trigger selection.
+     *
+     * @default false
+     */
+    checkboxOnly?: boolean;
+
+    /**
+     * Specifies whether row selection is persisted across grid operations such as sorting, filtering, searching, paging, or refreshing.
+     * Selection persistence requires a primary key, so define at least one unique value column with the `isPrimaryKey` property in the column definition.
+     * When the checkbox selection feature is enabled, selection persistence is automatically set to true. Set `enablePersistence` to false to disable selection persistence.
+     *
+     * @default false
+     */
+    persistSelection?: boolean;
 }
 
 /**
@@ -178,15 +199,60 @@ export interface SelectionModel<T = unknown> {
     onCellFocus: (e: CellFocusEvent) => void;
 
     /**
-     * Adds or removes selection styling classes from the given row element.
-     * Reflects the DOM manipulation implemented in `useSelection.ts` by toggling the `sf-active`
-     * class and the `aria-selected` attribute on each cell when a row is selected or deselected.
+     * Updates the persisted selection collection using a resolved row key.
      *
-     * @param {Element} row - The grid row element whose child cells require selection class updates.
-     * @param {boolean} isAdd - Set to true to apply selection classes, or false to remove them.
-     * @returns {void}
+     * @param rowData - The row data object to update in the persisted collection.
+     * @param isSelected - When `true`, adds the row; when `false`, removes it.
      */
-    addRemoveSelectionClasses: (row: Element, isAdd: boolean) => void;
+    updatePersistCollection: (rowData: T, isSelected: boolean) => void;
+
+    /**
+     * Persistent selection state as a set of unique row keys.
+     */
+    selectedRowState: Set<string>;
+
+    /**
+     * Persistent selected data keyed by unique row key.
+     */
+    persistSelectedData: Map<string, T>;
+
+    /**
+     * Indicates whether a remote header select-all action was triggered
+     */
+    isRemoteHeaderSelection: boolean;
+
+    /**
+     * Tracks rows that were manually unselected after a remote header select-all operation.
+     */
+    unselectedRowState: Set<string>;
+
+    /**
+     * Clears all persisted selection state, including keys and data.
+     */
+    clearAllPersistedSelection: () => void;
+
+    /**
+     * Handles persisted selection updates when the header "Select All" checkbox is toggled.
+     *
+     * @param row - The header row object.
+     * @param event - The checkbox change event triggered by user interaction.
+     */
+    headerCheckBoxOnChange: (row?: IRow<ColumnProps>, event?: CheckboxChangeEvent) => void;
+
+    /**
+     * Retrieves the full row object from a row element or row index.
+     * @param row - The row DOM element or the numeric index of the row in the table.
+     * @returns The complete row data object conforming to IRow<ColumnProps<T>>.
+     */
+    getRowObj: (row: Element | number) => IRow<ColumnProps<T>>;
+
+    /**
+     * Updates the header selection state based on current selection.
+     * Typically used to refresh the header checkbox state after row-level changes.
+     * @returns void - This method does not return any value directly.
+     */
+    updateHeaderSelectionState: () => void;
+
 }
 
 /**
@@ -196,7 +262,7 @@ export interface SelectionModel<T = unknown> {
  *
  * @private
  */
-export type selectionModule<T> = ReturnType<typeof useSelection<T>>;
+export type selectionModule<T = unknown> = ReturnType<typeof useSelection<T>>;
 
 /**
  * Represents event arguments for row selection events in the Data Grid component.

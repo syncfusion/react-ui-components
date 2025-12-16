@@ -1,0 +1,19 @@
+@use 'theme-variables' as *;
+
+@include export-module('numerictextbox-layout-and-theme') {
+
+  .sf-numeric.sf-input-group {
+
+    .sf-spin-icon svg {
+      font-size: $numeric-spin-icon-size;
+    }
+
+    &.sf-medium,
+    &.sf-large {
+      .sf-spin-icon svg {
+        font-size: $numeric-medium-spin-icon-size;
+      }
+    }
+  }
+
+}

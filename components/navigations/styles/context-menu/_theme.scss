@@ -1,3 +1,5 @@
+@use 'theme-variables' as *;
+
 @include export-module('contextmenu-theme') {
   .sf-contextmenu {
     .sf-menu-parent {

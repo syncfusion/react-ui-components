@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ChartAxisProps, MajorGridLines, MajorTickLines, MinorGridLines, MinorTickLines } from '../base/interfaces';
+import { ChartCrosshairTooltipProps, ChartAxisProps, MajorGridLines, MajorTickLines, MinorGridLines, MinorTickLines } from '../base/interfaces';
 import { ChartContext } from '../layout/ChartProvider';
 import { useContext, useEffect, useMemo } from 'react';
 import { defaultChartConfigs } from '../base/default-properties';
@@ -15,6 +15,7 @@ import { ChartStripLines } from './StripLines';
 import { processChildElement, processStripLines } from './PrimaryXAxis';
 import { ChartStripLineProps } from '../base/interfaces';
 import { extend, isNullOrUndefined } from '@syncfusion/react-base';
+import { ChartCrosshairTooltip } from './CrosshairTooltip';
 
 /**
  * Primary Y-Axis component for the chart.
@@ -44,6 +45,7 @@ export const ChartPrimaryYAxis: React.FC<ChartAxisProps> = (props: ChartAxisProp
         let minorTickLines: MinorTickLines = defaultChartConfigs.MinorTickLines;
         let labelStyle: ChartAxisLabelProps = defaultChartConfigs.LabelStyle;
         let titleStyle: ChartAxisTitleProps = defaultChartConfigs.TitleStyle;
+        let axisCrosshairTooltip: ChartCrosshairTooltipProps = defaultChartConfigs.AxisCrosshairTooltip;
         let stripLines: ChartStripLineProps[] = [...defaultChartConfigs.StripLines];
 
         childArray.forEach((child: React.ReactNode) => {
@@ -84,6 +86,12 @@ export const ChartPrimaryYAxis: React.FC<ChartAxisProps> = (props: ChartAxisProp
             } else if (child.type === ChartStripLines) {
                 stripLines = processStripLines(child, defaultChartConfigs.StripLines);
             }
+            else if (child.type === ChartCrosshairTooltip) {
+                axisCrosshairTooltip = {
+                    ...defaultChartConfigs.AxisCrosshairTooltip,
+                    ...childProps
+                };
+            }
         });
         axisProps.majorGridLines = extend({}, majorGridLines);
         axisProps.majorGridLines.width = isNullOrUndefined(axisProps.majorGridLines.width) ? 1 : axisProps.majorGridLines.width;
@@ -93,6 +101,8 @@ export const ChartPrimaryYAxis: React.FC<ChartAxisProps> = (props: ChartAxisProp
         axisProps.labelStyle = labelStyle;
         axisProps.titleStyle = titleStyle;
         axisProps.stripLines = stripLines;
+        axisProps.crosshairTooltip = axisCrosshairTooltip;
+        axisProps.crossAt = { ...defaultChartConfigs.PrimaryYAxis.crossAt, ...props.crossAt};
         axisProps.lineStyle = { ...defaultChartConfigs.PrimaryYAxis.lineStyle, ...props.lineStyle };
         context?.setChartPrimaryYAxis(axisProps as AxisModel);
     }, [serializedProps, childrenPropsSignature]);

@@ -24,7 +24,8 @@ import {
     IContentRowsBase,
     IRow,
     RowRef,
-    CellTypes, RenderType
+    CellTypes, RenderType,
+    IRowBase
 } from '../types';
 import { ColumnProps, ColumnTemplateProps, IColumnBase } from '../types/column.interfaces';
 import { EditFormTemplate, InlineEditFormRef } from '../types/edit.interfaces';
@@ -118,9 +119,11 @@ RenderEmptyRow.displayName = 'RenderEmptyRow';
 const ContentRowsBase: <T>(props: Partial<IContentRowsBase> & RefAttributes<ContentRowsRef<T>>) => ReactElement =
     memo(forwardRef<ContentRowsRef, Partial<IContentRowsBase>>(
         <T, >(_props: Partial<IContentRowsBase>, ref: RefObject<ContentRowsRef<T>>) => {
-            const { columnsDirective, currentViewData, editModule, uiColumns } = useGridMutableProvider<T>();
-            const { rowHeight, enableAltRow, columns, rowTemplate } = useGridComputedProvider<T>();
-
+            const { columnsDirective, currentViewData, editModule, uiColumns, selectionModule,
+                commandColumnModule } = useGridMutableProvider<T>();
+            const { commandEdit, commandAddRef, commandEditInlineFormRef, commandAddInlineFormRef } = commandColumnModule;
+            const { rowHeight, enableAltRow, columns, rowTemplate, getPrimaryKeyFieldNames } = useGridComputedProvider<T>();
+            const primaryKey: ColumnProps = columns.find((column: ColumnProps) => column.isPrimaryKey);
             // Refs for DOM elements and child components
             const contentSectionRef: RefObject<HTMLTableSectionElement> = useRef<HTMLTableSectionElement>(null);
             const rowsObjectRef: RefObject<IRow<ColumnProps<T>>[]> = useRef<IRow<ColumnProps<T>>[]>([]);
@@ -216,7 +219,7 @@ const ContentRowsBase: <T>(props: Partial<IContentRowsBase> & RefAttributes<Cont
                 }, []);
 
 
-            const inlineAddForm: JSX.Element = useMemo(() => {
+            const inlineAddForm: JSX.Element | JSX.Element[] = useMemo(() => {
                 const options: IRow<ColumnProps<T>> = {
                     uid: getUid('grid-add-row'),
                     data: editModule?.originalData,
@@ -225,34 +228,63 @@ const ContentRowsBase: <T>(props: Partial<IContentRowsBase> & RefAttributes<Cont
                 };
                 // Enhanced check for showAddNewRow functionality
                 // This ensures add form is properly visible in all scenarios
+                const isCommandAdd: boolean = commandEdit.current && commandAddRef.current.length ? true : false;
                 const showAddForm: boolean = editModule?.editSettings?.allowAdd &&
                     (editModule?.editSettings?.showAddNewRow ||
-                    (!options.data && editModule?.isEdit));
+                    (!options.data && editModule?.isEdit) || isCommandAdd);
 
-                return showAddForm ? (
-                    <InlineEditForm<T>
-                        ref={addInlineFormRef}
-                        key={`add-edit-${options.uid}`}
-                        stableKey={`add-edit-${options.uid}-${editModule?.editRowIndex}`}
-                        isAddOperation={true}
-                        columns={uiColumns ?? columns as ColumnProps<T>[]}
-                        editData={editModule?.editData}
-                        validationErrors={editModule?.validationErrors || {}}
-                        editRowIndex={options.index}
-                        rowUid={options.uid}
-                        // Properly handle disabled state for showAddNewRow inputs
-                        // This ensures inputs are disabled during data row editing and re-enabled after
-                        disabled={editModule?.isShowAddNewRowDisabled}
-                        onFieldChange={(field: string, value: ValueType | null) => {
-                            if (editModule?.updateEditData) {
-                                editModule?.updateEditData?.(field, value);
-                            }
-                        }}
-                        onSave={() => editModule?.saveDataChanges()}
-                        onCancel={editModule?.cancelDataChanges}
-                        template={editModule?.editSettings?.template as React.ComponentType<EditFormTemplate<T>>}
-                    />
-                ) : <></>;
+                return showAddForm ? isCommandAdd ?
+                    commandAddRef.current.map((row: IRow<ColumnProps>) => {
+                        return (
+                            <InlineEditForm<T>
+                                ref={(addInlineFormRef: InlineEditFormRef<T>) => {
+                                    commandAddInlineFormRef.current[row.uid] = { current: addInlineFormRef };
+                                }}
+                                key={`add-edit-${row.uid}`}
+                                stableKey={`add-edit-${row.uid}-${row.index}`}
+                                isAddOperation={true}
+                                columns={uiColumns ?? columns as ColumnProps<T>[]}
+                                editData={row.data as T}
+                                rowObject={row as IRow<ColumnProps<T>>}
+                                validationErrors={{}}
+                                editRowIndex={row.index}
+                                rowUid={row.uid}
+                                disabled={editModule?.isShowAddNewRowDisabled}
+                                onFieldChange={(field: string, value: ValueType | null) => {
+                                    if (editModule?.updateEditData) {
+                                        editModule?.updateEditData?.(field, value);
+                                    }
+                                }}
+                                onSave={() => editModule?.saveDataChanges()}
+                                onCancel={editModule?.cancelDataChanges}
+                                template={editModule?.editSettings?.template as React.ComponentType<EditFormTemplate<T>>}
+                            />
+                        );
+                    })
+                    : (
+                        <InlineEditForm<T>
+                            ref={addInlineFormRef}
+                            key={`add-edit-${options.uid}`}
+                            stableKey={`add-edit-${options.uid}-${editModule?.editRowIndex}`}
+                            isAddOperation={true}
+                            columns={uiColumns ?? columns as ColumnProps<T>[]}
+                            editData={editModule?.editData}
+                            validationErrors={editModule?.validationErrors || {}}
+                            editRowIndex={options.index}
+                            rowUid={options.uid}
+                            // Properly handle disabled state for showAddNewRow inputs
+                            // This ensures inputs are disabled during data row editing and re-enabled after
+                            disabled={editModule?.isShowAddNewRowDisabled}
+                            onFieldChange={(field: string, value: ValueType | null) => {
+                                if (editModule?.updateEditData) {
+                                    editModule?.updateEditData?.(field, value);
+                                }
+                            }}
+                            onSave={() => editModule?.saveDataChanges()}
+                            onCancel={editModule?.cancelDataChanges}
+                            template={editModule?.editSettings?.template as React.ComponentType<EditFormTemplate<T>>}
+                        />
+                    ) : <></>;
             }, [
                 columnsDirective, currentViewData?.length, rowHeight,
                 editModule?.isEdit,
@@ -261,7 +293,8 @@ const ContentRowsBase: <T>(props: Partial<IContentRowsBase> & RefAttributes<Cont
                 editModule?.isShowAddNewRowDisabled,
                 editModule?.showAddNewRowData,
                 editModule?.editSettings?.newRowPosition,
-                editModule?.editSettings?.template
+                editModule?.editSettings?.template,
+                commandAddRef?.current?.length
             ]);
 
             const generateCell: () => IRow<ColumnProps<T>>[] = useCallback((): IRow<ColumnProps<T>>[] => {
@@ -290,7 +323,7 @@ const ContentRowsBase: <T>(props: Partial<IContentRowsBase> & RefAttributes<Cont
 
                 const row: T = data;
                 const options: IRow<ColumnProps<T>> = {};
-                options.uid = getUid('grid-row');
+                options.uid = primaryKey ? 'grid-row-' + row[`${primaryKey.field}`] : `${'grid-row-' + rowIndex}`;
                 options.parentUid = parentUid;
                 options.data = row;
                 options.index = currentDataRowIndex ? currentDataRowIndex : rowIndex;
@@ -298,6 +331,19 @@ const ContentRowsBase: <T>(props: Partial<IContentRowsBase> & RefAttributes<Cont
                 options.isCaptionRow = false;
                 options.indent = indent;
                 options.isAltRow = enableAltRow ? rowIndex % 2 !== 0 : false;
+                options.key = getUid('grid-row');
+                // Initialize row selection based on persisted state and remote "Select All" mode
+                const primaryKeys: string[] = getPrimaryKeyFieldNames?.();
+                const rowKey: string = row?.[primaryKeys[0]];
+                if (selectionModule.isRemoteHeaderSelection) {
+                    options.isSelected = !selectionModule.unselectedRowState.has(rowKey);
+                    if (options.isSelected) {
+                        selectionModule.selectedRowState.add(rowKey);
+                        selectionModule.persistSelectedData.set(rowKey, row);
+                    }
+                } else {
+                    options.isSelected = selectionModule.selectedRowState.has(rowKey);
+                }
 
                 if (rowTemplate) {
                     options.cells = generateCell();
@@ -306,25 +352,41 @@ const ContentRowsBase: <T>(props: Partial<IContentRowsBase> & RefAttributes<Cont
                 // Store the options object for getRowsObject
                 rowOptions.push({ ...options });
 
+                const customAttributes: Partial<IRowBase<T>> | ({'data-uid': string}) = {
+                    className: `${CSS_DATA_ROW + (options.isAltRow ? (' ' + CSS_ALT_ROW) : '')}`,
+                    role: 'row',
+                    'aria-rowindex': rowIndex + 1,
+                    'data-uid': options.uid,
+                    style: { height: `${rowHeight}px` }
+                };
+
                 // Create the row element with a callback ref to store the element reference
                 rows.push(
                     <RowBase<T>
                         ref={(element: RowRef<T>) => {
                             if (element?.rowRef?.current) {
                                 storeRowRef(rowIndex, element.rowRef.current, element.getCells(), element.setRowObject);
+                                const selectedRowIndex: number = selectionModule.selectedRowIndexes.indexOf(
+                                    rowsObjectRef.current[rowIndex as number].index);
+                                if (rowsObjectRef.current[rowIndex as number].isSelected && selectedRowIndex === -1) {
+                                    selectionModule.selectedRowIndexes.push(rowsObjectRef.current[rowIndex as number].index);
+                                }
+                                else if (!rowsObjectRef.current[rowIndex as number].isSelected && selectedRowIndex !== -1) {
+                                    selectionModule.selectedRowIndexes.splice(rowsObjectRef.current[rowIndex as number].index, 1);
+                                }
                             } else if (element?.editInlineRowFormRef?.current) {
                                 rowsObjectRef.current[rowIndex as number].editInlineRowFormRef = element?.editInlineRowFormRef;
                                 editInlineFormRef.current = rowsObjectRef.current[rowIndex as number].editInlineRowFormRef.current; // final single row ref for edit form.
+                                rowElementRefs.current[rowIndex as number] = element?.editInlineRowFormRef?.current.rowRef.current;
+                                rowsObjectRef.current[rowIndex as number].cells = element.getCells();
+                                commandEditInlineFormRef.current[rowsObjectRef.current[rowIndex as number].uid]
+                                    = element?.editInlineRowFormRef;
                             }
                         }}
-                        key={options.uid}
+                        key={options.key}
                         row={{ ...options }}
                         rowType={RenderType.Content}
-                        className={CSS_DATA_ROW + (options.isAltRow ? (' ' + CSS_ALT_ROW) : '')}
-                        role="row"
-                        aria-rowindex={rowIndex + 1}
-                        data-uid={options.uid}
-                        style={{ height: `${rowHeight}px` }}
+                        {...customAttributes}
                     >
                         {(columnsDirective.props as ColumnsChildren<T>).children}
                     </RowBase>
@@ -364,9 +426,9 @@ const ContentRowsBase: <T>(props: Partial<IContentRowsBase> & RefAttributes<Cont
                     ref={contentSectionRef}
                     {..._props}
                 >
-                    {editModule?.editSettings?.allowAdd && editModule?.editSettings?.newRowPosition === 'Top' && inlineAddForm}
+                    {editModule?.editSettings?.allowAdd && editModule?.editSettings?.newRowPosition === 'Top' && editModule.editSettings.mode === 'Normal' && inlineAddForm}
                     {dataRows.length > 0 ? dataRows : emptyRowComponent}
-                    {editModule?.editSettings?.allowAdd && editModule?.editSettings?.newRowPosition === 'Bottom' && inlineAddForm}
+                    {editModule?.editSettings?.allowAdd && editModule?.editSettings?.newRowPosition === 'Bottom' && editModule.editSettings.mode === 'Normal' && inlineAddForm}
                 </tbody>
             );
         }

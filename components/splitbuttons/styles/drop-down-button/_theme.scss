@@ -1,3 +1,5 @@
+@use 'theme-variables' as *;
+
 @include export-module('drop-down-button-theme') {
   .sf-dropdown-popup {
 

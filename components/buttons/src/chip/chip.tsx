@@ -265,7 +265,8 @@ React.memo(forwardRef<IChip, ChipProps>((props: ChipComponentProps, ref: React.R
                 leadingIcon ? 'sf-chip-icon-wrap' : '',
             isFocused ? 'sf-focused' : '',
             variant === 'Outlined' ? 'sf-outline' : '',
-            color ? `sf-${color.toLowerCase()}` : ''
+            color ? `sf-${color.toLowerCase()}` : '',
+            avatar || leadingIcon || leadingIconUrl ? 'sf-chip-has-icon' : ''
         ].filter(Boolean).join(' ');
     }, [className, disabled, dir, avatar, leadingIcon, isFocused, variant, color]);
 

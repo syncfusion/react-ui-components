@@ -1,33 +1,35 @@
-.sf-input-group.sf-multi-line-input.sf-auto-width {
-  width: auto;
-}
+@use 'theme-variables' as *;
 
-.sf-input-group.sf-multi-line-input textarea {
-  &.sf-resize-x {
-    resize: horizontal;
-  }
-  &.sf-resize-y {
-    resize: vertical;
-  }
-  &.sf-resize-xy {
-    resize: both;
-  }
-  &.sf-textarea.sf-resize-none {
-    resize: none;
-  }
-}
+@include export-module('textarea-layout-and-theme') {
+  .sf-input-group.sf-multi-line-input {
+    align-items: flex-end;
 
-.sf-float-input .sf-clear-icon:hover,
-.sf-float-input.sf-control-wrapper .sf-clear-icon:hover,
-.sf-input-group .sf-clear-icon:hover,
-.sf-input-group.sf-control-wrapper .sf-clear-icon:hover {
-  background: none;
-  border: none;
-}
+    &.sf-auto-width {
+      width: auto;
+    }
 
-.sf-float-input:not(.sf-disabled) .sf-clear-icon:hover,
-.sf-float-input.sf-control-wrapper:not(.sf-disabled) .sf-clear-icon:hover,
-.sf-input-group:not(.sf-disabled) .sf-clear-icon:hover,
-.sf-input-group.sf-control-wrapper:not(.sf-disabled) .sf-clear-icon:hover {
-  background: none;
+    .sf-input {
+      min-height: $input-multiline-min-height;
+      padding: $input-multiline-padding;
+    }
+
+    &.sf-outline {
+
+      .sf-input {
+        padding: $input-multiline-outlined-padding;
+      }
+
+      &:has(.sf-label-top) .sf-float-text {
+        transform: $input-multiline-outlined-float-focus-transition;
+      }
+    }
+
+    &.sf-filled .sf-input {
+      min-height: $input-multiline-filled-min-height;
+    }
+
+    & .sf-clear-icon.sf-clear-icon-hide {
+      display: none;
+    }
+  }
 }

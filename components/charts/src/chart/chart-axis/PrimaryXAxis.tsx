@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ChartAxisProps, MajorGridLines, MajorTickLines, MinorGridLines, MinorTickLines } from '../base/interfaces';
+import { ChartCrosshairTooltipProps, ChartAxisProps, MajorGridLines, MajorTickLines, MinorGridLines, MinorTickLines } from '../base/interfaces';
 import { ChartContext } from '../layout/ChartProvider';
 import { useContext, useEffect, useMemo } from 'react';
 import { defaultChartConfigs } from '../base/default-properties';
@@ -15,6 +15,7 @@ import { ChartStripLines, ChartStripLine } from './StripLines';
 import { getCircularReplacer } from '../series/Series';
 import { ChartStripLineProps } from '../base/interfaces';
 import { extend, isNullOrUndefined } from '@syncfusion/react-base';
+import { ChartCrosshairTooltip } from './CrosshairTooltip';
 
 /**
  * Safely stringifies an object to JSON, handling circular references.
@@ -173,6 +174,8 @@ export const ChartPrimaryXAxis: React.FC<ChartAxisProps> = (props: ChartAxisProp
         let labelStyle: ChartAxisLabelProps = defaultChartConfigs.LabelStyle;
         let titleStyle: ChartAxisTitleProps = defaultChartConfigs.TitleStyle;
         let stripLines: ChartStripLineProps[] = [...defaultChartConfigs.StripLines];
+        let axisCrosshairTooltip: ChartCrosshairTooltipProps = defaultChartConfigs.AxisCrosshairTooltip;
+
         childArray.forEach((child: React.ReactNode) => {
             if (!React.isValidElement(child)) { return; }
             const childProps: Record<string, MajorGridLines | MajorTickLines> =
@@ -211,6 +214,12 @@ export const ChartPrimaryXAxis: React.FC<ChartAxisProps> = (props: ChartAxisProp
             } else if (child.type === ChartStripLines) {
                 stripLines = processStripLines(child, defaultChartConfigs.StripLines);
             }
+            else if (child.type === ChartCrosshairTooltip) {
+                axisCrosshairTooltip = {
+                    ...defaultChartConfigs.AxisCrosshairTooltip,
+                    ...childProps
+                };
+            }
         });
         axisProps.majorGridLines = extend({}, majorGridLines);
         axisProps.majorGridLines.width = isNullOrUndefined(axisProps.majorGridLines.width) ? 0 : axisProps.majorGridLines.width;
@@ -220,6 +229,8 @@ export const ChartPrimaryXAxis: React.FC<ChartAxisProps> = (props: ChartAxisProp
         axisProps.labelStyle = labelStyle;
         axisProps.titleStyle = titleStyle;
         axisProps.stripLines = stripLines;
+        axisProps.crosshairTooltip = axisCrosshairTooltip;
+        axisProps.crossAt = { ...defaultChartConfigs.PrimaryXAxis.crossAt, ...props.crossAt};
         axisProps.lineStyle = { ...defaultChartConfigs.PrimaryXAxis.lineStyle, ...props.lineStyle };
         context?.setChartPrimaryXAxis(axisProps as AxisModel);
     }, [serializedProps, childrenPropsSignature]);

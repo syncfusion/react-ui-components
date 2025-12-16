@@ -1,0 +1,40 @@
+@use '../../../base/styles/themes/variables' as *;
+
+$dialog-border: 0 solid rgba($border-light) !default;
+$dialog-border-radius: $radius-16 !default;
+$dialog-bg-color: $content-bg-color-alt3 !default;
+$dialog-shadow-color: $shadow-lg !default;
+$dialog-enable-resize-padding-bottom: $spacing-20 !default;
+$dialog-fullscreen-border-radius: $radius-0 !default;
+
+$dialog-header-border: none !default;
+$dialog-header-line-height: $line-height-2xl !default;
+$dialog-header-content-padding: $spacing-20 $spacing-20 $spacing-8 $spacing-20 !default;
+$dialog-header-content-border-radius: $radius-16 $radius-16 $radius-0 $radius-0 !default;
+$dialog-header-font-size: $font-size-2xl !default;
+$dialog-header-font-color: rgb($content-text-color) !default;
+
+$dialog-close-button-right-position: 21px !default;
+$dialog-close-button-padding: $spacing-9 !default;
+$dialog-close-icon-top-position: 17px !default;
+$dialog-close-icon-border-radius: $radius-full !default;
+$dialog-close-font-size: $font-size-xl !default;
+$dialog-close-icon-color: rgb($icon-color) !default;
+
+$dialog-content-padding: $spacing-16 $spacing-20 $spacing-12 $spacing-20 !default;
+$dialog-content-padding-top: $spacing-0 !default;
+$dialog-content-font-size: $font-size-sm !default;
+$dialog-content-line-height: $line-height-sm !default;
+$dialog-content-letter-spacing: $letter-spacing-wide !default;
+$dialog-content-font-color: rgb($content-text-color-alt1) !default;
+
+$dialog-footer-content-padding: $spacing-12 $spacing-20 $spacing-12 $spacing-20 !default;
+$dialog-footer-content-border-top: none !default;
+$dialog-footer-content-border-radius: $radius-0 $radius-0 $radius-16 $radius-16 !default;
+$dialog-footer-gap: $spacing-8 !default;
+
+$dialog-resize-handler-line-height: $line-height-sm !default;
+$dialog-resize-handler-position: $spacing-4 !default;
+$dialog-resize-handler-font-size: $font-size-xl !default;
+
+$dialog-overlay-bg-color: $overlay-bg-color !default;

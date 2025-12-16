@@ -1,303 +1,55 @@
-import * as React from 'react';
-import {
-    useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle,
-    useMemo
-} from 'react';
-import { Calendar, CalendarView, WeekRule, WeekDaysFormats, ViewChangeEvent, ICalendar, ChangeEvent } from '../calendar/calendar';
-import { CalendarCellProps } from '../calendar/calendar-cell';
-import { InputBase, renderFloatLabelElement } from '@syncfusion/react-inputs';
-import { Browser, formatDate, getDatePattern, parseDate, preRender, LabelMode } from '@syncfusion/react-base';
-import { useProviderContext } from '@syncfusion/react-base';
-import { CollisionType, getZindexPartial, IPopup, Popup } from '@syncfusion/react-popups';
-import { CloseIcon, TimelineDayIcon } from '@syncfusion/react-icons';
+import { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle, useMemo, useId } from 'react';
 import { createPortal } from 'react-dom';
+import { InputBase, renderFloatLabelElement } from '@syncfusion/react-inputs';
+import { Browser, useProviderContext, formatDate, parseDate, preRender, LabelMode, Orientation, IL10n, L10n } from '@syncfusion/react-base';
+import { Popup, CollisionType, getZindexPartial, type IPopup } from '@syncfusion/react-popups';
+import { CloseIcon, TimelineTodayIcon } from '@syncfusion/react-icons';
+import { Calendar } from '../calendar';
+import { CalendarView, ViewChangeEvent, ICalendar, CalendarProps, CalendarChangeEvent } from '../calendar';
+import { CalendarCellProps } from '../calendar/calendar-cell';
+import { GregorianCalendar } from '../calendar-core';
+import { inRange } from '../calendar/utils';
+import { DatePickerProps, PickerVariant, Variant } from './types';
 export { LabelMode };
 
-export interface DatePickerProps {
-    /**
-     * Specifies the placeholder text to display in the input box when no value is set.
-     *
-     * @default -
-     */
-    placeholder?: string;
-
-    /**
-     * Specifies whether the component is disabled or not.
-     *
-     * @default false
-     */
-    disabled?: boolean;
-
-    /**
-     * Specifies whether the component is in read-only mode.
-     * When enabled, users cannot change input value or open the picker.
-     *
-     * @default false
-     */
-    readOnly?: boolean;
-
-    /**
-     * Specifies the float label behavior.
-     * Possible values:
-     * * `Never` - The label will never float.
-     * * `Auto` - The label floats when the input has focus, value, or placeholder.
-     * * `Always` - The label always floats.
-     *
-     * @default 'Never'
-     */
-    labelMode?: LabelMode;
-
-    /**
-     * Specifies the date format string for displaying and parsing date values.
-     * Examples: 'MM/dd/yyyy', 'yyyy-MM-dd', etc.
-     *
-     * @default 'M/d/yyyy'
-     */
-    format?: string;
-
-    /**
-     * Specifies an array of acceptable date input formats for parsing user input.
-     * Can be an array of strings or FormatObject.
-     *
-     * @default -
-     */
-    inputFormats?: string[] | FormatObject[];
-
-    /**
-     * Specifies whether to show the clear button within the input field.
-     *
-     * @default true
-     */
-    clearButton?: boolean;
-
-    /**
-     * Enables strict date validation mode.
-     * When enabled, invalid values are prevented or auto-corrected.
-     *
-     * @default false
-     */
-    strictMode?: boolean;
-
-    /**
-     * When true, should open the calendar popup on input focus.
-     *
-     * @default false
-     */
-    openOnFocus?: boolean;
-
-    /**
-     * Specifies the selected date of the DatePicker for controlled usage.
-     *
-     * @default null
-     *
-     */
-    value?: Date | null;
-
-    /**
-     * Specifies the default selected date of the DatePicker for uncontrolled mode.
-     *
-     * @default null
-     *
-     */
-    defaultValue?: Date;
-
-    /**
-     * Specifies the minimum date that can be selected in the DatePicker.
-     *
-     * @default new Date(1900, 0, 1)
-     */
-    minDate?: Date;
-
-    /**
-     * Specifies the maximum date that can be selected in the DatePicker.
-     *
-     * @default new Date(2099, 11, 31)
-     */
-    maxDate?: Date;
-
-    /**
-     * Specifies the initial view of the Calendar when it is opened.
-     *
-     * @default Month
-     */
-    start?: CalendarView;
-
-    /**
-     * Sets the maximum level of view such as month, year, and decade.
-     * Depth view should be smaller than the start view to restrict its view navigation.
-     *
-     * @default Month
-     */
-    depth?: CalendarView;
-
-    /**
-     * Specifies whether the calendar popup is open or closed.
-     *
-     * @default false
-     */
-    open?: boolean;
-
-    /**
-     * Specifies the first day of the week for the calendar.
-     *
-     * @default 0
-     */
-    firstDayOfWeek?: number;
-
-    /**
-     * Specifies whether the week number of the year is to be displayed in the calendar or not.
-     *
-     * @default false
-     */
-    weekNumber?: boolean;
-
-    /**
-     * Specifies the rule for defining the first week of the year.
-     * Used only if `weekNumber` is enabled.
-     *
-     * @default FirstDay
-     */
-    weekRule?: WeekRule;
-
-    /**
-     * Specifies whether the today button is to be displayed or not.
-     *
-     * @default true
-     */
-    showTodayButton?: boolean;
-
-    /**
-     * Specifies the format of the day that to be displayed in header.
-     * Possible formats are:
-     * * `Short` - Sets the short format of day name (like Su) in day header.
-     * * `Narrow` - Sets the single character of day name (like S) in day header.
-     * * `Abbreviated` - Sets the min format of day name (like Sun) in day header.
-     * * `Wide` - Sets the long format of day name (like Sunday) in day header.
-     *
-     * @default Short
-     */
-    weekDaysFormat?: WeekDaysFormats;
-
-    /**
-     * Provides a template for rendering custom content for each day cell in the calendar.
-     *
-     * @default null
-     */
-    cellTemplate?: Function | React.ReactNode;
-
-    /**
-     * Specifies whether the input field can be edited directly.
-     * When false, only allows selection via calendar.
-     *
-     * @default true
-     */
-    editable?: boolean;
-
-    /**
-     * Sets the z-index value for the dropdown popup, controlling its stacking order relative to other elements on the page.
-     *
-     * @default 1000
-     */
-    zIndex?: number;
-
-    /**
-     * Specifies whether the component popup should display in full screen mode on mobile devices.
-     *
-     * @default false
-     */
-    fullScreenMode?: boolean;
-
-
-    /**
-     * Specifies whether the DatePicker is a required field in a form.
-     * When set to true, the component will be marked as required.
-     *
-     * @default false
-     */
-    required?: boolean;
-
-    /**
-     * Overrides the validity state of the component.
-     * If valid is set, the required property will be ignored.
-     *
-     * @default false
-     */
-    valid?: boolean;
-
-    /**
-     * Controls the form error message of the component.
-     *
-     * @default -
-     */
-    validationMessage?: string;
-
-    /**
-     * If set to false, no visual representation of the invalid state of the component will be applied.
-     *
-     * @default true
-     */
-    validityStyles?: boolean;
-
-    /**
-     * Triggers when the DatePicker value is changed.
-     *
-     * @event onChange
-     */
-    onChange?: ((args: ChangeEvent) => void);
-
-    /**
-     * Triggers when the calendar popup opens.
-     *
-     * @event onOpen
-     */
-    onOpen?: (args: { popup: IPopup }) => void;
-
-    /**
-     * Triggers when the calendar popup closes.
-     *
-     * @event onClose
-     */
-    onClose?: (args: { popup: IPopup }) => void;
-
-    /**
-     * Triggers when the Calendar is navigated to another level or within the same level of view.
-     *
-     * @event onViewChange
-     */
-    onViewChange?: (args: ViewChangeEvent) => void;
-}
-
-export interface FormatObject {
-    /**
-     * Specifies the format skeleton to use for formatting dates.
-     *
-     */
-    skeleton?: string;
-}
+type IDatePickerProps = IDatePicker & Omit<React.HTMLAttributes<HTMLDivElement>, 'defaultValue' | 'value' | 'onChange'>;
 
 export interface IDatePicker extends DatePickerProps {
     /**
      * The content to be rendered inside the component.
      *
      * @private
-     * @default null
+     * @default -
      */
     element?: HTMLSpanElement | null;
 }
 
-type IDatePickerProps = IDatePicker & Omit<React.HTMLAttributes<HTMLDivElement>, 'defaultValue' | 'value'>;
-
+/**
+ * The DatePicker component provides an input with an integrated calendar popup for selecting a single date.
+ * It supports formatting, parsing, min/max date constraints, validation, strict mode,
+ * custom calendar templates, and inline or dialog picker variants.
+ *
+ * ```typescript
+ * import { DatePicker } from '@syncfusion/react-calendars';
+ *
+ * export default function App() {
+ *   return <DatePicker placeholder="Choose a date" />;
+ * }
+ * ```
+ */
 export const DatePicker: React.ForwardRefExoticComponent<IDatePickerProps & React.RefAttributes<IDatePicker>> =
     forwardRef<IDatePicker, IDatePickerProps>((props: IDatePickerProps, ref: React.Ref<IDatePicker>) => {
         const {
             className = '',
             placeholder = 'Choose a date',
+            id = `datepicker_${useId()}`,
             disabled = false,
             readOnly = false,
             labelMode = 'Never',
             format = 'M/d/yyyy',
             clearButton = true,
             strictMode = false,
+            orientation = Orientation.Vertical,
             value,
             defaultValue,
             minDate = new Date(1900, 0, 1),
@@ -308,12 +60,19 @@ export const DatePicker: React.ForwardRefExoticComponent<IDatePickerProps & Reac
             weekNumber = false,
             weekRule,
             showTodayButton = true,
+            showToolBar = false,
             weekDaysFormat,
             open,
             inputFormats,
-            fullScreenMode = false,
+            pickerVariant = PickerVariant.Auto,
+            showDaysOutsideCurrentMonth,
+            disablePastDays,
+            disableFutureDays,
+            variant = Variant.Standard,
             zIndex = 1000,
             cellTemplate,
+            footerTemplate,
+            headerTemplate,
             onChange,
             onOpen,
             onClose,
@@ -327,10 +86,11 @@ export const DatePicker: React.ForwardRefExoticComponent<IDatePickerProps & Reac
         } = props;
 
         const { locale, dir } = useProviderContext();
-        const [isOpen, setIsOpen] = useState(false);
-        const [inputValue, setInputValue] = useState('');
+        const calendarSystem: GregorianCalendar = useMemo<GregorianCalendar>(() => new GregorianCalendar(), []);
+        const [isOpen, setIsOpen] = useState<boolean>(false);
+        const [inputValue, setInputValue] = useState<string>('');
         const [selectedDate, setSelectedDate] = useState<Date | null>(value ?? defaultValue ?? null);
-        const [isFocused, setIsFocused] = useState(false);
+        const [isFocused, setIsFocused] = useState<boolean>(false);
         const containerRef: React.RefObject<HTMLSpanElement | null> = useRef<HTMLSpanElement>(null);
         const inputRef: React.RefObject<HTMLInputElement | null> = useRef<HTMLInputElement>(null);
         const popupRef: React.RefObject<IPopup | null> = useRef<IPopup>(null);
@@ -340,83 +100,89 @@ export const DatePicker: React.ForwardRefExoticComponent<IDatePickerProps & Reac
         const currentValue: Date | null | undefined = isControlled ? value : selectedDate;
         const isOpenControlled: boolean = open !== undefined;
         const currentOpenState: boolean | undefined = isOpenControlled ? open : isOpen;
-        const [inputFormatsString, setInputFormatsString] = useState<string[]>([]);
         const [isInputValid, setIsInputValid] = useState<boolean>(valid !== undefined ? valid : (required ? selectedDate !== null : true));
         const [isIconActive, setIsIconActive] = useState<boolean>(false);
-        const isFullScreenMode: boolean = fullScreenMode && Browser.isDevice;
         const [shouldFocusOnClose, setShouldFocusOnClose] = useState<boolean>(false);
+        const isDevice: boolean = Browser.isDevice;
+        const useDialog: boolean =
+            pickerVariant === PickerVariant.Popup ||
+            (pickerVariant === PickerVariant.Auto && isDevice);
+        const useInline: boolean =
+            pickerVariant === PickerVariant.Inline ||
+            (pickerVariant === PickerVariant.Auto && !isDevice);
 
-        useEffect(() => {
-            if (inputFormats && inputFormats.length > 0) {
-                const formats: string[] = inputFormats.map((format: string | FormatObject) => {
-                    if (typeof format === 'string') {
-                        return format;
-                    } else if (format.skeleton) {
-                        return getDatePattern( {locale: locale || 'en-US', skeleton: format.skeleton, type: 'date' });
+        const inputFormatsString: string[] = useMemo(() => {
+            if (!inputFormats || inputFormats.length === 0) {
+                return [];
+            }
+            return inputFormats
+                .map((f: string): string => {
+                    if (typeof f === 'string') {
+                        return f;
                     }
                     return '';
-                }).filter(Boolean);
-                setInputFormatsString(formats);
-            } else {
-                setInputFormatsString([]);
-            }
+                })
+                .filter(Boolean);
         }, [inputFormats, locale]);
 
-        useEffect(() => {
-            if (!inputRef.current) { return; }
-            const isValid: boolean = valid !== undefined ? valid : (required ? currentValue !== null : true);
-            setIsInputValid(isValid);
-            const message: string = isValid ? '' : validationMessage || '';
+        useEffect((): void => {
+            if (!inputRef.current) {
+                return;
+            }
+            const isValidNow: boolean = valid !== undefined ? valid : (required ? currentValue !== null : true);
+            setIsInputValid(isValidNow);
+            const message: string = isValidNow ? '' : (validationMessage || '');
             inputRef.current.setCustomValidity(message);
         }, [valid, validationMessage, required, currentValue]);
 
-        const formatDateValue: (date: Date) => string = useCallback((date: Date) => {
+        const formatDateValue: (date: Date) => string = useCallback((date: Date): string => {
             try {
-                return formatDate(date, {locale: locale || 'en-US', format: format || 'M/d/yyyy', type: 'date' });
+                return formatDate(date, { locale: locale || 'en-US', format: format || 'M/d/yyyy', type: 'date' });
             } catch {
                 return date.toLocaleDateString(locale || 'en-US');
             }
         }, [locale, format]);
 
-        useEffect(() => {
+        const getPlaceholder: string = useMemo(() => {
+            const l10n: IL10n = L10n('datepicker', { placeholder: placeholder }, locale);
+            l10n.setLocale(locale);
+            const localized: string = l10n.getConstant('placeholder') as string;
+            return localized || (placeholder || '');
+        }, [locale, placeholder]);
+
+        useEffect((): void => {
             if (currentValue) {
-                const formattedValue: string = formatDateValue(currentValue);
-                if (inputValue !== formattedValue) {
-                    setInputValue(formattedValue);
+                const formatted: string = formatDateValue(currentValue);
+                if (inputValue !== formatted) {
+                    setInputValue(formatted);
                 }
-            } else {
-                if (inputValue !== '') {
-                    setInputValue('');
-                }
+            } else if (inputValue !== '') {
+                setInputValue('');
             }
         }, [currentValue, format, locale]);
 
-        const showPopup: () => void = useCallback(() => {
+        const showPopup: () => void = useCallback((): void => {
             if (disabled || readOnly) {
                 return;
             }
-            if (!currentOpenState) {
-                if (!isOpenControlled) {
-                    setIsOpen(true);
-                }
+            if (!currentOpenState && !isOpenControlled) {
+                setIsOpen(true);
             }
         }, [disabled, readOnly, currentOpenState, isOpenControlled]);
 
-        const hidePopup: () => void = useCallback(() => {
-            if (currentOpenState) {
-                if (!isOpenControlled) {
-                    setIsOpen(false);
-                }
-                if (onClose && popupRef.current) {
-                    onClose({
-                        popup: popupRef.current as IPopup
-                    });
-                }
+        const hidePopup: () => void = useCallback((): void => {
+            if (!currentOpenState) {
+                return;
+            }
+            if (!isOpenControlled) {
+                setIsOpen(false);
+            }
+            if (onClose && popupRef.current) {
+                onClose();
             }
         }, [currentOpenState, isOpenControlled, onClose]);
 
-
-        const togglePopup: () => void = useCallback(() => {
+        const togglePopup: () => void = useCallback((): void => {
             if (currentOpenState) {
                 hidePopup();
                 setIsIconActive(false);
@@ -425,300 +191,263 @@ export const DatePicker: React.ForwardRefExoticComponent<IDatePickerProps & Reac
             }
         }, [currentOpenState, hidePopup, showPopup]);
 
-        const handlePopupInteraction: (e: Event) => void = useCallback((e: Event) => {
-            const target: HTMLElement = e.target as HTMLElement;
-            if (isFullScreenMode && target.closest('.sf-popup-close')) {
-                hidePopup();
-                setIsIconActive(false);
-                return;
-            }
-            if (!isFullScreenMode && e.type === 'mousedown') {
-                const targetNode: Node = e.target as Node;
-                if (!containerRef.current?.contains(targetNode) && !popupRef.current?.element?.contains(targetNode)) {
+        const handlePopupInteraction: (e: Event) => void = useCallback((e: Event): void => {
+            const targetEl: HTMLElement = e.target as HTMLElement;
+
+            if (e.type === 'mousedown') {
+                const containerEl: HTMLSpanElement | null = containerRef.current;
+                const popupEl: HTMLElement | undefined = popupRef.current?.element as HTMLElement | undefined;
+                const calendarEl: HTMLElement |undefined = calendarRef.current?.element as HTMLElement | undefined;
+                const insideContainer: boolean = !!(containerEl && containerEl.contains(targetEl));
+                const insidePopup: boolean = !!(popupEl && popupEl.contains(targetEl));
+                const insideCalendar: boolean = !!(calendarEl && calendarEl.contains(targetEl));
+                const shouldClose: boolean = useDialog
+                    ? (!insideContainer && !insideCalendar)
+                    : (!insideContainer && !insidePopup);
+
+                if (shouldClose) {
                     hidePopup();
                     setIsIconActive(false);
                 }
             }
-        }, [isFullScreenMode, hidePopup]);
+        }, [hidePopup, useDialog]);
 
-        useEffect(() => {
+        useEffect((): (() => void) | void => {
             if (!currentOpenState) {
                 if (shouldFocusOnClose) {
-                    if (inputRef.current) {
-                        inputRef.current.focus();
-                    }
+                    inputRef.current?.focus();
                     setShouldFocusOnClose(false);
                 }
                 return;
             }
-            const handleGlobalKeyDown: (e: KeyboardEvent) => void = (e: KeyboardEvent) => {
-                if (e.altKey && e.key === 'ArrowUp' && currentOpenState) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const inputElement: HTMLInputElement | null = inputRef.current;
-
-                    hidePopup();
-                    setIsIconActive(false);
-
-                    if (inputElement) {
-                        inputElement.focus();
-                    }
-                }
-                if (e.key === 'Escape' && currentOpenState) {
+            const handleKeyDown: (e: KeyboardEvent) => void = (e: KeyboardEvent): void => {
+                if ((e.altKey || e.metaKey) && e.key === 'ArrowUp' || e.key === 'Escape' || e.key === 'Esc') {
                     e.preventDefault();
                     e.stopPropagation();
                     hidePopup();
                     setIsIconActive(false);
-                    if (inputRef.current) {
-                        inputRef.current.focus();
-                    }
+                    inputRef.current?.focus();
                 }
             };
             document.addEventListener('mousedown', handlePopupInteraction);
-            document.addEventListener('keydown', handleGlobalKeyDown, true);
-            return () => {
+            document.addEventListener('keydown', handleKeyDown, true);
+            return (): void => {
                 document.removeEventListener('mousedown', handlePopupInteraction);
-                document.removeEventListener('keydown', handleGlobalKeyDown, true);
+                document.removeEventListener('keydown', handleKeyDown, true);
             };
-        }, [currentOpenState, handlePopupInteraction, hidePopup]);
+        }, [currentOpenState, handlePopupInteraction, hidePopup, shouldFocusOnClose]);
 
-        const handleKeyDown: (e: React.KeyboardEvent<HTMLElement>) => void = (e: React.KeyboardEvent<HTMLElement>) => {
-            if (e.key === 'ArrowDown' && e.altKey) {
-                showPopup();
-            } else if (e.key === 'Tab' && currentOpenState) {
-                if (isIconActive || e.target === iconRef.current || e.target === inputRef.current) {
-                    if (isIconActive || e.target === iconRef.current) {
-                        setIsIconActive(false);
+        const getFocusableElements: () => HTMLElement[] = useCallback(() => {
+            let currentElements: HTMLElement[] = [];
+            if (popupRef.current) {
+                const selector: string = ['a[href]:not([tabindex="-1"])', 'button:not([disabled]):not([tabindex="-1"])', 'input:not([disabled]):not([tabindex="-1"])', 'select:not([disabled]):not([tabindex="-1"])', 'textarea:not([disabled]):not([tabindex="-1"])', 'details:not([tabindex="-1"])', '[contenteditable]:not([tabindex="-1"])', '[tabindex]:not([tabindex="-1"])'
+                ].join(',');
+                const elements: NodeListOf<HTMLElement> = (popupRef.current?.element as Element).querySelectorAll<HTMLElement>(selector);
+                currentElements = Array.from(elements).filter((el: HTMLElement) => !el.hasAttribute('disabled')) as HTMLElement[];
+            }
+            return currentElements;
+        }, [open]);
+
+        const handleKeyDown: (e: React.KeyboardEvent<HTMLElement>) => void = useCallback(
+            (e: React.KeyboardEvent<HTMLElement>) => {
+                let focusableElements: HTMLElement[];
+                let currentElement: HTMLElement | null;
+                let currentIndex: number;
+                let nextIndex: number;
+                switch (e.key) {
+                case 'ArrowDown':
+                    if (e.altKey || e.metaKey) {
+                        e.preventDefault();
+                        showPopup();
                     }
+                    break;
+                case 'ArrowUp':
+                    if (e.altKey || e.metaKey) {
+                        e.preventDefault();
+                        hidePopup();
+                    }
+                    break;
+                case 'Tab':
+                    focusableElements = getFocusableElements();
+                    if (!focusableElements.length) {
+                        return;
+                    }
+                    e.preventDefault();
+                    e.stopPropagation();
+                    currentElement = document.activeElement as HTMLElement | null;
+                    currentIndex = currentElement ? focusableElements.indexOf(currentElement) : -1;
+                    nextIndex = e.shiftKey
+                        ? (currentIndex <= 0 ? focusableElements.length - 1 : currentIndex - 1)
+                        : (currentIndex >= focusableElements.length - 1 ? 0 : currentIndex + 1);
+                    focusableElements[nextIndex as number]?.focus();
+                    break;
+                default:
+                    break;
                 }
+            },
+            [showPopup, hidePopup, getFocusableElements]
+        );
+
+        const normalizeTwoDigitYear: (raw: string) => string = (raw: string): string => {
+            const twoDigitYearPattern: RegExp = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2})$/;
+            const m: RegExpExecArray | null = twoDigitYearPattern.exec(raw.trim());
+            if (!m) {
+                return raw;
             }
-            if ((e.key === 'Enter' || e.key === ' ') && e.target !== inputRef.current) {
-                togglePopup();
-            }
+            const [, p1, p2, yy] = m;
+            const fullYear: number = 2000 + parseInt(yy, 10);
+            return `${p1}/${p2}/${fullYear}`;
         };
 
-        const parseInputValue: (inputVal: string) => Date | null = useCallback((inputVal: string) => {
+        const parseInputValue: (inputVal: string) => Date | null = useCallback((inputVal: string): Date | null => {
             if (!inputVal || !inputVal.trim()) {
                 return null;
             }
-            const normalizedInput: string = inputVal.replace(/(am|pm|Am|aM|pM|Pm)/g, (match: string) => match.toUpperCase());
-            if (inputFormatsString && inputFormatsString.length > 0) {
-                for (const formatStr of inputFormatsString) {
+            const normalizedAMPM: string = inputVal.replace(/(am|pm)/gi, (s: string): string => s.toUpperCase());
+            const normalized: string = normalizeTwoDigitYear(normalizedAMPM);
+            if (inputFormatsString.length) {
+                for (const fmt of inputFormatsString) {
                     try {
-                        const parsedDate: Date = parseDate(normalizedInput, {locale: locale || 'en-US', format: formatStr, type: 'date' });
-                        if (parsedDate && !isNaN(parsedDate.getTime())) {
-                            return parsedDate;
+                        const d: Date = parseDate(normalized, { locale: locale || 'en-US', format: fmt, type: 'date' });
+                        if (d && !isNaN(d.getTime())) {
+                            return d;
                         }
-                    } catch (e) {
+                    } catch {
                         continue;
                     }
                 }
-            }
-            try {
-                const parsedDate: Date = parseDate(normalizedInput, { locale: locale || 'en-US', format: format, type: 'date' });
-                if (parsedDate && !isNaN(parsedDate.getTime())) {
-                    return parsedDate;
+            } else {
+                const d: Date = parseDate(normalized, { locale: locale || 'en-US', format, type: 'date' });
+                if (d && !isNaN(d.getTime())) {
+                    return d;
                 }
-            } catch (e) {
-                return null;
             }
             return null;
-        }, [locale, format, inputFormatsString]);
+        }, [format, inputFormatsString, locale]);
 
-
-        const updateValue: (
-            newValue: Date | null,
-            event?: React.MouseEvent<Element> | React.FocusEvent<Element> | React.KeyboardEvent<Element>
-        ) => void = useCallback((
-            newValue: Date | null,
-            event?: React.MouseEvent<Element> | React.FocusEvent<Element> | React.KeyboardEvent<Element>
-        ) => {
-            if (!isControlled) {
-                setSelectedDate(newValue);
-            }
-            const isValid: boolean = valid !== undefined ? valid : (required ? newValue !== null : true);
-            setIsInputValid(isValid);
-            if (onChange) {
-                onChange({ value: newValue, event });
-            }
-        }, [isControlled, onChange, required, valid]);
-
-        const handleClear: () => void = useCallback(() => {
-            setInputValue('');
-            updateValue(null);
-            hidePopup();
-            inputRef.current?.focus();
-        }, [updateValue, hidePopup]);
-
-        const handleCalendarChange: (event: ChangeEvent) => void = useCallback((event: ChangeEvent) => {
-            if (event && event.value) {
-                if (!isControlled) {
-                    setInputValue(formatDateValue(event.value as Date));
-                }
-                updateValue(event.value as Date, event.event);
-                setShouldFocusOnClose(true);
-                hidePopup();
-            }
-        }, [formatDateValue, updateValue, hidePopup, isControlled]);
-
-        const isDateDisabledByCellTemplate: (date: Date) => boolean = (date: Date) => {
+        const isDateDisabledByCellTemplate: (date: Date) => boolean = useCallback((date: Date): boolean => {
             if (typeof cellTemplate !== 'function') {
                 return false;
             }
             try {
-                const isWeekend: boolean = date.getDay() === 0 || date.getDay() === 6;
                 const today: Date = new Date();
                 const referenceDate: Date = currentValue && !Array.isArray(currentValue) ? currentValue : today;
-                const isOtherMonth: boolean = date.getMonth() !== referenceDate.getMonth();
-                const isToday: boolean = today.toDateString() === date.toDateString();
-                const isSelected: boolean | null | undefined = currentValue &&
-                    !Array.isArray(currentValue) &&
-                    currentValue.toDateString() === date.toDateString();
+                const isWeekend: boolean = date.getDay() === 0 || date.getDay() === 6;
+                const isOtherMonth: boolean = calendarSystem.getMonth(date) !== calendarSystem.getMonth(referenceDate);
+                const isToday: boolean = calendarSystem.isSameDate(date, today);
+                const isSelected: boolean = !!(currentValue &&
+                    !Array.isArray(currentValue) && calendarSystem.isSameDate(date, currentValue));
+
                 const cellProps: CalendarCellProps = {
-                    date: date,
-                    isWeekend: isWeekend,
+                    date,
+                    isWeekend,
                     isDisabled: (minDate > date) || (maxDate < date),
                     isOutOfRange: isOtherMonth,
-                    isToday: isToday,
+                    isToday,
                     isSelected: isSelected || false,
                     isFocused: false,
                     className: '',
                     id: `${date.valueOf()}`
                 };
-
-                const result: React.ReactNode = cellTemplate(cellProps);
-                if (result && typeof result === 'object' && 'props' in result) {
-                    return (result as any).props.isDisabled === true;
+                const result: unknown = (cellTemplate as Function)(cellProps);
+                if (result && typeof result === 'object' && 'props' in (result as Record<string, unknown>)) {
+                    return Boolean((result as { props?: { isDisabled?: boolean } }).props?.isDisabled);
                 }
-                if (result === null || result === undefined) {
-                    return true;
-                }
-
                 return false;
-            } catch (error) {
+            } catch {
                 return false;
             }
-        };
+        }, [calendarSystem, cellTemplate, currentValue, maxDate, minDate]);
 
-        const isValidDate: (date: Date) => boolean = (date: Date) => {
+        const isValidDate: (date: Date | null) => boolean = useCallback((date: Date | null): boolean => {
             if (!date || isNaN(date.getTime())) {
                 return false;
             }
-            if (strictMode) {
-                if (minDate && maxDate && minDate.getTime() === maxDate.getTime()) {
-                    return date.getTime() === minDate.getTime();
-                }
-                if (minDate && date < minDate) {
-                    return false;
-                }
-                if (maxDate && date > maxDate) {
-                    return false;
-                }
-            }
-
-            const basicValidation: boolean = date >= (minDate || date) && date <= (maxDate || date);
-            if (!basicValidation) {
+            if (!inRange(date, minDate, maxDate)) {
                 return false;
             }
-
             if (isDateDisabledByCellTemplate(date)) {
                 return false;
             }
-
             return true;
-        };
+        }, [minDate, maxDate, isDateDisabledByCellTemplate]);
 
-        const handleInputBlur: () => void = useCallback(() => {
+        const commitValue: (
+            newDate: Date | null,
+            event?: React.SyntheticEvent
+        ) => void = useCallback((
+            newDate: Date | null,
+            event?: React.SyntheticEvent
+        ): void => {
+            if (!isControlled) {
+                setSelectedDate(newDate);
+                setInputValue(newDate ? formatDateValue(newDate) : '');
+            }
+            const nextValid: boolean = valid !== undefined ? valid : (required ? newDate !== null : true);
+            setIsInputValid(nextValid);
+            if (onChange) {
+                onChange({ value: newDate, event });
+            }
+        }, [formatDateValue, isControlled, onChange, required, valid]);
+
+        const handleClear: () => void = useCallback((): void => {
+            setInputValue('');
+            commitValue(null);
+            hidePopup();
+            if (inputRef.current) {
+                inputRef.current.focus();
+            }
+        }, [commitValue, hidePopup, isControlled]);
+
+        const handleCalendarChange: (event: CalendarChangeEvent) => void = useCallback((event: CalendarChangeEvent): void => {
+            const d: Date | null = (event?.value as Date) || null;
+            if (d && isValidDate(d)) {
+                commitValue(d, event.event);
+                setShouldFocusOnClose(true);
+                hidePopup();
+            }
+        }, [commitValue, hidePopup, isValidDate]);
+
+        const handleInputBlur: () => void = useCallback((): void => {
             setIsFocused(false);
-            const trimmedValue: string = inputValue.trim();
-            if (trimmedValue === '') {
-                setInputValue('');
-                updateValue(null);
+            const raw: string = inputValue.trim();
+
+            if (!raw) {
+                commitValue(null);
                 setIsInputValid(valid !== undefined ? valid : !required);
                 return;
             }
-            if (strictMode && inputValue.trim() !== '') {
-                let parsedDate: Date | null = parseInputValue(inputValue);
-                if (!parsedDate) {
-                    const twoDigitYearPattern: RegExp = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2})$/;
-                    const match: RegExpExecArray | null = twoDigitYearPattern.exec(inputValue.trim());
-                    if (match) {
-                        const [_, part1, part2, twoDigitYear] = match;
-                        const fullYear: number = 2000 + parseInt(twoDigitYear, 10);
-                        const modifiedInput: string = `${part1}/${part2}/${fullYear}`;
-                        parsedDate = parseInputValue(modifiedInput);
-                    }
-                }
-                if (!parsedDate || !isValidDate(parsedDate)) {
-                    setInputValue(currentValue ? formatDateValue(currentValue) : '');
-                    setIsInputValid(valid !== undefined ? valid : !inputValue.trim());
-                    if (!currentValue) {
-                        updateValue(null);
-                    }
-                    return;
-                } else {
-                    setInputValue(formatDateValue(parsedDate));
-                    updateValue(parsedDate);
-                    return;
-                }
-            }
-            let parsedDate: Date | null = parseInputValue(inputValue);
-            if (!parsedDate && inputValue.trim() !== '') {
-                const twoDigitYearPattern: RegExp = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2})$/;
-                const match: RegExpExecArray | null = twoDigitYearPattern.exec(inputValue.trim());
-                if (match) {
-                    const [_, part1, part2, twoDigitYear] = match;
-                    const fullYear: number = 2000 + parseInt(twoDigitYear, 10);
-                    const modifiedInput: string = `${part1}/${part2}/${fullYear}`;
-                    parsedDate = parseInputValue(modifiedInput);
-                }
-            }
-            let isValid: boolean = true;
-            if (inputValue.trim() !== '' && !parsedDate) {
-                isValid = false;
-            }
-            if (parsedDate && !isValidDate(parsedDate)) {
-                isValid = false;
-            }
-            if (valid !== undefined) {
-                setIsInputValid(valid);
-            } else if (inputValue.trim() === '') {
-                setIsInputValid(!required);
-            } else if (!isValid) {
-                setIsInputValid(false);
-            } else if (required) {
-                setIsInputValid(currentValue !== null);
+
+            const parsed: Date | null = parseInputValue(raw);
+            const ok: boolean = parsed !== null && isValidDate(parsed);
+
+            if (ok) {
+                commitValue(parsed);
             } else {
-                setIsInputValid(isValid);
-            }
-            if (parsedDate && isValidDate(parsedDate)) {
-                setInputValue(formatDateValue(parsedDate));
-                updateValue(parsedDate);
-            } else if (inputValue.trim() === '') {
-                updateValue(null);
-            } else if (!strictMode) {
-                updateValue(null);
-                if (valid === undefined && inputValue.trim() !== '' && !isValid) {
+                if (strictMode) {
+                    setInputValue(currentValue ? formatDateValue(currentValue) : '');
+                    commitValue(currentValue ?? null);
+                } else {
                     setIsInputValid(false);
                 }
-            } else {
-                updateValue(null);
             }
-        }, [parseInputValue, inputValue, strictMode, formatDateValue, isValidDate, updateValue, currentValue, valid, required]);
+        }, [commitValue, currentValue, formatDateValue, inputValue, isValidDate, parseInputValue, required, strictMode, valid]);
 
-        const handleInputChange: (event: React.ChangeEvent<HTMLInputElement>) => void = (event: React.ChangeEvent<HTMLInputElement>) => {
-            const newInputValue: string = event.target.value;
-            setInputValue(newInputValue);
-            if (valid === undefined) {
-                if (newInputValue.trim() === '') {
-                    setIsInputValid(!required);
+        const handleInputChange: (event: React.ChangeEvent<HTMLInputElement>) => void = useCallback(
+            (event: React.ChangeEvent<HTMLInputElement>): void => {
+                const newInputValue: string = event.target.value;
+                setInputValue(newInputValue);
+                if (valid === undefined) {
+                    if (newInputValue.trim() === '') {
+                        setIsInputValid(!required);
+                    } else if (!strictMode) {
+                        const parsedDate: Date | null = parseInputValue(newInputValue);
+                        setIsInputValid(parsedDate !== null && isValidDate(parsedDate));
+                    }
                 }
-                else if (!strictMode) {
-                    const parsedDate: Date | null  = parseInputValue(newInputValue);
-                    setIsInputValid(parsedDate !== null && isValidDate(parsedDate));
-                }
-            }
-        };
+            },
+            [valid, required, strictMode, parseInputValue, isValidDate]
+        );
 
         const publicAPI: Partial<IDatePicker> = {
             placeholder,
@@ -732,7 +461,8 @@ export const DatePicker: React.ForwardRefExoticComponent<IDatePickerProps & Reac
             clearButton,
             zIndex,
             strictMode,
-            value: currentValue,
+            pickerVariant,
+            value: currentValue || null,
             minDate,
             maxDate,
             firstDayOfWeek,
@@ -746,218 +476,205 @@ export const DatePicker: React.ForwardRefExoticComponent<IDatePickerProps & Reac
             valid,
             validationMessage,
             validityStyles,
-            cellTemplate
+            cellTemplate,
+            footerTemplate,
+            headerTemplate,
+            showToolBar
         };
 
-        const { zIndexPopup } = useMemo(() => {
+        const { zIndexPopup }: { zIndexPopup: number } = useMemo<{ zIndexPopup: number }>(() => {
             let baseValue: number = typeof zIndex === 'number' ? zIndex : 1000;
             if (baseValue === 1000 && containerRef.current) {
                 baseValue = getZindexPartial(containerRef.current);
             }
-            return {
-                zIndexPopup: Math.max(3, baseValue + 1)
-            };
-        }, [zIndex,  containerRef.current]);
+            return { zIndexPopup: Math.max(3, baseValue + 1) };
+        }, [zIndex, currentOpenState]);
 
-        useImperativeHandle(ref, () => ({
-            ...publicAPI as IDatePicker,
+        useImperativeHandle(ref, (): IDatePicker => ({
+            ...(publicAPI as IDatePicker),
             element: containerRef.current
         }), [publicAPI]);
 
-        useEffect(() => {
+        useEffect((): void => {
             preRender('datepicker');
         }, []);
+
+        const handleViewChange: (args: ViewChangeEvent) => void = useCallback(
+            (args: ViewChangeEvent): void => {
+                props.onViewChange?.({
+                    view: args.view,
+                    date: args.date,
+                    event: args.event
+                });
+            },
+            [props.onViewChange]
+        );
+
+        const calendarProps: CalendarProps = useMemo(() => ({
+            value: currentValue && !Array.isArray(currentValue) ? currentValue : null,
+            minDate,
+            maxDate,
+            start,
+            depth,
+            firstDayOfWeek,
+            weekNumber,
+            weekRule,
+            showToolBar,
+            showTodayButton,
+            orientation,
+            showDaysOutsideCurrentMonth,
+            disablePastDays,
+            disableFutureDays,
+            weekDaysFormat,
+            cellTemplate,
+            headerTemplate,
+            footerTemplate,
+            onChange: handleCalendarChange,
+            onViewChange: handleViewChange
+        }), [
+            currentValue, minDate, maxDate, start, depth, firstDayOfWeek, weekNumber, weekRule,
+            showToolBar, showTodayButton, orientation, weekDaysFormat, cellTemplate,
+            headerTemplate, footerTemplate, handleCalendarChange, handleViewChange, showDaysOutsideCurrentMonth,
+            disablePastDays, disableFutureDays
+        ]);
+
+        const handleIconClick: () => void = useCallback((): void => {
+            togglePopup();
+            setIsIconActive(true);
+        }, [togglePopup]);
+
+        const openPopup: () => void = useCallback((): void => {
+            calendarRef.current?.focusGrid?.();
+            if (onOpen) {
+                onOpen();
+            }
+        }, [onOpen]);
+
+        const handleInputFocus : () => void = useCallback((): void => {
+            setIsFocused(true);
+            if (openOnFocus && !disabled && !readOnly) {
+                showPopup();
+            }
+        }, [openOnFocus, disabled, readOnly, showPopup]);
+
+        const handleClearMouseDown: (e: React.MouseEvent<HTMLSpanElement>) => void = useCallback(
+            (e: React.MouseEvent<HTMLSpanElement>): void => {
+                e.preventDefault();
+                handleClear();
+            },
+            [handleClear]
+        );
+
+        const classNames: string = [
+            'sf-input-group sf-control', 'sf-medium', 'sf-datepicker', className,
+            disabled ? 'sf-disabled' : '', readOnly ? 'sf-readonly' : '',
+            currentOpenState ? 'sf-input-focus' : '',
+            isFocused ? 'sf-input-focus' : '',
+            labelMode !== 'Never' ? 'sf-float-input' : '',
+            dir === 'rtl' ? 'sf-rtl' : '',
+            !isInputValid && validityStyles ? 'sf-error' : '',
+            variant && variant.toLowerCase() !== 'standard' ? variant.toLowerCase() === 'outlined' ? 'sf-outline' : `sf-${variant.toLowerCase()}`
+                : ''
+        ].filter(Boolean).join(' ');
 
         return (
             <span
                 ref={containerRef}
-                className={[
-                    'sf-input-group', 'sf-medium', 'sf-control-wrapper', 'sf-date-wrapper', className,
-                    disabled ? 'sf-disabled' : '', readOnly ? 'sf-readonly' : '',
-                    currentOpenState ? 'sf-input-focus' : '',
-                    isFocused ? 'sf-input-focus' : '',
-                    labelMode !== 'Never' ? 'sf-float-input' : '',
-                    dir === 'rtl' ? 'sf-rtl' : '',
-                    !isInputValid && validityStyles ? 'sf-error' : ''
-                ].filter(Boolean).join(' ')}
+                className={classNames}
                 {...otherProps}
             >
                 <InputBase
                     ref={inputRef}
-                    className={'sf-datepicker'}
-                    placeholder={labelMode === 'Never' ? placeholder : ''}
+                    id={id}
+                    placeholder={labelMode === 'Never' ? getPlaceholder : ''}
                     disabled={disabled}
                     readOnly={readOnly || !editable}
-                    onFocus={() => {
-                        setIsFocused(true);
-                        if (openOnFocus && !disabled && !readOnly) {
-                            showPopup();
-                        }
-                    }}
-                    onBlur={() => {
-                        setIsFocused(false);
-                        handleInputBlur();
-                    }}
+                    onFocus={handleInputFocus}
+                    onBlur={handleInputBlur}
                     value={inputValue}
                     onChange={editable && !readOnly && !disabled ? handleInputChange : undefined}
                     role="combobox"
                     aria-haspopup="dialog"
-                    aria-expanded={currentOpenState}
+                    aria-autocomplete='none'
+                    aria-expanded={!!currentOpenState}
+                    aria-controls={currentOpenState ? `${id}_options` : undefined}
                     aria-disabled={disabled}
+                    aria-label={getPlaceholder ||  'Date picker input'}
                     onKeyDown={handleKeyDown}
                     tabIndex={0}
                     required={required}
                 />
+
                 {labelMode !== 'Never' && renderFloatLabelElement(
                     labelMode,
                     false,
                     inputValue,
                     placeholder,
-                    'datepicker-input'
+                    id
                 )}
 
-                {clearButton && inputValue && (isFocused || currentOpenState) && !readOnly && (
+                {clearButton && !!inputValue && (isFocused || !!currentOpenState) && !readOnly && (
                     <span
-                        className="sf-clear-icon"
-                        aria-label="clear"
+                        className="sf-clear-icon sf-input-icon"
+                        aria-label="clear date value"
                         role="button"
-                        onMouseDown={(e: React.MouseEvent<HTMLSpanElement>) => {
-                            e.preventDefault();
-                            handleClear();
-                        }}
+                        onMouseDown={handleClearMouseDown}
                     >
-                        <CloseIcon width={14} height={14} />
+                        <CloseIcon />
                     </span>
                 )}
 
                 <span
                     ref={iconRef}
-                    className={`sf-input-group-icon sf-date-icon sf-icons ${isIconActive ? 'sf-active' : ''}`}
-                    aria-label="select"
+                    className={`sf-input-icon sf-icons ${isIconActive ? 'sf-active' : ''}`}
+                    aria-label="select date"
                     role="button"
-                    onClick={() => {
-                        togglePopup();
-                        setIsIconActive(true);
+                    onClick={handleIconClick}
+                    onMouseDown={(e: React.MouseEvent<HTMLSpanElement, MouseEvent>): void => {
+                        e.preventDefault();
                     }}
-                    onKeyDown={handleKeyDown}
                 >
-                    <TimelineDayIcon />
+                    <TimelineTodayIcon viewBox='0 0 24 26'/>
                 </span>
+
                 {currentOpenState && createPortal(
                     <>
-                        {isFullScreenMode && (
-                            <div className="sf-datepick-mob-popup-wrap" style={{ zIndex: zIndex.toString() }}>
-                                <div className="sf-dlg-overlay"></div>
+                        {useDialog && (
+                            <div id={`${id}_options`} className="sf-datepick-popup-wrap" style={{ zIndex: zIndexPopup.toString() }}>
+                                <div className={'sf-overlay'}></div>
                                 <Popup
                                     ref={popupRef}
-                                    className={`sf-datepicker sf-popup-wrapper ${isFullScreenMode ? 'sf-popup-expand' : ''}`}
-                                    open={currentOpenState}
+                                    className={'sf-datepicker sf-popup sf-content-center'}
+                                    open={!!currentOpenState}
+                                    style={{ top: '0', left: '0' }}
                                     zIndex={zIndexPopup}
-                                    onClose={() => {
-                                        hidePopup();
-                                    }}
-                                    onOpen={() => {
-                                        const element: HTMLElement | null = calendarRef.current?.element ?? null;
-                                        if (element) {
-                                            setTimeout(() => {
-                                                element.focus();
-                                            });
-                                        }
-                                        if (onOpen) {
-                                            onOpen({
-                                                popup: popupRef.current as IPopup
-                                            });
-                                        }
-                                    }}
+                                    onClose={hidePopup}
+                                    onOpen={openPopup}
                                     relateTo={document.body}
                                     position={{ X: 'center', Y: 'center' }}
-                                    collision={{
-                                        X: CollisionType.Fit,
-                                        Y: CollisionType.Fit
-                                    }}
+                                    onKeyDown={handleKeyDown}
+                                    collision={{ X: CollisionType.Fit, Y: CollisionType.Fit }}
                                 >
-                                    <Calendar
-                                        ref={calendarRef}
-                                        value={currentValue && !Array.isArray(currentValue) ? currentValue : null}
-                                        minDate={minDate}
-                                        maxDate={maxDate}
-                                        start={start}
-                                        depth={depth}
-                                        firstDayOfWeek={firstDayOfWeek}
-                                        weekNumber={weekNumber}
-                                        weekRule={weekRule}
-                                        showTodayButton={showTodayButton}
-                                        weekDaysFormat={weekDaysFormat}
-                                        cellTemplate={cellTemplate}
-                                        onChange={handleCalendarChange}
-                                        onViewChange={(args: ViewChangeEvent) => {
-                                            if (props.onViewChange) {
-                                                props.onViewChange({
-                                                    view: args.view,
-                                                    date: args.date,
-                                                    event: args.event
-                                                });
-                                            }
-                                        }}
-                                        className={isFullScreenMode ? 'sf-fullscreen-calendar' : ''}
-                                        fullScreenMode={isFullScreenMode}
-                                    />
+                                    <Calendar ref={calendarRef} {...calendarProps} />
                                 </Popup>
                             </div>
                         )}
-                        {!isFullScreenMode && (
+                        {useInline && typeof document != 'undefined' && (
                             <Popup
                                 ref={popupRef}
-                                className="sf-datepicker sf-popup-wrapper"
-                                open={currentOpenState}
+                                id={`${id}_options`}
+                                className="sf-datepicker sf-popup"
+                                open={!!currentOpenState}
                                 zIndex={zIndexPopup}
-                                onClose={() => {
-                                    hidePopup();
-                                }}
-                                onOpen={() => {
-                                    const element: HTMLElement | null = calendarRef.current?.element ?? null;
-                                    if (element) {
-                                        setTimeout(() => {
-                                            element.focus();
-                                        });
-                                    }
-                                    if (onOpen) {
-                                        onOpen({
-                                            popup: popupRef.current as IPopup
-                                        });
-                                    }
-                                }}
+                                onClose={hidePopup}
+                                onOpen={openPopup}
                                 relateTo={containerRef.current as HTMLElement}
                                 position={{ X: 'left', Y: 'bottom' }}
-                                collision={{
-                                    X: CollisionType.Flip,
-                                    Y: CollisionType.Flip
-                                }}
+                                offsetY={4}
+                                onKeyDown={handleKeyDown}
+                                collision={{ X: CollisionType.Flip, Y: CollisionType.Flip }}
                             >
-                                <Calendar
-                                    ref={calendarRef}
-                                    value={currentValue && !Array.isArray(currentValue) ? currentValue : null}
-                                    minDate={minDate}
-                                    maxDate={maxDate}
-                                    start={start}
-                                    depth={depth}
-                                    firstDayOfWeek={firstDayOfWeek}
-                                    weekNumber={weekNumber}
-                                    weekRule={weekRule}
-                                    showTodayButton={showTodayButton}
-                                    weekDaysFormat={weekDaysFormat}
-                                    cellTemplate={cellTemplate}
-                                    onChange={handleCalendarChange}
-                                    onViewChange={(args: ViewChangeEvent) => {
-                                        if (props.onViewChange) {
-                                            props.onViewChange({
-                                                view: args.view,
-                                                date: args.date,
-                                                event: args.event
-                                            });
-                                        }
-                                    }}
-                                />
+                                <Calendar ref={calendarRef} {...calendarProps} />
                             </Popup>
                         )}
                     </>,

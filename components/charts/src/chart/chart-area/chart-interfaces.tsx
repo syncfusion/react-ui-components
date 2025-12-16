@@ -1,8 +1,8 @@
 import { JSX, ReactElement } from 'react';
-import { ChartSeriesType, ChartMarkerShape, Theme, IntervalType, LegendShape, Orientation, TitlePosition, StripLineSizeUnit, ZIndex } from '../base/enum';
-import { ChartBorderProps, ChartAreaProps, ChartComponentProps, ChartStackLabelsProps, ChartFontProps, ZoomEndEvent, MajorGridLines, MajorTickLines, ChartMarkerProps, MinorGridLines, MinorTickLines, TitleSettings, ChartTooltipProps, ChartSeriesProps, ChartZoomSettingsProps, ChartAxisProps, ChartStripLineProps, ChartTitleProps, ChartLegendProps, Column, Row, ChartDataLabelProps, ChartLocationProps, CornerRadius } from '../base/interfaces';
+import { ChartBorderProps, ChartAreaProps, ChartComponentProps, ChartStackLabelsProps, ChartFontProps, ZoomEndEvent, MajorGridLines, MajorTickLines, ChartMarkerProps, MinorGridLines, MinorTickLines, TitleSettings, ChartTooltipProps, ChartSeriesProps, ChartZoomSettingsProps, ChartAxisProps, ChartStripLineProps, ChartTitleProps, ChartLegendProps, Column, Row, ChartDataLabelProps, ChartLocationProps, CornerRadius, ChartCrosshairProps, ChartCrosshairTooltipProps, ChartSelectionProps, ChartHighlightProps, ChartAnnotationProps, ChartErrorBarProps } from '../base/interfaces';
+import { ChartSeriesType, ChartMarkerShape, IntervalType, LegendShape, Orientation, StripLineSizeUnit, ZIndex, SeriesValueType } from '../base/enum';
 import { BaseLegend } from '../base/Legend-base';
-import { Animation } from '../common/base';
+import { Animation } from '../../common';
 import { DataLabelRendererResults } from '../renderer/SeriesRenderer/DataLabelRender';
 import { IThemeStyle } from '../utils/theme';
 import { ChartAxisLabelProps, ChartAxisTitleProps } from '../chart-axis/base';
@@ -21,6 +21,16 @@ import { useData } from '../common/data';
 import { StackValuesType } from '../utils/helper';
 import { TooltipRefHandle } from '@syncfusion/react-svg-tooltip';
 import { VerticalAlignment, HorizontalAlignment } from '@syncfusion/react-base';
+import CandleSeriesRenderer from '../renderer/SeriesRenderer/CandleSeriesRenderer';
+import HiloSeriesRenderer from '../renderer/SeriesRenderer/HiloSeriesRenderer';
+import HiloOpenCloseSeriesRenderer from '../renderer/SeriesRenderer/HiloOpenCloseRenderer';
+import RangeAreaSeriesRenderer from '../renderer/SeriesRenderer/RangeAreaSeriesRenderer';
+import StepAreaSeriesRenderer from '../renderer/SeriesRenderer/StepAreaSeriesRenderer';
+import StackingAreaSeriesRenderer from '../renderer/SeriesRenderer/StackingAreaSeriesRenderer';
+import RangeColumnSeriesRenderer from '../renderer/SeriesRenderer/RangeColumnSeriesRenderer';
+import SplineRangeAreaSeriesRenderer from '../renderer/SeriesRenderer/SplineRangeAreaSeriesRenderer';
+import MultiColoredLineSeriesRenderer from '../renderer/SeriesRenderer/MultiColoredLineSeriesRenderer';
+import { Theme, TitlePosition } from '../../common';
 
 /**
  * Represents a two-dimensional size with width and height.
@@ -400,11 +410,6 @@ export interface Chart {
     /** Options for rendering pane lines. */
     paneLineOptions: PathOptions[];
 
-    /**
-     * The `selectionMode` property determines how data points or series can be highlighted or selected.
-     */
-    selectionMode: SelectionMode;
-
     /** Mouse X value of the chart. */
     mouseX: number;
 
@@ -508,6 +513,29 @@ export interface Chart {
      * @default []
      */
     palettes?: string[];
+
+
+    /**
+     * Configuration options for chart selection behavior,
+     * including highlighting and interaction settings.
+     */
+    chartSelection: ChartSelectionProps;
+
+    /**
+     * Configuration options for chart highlighting behavior,
+     * such as hover effects and active state styling.
+     */
+    chartHighlight: ChartHighlightProps;
+
+    /** Stores stacked negative Y-values for each X-category. */
+    negativeStackedValues: Map<string | number, number[]>;
+
+    /** Stores stacked positive Y-values for each X-category. */
+    positiveStackedValues: Map<string | number, number[]>;
+
+    /** Index of the series currently displayed in the tooltip. */
+    toolTipSeriesIndex: number;
+
 }
 
 
@@ -1063,6 +1091,21 @@ export interface AxisModel extends ChartAxisProps {
      * Specifies the collection of strip lines for the axis, which are visual elements used to mark or highlight specific ranges.
      */
     stripLines?: ChartStripLineProps[];
+
+    /**
+     * Optional reference to the axis with which this axis crosses.
+     */
+    crossInAxis?: AxisModel;
+
+    /**
+     * The value at which this axis crosses another axis.
+     */
+    axisCrossesAt?: number;
+
+    /**
+     * Options to customize the appearance and behavior of the crosshair tooltip that appears when hovering over the chart.
+     */
+    crosshairTooltip?: ChartCrosshairTooltipProps;
 }
 
 /**
@@ -1734,6 +1777,11 @@ export interface SeriesProperties extends ChartSeriesProps {
     seriesType: string;
 
     /**
+     * Defines series type of chart (e.r., 'XY', 'HighLow', 'highLowOpenClose').
+     */
+    seriesValueType: SeriesValueType;
+
+    /**
      * Stores the index of a data point that has been removed from the series.
      * Used for tracking animations and preserving continuity during data updates.
      */
@@ -1891,6 +1939,11 @@ export interface SeriesProperties extends ChartSeriesProps {
      * Defines the clip path used for marker rendering.
      */
     markerClipPath?: string;
+
+    /**
+     * Defines the error bar settings for the series to visualize measurement variability and uncertainty.
+     */
+    errorBar: ChartErrorBarProps;
 }
 
 /**
@@ -2109,6 +2162,11 @@ export interface SeriesModules {
     lineSeriesModule: typeof LineSeriesRenderer;
 
     /**
+     * The module representing the multicolored line series type.
+     */
+    multiColoredLineSeriesModule: typeof MultiColoredLineSeriesRenderer;
+
+    /**
      * The module representing the column series type.
      */
     columnSeriesModule: typeof ColumnSeries;
@@ -2127,6 +2185,11 @@ export interface SeriesModules {
      * The module representing the area series type.
      */
     stepLineSeriesModule: typeof StepLineSeriesRenderer;
+
+    /**
+     * The module representing the step area series type.
+     */
+    stepAreaSeriesModule: typeof StepAreaSeriesRenderer;
 
     /**
      * The module representing the area series type.
@@ -2157,6 +2220,41 @@ export interface SeriesModules {
      * The module representing the spline area series type.
      */
     splineAreaSeriesModule: typeof SplineAreaSeriesRenderer;
+
+    /**
+     * The module representing the stacking area series type.
+     */
+    stackingAreaSeriesModule: typeof StackingAreaSeriesRenderer;
+
+    /**
+     * The module represents the candle series type.
+     */
+    candleSeriesModule: typeof CandleSeriesRenderer;
+
+    /**
+     * The module represents the hilo series type.
+     */
+    hiloSeriesModule: typeof HiloSeriesRenderer;
+
+    /**
+     * The module represents the hilo open close series type.
+     */
+    hiloOpenCloseSeriesModule: typeof HiloOpenCloseSeriesRenderer;
+
+    /**
+     * The module represents the range area series type.
+     */
+    rangeAreaSeriesModule: typeof RangeAreaSeriesRenderer;
+
+    /**
+     * The module represents the range column series type.
+     */
+    rangeColumnSeriesModule: typeof RangeColumnSeriesRenderer;
+
+    /**
+     * The module represents the spline range area series type.
+     */
+    splineRangeAreaSeriesModule: typeof SplineRangeAreaSeriesRenderer;
 }
 
 /**
@@ -2207,6 +2305,16 @@ export interface RenderOptions {
      * The path data string that defines the shape to be rendered.
      */
     d: string;
+
+    /**
+     * Opacity that explicitly set for fill area of candle bodies.
+     */
+    fillOpacity?: number | undefined;
+
+    /**
+     * Opacity that follows the border of candle bodies.
+     */
+    strokeOpacity?: number | undefined;
 }
 
 
@@ -2722,6 +2830,10 @@ export interface VisibleRangeProps {
  */
 export interface DataLabelRendererResult {
     /**
+     * Indicates whether the data label is rendered using a predefined template.
+     */
+    template: boolean;
+    /**
      * Optional configuration for the background shape of the data label.
      * When provided, a shape will be rendered behind the text.
      */
@@ -2814,6 +2926,7 @@ export interface ScatterSeriesType {
         scatterBorder: { width: number; color: string; dashArray: string },
         isInverted: boolean
     ) => MarkerOptions | null;
+    doPointAnimation: Function;
     doAnimation: Function;
 }
 
@@ -2927,6 +3040,21 @@ export interface DataPoint {
      * Represents the quantitative value plotted along the y-axis.
      */
     y: number;
+    /**
+     * The close value of data point, especially used for candle live updates.
+     * Tracks the changes in 'close' value for dynamic updates.
+     */
+    close?: number;
+    /**
+     * The high value of data point, especially used for Range-type series live updates.
+     * Tracks the changes in 'high' value for dynamic updates.
+     */
+    high?: number;
+    /**
+     * The close value of data point, especially used for Range-type series live updates.
+     * Tracks the changes in 'low' value for dynamic updates.
+     */
+    low?: number;
 }
 /**
  * Interface representing the marker element data for animation.
@@ -3052,6 +3180,22 @@ export interface Points {
     marker: ChartMarkerProps;
     /** Specifies the size value of the point. */
     size: Object;
+    /** Specifies the high value of the point. */
+    high: Object;
+    /** Specifies the low value of the point. */
+    low: Object;
+    /** Specifies the open value of the point. */
+    open: Object;
+    /** Specifies the close value of the point. */
+    close: Object;
+    /** Specifies the color of the error bar for the point. */
+    errorBarColor?: string;
+    /** Specifies the vertical error value for the point. */
+    verticalError?: number | string;
+    /** Specifies the horizontal error value for the point. */
+    horizontalError?: number | string;
+    /** Specifies the error value of the point. */
+    error?: number | string;
 }
 
 /**
@@ -3181,6 +3325,100 @@ export interface AreaSeriesRendererType {
      * The main rendering function that processes an entire area series and generates all required SVG paths.
      */
     render: Function;
+}
+/**
+ * Defines the animation state structure for stacking area series rendering.
+ * This interface encapsulates all the necessary state and references required to manage
+ * smooth animations during stacking area series transitions, including initial rendering and data updates.
+ * It mirrors the structure of AreaSeriesAnimateState but is tailored for stacking-specific path interpolations.
+ *
+ * @private
+ */
+export interface StackingAreaSeriesAnimateState {
+    /**
+     * Reference to an array storing the previous path lengths for each series.
+     */
+    previousPathLengthRef: React.RefObject<number[]>;
+    /**
+     * Reference to an array tracking which series are in their initial render state.
+     */
+    isInitialRenderRef: React.RefObject<boolean[]>;
+    /**
+     * Reference to a record storing the previously rendered path data strings.
+     */
+    renderedPathDRef: React.RefObject<Record<string, string>>;
+    /**
+     * The current animation progress as a value between 0 and 1.
+     */
+    animationProgress: number;
+    /**
+     * Reference tracking if this is the very first render of the entire chart.
+     */
+    isFirstRenderRef: React.RefObject<boolean>;
+    /**
+     * Reference to the previous series rendering options for all series.
+     */
+    previousSeriesOptionsRef: React.RefObject<RenderOptions[][]>;
+}
+
+/**
+ * Defines the contract for the Stacking Area Series Renderer module.
+ * This interface outlines the methods required for rendering stacked area series,
+ * including stack-aware path generation, border handling, and animations.
+ *
+ * @private
+ */
+export interface StackingAreaSeriesRendererType {
+    /**
+     * Calculates and returns animation properties for stacking area series paths.
+     */
+    doAnimation: Function;
+    /**
+     * The main rendering function that processes an entire stacking area series and generates all required SVG paths.
+     */
+    render: Function;
+}
+/**
+ * Defines the contract for the Range Area Series Renderer module.
+ *
+ * @private
+ */
+export interface RangeAreaSeriesRendererType {
+    /**
+     * Calculates and returns animation properties for range area series paths.
+     */
+    doAnimation: Function;
+    /**
+     * The main rendering function that processes an entire range area series and generates all required SVG paths.
+     */
+    render: Function;
+}
+/**
+ * Defines the contract for the Range Column Series Renderer module.
+ *
+ * @private
+ */
+export interface RangeColumnSeriesRendererType {
+    /** Per-series cache of side-by-side ranges (start/end in data units or pixels). */
+    sideBySideInfo: DoubleRangeType[];
+
+    /**
+     * Create all render options for the series (one rectangle per visible point).
+     *
+     * @param series Series configuration and data points.
+     * @param isInverted Whether the chart uses transposed axes (bars horizontal).
+     */
+    render: Function;
+
+    /**
+     * Per-element animation handler (delegates to handleRectAnimation for rect bodies).
+     */
+    doAnimation: Function;
+
+    /**
+     * Produce a single rectangle for a point using low/high values.
+     */
+    renderPoint: Function;
 }
 /**
  * Defines the animation state structure for spline area series rendering.
@@ -3363,6 +3601,25 @@ export interface ChartProviderChildProps {
     chartStackLabels: ChartStackLabelsProps;
 
     /**
+     * Updates the selection configuration.
+     */
+    chartSelection: ChartSelectionProps;
+
+    /**
+     * Updates the highlight configuration.
+     */
+    chartHighlight: ChartHighlightProps;
+    /**
+     * Configuration for the chart crosshair.
+     */
+    chartCrosshair: ChartCrosshairProps;
+
+    /**
+     * Updates the chart crosshair configuration.
+     */
+    setChartCrosshair: (chartCrosshair: ChartCrosshairProps) => void;
+
+    /**
      * Updates the stack labels configuration.
      */
     setChartStackLabels: (stackLabels: ChartStackLabelsProps) => void;
@@ -3436,6 +3693,26 @@ export interface ChartProviderChildProps {
      * Updates the chart tooltip configuration.
      */
     setChartTooltip: (tooltip: ChartTooltipProps) => void;
+
+    /**
+     * Updates the chart selection configuration.
+     */
+    setChartSelection: (chartSelection: ChartSelectionProps) => void;
+
+    /**
+     * Updates the chart highlight configuration.
+     */
+    setChartHighlight: (chartHighlight: ChartHighlightProps) => void;
+
+    /**
+     * Configuration for annotation on chart.
+     */
+    chartAnnotation: ChartAnnotationProps[];
+
+    /**
+     * Updates the annotation configuration.
+     */
+    setChartAnnotation: (annotation: ChartAnnotationProps[]) => void;
 }
 
 /**

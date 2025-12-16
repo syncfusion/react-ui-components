@@ -1,3 +1,5 @@
+@use 'theme-variables' as *;
+
 @include export-module('v-scroll-theme') {
   .sf-vscroll-nav {
     background: $vscroll-bg;

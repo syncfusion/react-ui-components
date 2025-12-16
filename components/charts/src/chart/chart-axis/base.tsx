@@ -1,6 +1,7 @@
 import { ChartFontProps } from '../base/interfaces';
-import { AxisLabelPosition, EdgeLabelPlacement, LabelIntersectMode, LabelPlacement, TextOverflow } from '../base/enum';
+import { AxisLabelPosition, EdgeLabelPlacement, LabelIntersectMode, LabelPlacement } from '../base/enum';
 import { HorizontalAlignment } from '@syncfusion/react-base';
+import { TextOverflow } from '../../common';
 
 
 /**

@@ -215,13 +215,32 @@ export const setData: (data: Object[], duration: number,
             const point: Points = series.points?.[i as number];
             const getObjectValueByMappingString: Function = series.enableComplexProperty ? getValue : getObjectValue;
             const newPoint: Object = data[i as number];
-            point.y = getObjectValueByMappingString(series.yField, newPoint);
-            points.push(i);
 
-            point.yValue = (typeof point.y === 'number' && point.y !== null) ? point.y : 0;
+            // Handle Candle series differently for animation
+            if (series.type === 'Candle' || series.type === 'Hilo' || series.type === 'HiloOpenClose') {
+                point.high = getObjectValueByMappingString(series.high, newPoint);
+                point.low = getObjectValueByMappingString(series.low, newPoint);
+                point.open = getObjectValueByMappingString(series.open, newPoint);
+                point.close = getObjectValueByMappingString(series.close, newPoint);
+
+                point.y = point.close;
+                point.yValue = (typeof point.close === 'number' && point.close !== null) ? point.close : 0;
+            } else if (series.type === 'RangeArea' || series.type === 'RangeColumn') {
+                point.high = getObjectValueByMappingString(series.high, newPoint);
+                point.low = getObjectValueByMappingString(series.low, newPoint);
+
+                point.y = point.high;
+                point.yValue = (typeof point.close === 'number' && point.close !== null) ? point.close : 0;
+            }else {
+                // Standard series use yField
+                point.y = getObjectValueByMappingString(series.yField, newPoint);
+                point.yValue = (typeof point.y === 'number' && point.y !== null) ? point.y : 0;
+            }
+
             point.x = getObjectValueByMappingString(series.xField, newPoint);
             setEmptyPoint(point, series, series.index);
             (series.dataSource as Object[])[i as number] = data[i as number];
+            points.push(i);
         }
     })());
 

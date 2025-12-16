@@ -1,0 +1,51 @@
+@mixin radio-base(
+  $font-size,
+  $padding-inline-start,
+  $height,
+  $icon-height,
+  $icon-left,
+  $ripple-size,
+  $ripple-inline-start
+) {
+  .sf-label {
+    padding-inline-start: $padding-inline-start;
+    font-size: $font-size;
+  }
+
+  &::before {
+    padding: $height;
+  }
+
+  &::after {
+    padding: $icon-height;
+    inset-inline-start: $icon-left;
+  }
+
+  .sf-ripple-container {
+    padding: $ripple-size;
+    inset-inline-start: $ripple-inline-start;
+  }
+}
+
+@mixin radio-orientation($padding, $icon-left, $ripple-left) {
+  &.sf-right {
+    &.sf-radio-label {
+      flex-direction: row-reverse;
+    }
+
+    .sf-label {
+      padding-inline-end  : $padding;
+      padding-inline-start: 0;
+    }
+
+    &::after {
+      inset-inline-start: auto;
+      inset-inline-end  : $icon-left;
+    }
+
+    .sf-ripple-container {
+      inset-inline-start: auto;
+      inset-inline-end  : $ripple-left;
+    }
+  }
+}

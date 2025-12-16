@@ -2,5 +2,5 @@
 /// @param {String} $palette-name - Name of the color in the palette
 /// @return {Color} CSS variable reference to the color
 @function sf-color($palette-name) {
-  @return var(#{'--color-sf-' + $palette-name});
+  @return var(#{'--sf-color-' + $palette-name});
 }

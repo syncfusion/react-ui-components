@@ -262,6 +262,11 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
         const [isPopupOpen, setIsPopupOpen] = useState<boolean>(false);
         const [menuItems, setMenuItems] = useState<ItemModel[]>(items);
         const { dir } = useProviderContext();
+        const [mounted, setMounted] = useState(false);
+
+        useEffect(() => {
+            setMounted(true);
+        }, []);
 
         const isMounted: React.RefObject<boolean> = useRef(true);
         const itemClickHandler: (
@@ -450,21 +455,28 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
             toggle: togglePopup,
             element: buttonRef.current?.element
         }), [publicAPI]);
+
         const renderItemContent: (item: ItemModel) => React.ReactNode = React.useCallback((item: ItemModel): React.ReactNode => {
             if (itemTemplate) {
                 return (itemTemplate as Function)(item);
             }
-            return (
+
+            const content: JSX.Element = (
                 <>
-                    {item.icon && typeof item.icon === 'string' && (
-                        <span className={`sf-menu-icon ${item.icon}`}></span>
-                    )}
-                    {item.icon && typeof item.icon !== 'string' && (
-                        <span className='sf-menu-icon'>{item.icon}</span>
+                    {item.icon && (
+                        <span className="sf-menu-icon">
+                            {typeof item.icon === 'string' ? <span className={item.icon} /> : item.icon}
+                        </span>
                     )}
                     <span>{item.text}</span>
                 </>
             );
+
+            return item.url ? (
+                <a href={item.url} className="sf-menu-link">
+                    {content}
+                </a>
+            ) : content;
         }, [itemTemplate]);
 
         const handleItemClick: (item: ItemModel, event: React.MouseEvent<HTMLLIElement, MouseEvent>) => void
@@ -476,7 +488,7 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
         const renderItems: () => JSX.Element = React.useCallback(() => (
             <ul role='menu' tabIndex={0} aria-label='dropdown menu'>
                 {menuItems.map((item: ItemModel, index: number) => {
-                    const liClassName: string = `sf-item ${item.hasSeparator ? 'sf-separator' : ''} ${item.disabled ? 'sf-disabled' : ''}`;
+                    const liClassName: string = `sf-item sf-ellipsis ${item.hasSeparator ? 'sf-separator' : ''} ${item.disabled ? 'sf-disabled' : ''}`;
 
                     return (
                         <li
@@ -531,7 +543,7 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
             <>
                 <Button
                     ref={buttonRef}
-                    className={`${className} sf-dropdown-btn sf-drp-btn-${size.toLowerCase().substring(0, 2)}`}
+                    className={`${className} sf-dropdown-btn sf-drp-btn-${size.toLowerCase().substring(0, 2)} ${isPopupOpen ? 'sf-active' : ''}`}
                     icon={icon}
                     color={color}
                     dropIcon={true}
@@ -550,7 +562,7 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
                     {children}
                 </Button>
 
-                {(isPopupOpen || !lazyOpen) && createPortal(
+                {mounted && (isPopupOpen || !lazyOpen) && typeof document !== 'undefined' && createPortal(
                     <Popup
                         open={isPopupOpen}
                         ref={popupRef}

@@ -1,0 +1,31 @@
+@use '../../../base/styles/themes/variables' as *;
+
+$context-menu-min-width: calc(var(--sf-spacing) * 7.5) !default;
+$context-menu-color: rgb($flyout-text-color) !default;
+$context-menu-disable-text: $flyout-text-color-disabled !default;
+$context-menu-max-height: calc(var(--sf-spacing) * 31.25) !default;
+$context-menu-font-size: $font-size-base !default;
+
+$context-menu-ul-padding: $spacing-8 $spacing-0 !default;
+$context-menu-ul-margin: $spacing-0 !default;
+$context-menu-ul-border: 1px solid rgb($border-light) !default;
+$context-menu-ul-border-radius: $radius-4 !default;
+$context-menu-ul-bg-color: rgb($content-bg-color) !default;
+$context-menu-ul-box-shadow: $shadow-md !default;
+
+$context-menu-li-line-height: $line-height-base !default;
+$context-menu-li-padding: $spacing-8 $spacing-16 !default;
+$context-menu-li-border: 1px solid !default;
+$context-menu-li-border-color: rgb($flyout-border) !default;
+$context-menu-li-bg-color: $flyout-bg-color-hover !default;
+$context-menu-li-selection-bg-color: $flyout-bg-color-selected !default;
+$context-menu-li-separator-padding: $spacing-6 $spacing-0 !default;
+$context-menu-li-separator-margin: $spacing-0 !default;
+$context-menu-li--items-gap: $spacing-12 !default;
+
+$context-menu-icon-color: rgb($icon-color) !default;
+$context-menu-icon-disabled-color: $icon-color-disabled !default;
+$context-menu-icon-font-size: $font-size-xl !default;
+$context-menu-submenu-icon-font-size: $font-size-base !default;
+
+$context-menu-caret-blank-icon-padding: $spacing-48 $spacing-16 !default;

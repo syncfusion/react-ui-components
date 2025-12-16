@@ -11,7 +11,7 @@
 ///   .sf-button {
 ///     @include sf-border-radius(8px);
 ///   }
-@mixin sf-border-radius($radius: $border-radius-xs) {
+@mixin sf-border-radius($radius: $radius-4) {
   border-radius: $radius;
 }
 
@@ -22,7 +22,7 @@
 ///   .sf-modal {
 ///     @include sf-border-top-radius(16px);
 ///   }
-@mixin sf-border-top-radius($radius: $border-radius-xs) {
+@mixin sf-border-top-radius($radius: $radius-4) {
   border-top-left-radius: $radius;
   border-top-right-radius: $radius;
 }
@@ -34,7 +34,7 @@
 ///   .sf-drawer {
 ///     @include sf-border-bottom-radius(10px);
 ///   }
-@mixin sf-border-bottom-radius($radius: $border-radius-xs) {
+@mixin sf-border-bottom-radius($radius: $radius-4) {
   border-bottom-left-radius: $radius;
   border-bottom-right-radius: $radius;
 }
@@ -46,7 +46,7 @@
 ///   .sf-chip {
 ///     @include sf-border-left-radius(6px);
 ///   }
-@mixin sf-border-left-radius($radius: $border-radius-xs) {
+@mixin sf-border-left-radius($radius: $radius-4) {
   border-top-left-radius: $radius;
   border-bottom-left-radius: $radius;
 }
@@ -58,7 +58,7 @@
 ///   .sf-chip {
 ///     @include sf-border-right-radius(6px);
 ///   }
-@mixin sf-border-right-radius($radius: $border-radius-xs) {
+@mixin sf-border-right-radius($radius: $radius-4) {
   border-top-right-radius: $radius;
   border-bottom-right-radius: $radius;
 }

@@ -97,7 +97,6 @@ const SearchInputWrapper: React.FC<{
             <InputBase
                 ref={searchInputRef}
                 id={searchId}
-                type="search"
                 tabIndex={0}
                 placeholder="Search"
                 value={disabled ? '' : searchValue}

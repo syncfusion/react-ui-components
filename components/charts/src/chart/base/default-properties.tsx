@@ -1,7 +1,7 @@
 
 import { AxisModel, MarginModel, SeriesProperties } from '../chart-area/chart-interfaces';
 import { ChartAxisLabelProps, ChartAxisTitleProps } from '../chart-axis/base';
-import { ChartBorderProps, ChartAreaProps, ChartLegendProps, ChartStackLabelsProps, ChartTitleProps, Column, MajorGridLines, MajorTickLines, MinorGridLines, MinorTickLines, Row, ChartTooltipProps, ChartZoomSettingsProps, ChartStripLineProps, ChartAccessibilityProps } from './interfaces';
+import { ChartBorderProps, ChartAreaProps, ChartLegendProps, ChartStackLabelsProps, ChartTitleProps, Column, MajorGridLines, MajorTickLines, MinorGridLines, MinorTickLines, Row, ChartTooltipProps, ChartZoomSettingsProps, ChartStripLineProps, ChartAccessibilityProps, ChartCrosshairProps, ChartCrosshairTooltipProps, ChartSelectionProps, ChartHighlightProps, ChartAnnotationProps } from './interfaces';
 
 // Define default stripline settings to avoid duplication
 const defaultStripLineSettings: ChartStripLineProps = {
@@ -61,13 +61,18 @@ interface ChartConfig {
     PrimaryXAxis: Partial<AxisModel>;
     PrimaryYAxis: Partial<AxisModel>;
     SecondaryAxis: Partial<AxisModel>;
+    AxisCrosshairTooltip: ChartCrosshairTooltipProps;
     ChartSeries: Partial<SeriesProperties>;
-    ChartStackLabels: ChartStackLabelsProps
+    ChartStackLabels: ChartStackLabelsProps;
     ChartLegend: ChartLegendProps;
     ChartZoom: ChartZoomSettingsProps;
     ChartTooltip: ChartTooltipProps;
     accessibility: ChartAccessibilityProps;
+    ChartCrosshair: ChartCrosshairProps;
+    ChartAnnotation: ChartAnnotationProps;
     StripLines: ChartStripLineProps[];
+    ChartSelection: ChartSelectionProps;
+    ChartHighlight: ChartHighlightProps;
 }
 
 export const defaultChartConfigs: ChartConfig = {
@@ -300,6 +305,11 @@ export const defaultChartConfigs: ChartConfig = {
         minorTicksPerInterval: 0,
         rangePadding: 'Auto',
         logBase: 10,
+        crossAt: {
+            value: undefined,
+            axis: null,
+            allowOverlap: true
+        },
         majorGridLines: {
             width: 0,
             color: '',
@@ -343,6 +353,11 @@ export const defaultChartConfigs: ChartConfig = {
         zoomFactor: 1,
         zoomPosition: 0,
         logBase: 10,
+        crossAt: {
+            value: undefined,
+            axis: undefined,
+            allowOverlap: true
+        },
         labelStyle: {
             color: '',
             fontFamily: '',
@@ -506,6 +521,11 @@ export const defaultChartConfigs: ChartConfig = {
         minorTicksPerInterval: 0,
         rangePadding: 'Auto',
         logBase: 10,
+        crossAt: {
+            value: undefined,
+            axis: null,
+            allowOverlap: true
+        },
         majorGridLines: {
             width: 0,
             color: '',
@@ -562,6 +582,7 @@ export const defaultChartConfigs: ChartConfig = {
                 opacity: 1,
                 rotationAngle: 0,
                 enableRotation: false,
+                template: undefined,
                 position: 'Auto',
                 borderRadius: { x: 5, y: 5 },
                 textAlign: 'Center',
@@ -622,7 +643,29 @@ export const defaultChartConfigs: ChartConfig = {
         sizeField: '',
         minRadius: 1,
         maxRadius: 3,
-        enableTooltip: true
+        enableTooltip: true,
+        errorBar: {
+            visible: false,
+            type: 'Custom',
+            color: '',
+            verticalError: 1,
+            width: 1,
+            horizontalError: 0,
+            errorBarCap: {
+                width: 1,
+                length: 10,
+                color: '',
+                opacity: 1
+            },
+            errorBarColorField: ''
+        },
+        enableSolidCandles: false,
+        bullFillColor: null,
+        bearFillColor: null,
+        high: '',
+        low: '',
+        open: '',
+        close: ''
     },
     ChartStackLabels: {
         visible: false,
@@ -657,6 +700,7 @@ export const defaultChartConfigs: ChartConfig = {
         headerText: undefined,
         opacity: undefined,
         format: undefined,
+        template: undefined,
         enableAnimation: true,
         duration: 300,
         fadeOutDuration: 1000,
@@ -713,5 +757,56 @@ export const defaultChartConfigs: ChartConfig = {
         mouseWheelZoom: false,
         pinchZoom: false
     },
+    ChartSelection: {
+        mode: 'None',
+        allowMultiSelection: false,
+        selectedDataIndexes: [],
+        pattern: 'None'
+    },
+    ChartHighlight: {
+        mode: 'None',
+        fill: '',
+        pattern: 'None'
+    },
+    AxisCrosshairTooltip: {
+        enable: false,
+        fill: undefined,
+        textStyle: {
+            fontStyle: 'Normal',
+            fontSize: '',
+            fontWeight: 'Normal',
+            color: '',
+            fontFamily: '',
+            opacity: 1
+        }
+    },
+    ChartCrosshair: {
+        enable: false,
+        lineStyle: {
+            color: '',
+            width: 1.3,
+            dashArray: '5,5'
+        },
+        highlightCategory: false,
+        lineType: 'Both',
+        snap: true
+    },
+    ChartAnnotation: {
+        x: '0',
+        y: '0',
+        content: '',
+        coordinateUnit: 'Point',
+        hAlign: 'Center',
+        vAlign: 'Center',
+        xAxisName: null,
+        yAxisName: null,
+        accessibility: {
+            ariaLabel: '',
+            role: 'img',
+            focusable: false,
+            tabIndex: 0
+        }
+    },
     StripLines: [{ ...defaultStripLineSettings }]
 };
+

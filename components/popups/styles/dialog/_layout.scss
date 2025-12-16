@@ -1,3 +1,5 @@
+@use 'theme-variables' as *;
+
 @include export-module('dialog-layout') {
   .sf-dialog {
     border: $dialog-border;
@@ -20,16 +22,14 @@
       padding: $dialog-close-button-padding;
 
       & .sf-btn-icon svg {
-        height: 20px;
-        width: 20px;
+        font-size: $dialog-close-font-size;
       }
     }
   }
 
   .sf-dlg-resize-handle {
-    height: $dialog-resize-handler-height;
     position: absolute;
-    width: $dialog-resize-handler-width;
+    line-height: $dialog-resize-handler-line-height;
 
     svg {
       font-size: $dialog-resize-handler-font-size;
@@ -95,7 +95,7 @@
   }
 
   .sf-dlg-fullscreen {
-    border-radius: 0;
+    border-radius: $dialog-fullscreen-border-radius;
     border: none;
   }
 
@@ -112,14 +112,11 @@
     font-size: $dialog-header-font-size;
   }
 
-  .sf-dlg-header-content+.sf-dlg-content {
-    padding-top: $dialog-content-padding-top;
-  }
-
   .sf-dlg-content {
     flex: 1 1 auto;
     font-size: $dialog-content-font-size;
     line-height: $dialog-content-line-height;
+    letter-spacing: $dialog-content-letter-spacing;
     overflow-y: auto;
     overflow-x: hidden;
     padding: $dialog-content-padding;

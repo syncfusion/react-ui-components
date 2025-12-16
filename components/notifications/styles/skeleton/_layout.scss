@@ -1,3 +1,5 @@
+@use 'theme-variables' as *;
+
 @mixin shimmer-animation($animation-name) {
   animation: $animation-name $skeleton-shimmer-effect-duration $skeleton-shimmer-effect-timing-function infinite;
 }
@@ -12,7 +14,7 @@
     background: $skeleton-background-color;
 
     &.sf-skeleton-circle {
-      border-radius: 50%;
+      border-radius: $skeleton-circle-border-radius;
     }
   }
 
@@ -23,7 +25,7 @@
     top: 0;
     bottom: 0;
     right: 0;
-    width: calc(200% + 200px);
+    width: calc(200% + $skeleton-shimmer-wave-width);
     $wave-start: calc(#{$skeleton-shimmer-wave-pos} - #{$skeleton-shimmer-wave-length});
     $wave-end: calc(#{$skeleton-shimmer-wave-pos} + #{$skeleton-shimmer-wave-length});
     background-image: linear-gradient($skeleton-shimmer-wave-angle,

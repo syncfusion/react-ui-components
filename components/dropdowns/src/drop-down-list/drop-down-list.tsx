@@ -1,267 +1,30 @@
-import { useState, useEffect, useRef, forwardRef, useMemo, useCallback, useImperativeHandle, JSX } from 'react';
+import { useState, useEffect, useRef, forwardRef, useMemo, useCallback, useImperativeHandle, JSX, useId } from 'react';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
-import { Popup, CollisionType, IPopup, Spinner, SpinnerType } from '@syncfusion/react-popups';
-import { CLASS_NAMES, LabelMode, InputBase, renderClearButton, renderFloatLabelElement,
-    validationProps } from '@syncfusion/react-inputs';
+import { Popup, IPopup, Spinner } from '@syncfusion/react-popups';
+import { usePopupManagement } from './hooks/usePopupManagement';
+import { CLASS_NAMES, LabelMode, InputBase, renderClearButton, renderFloatLabelElement } from '@syncfusion/react-inputs';
 import { DataManager, Query } from '@syncfusion/react-data';
-import { Browser, EmitType, formatUnit, getUniqueID, getValue, IL10n, isNullOrUndefined, L10n, preRender, useProviderContext } from '@syncfusion/react-base';
+import { AnimationOptions, getValue, IL10n, isNullOrUndefined, L10n, preRender, Size, useProviderContext, Variant } from '@syncfusion/react-base';
 import { ChevronDownFillIcon } from '@syncfusion/react-icons';
-import { DropDownBase, IDropDownBase, SelectEventArgs, PopupEventArgs,
-    FieldSettingsModel, FilterType, FilteringEventArgs} from '../common/drop-down-base';
-import { SortOrder } from '@syncfusion/react-lists';
-export { LabelMode };
+import { DropDownBase } from '../common/drop-down-base';
+import ValueTemplate from './value-template';
+import { IDropDownBase } from '../common/types';
+import { DataLoadEvent, DropDownListProps, FieldSettingsModel, PopupSettings, CollisionType, SortOrder } from './types';
+import { useKeyboardNavigation, ListItemData } from './hooks/useKeyboardNavigation';
+import { useDropDownListState } from './hooks/useDropDownListState';
+import { useSelection } from './hooks/useSelection';
+import { useValueSync } from './hooks/useValueSync';
+import { processDataResult, useValidation } from './hooks/useDropDownList';
 
-export interface ChangeEventArgs{
-    value: number | string | boolean | object | null;
-    previousItemData: FieldSettingsModel | string | number | boolean | { [key: string]: unknown } | null;
-    event: React.MouseEvent<Element> | React.KeyboardEvent<Element>;
-}
+export { AnimationOptions, LabelMode, Variant, Size };
 
-export interface DropDownListProps extends validationProps {
-    /**
-     * Specifies whether to show a clear button in the DropDownList component. When enabled, a clear icon appears when a value is selected, allowing users to clear the selection.
-     *
-     * @default false
-     */
-    clearButton?: boolean | React.ReactNode;
+type IDropDownListProps = DropDownListProps & Omit<React.InputHTMLAttributes<HTMLDivElement>, keyof DropDownListProps>;
 
-    /**
-     * Defines the width of the dropdown popup list. The width can be specified in pixels or percentage.
-     *
-     * @default '100%'
-     */
-    popupWidth?: string;
-
-    /**
-     * Defines the height of the dropdown popup list. The height can be specified in pixels or as 'auto' to adjust based on content.
-     *
-     * @default 'auto'
-     */
-    popupHeight?: string;
-
-    /**
-     * Sets the placeholder text that appears in the DropDownList when no item is selected.
-     *
-     * @default -
-     */
-    placeholder?: string;
-
-    /**
-     * Specifies the query to retrieve data from the data source. This is useful when working with DataManager for complex data operations.
-     *
-     * @default null
-     */
-    query?: Query;
-
-    /**
-     * Specifies the value to be selected in the DropDownList component. This can be a primitive value or an object based on the configured data binding.
-     *
-     * @default null
-     */
-    value?: number | string | boolean | object | null;
-
-    /**
-     * Provides the data source for populating the dropdown items. Accepts various data formats including array of objects, primitive arrays, or DataManager.
-     *
-     * @default []
-     */
-    dataSource?: { [key: string]: object }[] | DataManager | string[] | number[] | boolean[];
-
-    /**
-     * Configures the mapping fields for text and value properties in the data source objects. Helps in binding complex data structures to the dropdown.
-     *
-     * @default { text: 'text', value: 'value' }
-     */
-    fields?: FieldSettingsModel;
-
-    /**
-     * Sets the z-index value for the dropdown popup, controlling its stacking order relative to other elements on the page.
-     *
-     * @default 1000
-     */
-    zIndex?: number;
-
-    /**
-     * Enables binding of complex objects as values instead of primitive values. When enabled, the entire object can be accessed in events.
-     *
-     * @default false
-     */
-    allowObjectBinding?: boolean;
-
-    /**
-     * Specifies whether the dropdown popup is open or closed.
-     *
-     * @default false
-     */
-    open?: boolean;
-
-    /**
-     * Sets the default value of the DropDownList. Similar to the native select HTML element.
-     *
-     * @default null
-     */
-    defaultValue?: number | string | boolean | object | null;
-
-    /**
-     * Determines whether disabled items in the DropDownList should be skipped during keyboard navigation. When set to true,
-     * keyboard navigation will bypass disabled items, moving to the next enabled item in the list.
-     *
-     * @default true
-     */
-    skipDisabledItems?: boolean;
-
-    /**
-     * Specifies the behavior of the floating label associated with the DropDownList input. Determines when and how the label appears.
-     *
-     * @default 'Never'
-     */
-    labelMode?: LabelMode;
-
-    /**
-     * Specifies whether the DropDownList should ignore case while filtering or selecting items.
-     *
-     * @default true
-     */
-    ignoreCase?: boolean;
-
-    /**
-     * Specifies whether to ignore diacritics while filtering or selecting items.
-     *
-     * @default false
-     */
-    ignoreAccent?: boolean;
-
-    /**
-     * Specifies whether filtering should be allowed in the DropDownList.
-     *
-     * @default false
-     */
-    filterable?: boolean;
-
-    /**
-     * Specifies the type of filtering to be applied.
-     *
-     * @default 'StartsWith'
-     */
-    filterType?: FilterType;
-
-    /**
-     * Specifies the placeholder text to be shown in the filter bar of the DropDownList.
-     *
-     * @default null
-     */
-    filterPlaceholder?: string;
-
-    /**
-     * Specifies the sort order for the DropDownList items.
-     *
-     * @default 'None'
-     */
-    sortOrder?: SortOrder;
-
-    /**
-     * Specifies whether the component is in loading state.
-     * When true, a spinner icon replaces the default caret icon.
-     *
-     * @default false
-     */
-    loading?: boolean;
-
-    /**
-     * Provides a custom template for rendering each item in the dropdown list, allowing for customized appearance of list items.
-     *
-     * @default null
-     */
-    itemTemplate?: Function | React.ReactNode;
-
-    /**
-     * Provides a custom template for rendering the header section of the dropdown popup, enabling additional content above the item list.
-     *
-     * @default null
-     */
-    headerTemplate?: Function | React.ReactNode;
-
-    /**
-     * Provides a custom template for rendering the footer section of the dropdown popup, enabling additional content below the item list.
-     *
-     * @default null
-     */
-    footerTemplate?: Function | React.ReactNode;
-
-    /**
-     * Provides a custom template for rendering group header sections when items are categorized into groups in the dropdown list.
-     *
-     * @default null
-     */
-    groupTemplate?: Function | React.ReactNode;
-
-    /**
-     * Provides a custom template for rendering the selected value in the input element, allowing for customized appearance of the selection.
-     *
-     * @default null
-     */
-    valueTemplate?: Function | React.ReactNode;
-
-    /**
-     * Provides a custom template for the message displayed when no items match the search criteria or when the data source is empty.
-     *
-     * @default 'No Records Found'
-     */
-    noRecordsTemplate?: Function | React.ReactNode;
-
-    /**
-     * Triggers when an item in the dropdown list is selected, providing details about the selected item.
-     *
-     * @event select
-     */
-    onSelect?: EmitType<SelectEventArgs>;
-
-    /**
-     * Triggers when the selected value of the DropDownList changes, providing details about the new and previous values.
-     *
-     * @event change
-     */
-    onChange?: EmitType<ChangeEventArgs>;
-
-    /**
-     * Triggers when the dropdown popup opens, allowing for custom actions to be performed at that moment.
-     *
-     * @event open
-     */
-    onOpen?: EmitType<PopupEventArgs>;
-
-    /**
-     * Triggers when the dropdown popup closes, allowing for custom actions to be performed at that moment.
-     *
-     * @event close
-     */
-    onClose?: EmitType<PopupEventArgs>;
-
-    /**
-     * Triggers when data fetching fails
-     */
-    actionFailure?: EmitType<object>;
-
-    /**
-     * Triggers on typing a character in the filter bar when the filtering is enabled.
-     */
-    onFilterChange?: EmitType<FilteringEventArgs>;
-
-    /**
-     * Triggers after data is fetched successfully from the remote server.
-     */
-    actionComplete?: EmitType<object>;
-}
-
+/**
+ * Specifies the methods and extended properties for DropdownList component.
+ */
 export interface IDropDownList extends DropDownListProps {
-    /**
-     * Gets all list items from the dropdown list.
-     *
-     * @returns Array of HTMLLIElement
-     * @private
-     */
-    getItems(): HTMLLIElement[];
 
     /**
      * Specifies the DOM element of the component.
@@ -271,28 +34,59 @@ export interface IDropDownList extends DropDownListProps {
     element?: HTMLElement | null;
 
     /**
-     * To filter the data from given data source by using query
+     * To filter the data from given data source by using query.
+     *
+     * @private
+     * @param {object[] | DataManager | string[] | number[] | boolean[]} dataSource - Specifies the data source value to filter.
+     * @param {Query} query - Specifies the query to filter the data from the dataSource.
+     * @param {FieldSettingsModel} fields - Specifies the fields value to filter the data from the dataSource.
+     *
+     * @returns {void}
+     *
      */
-    filter(dataSource: { [key: string]: Object }[] | DataManager | string[] | number[] | boolean[],
-        query?: Query, fields?: FieldSettingsModel): void;
+    filter(
+        dataSource: object[] | DataManager | string[] | number[] | boolean[],
+        query?: Query,
+        fields?: FieldSettingsModel
+    ): void;
 }
 
-type IDropDownListProps = DropDownListProps & Omit<React.InputHTMLAttributes<HTMLDivElement>, keyof DropDownListProps>;
-
+/**
+ * DropDownList lets users choose a single option from a list. It works with local or remote data sources, supports custom item, group, header, footer, and value templates,
+ * offers built-in filtering with debounce and case/accent handling, enables grouping and sorting, and keyboard navigation.
+ *
+ * ```typescript
+ * import { DropDownList } from "@syncfusion/react-dropdowns";
+ *
+ * export default function App() {
+ *   const data = [
+ *     { text: "Apple", value: "apple" },
+ *     { text: "Banana", value: "banana" },
+ *     { text: "Cherry", value: "cherry" }
+ *   ];
+ *
+ *   return (
+ *     <DropDownList
+ *       id="fruits"
+ *       dataSource={data}
+ *       fields={{ text: "text", value: "value" }}
+ *       placeholder="Select a fruit" />
+ *   );
+ * }
+ * ```
+ */
 export const DropDownList: React.ForwardRefExoticComponent<IDropDownListProps & React.RefAttributes<IDropDownList>> =
   forwardRef<IDropDownList, IDropDownListProps>((props: IDropDownListProps, ref: React.Ref<IDropDownList>) => {
       const {
-          dataSource = [],
+          dataSource: dataSourceProp,
           query,
-          fields = { text: 'text', value: 'value', groupBy: 'groupBy', disabled: 'disabled' },
+          fields: fieldsProp,
           value = null,
           placeholder = '',
-          id =  getUniqueID('dropdownlist'),
-          zIndex = 1000,
+          id =  `dropdownlist_${useId()}`,
           disabled = false,
           readOnly = false,
-          popupWidth = '100%',
-          popupHeight = '300px',
+          popupSettings = {},
           allowObjectBinding = false,
           labelMode = 'Never',
           open,
@@ -303,8 +97,12 @@ export const DropDownList: React.ForwardRefExoticComponent<IDropDownListProps & 
           filterable = false,
           filterType = 'StartsWith',
           filterPlaceholder = '',
+          debounceDelay = 0,
           sortOrder = SortOrder.None,
           loading = false,
+          size = Size.Medium,
+          variant = Variant.Standard,
+          inputProps = {},
           itemTemplate,
           headerTemplate,
           footerTemplate,
@@ -312,6 +110,7 @@ export const DropDownList: React.ForwardRefExoticComponent<IDropDownListProps & 
           valueTemplate,
           noRecordsTemplate,
           clearButton = false,
+          dropdownIcon,
           valid,
           validationMessage = '',
           validityStyles = true,
@@ -321,97 +120,301 @@ export const DropDownList: React.ForwardRefExoticComponent<IDropDownListProps & 
           onChange,
           onOpen,
           onClose,
-          actionFailure,
-          onFilterChange,
-          actionComplete,
+          onError,
+          onFilter,
+          onDataRequest,
+          onDataLoad,
+          onErrorTemplate,
           ...otherProps
       } = props;
 
-      const [isPopupOpen, setIsPopupOpen] = useState(false);
-      const [dropdownValue, setDropdownValue] = useState<number | string | boolean | object | null>(value ?? defaultValue ?? null);
-      const [textValue, setTextValue] = useState<string | null>('');
-      const [isSpanFocused, setIsSpanFocused] = useState(false);
-      const [, setSelectedLI] = useState<HTMLElement | null>(null);
-      const [, setPreviousValue] = useState<number | string | boolean | object | null>(value);
-      const [itemData, setItemData] = useState<FieldSettingsModel | string | number | boolean | { [key: string]: unknown } | null>(null);
-      const [previousItemData, setPreviousItemData] = useState<FieldSettingsModel | string | number | boolean |
-      { [key: string]: unknown } | null>(null);
-      const [activeIndex, setActiveIndex] = useState<number | null>(null);
-      const [changeEvent, setChangeEvent] = useState<React.MouseEvent<Element> | React.KeyboardEvent<Element> | null>(null);
-      const [isSelected] = useState(false);
-      const [isTyped, setIsTyped] = useState<boolean>(false);
-      const [ariaExpanded, setAriaExpanded] = useState(false);
-      const [isFullPagePopup, setIsFullPagePopup] = useState(false);
-      const [isInputValid, setIsInputValid] = useState((valid !== undefined) ? valid : (required) ? dropdownValue != null : true);
+      const defaultIcon: JSX.Element = useMemo(() => <ChevronDownFillIcon/>, []);
+
+      const resolvedDataSource: { [key: string]: unknown; }[] | DataManager | string[] | number[] | boolean[] = (dataSourceProp
+        !== undefined ? dataSourceProp : []) as { [key: string]: unknown; }[] | DataManager | string[] | number[] | boolean[];
+
+      const resolvedFields: FieldSettingsModel = useMemo(() => {
+          return fieldsProp ?? { text: 'text', value: 'value', groupBy: 'groupBy', disabled: 'disabled' };
+      }, [fieldsProp?.text, fieldsProp?.value, fieldsProp?.groupBy, fieldsProp?.disabled, fieldsProp?.htmlAttributes]);
+
+      const restInputProps: Omit<React.InputHTMLAttributes<HTMLInputElement>, 'className' | 'id' | 'readOnly' | 'required' | 'value' | 'defaultValue'> = React.useMemo(() => {
+          const rest: React.InputHTMLAttributes<HTMLInputElement> =
+          { ...(inputProps || {}) } as React.InputHTMLAttributes<HTMLInputElement>;
+          delete rest.className;
+          delete rest.id;
+          delete rest.readOnly;
+          delete rest.required;
+          delete rest.value;
+          delete rest.defaultValue;
+          return rest as typeof inputProps;
+      }, [inputProps]);
+
       const isOpenControlled: boolean = open !== undefined;
-      const [isLoading, setIsLoading] = useState(loading);
-      const [isDataLoading, setIsDataLoading] = useState(false);
-      const [shouldShowPopup, setShouldShowPopup] = useState(false);
       const [listKey, setListKey] = useState(0);
+      const [isValueTemplateVisible, setIsValueTemplateVisible] = useState(false);
+      const [isValueControlledAuto, setIsValueControlledAuto] = useState<boolean>(false);
+      const [isPopupOpened, setIsPopupOpened] = useState(false);
+      const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
+      const [isRemoteDataLoading, setIsRemoteDataLoading] = useState<boolean>(false);
 
       const spanElementRef: React.RefObject<HTMLSpanElement | null> = useRef<HTMLSpanElement>(null);
       const inputElementRef: React.RefObject<HTMLInputElement | null> = useRef<HTMLInputElement>(null);
       const popupRef: React.RefObject<IPopup | null> = useRef<IPopup>(null);
       const dropdownbaseRef: React.RefObject<IDropDownBase | null> = useRef<IDropDownBase>(null);
       const spinnerTargetRef: React.RefObject<HTMLSpanElement | null> = useRef<HTMLSpanElement>(null);
+      const initialValueRef: React.RefObject<string | number | boolean | object | null> = React.useRef(value);
+      const remoteCacheRef: React.RefObject<(string | number | boolean | {[key: string]: unknown; })[] | null> =
+      React.useRef<Array<{ [key: string]: unknown } | string | number | boolean> | null>(null);
+      const initialDataSourceRef: React.RefObject<string | null> = React.useRef<string | null>(null);
+      const initialFieldsRef: React.RefObject<string | null> = React.useRef<string | null>(null);
+      const isFetchedRef: React.RefObject<boolean> = useRef<boolean>(false);
+
+      const [ddlState, ddlActions] = useDropDownListState({ defaultValue });
+      const { isPopupOpen, ariaExpanded, dropdownValue, textValue, isSpanFocused, isLoading, activeIndex, itemData } = ddlState;
+      const { setIsPopupOpen, setAriaExpanded, setDropdownValue, setTextValue, setIsSpanFocused, setIsLoading, setActiveIndex,
+          setItemData, setPreviousItemData, setChangeEvent } = ddlActions;
+
+      const baseDropDownClick: (e?: Event | React.MouseEvent<Element, MouseEvent> | React.KeyboardEvent<Element> |
+      undefined) => void = (e?: React.MouseEvent | React.KeyboardEvent | Event) => {
+          setIsSpanFocused(!isPopupOpen);
+          if (isLoading && !isRemoteData && !loading) {
+              setIsLoading(false);
+          }
+          if (!readOnly) {
+              if (isPopupOpen) {
+                  hidePopup(e as React.MouseEvent<HTMLElement, MouseEvent>);
+              } else {
+                  showPopup(e as React.MouseEvent<HTMLElement, MouseEvent>);
+                  spanElementRef.current?.focus();
+              }
+          }
+      };
+
+      const isRemoteData: boolean = useMemo(() => resolvedDataSource instanceof DataManager, [resolvedDataSource]);
       const { dir, locale } = useProviderContext();
       const spinnerId: string = `${id.replace(/[,]/g, '_')}_spinner`;
+      const { isInputValid } = useValidation({ dropdownValue, inputElementRef, required, valid, validationMessage });
+      const listId: string = React.useMemo(() => `${id}_listbox`, [id]);
+      const getOptionId: (index: number) => string = React.useCallback((index: number) => `${id}_option_${index}`, [id]);
+      const comboboxA11yProps: { role: string; 'aria-controls': string; 'aria-activedescendant': string | undefined; 'aria-expanded': boolean; 'aria-autocomplete': 'list'; } = React.useMemo(() => ({
+          role: 'combobox',
+          'aria-controls': listId,
+          'aria-activedescendant': activeIndex != null ? getOptionId(activeIndex) : undefined,
+          'aria-expanded': ariaExpanded,
+          'aria-autocomplete': 'list' as const
+      }), [listId, activeIndex, getOptionId, ariaExpanded]);
+
+      const combinedPopupSettings: PopupSettings = useMemo(() => {
+          return {...{zIndex: 1000, position: { X: 'left', Y: 'bottom'}, collision: dir === 'rtl' ?
+              { X: CollisionType.Fit, Y: CollisionType.Flip } : { X: CollisionType.Flip, Y: CollisionType.Flip },
+          autoReposition: true, width: '100%', height: '300px'  }, ...popupSettings};
+      }, [popupSettings, dir]);
+
+      const { showPopup, hidePopup, setPopupWidth, setPopupHeight, popupClassNames } = usePopupManagement({
+          isOpenControlled,
+          isPopupOpen,
+          open,
+          setIsPopupOpen,
+          setAriaExpanded,
+          setIsSpanFocused,
+          spanElementRef: spanElementRef as React.RefObject<HTMLSpanElement>,
+          inputElementRef: inputElementRef as React.RefObject<HTMLInputElement>,
+          popupRef: popupRef as React.RefObject<IPopup>,
+          onOpen: onOpen,
+          onClose: onClose,
+          popupWidth: combinedPopupSettings.width as string ,
+          popupHeight: combinedPopupSettings.height as string,
+          className
+      });
+
+      const listData: ListItemData[] = useMemo(() => {
+          const source: DataManager | (string | number | boolean | {[key: string]: unknown; })[] =
+          remoteCacheRef.current ? remoteCacheRef.current : resolvedDataSource;
+          if (!Array.isArray(source) || (source as unknown[]).length === 0) {
+              return [];
+          }
+          const normalized: (string | number | boolean | { [key: string]: Object })[] = (source)
+              .filter((v: string | number | boolean | {[key: string]: unknown; }) => v != null && (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean' || typeof v === 'object')) as (string | number | boolean | { [key: string]: Object })[];
+          if (normalized.length === 0) { return []; }
+          const processed: (string | number | boolean | {[key: string]: Object; })[] = processDataResult(
+              normalized as Array<{ [key: string]: Object } | string | number | boolean>,
+              resolvedFields,
+              sortOrder,
+              (query ?? new Query())
+          ) as (string | number | boolean | { [key: string]: Object })[];
+          return processed.map((item: string | number | boolean | {[key: string]: Object; }) => {
+              const isDisabled: string | boolean | undefined =
+                  resolvedFields.disabled && typeof item === 'object' && getValue(resolvedFields.disabled, item) === true;
+              const isHeader: boolean = typeof item === 'object' && !!getValue('isHeader', item);
+              return { item: item as unknown as (string | number | { [key: string]: unknown }),
+                  isDisabled: Boolean(isDisabled), isHeader } as ListItemData;
+          });
+      }, [remoteCacheRef.current, resolvedDataSource, resolvedFields, sortOrder, query, isDataLoaded]);
+
+      const startRemoteRequest: () => void = useCallback(() => {
+          setIsLoading(true);
+          setIsRemoteDataLoading(true);
+      }, [setIsLoading]);
+
+      const endRemoteRequest: () => void = useCallback(() => {
+          setIsLoading(false);
+          setIsRemoteDataLoading(false);
+      }, [setIsLoading]);
+
+      const handleDataLoaded: () => void = useCallback(() => {
+          endRemoteRequest();
+          isFetchedRef.current = true;
+          if (dropdownbaseRef.current && dropdownValue !== null && dropdownValue !== undefined) {
+              const valueData: string | number | boolean | { [key: string]: object; } | undefined =
+              dropdownbaseRef.current.getDataByValue(dropdownValue as string | number | boolean);
+              if (valueData !== undefined) {
+                  const textField: string | undefined = resolvedFields?.text;
+                  const displayText: string = typeof valueData === 'object' && textField ? String(getValue(textField, valueData)) :
+                      typeof valueData === 'string' || typeof valueData === 'number' || typeof valueData === 'boolean' ? String(valueData) :
+                          dropdownbaseRef.current.getTextByValue( dropdownValue as string | number | boolean );
+                  setTextValue(displayText);
+              }
+          }
+      }, [endRemoteRequest, dropdownbaseRef, dropdownValue, resolvedFields?.text, setTextValue]);
+
+      const prefetchData: () => Promise<(string | number | { [key: string]: unknown; })[] | null> = React.useCallback(async () => {
+          const data: DataManager | string[] | number[] | boolean[] | unknown[] | null =
+          isRemoteData ? await prefetchIfNeeded() : resolvedDataSource;
+          if (Array.isArray(data)) {
+              const normalized: (string | number | { [key: string]: unknown;  })[] = (data as object[]).filter(
+                  (v: object) => v != null && (typeof v === 'string' || typeof v === 'number' || typeof v === 'object')) as Array<{ [key: string]: unknown } | string | number>;
+              remoteCacheRef.current = normalized;
+              setIsDataLoaded(true);
+              return normalized;
+          }
+          return null;
+      }, [isRemoteDataLoading, isFetchedRef, handleDataLoaded, baseDropDownClick, endRemoteRequest]);
+
+      useValueSync({
+          value,
+          defaultValue,
+          dataSource: resolvedDataSource,
+          dataSourceListItems: listData,
+          fields: resolvedFields,
+          isValueControlled: isValueControlledAuto,
+          allowObjectBinding,
+          filterable,
+          dropdownbaseRef,
+          setDropdownValue: (v: number | string | boolean | object | null) => setDropdownValue(v),
+          setTextValue: (v: string) => setTextValue(v),
+          setActiveIndex: (v: number | null) => setActiveIndex(v),
+          setItemData,
+          prefetchData
+      });
 
       useEffect(() => {
-          const isPrimitive: (val: string | number | boolean | object | null) => boolean =
-          (val: string | number | boolean | object | null) => {
-              return typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean';
-          };
-          const setFallback: (val: string | number | boolean | object | null) => void =
-          (val: string | number | boolean | object | null) => {
-              setTextValue(isPrimitive(val) ? String(val) : '');
-              return;
-          };
-          const handleArrayDataSource: (
-              source: Array<string | number | boolean | { [key: string]: object }>,
-              val: string | number | boolean | object | null
-          ) => boolean = (source: Array<string | number | boolean | { [key: string]: object }>,
-                          val: string | number | boolean | object | null) => {
-              const isPrimitiveArray: boolean = source.length > 0 && isPrimitive(source[0]);
-              const idx: number = source.findIndex((item: string | number | boolean | { [key: string]: object }) =>
-                  isPrimitiveArray
-                      ? String(item) === String(val)
-                      : fields.value && String(getValue(fields.value as string, item)) === String(val)
-              );
-              if (idx !== -1) {
-                  const item: string | number | boolean | { [key: string]: object } = source[idx as number];
-                  const text: string = isPrimitiveArray
-                      ? String(item)
-                      : fields.text
-                          ? getValue(fields.text as string, item) as string
-                          : String(val);
-                  setTextValue(text);
-                  setActiveIndex(idx);
-                  return true;
-              }
-              return false;
-          };
-
-          if (!isNullOrUndefined(value)) {
-              setDropdownValue(value);
-              if (dataSource && Array.isArray(dataSource)) {
-                  if (!handleArrayDataSource(dataSource, value)) {
-                      setFallback(value);
-                  }
-              } else if (dataSource instanceof DataManager) {
-                  setFallback(value);
-              }
-          } else if (defaultValue && dataSource) {
-              if (Array.isArray(dataSource)) {
-                  if (!handleArrayDataSource(dataSource, defaultValue)) {
-                      setFallback(defaultValue);
-                  }
-              } else if (dataSource instanceof DataManager) {
-                  setFallback(defaultValue);
-              }
-              setDropdownValue(defaultValue);
+          const isControlled: boolean = open !== undefined;
+          if (!isControlled) { return; }
+          if (open !== isPopupOpen) {
+              setIsPopupOpen(Boolean(open));
           }
-      }, [value, defaultValue, dataSource, fields]);
+      }, [open, isPopupOpen, setIsPopupOpen]);
+
+      const handleOnError: (err: Error) => void = React.useCallback((err: Error) => {
+          endRemoteRequest();
+          setIsLoading(false);
+          setIsDataLoaded(true);
+          onError?.(err);
+      }, [isRemoteDataLoading, isFetchedRef, endRemoteRequest, onError]);
+
+      const { keyActionHandler } = useKeyboardNavigation({
+          disabled,
+          readOnly,
+          isPopupOpen,
+          skipDisabledItems,
+          activeIndex,
+          onChange,
+          setActiveIndex,
+          dataSource: resolvedDataSource,
+          dataSourceListItems: listData,
+          fields: resolvedFields,
+          dropdownbaseRef,
+          setTextValue: (v: string) => setTextValue(v),
+          setSelection: (li: Element, e: React.MouseEvent<Element, MouseEvent> | React.KeyboardEvent<Element>) => setSelection(li, e),
+          showPopup,
+          hidePopup,
+          setIsSpanFocused,
+          baseDropDownClick,
+          setDropdownValue: (v: string | number | boolean | object | null) => setDropdownValue(v),
+          prefetchData,
+          currentItemData: itemData,
+          setItemData
+      });
+
+      const getItemData: (itemData: FieldSettingsModel | string | number | boolean |
+      { [key: string]: unknown } | null, fields: FieldSettingsModel) => { [key: string]: string } =
+      (itemData: FieldSettingsModel | string | number | boolean |
+      { [key: string]: unknown } | null, fields: FieldSettingsModel) => {
+          const dataItem: { [key: string]: string } = {};
+          if (!isNullOrUndefined(itemData)) {
+              const fieldData: string | boolean | object = getValue(fields?.value as string, itemData);
+              dataItem.value = fieldData as string;
+              dataItem.text = getValue(fields?.text || fields?.value || '', itemData) as string;
+          }
+          return dataItem;
+      };
+
+      const selectEventCallback: ( li: Element, e: React.MouseEvent<Element> | React.KeyboardEvent<Element> | null,
+          selectedData?: string | number | boolean | { [key: string]: object }, value?: string | number | boolean | null )
+      => void = useCallback(( li: Element, e: React.MouseEvent<Element> | React.KeyboardEvent<Element> | null, selectedData?: string |
+      number | boolean | { [key: string]: object }, value?: string | number | boolean | null) => {
+          setPreviousItemData(itemData || null);
+          setChangeEvent(e as React.MouseEvent<Element> | React.KeyboardEvent<Element>);
+
+          let nextValue: string | number | boolean | null | undefined | Element = value ?? li;
+          if (typeof selectedData === 'string' || typeof selectedData === 'number' || typeof selectedData === 'boolean') {
+              setItemData(selectedData);
+              setDropdownValue(selectedData);
+              nextValue = selectedData;
+          } else {
+              setItemData(selectedData as { [key: string]: object; });
+              if (value !== null && value !== undefined) {
+                  setDropdownValue(value as string | number | boolean);
+                  nextValue = value;
+              } else if (selectedData) {
+                  const extracted: {
+                      [key: string]: string;
+                  } = getItemData(selectedData, resolvedFields);
+                  setDropdownValue(extracted.value);
+                  nextValue = extracted.value !== null ? extracted.value : null;
+              }
+          }
+
+          if (dropdownbaseRef.current != null && nextValue !== null && nextValue !== undefined) {
+              setActiveIndex(dropdownbaseRef.current.getIndexByValue(nextValue as string | number | boolean));
+          }
+
+          if (onChange && nextValue !== undefined) {
+              onChange({
+                  event: e as React.KeyboardEvent<Element> | React.MouseEvent<Element, MouseEvent>,
+                  previousItemData: itemData,
+                  value: nextValue,
+                  itemData: selectedData ? selectedData : null
+              });
+          }
+      }, [itemData, onChange, resolvedFields]);
+
+      const { setSelection, onItemClick } = useSelection({
+          dropdownbaseRef,
+          onSelect,
+          getFormattedValue: dropdownbaseRef?.current?.getFormattedValue,
+          setActiveIndex,
+          selectEventCallback,
+          setTextValue: (v: string) => setTextValue(v),
+          setDropdownValue: (v: React.SetStateAction<string | number | boolean | object | null>) => setDropdownValue(v),
+          hidePopup
+      });
+
+      useEffect(() => {
+          if (value !== undefined && value !== initialValueRef.current && !allowObjectBinding) {
+              setIsValueControlledAuto(true);
+          }
+      }, [value]);
 
       useEffect(() => {
           if (isPopupOpen && filterable && dropdownbaseRef.current) {
@@ -423,44 +426,108 @@ export const DropDownList: React.ForwardRefExoticComponent<IDropDownListProps & 
 
       useEffect(() => {
           setIsLoading(loading);
-      }, [loading]);
+      }, [loading, setIsLoading]);
 
       useEffect(() => {
-          if (isOpenControlled && open !== isPopupOpen) {
-              setIsPopupOpen(open as boolean);
-              if (open && onOpen) {
-                  onOpen();
-              } else if (!open && onClose) {
-                  onClose();
+          if (!isOpenControlled) { return; }
+          if (open) {
+              setIsSpanFocused(true);
+              setAriaExpanded(true);
+              showPopup();
+          } else {
+              hidePopup();
+              setAriaExpanded(false);
+              setIsSpanFocused(false);
+          }
+      }, [open, isOpenControlled, showPopup, hidePopup, setAriaExpanded, setIsSpanFocused]);
+
+      useEffect(() => {
+          preRender('dropdownlist');
+      }, []);
+
+      useEffect(() => {
+          if (itemData !== null && isPopupOpened) {
+              const listItems: HTMLLIElement[] | undefined = dropdownbaseRef?.current?.getListItems();
+              const currValue: string | number | boolean | null = typeof itemData === 'object' && itemData !== null
+                  ? (getValue(resolvedFields?.value ?? 'value', itemData) as string | number | boolean | null) : (itemData as string | number | boolean | null);
+              const activeItem: HTMLElement | undefined = listItems?.find((item: HTMLElement) => item.getAttribute('data-value') === String(currValue));
+              if (activeItem && activeItem.classList.contains('sf-active')) {
+                  setSelection(activeItem, null);
               }
           }
-      }, [open, isOpenControlled, isPopupOpen, onOpen, onClose]);
+          setIsPopupOpened(false);
+      }, [itemData, isPopupOpened]);
 
       useEffect(() => {
-          if (changeEvent && itemData) {
-              onChangeEvent(changeEvent);
-              setChangeEvent(null);
+          if (initialDataSourceRef.current === null) {
+              initialDataSourceRef.current = JSON.stringify(props.dataSource) ?? null;
           }
-      }, [itemData, changeEvent]);
+          if (initialFieldsRef.current === null) {
+              initialFieldsRef.current = JSON.stringify(props.fields) ?? null;
+          }
+      }, []);
 
       useEffect(() => {
-          const isValid: boolean = valid !== undefined ? valid : (required ? dropdownValue != null : true);
-          setIsInputValid(isValid);
-          const message: string = isValid ? '' : validationMessage || '';
-          inputElementRef.current?.setCustomValidity(message);
+          if (JSON.stringify(props.dataSource) !== initialDataSourceRef.current ||
+          JSON.stringify(props.fields) !== initialFieldsRef.current ) {
+              initialDataSourceRef.current = JSON.stringify(props.dataSource) ?? null;
+              initialFieldsRef.current = JSON.stringify(props.fields) ?? null;
+              remoteCacheRef.current = null;
+              if (isFetchedRef?.current) {
+                  setIsDataLoaded(false);
+                  isFetchedRef.current = false;
+                  prefetchData();
+              }
+              setIsLoading(false);
+              setListKey((value: number) => value + 1);
+          }
+      }, [props.dataSource, props.fields]);
 
-      }, [valid, validationMessage, required, dropdownValue]);
+      useEffect(() => {
+          if (!isRemoteData) {
+              setIsRemoteDataLoading(false);
+          }
+      }, [isRemoteData]);
+
+      useEffect(() => {
+          if (isRemoteData && isPopupOpen && !isFetchedRef.current) {
+              startRemoteRequest();
+          }
+      }, [isRemoteData, isPopupOpen, startRemoteRequest]);
+
+      const propLoadingActive: boolean = useMemo(() => Boolean(loading) && !isPopupOpen, [loading, isPopupOpen]);
+      const uiLoading: boolean = useMemo(() => (
+          isRemoteData ? (propLoadingActive || (isRemoteDataLoading && !isDataLoaded)) : (propLoadingActive || isLoading)
+      ), [isRemoteData, propLoadingActive, isRemoteDataLoading, isLoading, isDataLoaded]);
+
+      const setPlaceholder: string = useMemo(() => {
+          const l10n: IL10n = L10n('dropdownList', { placeholder: placeholder }, locale);
+          l10n.setLocale(locale);
+          const localized: string = l10n.getConstant('placeholder') as string;
+          return localized || (placeholder || '');
+      }, [locale, placeholder]);
+
+      const handleOnDataLoad: (e: { data: DataManager | Array<{[key: string]: unknown; }> | string[] | number[] | boolean[]; }) => void =
+      (e: { data: DataManager | Array<{[key: string]: unknown; }> | string[] | number[] | boolean[]; }): void => {
+          if (Array.isArray(e.data)) {
+              const normalized: (string | number | { [key: string]: unknown; })[] = (e.data as object[]).filter(
+                  (v: object) => v != null && (typeof v === 'string' || typeof v === 'number' || typeof v === 'object')) as Array<{ [key: string]: unknown } | string | number>;
+              remoteCacheRef.current = normalized;
+          } else {
+              remoteCacheRef.current = null;
+          }
+          onDataLoad?.(e as DataLoadEvent);
+          setIsDataLoaded(true);
+      };
 
       const publicAPI: Partial<IDropDownList> = useMemo(() => ({
-          dataSource,
+          dataSource: resolvedDataSource,
           query,
-          fields,
+          fields: resolvedFields,
           value,
           placeholder,
           id,
-          zIndex,
-          popupWidth,
-          popupHeight,
+          popupSettings,
           allowObjectBinding,
           itemTemplate,
           headerTemplate,
@@ -478,29 +545,74 @@ export const DropDownList: React.ForwardRefExoticComponent<IDropDownListProps & 
           filterPlaceholder,
           sortOrder,
           clearButton,
+          dropdownIcon,
           loading,
-          onChange,
-          onOpen,
-          onClose,
-          onSelect,
-          onFilterChange,
-          actionComplete
-      }), [dataSource, fields, value, placeholder, id, zIndex, popupWidth, popupHeight, allowObjectBinding, onChange,
-          onOpen, onClose, onSelect, onFilterChange, actionComplete]);
+          size,
+          variant
+      }), [resolvedDataSource, resolvedFields, value, placeholder, id, popupSettings, allowObjectBinding]);
 
-      const filter: (
-          dataSource: { [key: string]: Object }[] | DataManager | string[] | number[] | boolean[],
-          query?: Query,
-          fields?: FieldSettingsModel
-      ) => void = useCallback((
-          dataSource: { [key: string]: Object }[] | DataManager | string[] | number[] | boolean[],
-          query?: Query,
-          fields?: FieldSettingsModel
-      ) => {
-          if (dropdownbaseRef.current) {
-              dropdownbaseRef.current.filter(dataSource, query, fields || props.fields);
-          }
-      }, [props.fields]);
+      const containerClassNames: string = useMemo(() => {
+          return [
+              'sf-input-group sf-control',
+              'sf-ddl',
+              uiLoading ? 'sf-loading' : '',
+              dir === 'rtl' ? 'sf-rtl' : '',
+              readOnly ? 'sf-readonly' : '',
+              disabled ? 'sf-disabled' : '',
+              labelMode !== 'Never' ? CLASS_NAMES.FLOATINPUT : '',
+              isSpanFocused ? 'sf-input-focus' : '',
+              (!isInputValid && validityStyles) ? 'sf-error' : '',
+              size === Size.Small ? 'sf-small' : size === Size.Large ? 'sf-large' : 'sf-medium',
+              variant && variant.toLowerCase() !== 'standard'  ? variant.toLowerCase() === 'outlined' ? 'sf-outline' : `sf-${variant.toLowerCase()}` : '',
+              className
+          ].filter(Boolean).join(' ');
+      }, [uiLoading, readOnly, disabled, dir, isSpanFocused, isInputValid, validityStyles, size, variant, className]);
+
+      const showValueTemplate: boolean = useMemo(() =>
+          Boolean(valueTemplate && isValueTemplateVisible), [valueTemplate, isValueTemplateVisible]);
+
+      const popupContent: JSX.Element = useMemo(() => (
+          <DropDownBase
+              key={listKey}
+              ref={dropdownbaseRef}
+              dataSource={resolvedDataSource}
+              itemData={itemData as { [key: string]: unknown; } | string | number | boolean }
+              fields={resolvedFields}
+              query={query}
+              ignoreAccent={ignoreAccent}
+              ignoreCase={ignoreCase}
+              isDropdownFiltering={filterable}
+              filterPlaceholder={filterPlaceholder}
+              filterType={filterType}
+              size={size}
+              sortOrder={sortOrder}
+              allowObjectBinding={allowObjectBinding}
+              onItemClick={onItemClick}
+              itemTemplate={itemTemplate}
+              headerTemplate={headerTemplate}
+              footerTemplate={footerTemplate}
+              groupTemplate={groupTemplate}
+              noRecordsTemplate={isRemoteDataLoading ? null : noRecordsTemplate}
+              value={dropdownValue}
+              keyActionHandler={keyActionHandler}
+              onError={handleOnError}
+              onErrorTemplate={onErrorTemplate}
+              onFilter={onFilter}
+              onRemoteDataLoaded={handleDataLoaded}
+              onDataRequest={onDataRequest}
+              onDataLoad={handleOnDataLoad}
+              listId={listId}
+              getOptionId={getOptionId}
+              activeIndex={activeIndex}
+              id={id}
+              debounceDelay={debounceDelay}
+              endRemoteRequest={endRemoteRequest}
+              remoteCacheRef={remoteCacheRef}
+          />
+      ), [listKey, dropdownbaseRef, resolvedDataSource, resolvedFields, query, ignoreAccent, ignoreCase, filterable, filterPlaceholder,
+          filterType, size, sortOrder, onItemClick, itemTemplate, headerTemplate, footerTemplate, groupTemplate, isRemoteDataLoading,
+          noRecordsTemplate, dropdownValue, keyActionHandler, onError, onErrorTemplate, onFilter, handleDataLoaded, onDataRequest,
+          onDataLoad, listId, id, getOptionId, activeIndex, debounceDelay, endRemoteRequest, remoteCacheRef, handleOnDataLoad ]);
 
       useImperativeHandle(ref, () => ({
           ...publicAPI as IDropDownList,
@@ -508,737 +620,164 @@ export const DropDownList: React.ForwardRefExoticComponent<IDropDownListProps & 
           filter
       }), [publicAPI]);
 
-      const showPopup: () => void = useCallback(() => {
-          if (!isOpenControlled) {
-              setIsPopupOpen(true);
-              setAriaExpanded(true);
-              spanElementRef.current?.focus();
+      const filter: (dataSource: { [key: string]: Object }[] | DataManager | string[] | number[] | boolean[], query?:
+      Query, fields?: FieldSettingsModel) => void = useCallback((dataSource: { [key: string]: Object }[] | DataManager | string[] |
+      number[] | boolean[], query?: Query, fields?: FieldSettingsModel) => {
+          if (dropdownbaseRef.current) {
+              dropdownbaseRef.current.filter(dataSource, query, fields || props.fields);
           }
-          if (onOpen) {
-              const eventArgs: PopupEventArgs = {
-                  popup: popupRef.current as IPopup,
-                  animation: undefined,
-                  event: undefined
-              };
-              onOpen(eventArgs);
-          }
-      }, [onOpen, dropdownValue]);
+      }, [props.fields]);
 
-      const hidePopup: () => void = useCallback(() => {
-          if (!isOpenControlled) {
-              setIsPopupOpen(false);
-              setAriaExpanded(false);
-              setIsTyped(false);
-          }
-          if (onClose && popupRef.current) {
-              const eventArgs: PopupEventArgs = {
-                  popup: popupRef.current as IPopup,
-                  animation: undefined,
-                  event: undefined
-              };
-              onClose(eventArgs);
-          }
-          if (Browser.isDevice) {
-              setIsFullPagePopup(false);
-          }
-
-      }, [isPopupOpen, open, onClose]);
-
-      const handleDocumentClick: (e: MouseEvent) => void = (e: MouseEvent) => {
-          const target: Node = e.target as Node;
-          const isOutsideInput: boolean | null = spanElementRef.current && !spanElementRef.current.contains(target);
-          const isOutsidePopup: boolean | null | undefined = popupRef.current?.element && !popupRef.current.element.contains(target);
-          if (isPopupOpen && isOutsideInput && isOutsidePopup) {
-              hidePopup();
-              setIsSpanFocused(false);
-          }
-          if (isOutsideInput &&
-                    !(target instanceof Element && target.classList.contains('sf-list-item')) &&
-                    !(target instanceof Element && target.classList.contains('e-input-group-icon'))) {
-              setIsSpanFocused(false);
-          }
-      };
-
-      useEffect(() => {
-          if (isPopupOpen) {
-              document.addEventListener('mousedown', handleDocumentClick);
-          }
-          return () => {
-              document.removeEventListener('mousedown', handleDocumentClick);
-          };
-      }, [isPopupOpen, open, hidePopup]);
-
-      useEffect(() => {
-          preRender('dropdownlist');
+      const onPopupOpen: () => void = useCallback(() => {
+          setIsPopupOpened(true);
       }, []);
-
-      useEffect(() => {
-          const handleScroll: (e: Event) => void = (e: Event) => {
-              const isOutsidePopup: boolean | null | undefined = popupRef.current?.element &&
-              !popupRef.current.element.contains(e.target as Node);
-              if (isPopupOpen && isOutsidePopup) {
-                  hidePopup();
-                  setIsSpanFocused(false);
-              }
-          };
-          if (isPopupOpen) {
-              document.addEventListener('scroll', handleScroll, true);
-          }
-          return () => {
-              document.removeEventListener('scroll', handleScroll, true);
-          };
-      }, [isPopupOpen, hidePopup]);
-
 
       const handleInputChange: (event: React.ChangeEvent<HTMLInputElement>) => void =
       useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
           setTextValue(event.target.value);
-      }, []);
+      }, [setTextValue]);
 
-      const handleFocus: () => void =
-      useCallback(() => {
+      const handleFocus: () => void = useCallback(() => {
           setIsSpanFocused(true);
-          if (isPopupOpen && dropdownbaseRef.current) {
-              const listItems: HTMLLIElement[] = dropdownbaseRef.current.getListItems();
-              if (listItems.length > 0 && activeIndex === null) {
-                  setActiveIndex(0);
-              }
+          const length: number | undefined = inputElementRef.current?.value.length;
+          if (length) {
+              inputElementRef.current?.setSelectionRange(length, length);
           }
+      }, [isPopupOpen, activeIndex, setIsSpanFocused, dropdownbaseRef, setActiveIndex]);
 
-      }, [isPopupOpen, activeIndex]);
-
-      const handleClear: () => void = useCallback(() => {
+      const handleClear: (e: React.MouseEvent) => void = useCallback((e: React.MouseEvent) => {
+          e.preventDefault();
+          e.stopPropagation();
           setTextValue('');
           setDropdownValue(null);
           setActiveIndex(null);
-          setSelectedLI(null);
+          setItemData(null);
+          setChangeEvent(null);
           setListKey((prev: number) => prev + 1);
-      }, []);
-
-      const selectEventCallback: (
-          li: Element,
-          e: React.MouseEvent<Element> | React.KeyboardEvent<Element> | null,
-          selectedData?: string | number | boolean | { [key: string]: object },
-          value?: string | number | boolean | null
-      ) => void = useCallback((
-          li: Element,
-          e: React.MouseEvent<Element> | React.KeyboardEvent<Element> | null,
-          selectedData?: string | number | boolean | { [key: string]: object },
-          value?: string | number | boolean | null
-      ) => {
-          setPreviousItemData(itemData || null);
-          setPreviousValue(itemData);
-          setSelectedLI(li as HTMLLIElement);
-          setTextValue((value as string | number | boolean).toString());
-          setChangeEvent(e as React.MouseEvent<Element> | React.KeyboardEvent<Element>);
-          if (typeof selectedData === 'string' || typeof selectedData === 'number' || typeof selectedData === 'boolean') {
-              setItemData(selectedData);
-              setDropdownValue(selectedData);
-          } else {
-              setItemData(selectedData as { [key: string]: object; });
+          if (onChange) {
+              onChange({ event: e, previousItemData: itemData, value: null, itemData: null });
           }
-          if (dropdownbaseRef.current != null && value) {
-              setActiveIndex(dropdownbaseRef.current.getIndexByValue(value));
-          }
-      }, [itemData]);
-
-
-      const getFormattedValue: (value: string) => string | number | boolean | [] = useCallback((value: string) => {
-          return dropdownbaseRef?.current?.getFormattedValue(value) as string;
-      }, []);
-
-      const updateSelectedItem: (li: Element, e: React.MouseEvent<Element> | React.KeyboardEvent<Element> | null) => void =
-      useCallback((li: Element, e: React.MouseEvent<Element> | React.KeyboardEvent<Element> | null) => {
-          li.setAttribute('aria-selected', 'true');
-          const value: string | number | boolean | [] | null = getFormattedValue(li.getAttribute('data-value') as string);
-          const formattedValue: string | number | boolean | null = value as string | number | boolean;
-          const selectedData: string | number | boolean | {[key: string]: object; } | undefined =
-            dropdownbaseRef.current?.getDataByValue(formattedValue);
-          if (value) {
-              setActiveIndex(dropdownbaseRef.current?.getIndexByValue(value as string | number | boolean) as number);
-          }
-
-          const dataType: string | undefined = Array.isArray(dataSource) && dataSource.length > 0 ?
-              typeof dataSource[0] : undefined;
-
-          let itemDataToPass: string | number | boolean | {[key: string]: object} | undefined | null;
-          if (dataType === 'string' || dataType === 'number' || dataType === 'boolean') {
-              itemDataToPass = formattedValue;
-          } else {
-              itemDataToPass = selectedData;
-          }
-          if (e && itemDataToPass && onSelect) {
-              const eventArgs: SelectEventArgs = {
-                  e: e as React.MouseEvent<Element> | React.KeyboardEvent<Element> | React.TouchEvent<Element>,
-                  item: li as HTMLLIElement,
-                  itemData: selectedData as FieldSettingsModel
-              };
-              onSelect(eventArgs);
-          }
-          selectEventCallback(li, e, selectedData, value as string | number | boolean | null);
-          setSelectedLI(li as HTMLLIElement);
-      }, [getFormattedValue, onSelect, selectEventCallback, dataSource]);
-
-
-      const setSelection: (li: Element | null, e: React.MouseEvent<Element> | React.KeyboardEvent<Element> | null) => void =
-      useCallback((li: Element | null, e: React.MouseEvent<Element> | React.KeyboardEvent<Element> | null) => {
-          const value: string | null = li?.getAttribute('data-value') as string;
-          if (value) {
-              setTextValue(value);
-              setDropdownValue(getFormattedValue(value));
-              updateSelectedItem(li as Element, e);
-          }
-      }, [getFormattedValue, updateSelectedItem, setTextValue, setDropdownValue]);
-
-      const onItemClick: (e: React.MouseEvent<HTMLLIElement>) => void = useCallback((e: React.MouseEvent<HTMLLIElement>) => {
-          const target: Element = e.target as Element;
-          const li: HTMLLIElement | null = target.closest('li');
-          if (li) {
-              const dataValue: string | null = li.getAttribute('data-value');
-              if (dataValue) {
-                  const isPrimitiveArray: boolean = Array.isArray(dataSource) && dataSource.length > 0 &&
-                (typeof dataSource[0] === 'string' || typeof dataSource[0] === 'number' || typeof dataSource[0] === 'boolean');
-                  setTextValue(dataValue);
-                  if (isPrimitiveArray) {
-                      setDropdownValue(dataValue);
-                      updateSelectedItem(li as HTMLElement, e);
-                  } else {
-                      setDropdownValue(getFormattedValue(dataValue));
-                      updateSelectedItem(li as HTMLElement, e);
-                  }
-              }
-              hidePopup();
-          }
-      }, [hidePopup, setSelection, getFormattedValue, updateSelectedItem]);
-
-      const getItemData: () => { [key: string]: string } = () => {
-          const dataItem: { [key: string]: string } = {};
-          if (!isNullOrUndefined(itemData)) {
-              const fieldData: string | boolean | object = allowObjectBinding ?
-                  getValue(fields.value as string, itemData) :
-                  getValue(fields?.value as string, itemData);
-              dataItem.value = fieldData as string;
-              dataItem.text = getValue(fields?.text || fields?.value || '', itemData) as string;
-          }
-          return dataItem;
-      };
-
-      const onChangeEvent: (e?: React.MouseEvent<Element> | React.KeyboardEvent<Element>) => void =
-useCallback((e?: React.MouseEvent<Element> | React.KeyboardEvent<Element>) => {
-    if (typeof itemData === 'string' || typeof itemData === 'number' || typeof itemData === 'boolean') {
-        setTextValue(itemData.toString());
-        setDropdownValue(itemData);
-        if (onChange) {
-            const eventArgs: ChangeEventArgs = {
-                event: e as React.MouseEvent<Element> | React.KeyboardEvent<Element>,
-                previousItemData: previousItemData,
-                value: itemData
-            };
-            onChange(eventArgs);
-        }
-        setIsInputValid(true);
-        return;
-    }
-    const dataItem: { [key: string]: string } = getItemData();
-    const newValue: string | number | boolean | null = dataItem.value;
-    const displayText: string = dataItem.text !== undefined ?
-        dataItem.text.toString() :
-        (dataItem.value !== undefined ? dataItem.value.toString() : '');
-    setTextValue(displayText);
-    setDropdownValue(newValue);
-    if (onChange) {
-        const eventArgs: ChangeEventArgs = {
-            event: e as React.MouseEvent<Element> | React.KeyboardEvent<Element>,
-            previousItemData: previousItemData,
-            value: newValue
-        };
-        onChange(eventArgs);
-    }
-    setIsInputValid(true);
-}, [getItemData, onChange, previousItemData, itemData]);
-
-      const isItemDisabled: (li: HTMLLIElement) => boolean = useCallback((li: HTMLLIElement) => {
-          return li.getAttribute('aria-disabled') === 'true' ||
-                    li.className.indexOf('e-disabled') !== -1 ||
-                    li.className.indexOf('sf-disabled') !== -1;
-      }, []);
-
-      const findNextEnabledItem: (items: HTMLLIElement[], startIndex: number, direction: number) => number =
-      useCallback((items: HTMLLIElement[], startIndex: number, direction: number) => {
-          if (!skipDisabledItems) {
-              return Math.max(0, Math.min(items.length - 1, startIndex + direction));
-          }
-          let index: number = startIndex;
-          const maxIterations: number = items.length;
-          for (let i: number = 0; i < maxIterations; i++) {
-              index += direction;
-              if (index < 0 || index >= items.length) {
-                  break;
-              }
-              if (!isItemDisabled(items[index as number])) {
-                  return index;
-              }
-          }
-          return startIndex;
-      }, [skipDisabledItems, isItemDisabled]);
-
-      const findFirstEnabledItem: (items: HTMLLIElement[]) => number = useCallback((items: HTMLLIElement[]) => {
-          if (!skipDisabledItems) {
-              return 0;
-          }
-          for (let i: number = 0; i < items.length; i++) {
-              if (!isItemDisabled(items[i as number])) {
-                  return i;
-              }
-          }
-          return 0;
-      }, [skipDisabledItems, isItemDisabled]);
-
-      const findLastEnabledItem: (items: HTMLLIElement[]) => number = useCallback((items: HTMLLIElement[]) => {
-          if (!skipDisabledItems) {
-              return items.length - 1;
-          }
-          for (let i: number = items.length - 1; i >= 0; i--) {
-              if (!isItemDisabled(items[i as number])) {
-                  return i;
-              }
-          }
-          return items.length - 1;
-      }, [skipDisabledItems, isItemDisabled]);
-
-      const findNearestEnabledItem: (items: HTMLLIElement[], targetIndex: number) => number =
-    useCallback((items: HTMLLIElement[], targetIndex: number) => {
-        if (!skipDisabledItems) {
-            return targetIndex;
-        }
-        if (!isItemDisabled(items[targetIndex as number])) {
-            return targetIndex;
-        }
-        let forwardIndex: number = targetIndex;
-        let backwardIndex: number = targetIndex;
-        while (forwardIndex < items.length - 1 || backwardIndex > 0) {
-            if (forwardIndex < items.length - 1) {
-                forwardIndex++;
-                if (!isItemDisabled(items[forwardIndex as number])) {
-                    return forwardIndex;
-                }
-            }
-            if (backwardIndex > 0) {
-                backwardIndex--;
-                if (!isItemDisabled(items[backwardIndex as number])) {
-                    return backwardIndex;
-                }
-            }
-        }
-        return targetIndex;
-    }, [skipDisabledItems, isItemDisabled]);
-
-      const keyActionHandler: (e: React.KeyboardEvent<HTMLElement>) => void = useCallback((e: React.KeyboardEvent<HTMLElement>) => {
-          if (disabled || readOnly) { return; }
-          if (e.altKey) {
-              if (e.key === 'ArrowDown') {
-                  showPopup();
-                  e.preventDefault();
-                  return;
-              }
-              if (e.key === 'ArrowUp') {
-                  hidePopup();
-                  e.preventDefault();
-                  return;
-              }
-          }
-          if (e.key === 'Tab' || e.key === 'Escape') {
-              hidePopup();
-              if (e.key === 'Tab') {
-                  setIsSpanFocused(false);
-                  setTimeout(() => {
-                      if (inputElementRef.current) {
-                          inputElementRef.current.blur();
-                      }
-                  }, 0);
-                  return;
-              }
-              e.preventDefault();
-              e.stopPropagation();
-              return;
-          }
-          const isNavigation: boolean = ['ArrowDown', 'ArrowUp', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key);
-          setIsTyped((isNavigation || e.key === 'Escape') ? false : isTyped);
-          if (e.key === 'Enter') {
-              if (!isPopupOpen) {
-                  showPopup();
-                  setIsSpanFocused(true);
-                  e.preventDefault();
-                  return;
-              } else if (isPopupOpen && activeIndex !== null && activeIndex >= 0) {
-                  const listItems: HTMLLIElement[] | undefined = dropdownbaseRef.current?.getListItems();
-                  if (listItems && listItems[activeIndex as number]) {
-                      setSelection(listItems[activeIndex as number], e);
-                      hidePopup();
-                  }
-                  e.preventDefault();
-                  return;
-              }
-          }
-          if (!isPopupOpen || !dropdownbaseRef.current) {
-              return;
-          }
-          const listItems: HTMLLIElement[] | undefined = dropdownbaseRef.current?.getListItems();
-          if (!listItems || listItems.length === 0) { return; }
-          e.preventDefault();
-          switch (e.key) {
-          case 'ArrowDown':
-          case 'ArrowUp': {
-              const direction: number = e.key === 'ArrowDown' ? 1 : -1;
-              const currentIndex: number = activeIndex !== null ? activeIndex : -1;
-              if (listItems.length === 1 && e.key === 'ArrowDown') {
-                  const targetItem: HTMLLIElement = listItems[0];
-                  if (!isItemDisabled(targetItem)) {
-                      setActiveIndex(0);
-                      setSelection(targetItem, e);
-                      targetItem.scrollIntoView({ behavior: 'auto', block: 'nearest' });
-                  }
-                  break;
-              }
-              const newIndex: number = findNextEnabledItem(listItems, currentIndex, direction);
-              if (
-                  newIndex !== currentIndex &&
-                newIndex >= 0 &&
-                newIndex < listItems.length
-              ) {
-                  const targetItem: HTMLLIElement = listItems[newIndex as number];
-                  if (!skipDisabledItems || !isItemDisabled(targetItem)) {
-                      setActiveIndex(newIndex);
-                      setSelection(targetItem, e);
-                      targetItem.scrollIntoView({ behavior: 'auto', block: 'nearest' });
-                  }
-              }
-              break;
-          }
-          case 'PageUp':
-          case 'PageDown': {
-              const currentIndex: number = activeIndex !== null ? activeIndex : (e.key === 'PageDown' ? 0 : listItems.length - 1);
-              const pageSize: number = 10;
-              const direction: number = e.key === 'PageUp' ? -1 : 1;
-              const rawIndex: number = Math.max(0, Math.min(
-                  listItems.length - 1,
-                  currentIndex + (direction * pageSize)
-              ));
-              const newIndex: number = findNearestEnabledItem(listItems, rawIndex);
-              if (newIndex !== currentIndex && newIndex >= 0 && newIndex < listItems.length) {
-                  const targetItem: HTMLLIElement = listItems[newIndex as number];
-                  if (!skipDisabledItems || !isItemDisabled(targetItem)) {
-                      setActiveIndex(newIndex);
-                      setSelection(targetItem, e);
-                      targetItem.scrollIntoView({ behavior: 'auto', block: 'nearest' });
-                  }
-              }
-              break;
-          }
-          case 'Home': {
-              const newIndex: number = findFirstEnabledItem(listItems);
-              if (newIndex !== activeIndex && newIndex >= 0 && newIndex < listItems.length) {
-                  const firstItem: HTMLLIElement = listItems[newIndex as number];
-                  if (!skipDisabledItems || !isItemDisabled(firstItem)) {
-                      setActiveIndex(newIndex);
-                      setSelection(firstItem, e);
-                      firstItem.scrollIntoView({ behavior: 'auto', block: 'nearest' });
-                  }
-              }
-              break;
-          }
-          case 'End': {
-              const newIndex: number = findLastEnabledItem(listItems);
-              if (newIndex !== activeIndex && newIndex >= 0 && newIndex < listItems.length) {
-                  const lastItem: HTMLLIElement = listItems[newIndex as number];
-                  if (!skipDisabledItems || !isItemDisabled(lastItem)) {
-                      setActiveIndex(newIndex);
-                      setSelection(lastItem, e);
-                      lastItem.scrollIntoView({ behavior: 'auto', block: 'nearest' });
-                  }
-              }
-              break;
-          }
-          }
-      }, [
-          isPopupOpen,
-          disabled,
-          readOnly,
-          hidePopup,
-          showPopup,
-          activeIndex,
-          setSelection,
-          setIsTyped,
-          skipDisabledItems,
-          isItemDisabled,
-          findNextEnabledItem,
-          findFirstEnabledItem,
-          findLastEnabledItem,
-          findNearestEnabledItem
-      ]);
-
-      const dropDownClick: (e: React.MouseEvent<HTMLSpanElement>) => void = useCallback((e: React.MouseEvent<HTMLSpanElement>) => {
-          if (e.button === 2 || disabled) {return; }
-          if (e.target instanceof Element && e.target.parentElement?.classList.contains('sf-clear-icon')) {
-              return;
-          }
-          setIsSpanFocused(!isPopupOpen);
-          if (isLoading && !isDataLoading) {
-              setIsLoading(false);
-          }
-          if (!readOnly) {
-              if (isPopupOpen) {
-                  hidePopup();
-              } else {
-                  if (dataSource instanceof DataManager) {
-                      setIsLoading(true);
-                      setIsDataLoading(true);
-                      setShouldShowPopup(true);
-                  }
-                  showPopup();
-                  spanElementRef.current?.focus();
-              }
-          }
-      }, [isPopupOpen, open, disabled, readOnly, hidePopup, showPopup, isLoading, isDataLoading, dataSource]);
+      }, [onChange, itemData, setTextValue, setDropdownValue, setActiveIndex, setItemData, setChangeEvent]);
 
       const focusOutAction: (e?: React.MouseEvent<Element> | React.KeyboardEvent<Element> | React.FocusEvent<Element>) => void =
-      useCallback((e?: React.MouseEvent<Element> | React.KeyboardEvent<Element> | React.FocusEvent<Element>) => {
+      useCallback(() => {
           setIsSpanFocused(false);
-          if (isSelected) {
-              onChangeEvent(e as React.MouseEvent<Element> | React.KeyboardEvent<Element>);
-          }
-      }, [isSelected, onChangeEvent]);
+      }, [setIsSpanFocused]);
 
       const onBlurHandler: (e: React.FocusEvent<HTMLElement>) => void = useCallback((e: React.FocusEvent<HTMLElement>) => {
           if (disabled) {return; }
-          const target: HTMLElement = e.relatedTarget as HTMLElement;
+          const target: (EventTarget & Element) | null = e.relatedTarget;
           if (!inputElementRef.current?.contains(target)) {
               focusOutAction(e);
           }
       }, [disabled, focusOutAction]);
 
-      const setPopupWidth: () => string = useCallback(() => {
-          let width: string = formatUnit(popupWidth);
-          if (width.indexOf('%') > -1) {
-              const spanWidth: number = spanElementRef.current ?
-                  spanElementRef.current.offsetWidth * parseFloat(width) / 100 : 0;
-              width = spanWidth.toString() + 'px';
-          }
-          return width;
-      }, [popupWidth]);
-
-      const setPopupHeight: () => string = useCallback(() => {
-          let height: string = formatUnit(popupHeight);
-          if (height.indexOf('%') > -1) {
-              const inputHeight: number = inputElementRef.current ?
-                  inputElementRef.current.offsetHeight * parseFloat(height) / 100 : 0;
-              height = inputHeight.toString() + 'px';
-          }
-          return height;
-      }, [popupHeight]);
-
       const renderValueTemplate: () => JSX.Element | null = useCallback(() => {
-          if (!valueTemplate || !dropdownValue) {
+          return (
+              <ValueTemplate
+                  valueTemplate={valueTemplate}
+                  dropdownValue={dropdownValue}
+                  dataSource={Array.isArray(resolvedDataSource) ? resolvedDataSource : []}
+                  fields={resolvedFields}
+                  allowObjectBinding={allowObjectBinding}
+                  onRenderedChange={setIsValueTemplateVisible}
+              />
+          );
+      }, [valueTemplate, dropdownValue, resolvedDataSource, resolvedFields, allowObjectBinding]);
+
+      const dropDownClick: (e: React.MouseEvent<HTMLSpanElement>) => void = useCallback((e: React.MouseEvent<HTMLSpanElement>) => {
+          if (e.button === 2 || disabled) { return; }
+          const el: Element | null = e.target instanceof Element ? e.target : null;
+          if (el && el.parentElement && el.parentElement.matches('.sf-clear-icon')) { return; }
+          baseDropDownClick(e);
+          if (isRemoteData && isPopupOpen) {
+              endRemoteRequest();
+          }
+      }, [endRemoteRequest, disabled, isPopupOpen, isRemoteData, baseDropDownClick]);
+
+      const prefetchIfNeeded: () => Promise<object[] | null> = useCallback(async (): Promise<object[] | null> => {
+          if (!isRemoteData || isFetchedRef.current) {
               return null;
           }
-          let selectedItem: string | number | boolean | {[key: string]: object; } | null | undefined;
-          if (Array.isArray(dataSource)) {
-              if (typeof dataSource[0] === 'string' || typeof dataSource[0] === 'number' || typeof dataSource[0] === 'boolean') {
-                  selectedItem = dataSource.find((item: string | number | boolean | {[key: string]: object}) => item === dropdownValue);
-              } else {
-                  selectedItem = dataSource.find((item: FieldSettingsModel | string | number | boolean | { [key: string]: unknown }) => {
-                      const fieldValue: string | number | boolean | FieldSettingsModel = fields.value ? getValue(fields.value, item) : item;
-                      return allowObjectBinding
-                          ? fieldValue === dropdownValue
-                          : fieldValue === dropdownValue || fieldValue.toString() === dropdownValue.toString();
-                  });
-              }
-          }
-          if (!selectedItem) {
+          const dm: DataManager = resolvedDataSource as DataManager;
+          try {
+              startRemoteRequest();
+              onDataRequest?.({ data: dm, query: query ?? new Query() });
+              const res: unknown = await dm.executeQuery(query ?? new Query());
+              const arr: { [key: string]: unknown; }[] =
+              (Array.isArray((res as {result: unknown})?.result) ? (res as {result: unknown}).result : []) as { [key: string]: unknown; }[];
+              isFetchedRef.current = true;
+              onDataLoad?.({ data: arr });
+              endRemoteRequest();
+              return arr as { [key: string]: unknown; }[];
+          } catch (err: unknown) {
+              endRemoteRequest();
+              onError?.(err as Error);
               return null;
           }
-          return typeof valueTemplate === 'function'
-              ? valueTemplate(selectedItem, 'dropdownlist')
-              : valueTemplate;
-
-      }, [valueTemplate, dropdownValue, dataSource, fields.value, allowObjectBinding]);
-
-      const setPlaceholder: string = useMemo(() => {
-          const l10n: IL10n = L10n('dropdownlist', { placeholder: placeholder }, locale);
-          l10n.setLocale(locale);
-          return l10n.getConstant('placeholder');
-      }, [locale, placeholder]);
-
-      const handleDataLoaded: () => void = useCallback(() => {
-          setIsDataLoading(false);
-          setIsLoading(false);
-          if (shouldShowPopup) {
-              showPopup();
-              setShouldShowPopup(false);
-          }
-          if (dropdownbaseRef.current && dropdownValue !== null) {
-              const valueData: string | number | boolean | {[key: string]: object} | undefined =
-              dropdownbaseRef.current.getDataByValue(dropdownValue as string | number | boolean);
-              if (valueData) {
-                  let displayText: string | number | boolean;
-                  if (typeof valueData === 'object' && fields.text) {
-                      displayText = getValue(fields.text, valueData) as string;
-                  } else if (typeof valueData === 'string' || typeof valueData === 'number' || typeof valueData === 'boolean') {
-                      displayText = valueData.toString();
-                  } else {
-                      displayText = dropdownbaseRef.current.getTextByValue(dropdownValue as string | number | boolean);
-                  }
-                  setTextValue(displayText);
-              }
-          }
-      }, [dropdownValue, fields, showPopup, shouldShowPopup]);
-
-      const containerClassNames: string = useMemo(() => {
-          return [
-              'sf-input-group sf-medium',
-              'sf-control-wrapper',
-              'sf-ddl',
-              dir === 'rtl' ? 'sf-rtl' : '',
-              readOnly ? 'sf-readonly' : '',
-              disabled ? 'sf-disabled' : '',
-              labelMode !== 'Never' ? CLASS_NAMES.FLOATINPUT : '',
-              isSpanFocused ? 'sf-input-focus' : '',
-              (!isInputValid && validityStyles) ? 'sf-error' : '',
-              className
-          ].filter(Boolean).join(' ');
-      }, [readOnly, disabled, dir, isSpanFocused, isInputValid, validityStyles, className]);
-
-      const popupClassNames: string = useMemo(() => {
-          return [
-              isFullPagePopup ? 'sf-popup-full-page' : 'sf-ddl sf-popup',
-              className
-          ].filter(Boolean).join(' ');
-      }, [isFullPagePopup, className]);
-
-      const popupContent: JSX.Element = useMemo(() => (
-          <DropDownBase
-              key={listKey}
-              ref={dropdownbaseRef}
-              dataSource={dataSource}
-              fields={fields}
-              query={query}
-              ignoreAccent={ignoreAccent}
-              ignoreCase={ignoreCase}
-              isDropdownFiltering={filterable}
-              filterPlaceholder={filterPlaceholder}
-              filterType={filterType}
-              sortOrder={sortOrder}
-              onItemClick={onItemClick}
-              itemTemplate={itemTemplate}
-              headerTemplate={headerTemplate}
-              footerTemplate={footerTemplate}
-              groupTemplate={groupTemplate}
-              popupHeight={setPopupHeight()}
-              noRecordsTemplate={isDataLoading ? null : noRecordsTemplate}
-              value={dropdownValue}
-              keyActionHandler={keyActionHandler}
-              actionFailure={actionFailure}
-              onFilterChange={onFilterChange}
-              onDataLoaded={handleDataLoaded}
-              actionComplete={actionComplete}
-          />
-      ), [
-          dataSource,
-          fields,
-          query,
-          filterable,
-          filterType,
-          ignoreAccent,
-          ignoreCase,
-          value,
-          sortOrder,
-          itemTemplate,
-          headerTemplate,
-          footerTemplate,
-          groupTemplate,
-          noRecordsTemplate,
-          dropdownValue,
-          filterPlaceholder,
-          filterType,
-          onItemClick,
-          keyActionHandler,
-          setPopupHeight
-      ]);
+      }, [isRemoteData, resolvedDataSource, query, startRemoteRequest, endRemoteRequest, onDataRequest, onDataLoad, onError]);
 
       return (
           <>
               <span
                   ref={spanElementRef}
                   className={containerClassNames}
-                  aria-label="dropdownlist"
-                  aria-labelledby={id + '_hidden'}
-                  aria-describedby={id}
-                  aria-disabled={disabled}
-                  aria-expanded={isPopupOpen}
                   tabIndex={-1}
                   onMouseDown={dropDownClick}
                   onKeyDown={keyActionHandler}
                   {...otherProps}
               >
-                  {valueTemplate && renderValueTemplate() ? (
-                      <span className="sf-input-value">
+                  {valueTemplate && (
+                      <span className={`sf-input-value ${showValueTemplate ? 'sf-content' : 'sf-display-none'}`}>
                           {renderValueTemplate()}
                       </span>
-                  ) : null}
+                  )}
 
                   <InputBase
                       id={id}
                       ref={inputElementRef}
-                      className={`${dir === 'rtl' ? 'sf-rtl' : ''} ${isInputValid ? 'sf-valid-input' : ''} sf-control sf-dropdownlist`}
-                      value={textValue || ''}
-                      role="combobox"
+                      className={`${dir === 'rtl' ? 'sf-rtl' : ''} ${isInputValid ? 'sf-valid-input' : ''} sf-dropdown-list ${showValueTemplate ? 'sf-input-value-template' : ''}`}
                       type="text"
-                      aria-expanded={ariaExpanded}
-                      aria-label={props['aria-label'] ? props['aria-label'] : 'dropdownlist'}
+                      value={textValue || ''}
+                      aria-haspopup="listbox"
+                      aria-label="dropdownlist"
                       aria-disabled={disabled}
                       aria-readonly={readOnly}
-                      readOnly={true}
                       placeholder={setPlaceholder}
                       floatLabelType={labelMode}
                       onChange={handleInputChange}
-                      onKeyDown={keyActionHandler}
                       onFocus={handleFocus}
                       onBlur={onBlurHandler}
-                      style={valueTemplate && renderValueTemplate() ? { display: 'none' } : undefined}
+                      {...comboboxA11yProps}
+                      {...restInputProps}
+                      readOnly={true}
                       required={required}
-                      tabIndex={disabled ? -1 : 0}
                   />
 
-                  {labelMode !== 'Never' && renderFloatLabelElement(
-                      labelMode,
-                      isSpanFocused,
-                      textValue || '',
-                      placeholder,
-                      id
-                  )}
+                  {labelMode !== 'Never' && renderFloatLabelElement( labelMode, isSpanFocused, textValue || '', placeholder, id )}
 
-                  {clearButton && textValue && (isSpanFocused || isPopupOpen) && renderClearButton(textValue ?? '', handleClear)}
+                  {clearButton && renderClearButton((textValue && (isSpanFocused || isPopupOpen)) ? textValue : '', handleClear)}
 
-                  <span
+                  {!uiLoading && (<span
                       ref={spinnerTargetRef}
                       id={spinnerId}
-                      className={`sf-input-group-icon sf-ddl-icon ${!isLoading ? 'sf-icon-container' : ''} 
-                                ${!isLoading && isPopupOpen ? 'sf-icon-rotate' : 'sf-icon-normal'}`}
+                      aria-hidden='true'
+                      className={`sf-input-icon sf-ddl-icon
+                          ${!uiLoading ? 'sf-icon-container' : ''} 
+                          ${!uiLoading && isPopupOpen ? 'sf-icon-rotate' : 'sf-icon-normal'} 
+                          ${size === Size.Small ? 'sf-small' : size === Size.Large ? 'sf-large' : 'sf-medium'}`}
                   >
-                      {!isLoading && <ChevronDownFillIcon width={16} height={16} />}
-                  </span>
-
-                  {isLoading && (
+                      {dropdownIcon ?? defaultIcon}
+                  </span>)}
+                  {uiLoading && (
                       <Spinner
-                          type={SpinnerType.Material3}
-                          width={16}
+                          size={ size === Size.Small ? '16px' : '20px'}
                           visible={true}
-                          target={`#${spinnerId}`}
                       />
                   )}
               </span>
 
-              {isPopupOpen && createPortal(
+              {isPopupOpen && typeof document !== 'undefined' && createPortal(
                   <Popup
                       ref={popupRef}
                       className={popupClassNames}
@@ -1246,13 +785,16 @@ useCallback((e?: React.MouseEvent<Element> | React.KeyboardEvent<Element>) => {
                       relateTo={spanElementRef.current as HTMLElement}
                       width={setPopupWidth()}
                       height="auto"
-                      position={{ X: 'left', Y: 'bottom' }}
-                      aria-label={`${id}_popup`}
-                      zIndex={zIndex}
-                      collision={dir === 'rtl'
-                          ? { X: CollisionType.Fit, Y: CollisionType.Flip }
-                          : { X: CollisionType.Flip, Y: CollisionType.Flip }}
+                      position={combinedPopupSettings.position}
+                      zIndex={combinedPopupSettings.zIndex}
+                      collision={combinedPopupSettings.collision}
                       open={isPopupOpen }
+                      onOpen={onPopupOpen}
+                      autoReposition={combinedPopupSettings.autoReposition}
+                      animation={{ show: { name: 'FadeIn', duration: 100 }, hide: { name: 'FadeOut', duration: 100 } }}
+                      offsetX={combinedPopupSettings.offsetX}
+                      offsetY={combinedPopupSettings.offsetY}
+                      style={{ maxHeight: setPopupHeight() }}
                   >
                       {popupContent}
                   </Popup>,

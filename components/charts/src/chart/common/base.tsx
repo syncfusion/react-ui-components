@@ -2,37 +2,6 @@ import { LayoutMap } from '../layout/LayoutContext';
 
 
 /**
- * Defines animation settings for chart series in a React component.
- */
-export interface Animation {
-
-    /**
-     * When set to `false`, animation is disabled during the initial rendering of the chart series.
-     *
-     * @default true
-     */
-    enable: boolean;
-
-    /**
-     * Duration of the animation in milliseconds.
-     * Controls how long the animation effect lasts.
-     *
-     * @default 1000
-     */
-    duration?: number;
-
-    /**
-     * Delay before the animation starts, in milliseconds.
-     * Useful for sequencing animations or staggering effects.
-     *
-     * @default 0
-     */
-    delay?: number;
-}
-
-
-
-/**
  * Represents a single SVG path command used in rendering chart elements.
  *
  * @private
@@ -51,6 +20,7 @@ export interface PathCommand {
 
 /**
  * Defines the context type for layout-related operations in the charting system.
+ *
  * @private
  */
 export interface LayoutContextType {
@@ -113,5 +83,9 @@ export interface LayoutContextType {
      * @param progress - A number between 0 and 1 representing animation progress.
      */
     setAnimationProgress: (progress: number) => void;
+
+    seriesRef: React.RefObject<SVGGElement | null>;
+
+    legendRef: React.RefObject<SVGGElement | null>;
 }
 

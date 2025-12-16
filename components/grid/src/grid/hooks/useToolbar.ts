@@ -6,6 +6,7 @@ import { SelectionModel } from '../types/selection.interfaces';
 import { editModule } from '../types/edit.interfaces';
 import * as React from 'react';
 import { ToolbarConfig, ToolbarAPI, ToolbarClickEvent } from '../types/toolbar.interfaces';
+import { UseCommandColumnResult } from '../types';
 
 /**
  * Custom hook to manage toolbar operations for the grid
@@ -16,16 +17,19 @@ import { ToolbarConfig, ToolbarAPI, ToolbarClickEvent } from '../types/toolbar.i
  * @param {SelectionModel} selectionModule - Selection module reference (passed directly to avoid context issues)
  * @param {Object[]} currentViewData - Current view data (passed directly to avoid context issues)
  * @param {boolean} allowSearching - Enable or disable the searching UI
+ * @param {UseCommandColumnResult} commandColumnModule - Reference to the command column module
  * @returns {ToolbarAPI} Toolbar API methods and state
  */
 export const useToolbar: (config: ToolbarConfig, editModule?: editModule, selectionModule?: SelectionModel,
-    currentViewData?: Object[], allowSearching?: boolean) => ToolbarAPI = (
+    currentViewData?: Object[], allowSearching?: boolean, commandColumnModule?: UseCommandColumnResult) => ToolbarAPI = (
     config: ToolbarConfig,
     editModule?: editModule,
     selectionModule?: SelectionModel,
     currentViewData?: Object[],
-    allowSearching?: boolean
+    allowSearching?: boolean,
+    commandColumnModule?: UseCommandColumnResult
 ): ToolbarAPI => {
+    const { commandEdit } = commandColumnModule;
     // Always call hooks in the same order - no conditional hooks
     const [isRendered, setIsRendered] = useState<boolean>(false);
     // Track disabled state using React state instead of DOM manipulation
@@ -138,7 +142,7 @@ export const useToolbar: (config: ToolbarConfig, editModule?: editModule, select
                 // Normal edit mode or showAddNewRow with edited row
                 // When editing an existing row with showAddNewRow enabled, the add new row should be disabled
                 const itemsToEnable: string[] = [`${gridId}_update`, `${gridId}_cancel`, `${gridId}_search`];
-                const itemsToDisable: string[] = [`${gridId}_add`, `${gridId}_edit`, `${gridId}_delete`];
+                const itemsToDisable: string[] = commandEdit.current ? [] : [`${gridId}_add`, `${gridId}_edit`, `${gridId}_delete`];
 
                 itemsToEnable.forEach((item: string) => {
                     if (!enableItemsList.includes(item)) {

@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect, forwardRef } from 'react';
-import { getUniqueID, formatUnit, preRender, useProviderContext } from '@syncfusion/react-base';
+import { useMemo, useEffect, forwardRef, useImperativeHandle, useRef, useId } from 'react';
+import { formatUnit, preRender, useProviderContext } from '@syncfusion/react-base';
 
 /**
  * Defines the available variant types for skeleton loading placeholders.
@@ -140,7 +140,7 @@ export const Skeleton: React.ForwardRefExoticComponent<ISkeletonProps & React.Re
          label = 'Loading...',
          className = ''
      } = props;
-     const [id] = useState(() => getUniqueID('sf-skeleton'));
+     const id: string = `sf-skeleton_${useId()}`;
      const { dir } = useProviderContext();
      const getShapeClass: (variant: Variants) => string = (variant: Variants): string => {
          switch (variant) {
@@ -180,6 +180,22 @@ export const Skeleton: React.ForwardRefExoticComponent<ISkeletonProps & React.Re
          };
      }, [width, height, variant]);
 
+     //To expose a controlled API/handle instead of a raw DOM node.
+     // To keep the public ref stable and typed (ISkeleton) while you manage an internal elementRef to the div.
+     const elementRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
+
+     const publicAPI: Partial<ISkeleton> = {
+         width,
+         height,
+         variant,
+         animation,
+         label
+     };
+
+     useImperativeHandle(ref, (): ISkeleton => ({
+         ...publicAPI as ISkeleton,
+         element: elementRef.current
+     }), [publicAPI]);
 
      useEffect(() => {
          preRender('skeleton');
@@ -194,7 +210,7 @@ export const Skeleton: React.ForwardRefExoticComponent<ISkeletonProps & React.Re
              aria-busy="true"
              aria-live="polite"
              aria-label={label}
-             ref={ref as React.RefObject<HTMLDivElement>}
+             ref={elementRef}
          />
      );
  });

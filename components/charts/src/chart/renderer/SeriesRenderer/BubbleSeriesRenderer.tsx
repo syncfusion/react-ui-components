@@ -1,6 +1,6 @@
 
 import { ChartLocationProps, EmptyPointSettings } from '../../base/interfaces';
-import { drawSymbol, getPoint, withInRange } from '../../utils/helper';
+import { applyPointRenderCallback, drawSymbol, getPoint, withInRange } from '../../utils/helper';
 import { BubbleSeriesType, MarkerElementData, MarkerOptions, MarkerProperties, PointRenderingEvent, Points, RenderOptions, SeriesProperties } from '../../chart-area/chart-interfaces';
 import { markerAnimate } from './MarkerRenderer';
 
@@ -106,6 +106,12 @@ const BubbleSeries: BubbleSeriesType = {
                     markerHeight: pointHeight
                 };
 
+                const customizedValues: string = applyPointRenderCallback(({
+                    seriesIndex: series.index as number, color: pointRenderArgs.fill,
+                    xValue: bubblePoint.xValue as number | Date | string | null,
+                    yValue: bubblePoint.yValue as number | Date | string | null
+                }), series.chart);
+
                 // Create region for bubble point tooltip
                 bubblePoint.regions.push({
                     x: bubblePoint.symbolLocations[0].x - bubbleRadius,
@@ -114,8 +120,9 @@ const BubbleSeries: BubbleSeriesType = {
                     height: 2 * bubbleRadius
                 });
 
-                bubblePoint.color = pointRenderArgs.fill as string;
-                fillColor = pointRenderArgs.fill as string;
+                bubblePoint.color = customizedValues as string;
+                bubblePoint.interior = customizedValues as string;
+                fillColor = customizedValues as string;
                 strokeColor = pointRenderArgs.border.color as string;
                 pointBorderWidth = pointRenderArgs.border.width as number;
                 pointWidth = pointRenderArgs.markerWidth as number;

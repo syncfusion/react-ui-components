@@ -1,3 +1,5 @@
+@use 'theme-variables' as *;
+
 @mixin chip-specific-properties($border-radius, $font-size: null, $margin) {
   border-radius: $border-radius;
   margin-inline: $margin;
@@ -33,13 +35,16 @@
     box-shadow: none;
     cursor: pointer;
     display: inline-flex;
-    height: $chip-height;
     line-height: $chip-line-height;
     outline: none;
     overflow: hidden;
     padding: $chip-padding;
     position: relative;
     user-select: none;
+
+    &.sf-chip-has-icon {
+      padding-block: $chip-has-icon-padding-block;
+    }
   }
 
   .sf-chip-avatar,
@@ -57,7 +62,6 @@
   }
 
   .sf-chip-delete {
-    @include icon-style-size($chip-delete-icon-size, $chip-delete-icon-width);
     @include chip-specific-properties($chip-delete-icon-border-radius, $chip-delete-icon-font-size, $chip-delete-icon-margin);
   }
 

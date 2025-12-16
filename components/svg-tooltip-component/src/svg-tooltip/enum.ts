@@ -35,10 +35,10 @@ export type TooltipShape =
  * These themes control the visual styling of tooltips to match various design languages.
  */
 export type TooltipTheme =
-  /** Material 3 design theme. */
-  | 'Material3'
-  /** Dark variant of Material 3 design theme. */
-  | 'Material3Dark';
+  /** Material design theme. */
+  | 'Material'
+  /** Dark variant of Material design theme. */
+  | 'MaterialDark';
 
 /**
  * Defines the placement options for tooltips.

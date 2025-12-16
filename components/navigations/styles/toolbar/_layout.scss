@@ -1,8 +1,8 @@
+@use 'theme-variables' as *;
+
 @include export-module('toolbar-layout') {
   .sf-toolbar {
     display: block;
-    height: $toolbar-height;
-    min-height: $toolbar-height;
     position: relative;
     user-select: none;
     white-space: nowrap;
@@ -69,7 +69,7 @@
 
   .sf-toolbar-separator {
     min-height: $toolbar-separator-min-height;
-    min-width: 1px;
+    min-width: $toolbar-separator-min-width;
     height: $toolbar-separator-height;
   }
 
@@ -142,7 +142,6 @@
   .sf-toolbar-extended:not(.sf-toolbar-vertical) {
 
     .sf-toolbar-extended-items {
-      min-height: $toolbar-height;
       box-shadow: $toolbar-box-shadow;
       display: flex;
       flex-wrap: wrap;
@@ -238,7 +237,7 @@
       height: auto;
       left: 0;
       min-height: $toolbar-items-height;
-      min-width: 50px;
+      min-width: $toolbar-items-min-width;
       right: auto;
       top: auto;
       width: 100%;

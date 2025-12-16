@@ -1,4 +1,5 @@
-import { ChartBorderProps, ChartFontProps, ChartLocationProps, DataLabelContentFunction } from '../../base/interfaces';
+import * as React from 'react';
+import { ChartBorderProps, ChartFontProps, ChartLocationProps, ChartDataLabelTemplateProps, DataLabelContentFunction } from '../../base/interfaces';
 import { calculateRect, getDataLabelText, getPosition, getRectanglePoints, getVisiblePoints, isCollide, isDataLabelOverlapWithChartBound, isRotatedRectIntersect, measureText, rotateTextSize, textElement } from '../../utils/helper';
 import { LabelPosition } from '../../base/enum';
 import { LayoutMap } from '../../layout/LayoutContext';
@@ -125,7 +126,7 @@ interface IDataLabelRenderer {
      * @returns DataLabelRendererResult for the label.
      */
     renderDataLabel: (series: SeriesProperties, point: Points, dataLabel: DataLabelProperties) =>
-    DataLabelRendererResults;
+    DataLabelRendererResults | DataLabelRendererResults[];
     /**
      * Determines if a data label should have a shape (background/stroke) and sets flag on dataLabel.
      *
@@ -210,6 +211,7 @@ interface IDataLabelRenderer {
 }
 
 export interface DataLabelRendererResults {
+    template?: boolean;
     shapeRect?: ShapeRectConfig;
     textOption: TextOption;
 }
@@ -247,7 +249,7 @@ export function applyDataLabelContentCallback(
 export const DataLabelRenderer: IDataLabelRenderer  = {
 
     render: (series: SeriesProperties, dataLabel: DataLabelProperties ) => {
-        let dataLabelProps: DataLabelRendererResults;
+        let dataLabelProps: DataLabelRendererResults | DataLabelRendererResults[];
         const dataLabels: DataLabelRendererResults[] = [];
         dataLabel.markerHeight = 0;
         const index: number | string = series.index as number;
@@ -257,8 +259,14 @@ export const DataLabelRenderer: IDataLabelRenderer  = {
         const visiblePoints: Points[] = getVisiblePoints(series);
         void (series.visible && (() => {
             for (let i: number = 0; i < visiblePoints.length; i++) {
-                dataLabelProps = DataLabelRenderer.renderDataLabel(series, visiblePoints[i as number], dataLabel);
-                dataLabels.push(dataLabelProps);
+                dataLabelProps = DataLabelRenderer.renderDataLabel(
+                    series, visiblePoints[i as number], dataLabel
+                ) as DataLabelRendererResults | DataLabelRendererResults[];
+                if (Array.isArray(dataLabelProps)) {
+                    dataLabels.push(...dataLabelProps);
+                } else {
+                    dataLabels.push(dataLabelProps);
+                }
             }
         })());
         return dataLabels;
@@ -277,15 +285,20 @@ export const DataLabelRenderer: IDataLabelRenderer  = {
         const clip: Rect = series.clipRect as Rect;
         let shapeRect: ShapeRectConfig | undefined;
         let isDataLabelOverlap: boolean = false;
+        const template: boolean = dataLabel.template !== undefined;
         dataLabel.rotationAngle = dataLabel.intersectMode === 'Rotate90' ? 90 : dataLabel.rotationAngle;
         dataLabel.enableRotation = dataLabel.intersectMode === 'Rotate90' ? true : dataLabel.enableRotation;
         const angle: number = degree = dataLabel.rotationAngle as number;
         const border: ChartBorderProps = { width: dataLabel.border?.width, color: dataLabel.border?.color };
         const dataLabelFont: ChartFontProps = dataLabel.font as ChartFontProps;
+        const results: DataLabelRendererResults[] = [];
         const isBorder: boolean = Number(border.width) > 0 && border.color !== 'Transparent' && border.color !== '';
         const dataLabelPosition: LabelPosition | undefined = series.isRectSeries && dataLabel.position === 'Auto'
             ? ((series?.type!.indexOf('Bar') > -1 || series?.type!.indexOf('Column') > -1) ? ((series?.type!.indexOf('Stacking') === -1)
                 ? 'Outer' : 'Top') : 'Top') : dataLabel.position;
+
+        const isFinacalSeries: boolean = (series.type === 'Hilo' || series.type === 'HiloOpenClose' || series.type === 'Candle');
+        if (isFinacalSeries) { return results; }
         if (
             (point.symbolLocations?.length && point.symbolLocations[0])
         ) {
@@ -309,7 +322,7 @@ export const DataLabelRenderer: IDataLabelRenderer  = {
                         series.chart.themeStyle.datalabelFont)
                 };
 
-                const customText: string | boolean =  applyDataLabelContentCallback(argsData.text, point.index, dataLabel);
+                const customText: string | boolean = applyDataLabelContentCallback(argsData.text, point.index, dataLabel);
                 if (customText && typeof customText !== 'boolean') {
                     dataLabel.fontBackground = argsData.color;
                     DataLabelRenderer.isDataLabelShape(argsData, dataLabel);
@@ -443,11 +456,18 @@ export const DataLabelRenderer: IDataLabelRenderer  = {
                         false
                     ) as TextOption;
 
-                    return dataLabel.isShape ? { shapeRect, textOption } : { textOption };
+                    const result: {
+                        shapeRect: ShapeRectConfig | undefined;
+                        textOption: TextOption;
+                    } | {
+                        textOption: TextOption;
+                        shapeRect?: undefined;
+                    } = dataLabel.isShape ? { shapeRect, textOption } : { textOption };
+                    results.push(result);
                 }
             }
         }
-        return { textOption: {} as TextOption };
+        return results.length > 0 ? results : [{ template, shapeRect, textOption: {} as TextOption }];
     },
     isDataLabelShape: (style: { color: string, border: ChartBorderProps }, dataLabel: DataLabelProperties) => {
         dataLabel.isShape = (style.color !== 'transparent' || (style.border?.width ?? 0) > 0);
@@ -461,18 +481,19 @@ export const DataLabelRenderer: IDataLabelRenderer  = {
         const location: ChartLocationProps = DataLabelRenderer.getLabelLocation(point, series, labelIndex);
         const padding: number = 5;
         const clipRect: Rect = series.clipRect as Rect;
-        const dataLabelPosition: LabelPosition | undefined = series.isRectSeries && dataLabel.position === 'Auto' ? ((series?.type!.indexOf('Bar') > -1 || series?.type!.indexOf('Column') > -1) ? ((series?.type!.indexOf('Stacking') === -1) ? 'Outer' : 'Top') : 'Top') : dataLabel.position;
+        const isRectSeries: boolean = isRectSeriesType(series);
+        const dataLabelPosition: LabelPosition | undefined = isRectSeries && dataLabel.position === 'Auto' ? ((series?.type!.indexOf('Bar') > -1 || series?.type!.indexOf('Column') > -1) ? ((series?.type!.indexOf('Stacking') === -1) ? 'Outer' : 'Top') : 'Top') : dataLabel.position;
 
-        if (!series.chart.requireInvertedAxis || !series.isRectSeries) {
+        if (!series.chart.requireInvertedAxis || !isRectSeries) {
             dataLabel.locationX = location.x;
             const alignmentValue: number = textSize.height + (dataLabel.borderWidth as number * 2) + (dataLabel.markerHeight as number) +
                 (dataLabel.margin?.bottom as number)  + (dataLabel.margin?.top as number) + padding;
             location.x =
                 DataLabelRenderer.calculateAlignment(
                     alignmentValue, location.x, dataLabel.textAlign as HorizontalAlignment,
-                    series.isRectSeries ? Number(point.yValue) < 0 : false, series.chart.requireInvertedAxis
+                    isRectSeries ? Number(point.yValue) < 0 : false, series.chart.requireInvertedAxis
                 );
-            location.y = !series.isRectSeries ?
+            location.y = !isRectSeries ?
                 DataLabelRenderer.calculatePathPosition(
                     location.y, dataLabelPosition as LabelPosition, textSize, dataLabel, series, point, labelIndex
                 ) : DataLabelRenderer.calculateRectPosition(
@@ -540,7 +561,6 @@ export const DataLabelRenderer: IDataLabelRenderer  = {
                         isInverted ?
                             { x: labelRegion.x + (labelRegion.width) / 2, y: labelRegion.y } :
                             { x: labelRegion.x + labelRegion.width, y: labelRegion.y + (labelRegion.height) / 2 };
-
         return location;
     },
 
@@ -731,14 +751,24 @@ export const DataLabelRenderer: IDataLabelRenderer  = {
 };
 
 /**
+ * To determine whether the series is rect series ot not.
+ *
+ * @param {SeriesProperties} series - series to be checked.
+ * @returns {boolean} Returns if rect series, false if not.
+ */
+function isRectSeriesType(series: SeriesProperties): boolean {
+    return series.isRectSeries || series.type === 'RangeArea' || series.type === 'SplineRangeArea';
+}
+
+/**
  * Calculates the position for data labels in 'Top' or 'Outer' positions
  * Adjusts the label location based on marker visibility, series type, and chart orientation
  *
  * @param {number} location - The initial label location (x or y) to adjust
- * @param {Rect} _rect - The rectangle representing the data point region
+ * @param {Rect} rect - The rectangle representing the data point region
  * @param {LabelPosition} position - The desired label position ('Top', 'Outer', etc.)
  * @param {SeriesProperties} series - The series object containing styling and configuration
- * @param {number} _index - The index of the label (for multiple labels per point)
+ * @param {number} index - The index of the label (for multiple labels per point)
  * @param {number} extraSpace - Additional spacing to apply
  * @param {boolean} isMinus - Whether the value is negative
  * @param {Points} point - The data point object
@@ -748,22 +778,98 @@ export const DataLabelRenderer: IDataLabelRenderer  = {
  * @private
  */
 export function calculateTopAndOuterPosition(
-    location: number, _rect: Rect, position: LabelPosition, series: SeriesProperties, _index: number,
-    extraSpace: number, isMinus: boolean, point: Points, inverted: boolean, _yAxisInversed: boolean
+    location: number, rect: Rect, position: LabelPosition, series: SeriesProperties, index: number,
+    extraSpace: number, isMinus: boolean, point: Points,    inverted: boolean, _yAxisInversed: boolean
 ): number {
     const margin: MarginModel = (series.marker?.dataLabel?.margin) as MarginModel;
 
-    if (((isMinus && position === 'Top') || (!isMinus && position === 'Outer')) ||
-        (position === 'Top' && series.visiblePoints![point.index].yValue === 0)) {
-        location = !inverted ?
-            location + ((-extraSpace - margin.bottom - (series.marker?.visible ? Number(series.marker?.height) / 2 : 0))) :
-            location + ((+ extraSpace + margin.left + (series.marker?.visible ? Number(series.marker?.height) / 2 : 0)));
-    } else {
-        location = !inverted ?
-            location + ((+ extraSpace + margin.top + (series.marker?.visible ? Number(series.marker?.height) / 2 : 0))) :
-            location + ((- extraSpace - margin.right - (series.marker?.visible ? Number(series.marker?.height) / 2 : 0)));
+    let top: boolean;
+    switch (series.type) {
+    case 'RangeArea':
+    case 'SplineRangeArea':
+    case 'RangeColumn':
+        top = (index === 0 && !series.yAxis?.isAxisInverse) || (index === 1 && series.yAxis?.isAxisInverse);
+        location = updateLabelLocation(series, position, location, extraSpace, margin, rect, top, false);
+        break;
+    default:
+        if (((isMinus && position === 'Top') || (!isMinus && position === 'Outer')) ||
+            (position === 'Top' && (series.visiblePoints as Points[])[point.index].yValue === 0)) {
+            location = !inverted ?
+                location + ((-extraSpace - margin.bottom - (series.marker?.visible ? Number(series.marker?.height) / 2 : 0))) :
+                location + ((+extraSpace + margin.left + (series.marker?.visible ? Number(series.marker?.height) / 2 : 0)));
+        }
+        else {
+            location = !inverted ?
+                location + ((+extraSpace + margin.top + (series.marker?.visible ? Number(series.marker?.height) / 2 : 0))) :
+                location + ((-extraSpace - margin.right - (series.marker?.visible ? Number(series.marker?.height) / 2 : 0)));
+        }
     }
+    return location;
+}
 
+/**
+ * Updates the location of the data label.
+ *
+ *@param {SeriesProperties} series - The series where the location of labels to be updated.
+ *@param {LabelPosition} position - The position of the data label.
+ *@param {number} location - The initial location of the data label.
+ *@param {number} extraSpace - Extra space to adjust the label position.
+ *@param {MarginModel} margin - The margin for the chart.
+ *@param {Rect} rect - The rectangle associated with the data label.
+ *@param {boolean} top - Indicates whether the label is positioned at the top.
+ *@param {boolean} inside - Indicates whether the label is inside the chart area.
+ *@returns {number} The updated location of the data label.
+ *@private
+ */
+export function updateLabelLocation(
+    series: SeriesProperties,
+    position: LabelPosition,
+    location: number,
+    extraSpace: number,
+    margin: MarginModel,
+    rect: Rect,
+    top: boolean,
+    inside: boolean = false
+): number {
+    const markerHalf: number = (series.marker?.height as number) / 2 || 0;
+    const isPointWiseRenderingType: boolean = (series.type === 'RangeColumn');
+
+    if (!series.chart?.requireInvertedAxis) {
+        if (series.yAxis?.inverted === true && isPointWiseRenderingType) {
+            // Y-axis inverted financial series
+            if (top) {
+                location = (position === 'Outer' && !inside)
+                    ? location - (rect.height + extraSpace + margin.bottom + markerHalf)
+                    : location - rect.height + extraSpace + margin.top + markerHalf;
+            } else {
+                location = (position === 'Outer' && !inside)
+                    ? location + extraSpace + margin.top + markerHalf
+                    : location - extraSpace - margin.bottom - markerHalf;
+            }
+        } else {
+            // Normal non-transposed chart
+            if (top) {
+                location = (position === 'Outer' && !inside)
+                    ? location - extraSpace - margin.bottom - markerHalf
+                    : location + extraSpace + margin.top + markerHalf;
+            } else {
+                location = (position === 'Outer' && !inside)
+                    ? location + rect.height + extraSpace + margin.top + markerHalf
+                    : location + rect.height - extraSpace - margin.bottom - markerHalf;
+            }
+        }
+    } else {
+        // Transposed chart
+        if (top) {
+            location = (position === 'Outer' && !inside)
+                ? location + extraSpace + margin.left + markerHalf
+                : location - extraSpace - margin.right - markerHalf;
+        } else {
+            location = (position === 'Outer' && !inside)
+                ? location - rect.width - extraSpace - margin.right - markerHalf
+                : location - rect.width + extraSpace + margin.left + markerHalf;
+        }
+    }
     return location;
 }
 
@@ -1196,3 +1302,132 @@ export const calculateRectPosition: (
     labelIndex: number, point: Points, dataLabel: DataLabelProperties
 ) => number = DataLabelRenderer.calculateRectPosition;
 export default DataLabelRenderer;
+
+export const renderDataLabelTemplates: (chart: Chart, dataLabelOptionsByChartId: {
+    [chartId: string]: DataLabelRendererResult[][];
+}, animationProgress: number) => React.JSX.Element[] | null = (
+    chart: Chart,
+    dataLabelOptionsByChartId: { [chartId: string]: DataLabelRendererResult[][] },
+    animationProgress: number
+): React.JSX.Element[] | null => {
+    if (!chart?.visibleSeries?.length) {return null; }
+
+    const chartId: string = chart.element.id;
+
+    {
+        const compactOptions: DataLabelRendererResult[][] =
+            (dataLabelOptionsByChartId[chartId as string] || []).filter(Boolean);
+        let visibleIdx: number = -1;
+        return chart.visibleSeries.flatMap((series: SeriesProperties, seriesIndex: number) => {
+            if (series?.visible === false) { return []; }
+            visibleIdx += 1;
+
+            const seriesDataLabels: DataLabelRendererResult[] | undefined = compactOptions[visibleIdx as number];
+            if (!series.marker?.dataLabel?.template || !seriesDataLabels?.length) {
+                return [];
+            }
+
+            return [
+                <DataLabelTemplates
+                    key={`datalabel-template-${chartId}-${seriesIndex}`}
+                    chart={chart}
+                    series={series}
+                    seriesIndex={seriesIndex}
+                    template={series.marker?.dataLabel?.template}
+                    seriesDataLabels={seriesDataLabels}
+                    animationProgress={animationProgress}
+                />
+            ];
+        });
+    }
+};
+
+const DataLabelTemplates: React.FC<{
+    chart: Chart;
+    series: SeriesProperties;
+    seriesIndex: number;
+    template: (data: ChartDataLabelTemplateProps) => React.JSX.Element | null;
+    seriesDataLabels: DataLabelRendererResult[];
+    animationProgress: number;
+}> = ({
+    chart,
+    series,
+    seriesIndex,
+    template,
+    seriesDataLabels,
+    animationProgress
+}: {
+    chart: Chart;
+    series: SeriesProperties;
+    seriesIndex: number;
+    template: (data: ChartDataLabelTemplateProps) => React.JSX.Element | null;
+    seriesDataLabels: DataLabelRendererResult[];
+    animationProgress: number;
+}) => {
+    const hasAnimatedSeries: boolean =
+        chart?.visibleSeries?.some((s: SeriesProperties) => s.animation?.enable) ?? false;
+
+    const shouldDelay: boolean =
+        hasAnimatedSeries && !chart?.isLegendClicked && chart?.delayRedraw;
+
+    const labelVisibility: 'visible' | 'hidden' =
+        shouldDelay && animationProgress !== 1 ? 'hidden' : 'visible';
+
+    return (
+        <div
+            key={`container_Series_${seriesIndex}_DataLabelCollections`}
+            id={`container_Series_${seriesIndex}_DataLabelCollections`}
+        >
+            {seriesDataLabels.map((dataLabel: DataLabelRendererResult, pointIndex: number) => {
+                const renderOption: {
+                    id: string;
+                    x: number;
+                    y: number;
+                    fill: string;
+                    'font-size': string;
+                    'font-family': string;
+                    'font-weight': string;
+                    'font-style': string;
+                    'text-anchor': string;
+                    transform: string;
+                } = dataLabel.textOption.renderOptions;
+                const point: Points = series.points?.[pointIndex as number] as Points;
+                if (!point || !renderOption) {return null; }
+
+                const labelContent: React.JSX.Element = template({
+                    x: point.x,
+                    y: point.y,
+                    pointIndex: pointIndex,
+                    seriesIndex: seriesIndex
+                } as ChartDataLabelTemplateProps) as React.JSX.Element;
+
+                if (!React.isValidElement(labelContent)) {return null; }
+
+                const style: React.CSSProperties = {
+                    position: 'absolute',
+                    backgroundColor: 'transparent',
+                    fontSize: renderOption['font-size'],
+                    fontStyle: renderOption['font-style'],
+                    fontWeight: renderOption['font-weight'],
+                    fontFamily: renderOption['font-family'],
+                    opacity: 1,
+                    left: `${renderOption.x + series.clipRect!.x}px`,
+                    top: `${renderOption.y + series.clipRect!.y}px`,
+                    pointerEvents: 'none',
+                    transform: `${renderOption.transform} translate(-50%, -50%)`,
+                    visibility: labelVisibility
+                };
+
+                return (
+                    <div
+                        key={`container_Series_${seriesIndex}_DataLabel_${pointIndex}`}
+                        id={`container_Series_${seriesIndex}_DataLabel_${pointIndex}`}
+                        style={style}
+                    >
+                        {labelContent}
+                    </div>
+                );
+            })}
+        </div>
+    );
+};

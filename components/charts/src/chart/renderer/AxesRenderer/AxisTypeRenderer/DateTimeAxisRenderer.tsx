@@ -7,7 +7,7 @@ import { firstToLowerCase, isZoomSet, setRange, withIn } from '../../../utils/he
 import { ChartRangePadding, IntervalType } from '../../../base/enum';
 import { extend, isNullOrUndefined } from '@syncfusion/react-base';
 import { calculateVisibleRangeOnZooming, getMaxLabelWidth } from './AxisUtils';
-import { AxisModel, Chart, ChartSizeProps, VisibleRangeProps } from '../../../chart-area/chart-interfaces';
+import { AxisModel, Chart, ChartSizeProps, Points, SeriesProperties, VisibleRangeProps } from '../../../chart-area/chart-interfaces';
 
 /**
  * Calculates the range and interval for a DateTime axis within a chart.
@@ -95,6 +95,60 @@ function getActualRange(axis: AxisModel, size: ChartSizeProps, dateTimeRange: Do
     }
     axis.actualRange.minimum = axis.doubleRange.start;
     axis.actualRange.maximum = axis.doubleRange.end;
+}
+
+/**
+ * Returns all series that are bound to the given x-axis.
+ *
+ * @param {AxisModel} axis - The x-axis whose bound series should be resolved.
+ * @returns {SeriesProperties[]} An array of series bound to the provided axis (may be empty).
+ */
+function getSeriesOnAxis(axis: AxisModel): SeriesProperties[] {
+    const seriesInAxis: SeriesProperties[] = axis.series as SeriesProperties[];
+    if (Array.isArray(seriesInAxis) && seriesInAxis.length) { return seriesInAxis; }
+
+    if (axis.chart && Array.isArray(axis.chart.visibleSeries)) {
+        return axis.chart.visibleSeries.filter((currentSeries: SeriesProperties) => currentSeries.xAxis === axis);
+    }
+    return [];
+}
+
+/**
+ * Determines whether the given axis contains financial (rect-style) candle & OHLC series.
+ *
+ * @param {AxisModel} axis - The axis to inspect.
+ * @returns {boolean} True if at least one Candle or HiloOpenClose series is bound to the axis; otherwise false.
+ */
+function hasFinancialSeries(axis: AxisModel): boolean {
+    return getSeriesOnAxis(axis).some((series: SeriesProperties) => (series?.type === 'Candle' || series?.type === 'HiloOpenClose'));
+}
+
+/**
+ * Computes half of the smallest adjacent x-distance (in milliseconds) among
+ * all Candle/HiloOpenClose series bound to the given axis.
+ *
+ *
+ * @param {AxisModel} axis - The axis for which to compute the half-slot.
+ * @returns {number} Half of the minimum adjacent x-distance in milliseconds; 0 if not applicable.
+ */
+function getHalfCandleSlotMs(axis: AxisModel): number {
+    const seriesList: SeriesProperties[] = getSeriesOnAxis(axis).filter((series: SeriesProperties) => (series?.type === 'Candle' || series?.type === 'HiloOpenClose'));
+    if (!seriesList.length) { return 0; }
+
+    let minDelta: number = Number.POSITIVE_INFINITY;
+    for (const series of seriesList) {
+        const pointsInSeries: Points[] = Array.isArray(series.points) ? series.points : [];
+        for (let i: number = 1; i < pointsInSeries.length; i++) {
+            const previousPoint: number = Number(pointsInSeries[i - 1]?.xValue);
+            const currentPoint: number = Number(pointsInSeries[i as number]?.xValue);
+            if (isFinite(previousPoint) && isFinite(currentPoint)) {
+                const delta: number = Math.abs(currentPoint - previousPoint);
+                if (delta > 0 && delta < minDelta) { minDelta = delta; }
+            }
+        }
+    }
+    if (!isFinite(minDelta) || minDelta === Number.POSITIVE_INFINITY) { return 0; }
+    return Math.max(0, Math.floor(minDelta / 2)) + 1;
 }
 /**
  * Apply padding for the range.
@@ -195,6 +249,18 @@ function applyRangePadding(axis: AxisModel, size: ChartSizeProps, dateTimeRange:
             }
             }
         }
+    }
+    // Candle-only symmetric half-slot padding in time-domain
+    try {
+        if (hasFinancialSeries(axis)) {
+            const halfSlot: number = getHalfCandleSlotMs(axis);
+            if (halfSlot > 0) {
+                dateTimeRange.min = (dateTimeRange.min as number) - halfSlot;
+                dateTimeRange.max = (dateTimeRange.max as number) + halfSlot;
+            }
+        }
+    } catch {
+        // no-op
     }
     axis.actualRange.minimum = !isNullOrUndefined(axis.minimum) ? dateTimeRange.min : dateTimeRange.min;
     axis.actualRange.maximum = !isNullOrUndefined(axis.maximum) ? dateTimeRange.max : dateTimeRange.max;
@@ -411,6 +477,18 @@ function calculateVisibleRange(axis: AxisModel, size: ChartSizeProps): void {
     if (isZoomSet(axis)) {
         calculateVisibleRangeOnZooming(axis);
         axis.visibleRange.interval = calculateDateTimeNiceInterval(axis, size, axis.visibleRange.minimum, axis.visibleRange.maximum);
+        try {
+            if (hasFinancialSeries(axis)) {
+                const halfSlot: number = getHalfCandleSlotMs(axis);
+                if (halfSlot > 0) {
+                    axis.visibleRange.minimum -= halfSlot;
+                    axis.visibleRange.maximum += halfSlot;
+                    axis.visibleRange.delta = axis.visibleRange.maximum - axis.visibleRange.minimum;
+                }
+            }
+        } catch {
+            // no-op
+        }
     }
     axis.dateTimeInterval = increaseDateTimeInterval(axis, axis.visibleRange.minimum, axis.visibleRange.interval).getTime()
         - axis.visibleRange.minimum;

@@ -1,3 +1,6 @@
+@use 'mixin' as *;
+@use 'theme-variables' as *;
+
 @include export-module('pager-theme') {
   .sf-pager {
     @include color-styles($pager-text-color, $pager-bg-color);

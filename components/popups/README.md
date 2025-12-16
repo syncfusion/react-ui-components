@@ -1,6 +1,6 @@
 # React Popups Components
 
-The Syncfusion React popup package is a feature-rich collection of UI components such as Dialog and Tooltip, used to display contextual information or messages in separate pop-ups.
+The Syncfusion React popup package is a feature-rich collection of UI components such as Dialog, Tooltip, and Spinner, used to display contextual information or messages in separate pop-ups.
 
 ## Setup
 
@@ -56,8 +56,8 @@ export default function App() {
 
 **Resources**
 
-- [Dialog Demo/Docs](https://react.syncfusion.com/dialog)
-- [Dialog API](https://react-api.syncfusion.com/dialog/overview)
+- [Dialog Demo/Docs](https://react.syncfusion.com/react-ui/dialog)
+- [Dialog API](https://react.syncfusion.com/api/dialog/overview)
 
 ## React Tooltip
 
@@ -93,8 +93,35 @@ export default function App() {
 
 **Resources**
 
-- [Tooltip Demo/Docs](https://react.syncfusion.com/tooltip)
-- [Tooltip API](https://react-api.syncfusion.com/tooltip/overview)
+- [Tooltip Demo/Docs](https://react.syncfusion.com/react-ui/tooltip)
+- [Tooltip API](https://react.syncfusion.com/api/tooltip/overview)
+
+## React Spinner
+
+The Spinner component indicates loading or background processing. It supports multiple visual styles, sizing, theming, and fullscreen overlay.
+
+**Key features**
+
+- **Variants:** Circular (default), Cupertino, SingleCircle, DoubleCircle.
+- **Size and Thickness:** Control overall size and stroke thickness.
+- **Animation Duration:** Customize rotation/fade speed.
+- **Overlay Mode:** Show as a fullscreen overlay.
+- **Theming:** Built-in color styles via the Color enum (Primary, Secondary, Success, Warning, Error, Info).
+
+**Usage**
+
+```tsx
+import { Spinner, SpinnerType, Color } from "@syncfusion/react-popups";
+
+export default function App() {
+    return (<Spinner label="Loading data…" type={SpinnerType.Circular} size={36} color={Color.Primary} />);
+}
+```
+
+**Resources**
+
+- [Spinner Demo/Docs](https://react.syncfusion.com/react-ui/spinner)
+- [Spinner API](https://react.syncfusion.com/api/spinner/overview)
 
 <p align="center">
 Trusted by the world's leading companies
@@ -122,4 +149,4 @@ Check the changelog [here](https://github.com/syncfusion/react-ui-components/blo
 
 See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campaign=notification) for more info.
 
-&copy; Copyright 2025 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential Studio® license and copyright applies to this distribution.
+&copy; Copyright 2026 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential Studio® license and copyright applies to this distribution.

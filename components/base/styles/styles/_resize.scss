@@ -1,3 +1,5 @@
+@use '../themes/variables' as *;
+
 @include export-module('resize') {
   .sf-resize {
     position: absolute;

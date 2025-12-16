@@ -1,9 +1,9 @@
 import * as React from 'react';
-import { forwardRef, useRef, useImperativeHandle, HTMLAttributes, useCallback, useState, useEffect, useMemo } from 'react';
+import { forwardRef, useRef, useImperativeHandle, HTMLAttributes, useCallback, useState, useEffect, useMemo, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { Popup, IPopup, getZindexPartial, PositionAxis } from '../popup/popup';
 import { Button, Color, IButton, Variant } from '@syncfusion/react-buttons';
-import { Effect, IL10n, L10n, preRender, useProviderContext, useDraggable, IDraggable, DragEvent, getUniqueID } from '@syncfusion/react-base';
+import { Effect, IL10n, L10n, preRender, useProviderContext, useDraggable, IDraggable, DragEvent } from '@syncfusion/react-base';
 import { useResize, ResizeDirections, IResize } from '../common/resize';
 import { ResizerRightIcon, CloseIcon } from '@syncfusion/react-icons';
 
@@ -323,7 +323,7 @@ export const Dialog: React.ForwardRefExoticComponent<DialogComponentProps & Reac
             className = '',
             children,
             style,
-            id = getUniqueID('dialog'),
+            id = `dialog_${useId()}`,
             ...restProps
         } = props;
 

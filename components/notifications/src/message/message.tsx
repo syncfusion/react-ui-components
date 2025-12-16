@@ -104,7 +104,7 @@ export const Message: React.ForwardRefExoticComponent<MsgProps & React.RefAttrib
             return l10n.getConstant('close');
         }, [locale]);
 
-        const classArray: string[] = ['sf-control sf-message sf-lib sf-size-medium', className];
+        const classArray: string[] = ['sf-control sf-message sf-lib sf-size-small', className];
         const hasWrap: boolean = useMemo(() => classArray.join(' ').split(' ').includes('sf-content-center'), [className]);
 
         const classes: string = useMemo(() => {
@@ -178,7 +178,7 @@ export const Message: React.ForwardRefExoticComponent<MsgProps & React.RefAttrib
                 {icon && (
                     <span className="sf-msg-icon sf-display-flex">
                         {typeof icon === 'boolean' ? (
-                            <SvgIcon className="sf-font-size-18" d={msgIcon} />
+                            <SvgIcon className="sf-font-size-lg" d={msgIcon} />
                         ) : (
                             icon
                         )}

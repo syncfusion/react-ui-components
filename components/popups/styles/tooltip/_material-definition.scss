@@ -1,0 +1,40 @@
+@use '../../../base/styles/themes/variables' as *;
+
+$tooltip-wrapper-drop-shadow: $shadow-sm !default;
+$tooltip-wrapper-border-radius: $radius-4 !default;
+$tooltip-wrapper-max-width: calc(var(--sf-spacing) * 21.875) !default;
+$tooltip-wrapper-min-width: $spacing-30 !default;
+
+$tooltip-close-icon-border: 1px solid rgb($tooltip-text-color) !default;
+$tooltip-close-icon-border-radius: $radius-full !default;
+$tooltip-close-icon-box-shadow: $shadow-sm !default;
+$tooltip-close-icon-right: calc(var(--sf-spacing) * -0.625) !default;
+$tooltip-close-icon-top: calc(var(--sf-spacing) * -0.625) !default;
+$tooltip-close-icon-padding: $spacing-2 !default;
+$tooltip-close-icon-font-size: $font-size-sm !default;
+
+$tooltip-tip-directions: (
+    'bottom': (left: 50%, top: 100%),
+    'top': (left: 50%, top: -9px),
+    'left': (left: -9px, top: 48%),
+    'right': (left: 100%, top: 50%)) !default;
+
+$tooltip-content-bg-color: rgb($tooltip-bg-color) !default;
+$tooltip-content-border-color: rgb($tooltip-border) !default;
+$tooltip-content-font-color: rgb($tooltip-text-color) !default;
+$tooltip-content-padding: $spacing-4 $spacing-8 !default;
+$tooltip-content-font-size: $font-size-xs !default;
+$tooltip-content-line-height: $line-height-xs !default;
+
+$tooltip-icon-color: rgb($tooltip-text-color) !default;
+$tooltip-icon-bg-color: rgb($tooltip-bg-color) !default;
+$tooltip-icon-hover-color: rgb($tooltip-bg-color) !default;
+$tooltip-icon-bg-hover: rgb($tooltip-text-color) !default;
+
+$tooltip-arrow-icon-positions: $spacing-16 !default;
+$tooltip-arrow-transparent-border: $spacing-8 solid transparent !default;
+$tooltip-arrow-colored-border: $spacing-8 solid $tooltip-content-border-color !default;
+$tooltip-arrow-x-width: $spacing-8 !default;
+$tooltip-arrow-x-height: $spacing-16 !default;
+$tooltip-arrow-y-width: $spacing-16 !default;
+$tooltip-arrow-y-height: $spacing-8 !default;

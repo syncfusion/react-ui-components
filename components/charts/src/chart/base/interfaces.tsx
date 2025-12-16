@@ -1,8 +1,11 @@
-import { AxisLabelPosition, ChartRangePadding, ChartSeriesType, EmptyPointMode, StepPosition, TitlePosition, AxisValueType, FadeOutMode, LabelPosition, Theme, LegendShape, ChartMarkerShape, LegendPosition, TextOverflow, ZoomMode, ToolbarItems, SplineType, IntervalType, SkeletonType, StripLineSizeUnit, ZIndex, DataLabelIntersectMode } from './enum';
+import { AxisLabelPosition, ChartRangePadding, ChartSeriesType, EmptyPointMode, StepPosition, AxisValueType, LabelPosition, LegendShape, ChartMarkerShape, ZoomMode, ToolbarItems, SplineType, IntervalType, SkeletonType, StripLineSizeUnit, ZIndex, DataLabelIntersectMode, CrosshairLineType, SelectionMode, SelectionPattern, AnnotationCoordinateUnit, ErrorBarType } from './enum';
 import { DataManager, Query } from '@syncfusion/react-data';
-import { AxisDataProps, ChartSizeProps, VisibleRangeProps } from '../chart-area/chart-interfaces';
-import { Animation } from '../common/base';
+import { AxisDataProps, Chart, ChartSizeProps, VisibleRangeProps } from '../chart-area/chart-interfaces';
+import { Animation } from '../../common';
 import { HorizontalAlignment, VerticalAlignment } from '@syncfusion/react-base';
+import { JSX } from 'react';
+import { FadeOutMode, LegendPosition, TextOverflow, Theme, TitlePosition } from '../../common';
+import { FocusOutlineProps } from '../../common/interfaces';
 
 /**
  * Represents the border configuration for the chart title.
@@ -310,6 +313,186 @@ export interface ChartAreaProps {
      * @default {left: 0, right: 0, top: 0, bottom: 0}
      */
     margin?: ChartMarginProps;
+}
+
+/**
+ * Defines the configuration options for customizing chart selection behavior
+ */
+export interface ChartSelectionProps {
+
+    /**
+     * Specifies how data points or series can be selected or highlighted.
+     *
+     * Available options:
+     * - 'None': Disables selection.
+     * - 'Series': Selects the entire series.
+     * - 'Point': Selects individual data points.
+     * - 'Cluster': Selects a group of related data points.
+     *
+     * @default 'None'
+     */
+    mode?: SelectionMode;
+
+    /**
+     * Enables selection of multiple data points, series, or clusters.
+     > Note that the `selectionMode` must be set to `Point`, `Series`, or `Cluster` for multi-selection to be enabled.
+     *
+     * @default false
+     */
+    allowMultiSelection?: boolean;
+
+    /**
+     * Defines the indexes of points to be selected when the chart is initially rendered.
+     > Note that `selectionMode` or `highlightMode` must be set to `Point`, `Series`, or `Cluster` for this feature to work.
+     *
+     * @default []
+     */
+    selectedDataIndexes?: ChartIndexesProps[];
+
+    /**
+     * Specifies the visual pattern applied to selected data points or series
+     * The available options are:
+     * * 'None': No selection pattern is applied.
+     * * 'Chessboard': Applies a chessboard pattern as the selection effect.
+     * * 'Dots': Applies a dot pattern as the selection effect.
+     * * 'DiagonalForward': Applies a forward diagonal line pattern as the selection effect.
+     * * 'Crosshatch': Applies a crosshatch pattern as the selection effect.
+     * * 'Pacman': Applies a Pacman pattern as the selection effect.
+     * * 'DiagonalBackward': Applies a backward diagonal line pattern as the selection effect.
+     * * 'Grid': Applies a grid pattern as the selection effect.
+     * * 'Turquoise': Applies a turquoise pattern as the selection effect.
+     * * 'Star': Applies a star pattern as the selection effect.
+     * * 'Triangle': Applies a triangle pattern as the selection effect.
+     * * 'Circle': Applies a circle pattern as the selection effect.
+     * * 'Tile': Applies a tile pattern as the selection effect.
+     * * 'HorizontalDash': Applies a horizontal dash pattern as the selection effect.
+     * * 'VerticalDash': Applies a vertical dash pattern as the selection effect.
+     * * 'Rectangle': Applies a rectangle pattern as the selection effect.
+     * * 'Box': Applies a box pattern as the selection effect.
+     * * 'HorizontalStripe': Applies a horizontal stripe pattern as the selection effect.
+     * * 'Bubble': Applies a bubble pattern as the selection effect.
+     *
+     * @default None
+     */
+    pattern?: SelectionPattern;
+}
+
+
+/**
+ * Internal interface for managing chart selection state.
+ *
+ * @private
+ */
+export interface BaseSelection extends ChartSelectionProps {
+
+    /** Chart instance associated with the selection. */
+    chart?: Chart;
+
+    /** True if the selection was triggered from the legend. */
+    isLegendSelection?: boolean;
+
+    /** True if the selection should be added to existing selections. */
+    isAdd?: boolean;
+
+    /** Indexes of currently selected data points in the chart. */
+    chartSelectedDataIndexes?: ChartIndexesProps[];
+
+    /** Elements that were previously selected. */
+    previousSelectedElements?: Element[];
+
+    /** Optional name identifier for the selection context. */
+    name?: string;
+
+    /** Color used to highlight selected elements. */
+    fill?: string;
+
+    /** True if the element is currently selected. */
+    isSelected?: boolean;
+
+    /** True if the highlight was triggered from the legend. */
+    isLegendHighlight?: boolean;
+
+    /** True if the highlight was triggered from the tooltip. */
+    isTooltipHighlight?: boolean;
+
+    /** True if legend toggling is enabled for selection. */
+    isLegendToggle?: boolean;
+}
+
+/**
+ * Defines the configuration options for customizing chart highlight behavior.
+ */
+export interface ChartHighlightProps {
+
+    /**
+     * Specifies how data points or series can be highlighted.
+     *
+     * Available options:
+     * - 'None': Disables highlighting.
+     * - 'Series': Highlights the entire series.
+     * - 'Point': Highlights individual data points.
+     * - 'Cluster': Highlights a group of related data points.
+     *
+     * @default 'None'
+     */
+    mode?: SelectionMode;
+
+    /**
+     * Specifies the color used to highlight a data point when hovered.
+     *
+     * @default ''
+     */
+    fill?: string;
+
+    /**
+     * Defines the visual pattern applied to highlighted data points or series.
+     * The available options are:
+     * * 'None': No highlight. pattern is applied.
+     * * 'Chessboard': Applies a chessboard pattern as the highlight. effect.
+     * * 'Dots': Applies a dot pattern as the highlight. effect.
+     * * 'DiagonalForward': Applies a forward diagonal line pattern as the highlight. effect.
+     * * 'Crosshatch': Applies a crosshatch pattern as the highlight. effect.
+     * * 'Pacman': Applies a Pacman pattern as the highlight. effect.
+     * * 'DiagonalBackward': Applies a backward diagonal line pattern as the highlight. effect.
+     * * 'Grid': Applies a grid pattern as the highlight. effect.
+     * * 'Turquoise': Applies a turquoise pattern as the highlight. effect.
+     * * 'Star': Applies a star pattern as the highlight. effect.
+     * * 'Triangle': Applies a triangle pattern as the highlight. effect.
+     * * 'Circle': Applies a circle pattern as the highlight. effect.
+     * * 'Tile': Applies a tile pattern as the highlight. effect.
+     * * 'HorizontalDash': Applies a horizontal dash pattern as the highlight. effect.
+     * * 'VerticalDash': Applies a vertical dash pattern as the highlight. effect.
+     * * 'Rectangle': Applies a rectangle pattern as the highlight. effect.
+     * * 'Box': Applies a box pattern as the highlight. effect.
+     * * 'HorizontalStripe': Applies a horizontal stripe pattern as the highlight. effect.
+     * * 'Bubble': Applies a bubble pattern as the highlight. effect.
+     *
+     * @default None
+     */
+    pattern?: SelectionPattern;
+}
+
+/**
+ * Represents the index information for a data point within a chart.
+ * Used to identify specific series and points for selection or highlighting.
+ */
+export interface ChartIndexesProps {
+
+    /**
+     * Index of the series in the chart.
+     * Determines which series the data point belongs to.
+     *
+     * @default 0
+     */
+    seriesIndex?: number;
+
+    /**
+     * Index of the data point within the specified series.
+     * Used to target a specific point for selection or interaction.
+     *
+     * @default 0
+     */
+    pointIndex?: number;
 }
 
 /**
@@ -623,10 +806,10 @@ export interface ChartComponentProps {
      * Applies a visual theme to the chart.
      *
      * Available options:
-     * - `Material3`: Applies the Material 3 light theme.
-     * - `Material3Dark`: Applies the Material 3 dark theme.
+     * - `Material`: Applies the Material light theme.
+     * - `MaterialDark`: Applies the Material dark theme.
      *
-     * @default 'Material3'
+     * @default 'Material'
      */
     theme?: Theme;
 
@@ -748,6 +931,13 @@ export interface ChartComponentProps {
      * @event onResize
      */
     onResize?: (args: ResizeEvent) => void;
+
+    /**
+     * Specifies a callback function to customize the color of individual points in the series.
+     *
+     * @default null
+     */
+    pointRender?: (args: PointRenderProps) => string;
 }
 
 /**
@@ -1010,7 +1200,16 @@ export interface ChartAxisProps {
      */
     logBase?: number;
 
+    /**
+     * Defines the configuration for where and how the axis line intersects with another axis.
+     * This includes the intersection value, the target axis, and whether overlapping of axis elements is allowed.
+     *
+     * @default null
+     */
+    crossAt?: ChartAxisCrossingProps;
+
 }
+
 
 /**
  * Defines the configuration options for customizing a column within the chart layout.
@@ -1312,16 +1511,28 @@ export interface ChartSeriesProps {
      * Defines the type of series used to visualize the data.
      * Supported types include:
      * - `Line` - Renders a line chart.
+     * - `MultiColoredLine` - Renders a multicolored line chart.
      * - `Column` - Renders a column chart.
      * - `Area` - Renders an area chart.
+     * - `StepArea` - Renders an  step area chart.
      * - `Bar` - Renders a bar chart.
+     * - `StackingArea` - Renders a stacking area chart.
+     * - `StackingArea100` - Renders a 100% stacking area chart.
      * - `StackingColumn` - Renders a stacking column chart.
      * - `StackingBar` - Renders a stacking bar chart.
+     * - `StackingColumn100` - Renders a 100% stacking column chart.
+     * - `StackingBar100` - Renders a 100% stacking bar chart.
      * - `StepLine` - Renders a step line chart.
      * - `SplineArea` - Renders a spline area chart.
      * - `Scatter` - Renders a scatter chart.
      * - `Spline` - Renders a spline chart.
      * - `Bubble` - Renders a bubble chart.
+     * - `Candle` - Renders a candle chart.
+     * - `Hilo` - Renders a hilo chart.
+     * - `HiloOpenClose` - Renders a hiloOpenClose chart.
+     * - `RangeArea` - Renders a rangeArea chart.
+     * - `RangeColumn` - Renders a rangeColumn chart.
+     * - `SplineRangeArea` - Renders a spline range area series.
      *
      * @default 'Line'
      */
@@ -1486,6 +1697,78 @@ export interface ChartSeriesProps {
      * @default 3
      */
     maxRadius?: number;
+
+    /**
+     * Enables the solid candlestick rendering style in charts.
+     *
+     * When enabled, candlesticks are filled based on the relationship between
+     * the open and close prices of the current data point:
+     * * A candle is filled (solid) if the close is below the open.
+     * * A candle is hollow if the close is above the open.
+     *
+     * @default false
+     */
+    enableSolidCandles?: boolean;
+
+    /**
+     * Specifies the fill color for bullish candles or points,
+     * where the closing price is higher than the opening price.
+     *
+     * Commonly used to indicate upward price movement.
+     *
+     * @default null
+     */
+    bullFillColor?: string | null;
+
+    /**
+     * Specifies the fill color for bearish candles or points,
+     * where the closing price is lower than the opening price.
+     *
+     * Commonly used to indicate downward price movement.
+     *
+     * @default null
+     */
+    bearFillColor?: string | null;
+
+    /**
+     * Specifies the data field name that contains the high price value
+     * for each data point in the financial chart.
+     *
+     * This value represents the highest price reached during the time interval.
+     *
+     * @default ''
+     */
+    high?: string;
+
+    /**
+     * Specifies the data field name that contains the low price value
+     * for each data point in the financial chart.
+     *
+     * This value represents the lowest price reached during the time interval.
+     *
+     * @default ''
+     */
+    low?: string;
+
+    /**
+     * Specifies the data field name that contains the opening price value
+     * for each data point in the financial chart.
+     *
+     * This value represents the price at the beginning of the time interval.
+     *
+     * @default ''
+     */
+    open?: string;
+
+    /**
+     * Specifies the data field name that contains the closing price value
+     * for each data point in the financial chart.
+     *
+     * This value represents the price at the end of the time interval.
+     *
+     * @default ''
+     */
+    close?: string;
 
     /**
      * Determines whether tooltips for the chart series are enabled.
@@ -1850,6 +2133,16 @@ export interface ChartDataLabelProps {
      * @default null
      */
     formatter?: (index: number, text: string) => string | boolean;
+
+    /**
+     * Custom template function for rendering the data label content.
+     *
+     * This function receives the data point properties and returns a JSX element
+     * to access the data point values.
+     *
+     * @default null
+     */
+    template?: ((data: ChartDataLabelTemplateProps) => JSX.Element | null);
 }
 
 /**
@@ -1940,7 +2233,7 @@ export interface ChartTitleProps {
     /**
      * Specifies the main title text of the chart. This text provides context or a label for the chart's data.
      *
-     * @default 'Normal'
+     * @default ''
      */
     text?: string;
 
@@ -2211,6 +2504,17 @@ export interface ChartTooltipProps {
      * @default null
      */
     formatter?: (text: string | string[]) => string | string[] | boolean;
+
+    /**
+     * Custom template function for rendering the tooltip content.
+     *
+     * This function receives the data point properties and returns a JSX element
+     * to access the data point values.
+     *
+     * @default null
+     */
+    template?: ((data: ChartTooltipTemplateProps) => JSX.Element | null);
+
 }
 
 /**
@@ -2975,36 +3279,6 @@ export interface AxisLine {
 }
 
 /**
- * Defines the appearance of the focus outline for interactive UI elements.
- */
-export interface FocusOutlineProps {
-
-    /**
-     * Customizes the focus border color.
-     * If not specified, the default focus border color is used.
-     *
-     * @default null
-     */
-    color?: string;
-
-    /**
-     * Customizes the focus border width.
-     * If not specified, the default width is used.
-     *
-     * @default 1.5
-     */
-    width?: number;
-
-    /**
-     * Customizes the focus border margin.
-     * If not specified, the default margin is used.
-     *
-     * @default 0
-     */
-    offset?: number;
-}
-
-/**
  * Represents a point location in a 2D chart coordinate space.
  *
  */
@@ -3069,4 +3343,418 @@ export interface ChartPaddingProps {
  * @private
  */
 export type TooltipContentFunction = (text: string | string[]) => string | string[] | boolean;
+
+/**
+ * Represents the context data available for rendering a custom tooltip template in a chart.
+ */
+export interface ChartTooltipTemplateProps {
+    /** The X-coordinate of the data point in the chart. */
+    x: number;
+
+    /** The Y-coordinate of the data point in the chart. */
+    y: number;
+
+    /** The value to be displayed in the tooltip, mapped from the `tooltipField` in the series configuration. */
+    tooltip: string;
+
+    /** The index of the series to which the data point belongs. */
+    seriesIndex: number;
+
+    /** The index of the data point within the series. */
+    pointIndex: number;
+}
+
+/**
+ * Represents the context data available for rendering a custom data label template in a chart.
+ */
+export interface ChartDataLabelTemplateProps {
+    /** The X-coordinate of the data point in the chart. */
+    x: number;
+
+    /** The Y-coordinate of the data point in the chart. */
+    y: number;
+
+    /** The value to be displayed as a data label, mapped from the `labelField` in the series configuration. */
+    label: string;
+
+    /** The index of the series to which the data point belongs. */
+    seriesIndex: number;
+
+    /** The index of the data point within the series. */
+    pointIndex: number;
+}
+
+/**
+ * Defines the configuration options for the chart crosshair.
+ *
+ */
+export interface ChartCrosshairProps {
+
+    /**
+     * Enables or disables the crosshair line.
+     * When set to `true`, the crosshair line is visible.
+     *
+     * @default false
+     */
+    enable?: boolean;
+
+    /**
+     * Specifies the visual style of the crosshair line.
+     *
+     * You can customize the line's color, width, and dash pattern
+     * using the `dashArray` property.
+     *
+     * @default { color: undefined, width: 1, dashArray: '' }
+     */
+    lineStyle?: ChartCrosshairLineStyleProps;
+
+    /**
+     * Determines the orientation of the crosshair lines.
+     *
+     * Available options:
+     * - `Both`: Displays both vertical and horizontal lines.
+     * - `Vertical`: Displays only the vertical line.
+     * - `Horizontal`: Displays only the horizontal line.
+     *
+     * @default Both
+     */
+    lineType?: CrosshairLineType;
+
+    /**
+     * Highlights the entire category range on hover.
+     *
+     * This option is applicable only for category axes.
+     *
+     * @default false
+     */
+    highlightCategory?: boolean;
+
+    /**
+     * Specifies whether the crosshair should snap to the nearest data point or follow the mouse pointer.
+     *
+     * When `false`, the crosshair freely follows the mouse pointer's X and Y coordinates across the chart.
+     *
+     * @default true
+     */
+    snap?: boolean;
+
+}
+
+/**
+ * Represents the styling options for crosshair lines in a chart.
+ *
+ */
+export interface ChartCrosshairLineStyleProps {
+    /**
+     * Specifies the color of the crosshair lines.
+     * Accepts any valid CSS color string, including hexadecimal, RGB, or RGBA formats.
+     *
+     * @default ''
+     */
+    color?: string;
+
+    /**
+     * Sets the width of the crosshair lines, in pixels.
+     *
+     * @default 1
+     */
+    width?: number;
+
+    /**
+     * Defines the dash pattern for the crosshair lines.
+     * Accepts a string of numbers that specify the lengths of dashes and gaps (e.g., "5,3").
+     *
+     * @default '5,5'
+     */
+    dashArray?: string;
+
+    /**
+     * Sets the transparency level of the crosshair lines.
+     * Accepts a value from `0` (fully transparent) to `1` (fully opaque).
+     *
+     * @default 1
+     */
+    opacity?: number;
+}
+
+/**
+ * Configuration options for the crosshair axis tooltip in the chart.
+ *
+ */
+export interface ChartCrosshairTooltipProps {
+    /**
+     * When set to true, a tooltip will be displayed at the axis intersection point
+     * when the crosshair is active.
+     *
+     * @default false
+     */
+    enable?: boolean;
+
+    /**
+     * Specifies the background color of the axis tooltip.
+     *
+     * @default ''
+     */
+    fill?: string;
+
+    /**
+     * Customizes the text style of the axis tooltip.
+     * Accepts font-related properties such as font size, color, weight, and family.
+     *
+     * @default { fontStyle: 'Normal', fontSize: '', fontWeight: 'Normal', color: '', fontFamily: '' }
+     */
+    textStyle?: ChartFontProps;
+
+    /**
+     * Formatter for the crosshair axis tooltip text.
+     *
+     * @param {number} value - The numeric value at the crosshair on the axis.
+     * @param {string} text - The current formatted text of the axis tooltip.
+     * @returns {string | boolean} A string to override the tooltip text, or a boolean to keep it unchanged.
+     * @default null
+     */
+    formatter?: (value: number, text: string) => string | boolean;
+}
+
+/**
+ * Represents the configuration options for axis crossing in a chart.
+ */
+export interface ChartAxisCrossingProps {
+    /**
+     * Defines the value at which the axis line intersects with another axis.
+     * This can be a numeric value, date, or category name, depending on the axis type.
+     *
+     * @default null
+     */
+    value?: number | Date | string | null;
+
+    /**
+     * Specifies the name of the target axis that the current axis line should intersect.
+     *
+     * @default null
+     */
+    axis?: string | null;
+
+    /**
+     * Indicates whether the axis line is allowed to overlap axis elements such as labels and titles.
+     * When set to `true`, the axis line may cross over these elements.
+     *
+     * @default true
+     */
+    allowOverlap?: boolean;
+}
+
+/**
+ * Represents an annotation element displayed on the chart.
+ */
+export interface ChartAnnotationProps {
+    /**
+     * X-axis position of the annotation.
+     * - When coordinateUnit is 'Pixel', specify offset in pixels.
+     * - When coordinateUnit is 'Point', specify the axis value.
+     *
+     * @default null
+     */
+    x?: string | Date | number;
+
+    /**
+     * Y-axis position of the annotation.
+     * - When coordinateUnit is 'Pixel', specify offset in pixels.
+     * - When coordinateUnit is 'Point', specify the axis value.
+     *
+     * @default null
+     */
+    y?: string | number;
+
+    /**
+     * Content of the annotation. Accepts HTML string, plain text, or DOM element ID.
+     *
+     * @default null
+     */
+    content?: string;
+
+    /**
+     * Horizontal alignment relative to the X-position.
+     * Available Options:
+     * - `Right`: Aligns the annotation to the right of its anchor/target.
+     * - `Center`: Centers the annotation horizontally on its anchor/target.
+     * - `Left`: Aligns the annotation to the left of its anchor/target.
+     *
+     * @default 'Center'
+     */
+    hAlign?: HorizontalAlignment;
+
+    /**
+     * Defines whether position values are axis-based ('Point') or pixel-based ('Pixel').
+     *
+     * @default 'Point'
+     */
+    coordinateUnit?: AnnotationCoordinateUnit;
+
+    /**
+     * Vertical alignment relative to the Y-position.
+     * Available options :
+     * - `Top`: Aligns the annotation above its anchor/target.
+     * - `Center`: Vertically centers the annotation on its anchor/target.
+     * - `Bottom`: Aligns the annotation below its anchor/target.
+     *
+     * @default 'Center'
+     */
+    vAlign?: VerticalAlignment;
+
+    /**
+     * Name of the X-axis to bind when coordinateUnit is 'Point'.
+     *
+     * @default null
+     */
+    xAxisName?: string | null;
+
+    /**
+     * Name of the Y-axis to bind when coordinateUnit is 'Point'.
+     *
+     * @default null
+     */
+    yAxisName?: string | null;
+
+    /**
+     * Enhances accessibility for annotation elements to ensure compatibility with assistive technologies, such as screen readers and keyboard navigation.
+     *
+     * @default { ariaLabel: null, role: 'img', focusable: true, tabIndex: 0 }
+     */
+    accessibility?: ChartAccessibilityProps;
+}
+
+/**
+ * Configuration options for customizing error bars in chart series.
+ */
+export interface ChartErrorBarProps {
+
+    /**
+     * Specifies whether error bars should be displayed for the data.
+     * When set to true, error bars will be rendered to represent data variability or uncertainty.
+     *
+     * @default false
+     */
+    visible?: boolean;
+
+    /**
+     * Specifies the type of error bar to render on the chart.
+     * Determines how the error values are calculated and displayed.
+     * The available options are:
+     * * `Percentage` - Renders an error bar based on percentage.
+     * * `StandardDeviation`- Renders an error bar using standard deviation.
+     * * `StandardError`- Renders an error bar using standard error.
+     * * `Custom`- Renders a custom-defined error bar.
+     *
+     * @default 'Custom'
+     */
+    type?: ErrorBarType;
+
+    /**
+     * Specifies the stroke color of the error bar. Accepts hex, rgba, or any valid CSS color string.
+     *
+     * @default ''
+     */
+    color?: string;
+
+    /**
+     * Specifies the vertical error value associated with each data point. This value can be mapped from a specific field in the data source.
+     *
+     * @default 1
+     */
+    verticalError?: number | string;
+
+    /**
+     * Defines the width of the error bars in the chart series.
+     * This value controls the thickness of the error bars, allowing customization of their appearance.
+     *
+     * @default 1
+     */
+    width?: number;
+
+    /**
+     * Specifies the horizontal error value associated with each data point. This value can be mapped from a specific field in the data source.
+     *
+     * @default 0
+     */
+    horizontalError?: number | string;
+
+    /**
+     * Allows customization of the appearance and behavior of the caps at the ends of error bars in a chart series.
+     *
+     * @default { width: 1, length: 10, color: "", opacity: 1 }
+     */
+    errorBarCap?: ChartErrorBarCapProps;
+
+    /**
+     * Defines the color for the error bar, which is mapped to the data source mapping name.
+     *
+     * @default ''
+     */
+    errorBarColorField?: string;
+}
+
+/**
+ * Configuration options for customizing the caps at the ends of error bars in a chart series.
+ */
+export interface ChartErrorBarCapProps {
+    /**
+     * Specifies the width of the error bar cap in pixels.
+     *
+     * @default 1
+     */
+    width?: number;
+    /**
+     * Specifies the length of the caps on the error bars, measured in pixels.
+     *
+     * @default 10
+     */
+    length?: number;
+    /**
+     * Specifies the stroke color of the cap.
+     * Accepts hex, rgba, or any valid CSS color string.
+     *
+     * @default ""
+     */
+    color?: string;
+    /**
+     * Specifies the opacity of the error bar caps.
+     * Accepts a value between 0 (fully transparent) and 1 (fully opaque).
+     *
+     * @default 1
+     */
+    opacity?: number;
+}
+
+/**
+ * Provides options to customize the rendering of individual points in a chart.
+ *
+ * @public
+ */
+export interface PointRenderProps {
+
+    /**
+     * The color applied to the point.
+     *
+     */
+    color: string;
+
+    /**
+     * The zero-based index of the series in the chart.
+     *
+     */
+    seriesIndex: number;
+
+    /**
+     * The value of the xField for the point.
+     *
+     */
+    xValue: number | Date | string | null;
+
+    /**
+     * The value of the yField for the point.
+     *
+     */
+    yValue: number | Date | string | null;
+}
 

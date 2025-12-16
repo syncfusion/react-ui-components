@@ -1,3 +1,5 @@
+@use 'theme-variables' as *;
+
 @include export-module('h-scroll') {
   #{&}.sf-hscroll {
     display: block;
@@ -30,11 +32,11 @@
     width: $hscroll-nav-width;
 
     &.sf-scroll-left-nav {
-      inset-inline-start: 0;
+      inset-inline-start: $hscroll-inline-distance;
     }
 
     &.sf-scroll-right-nav {
-      inset-inline-end: 0;
+      inset-inline-end: $hscroll-inline-distance;
     }
   }
 
