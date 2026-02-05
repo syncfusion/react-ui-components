@@ -29,7 +29,9 @@ export const TimeSlotEvent: FC = memo(() => {
         maxEventsPerRow = 3,
         timeScale,
         readOnly,
-        quickPopupRef
+        quickPopupRef,
+        startHourTuple,
+        endHourTuple
     } = useSchedulerPropsContext();
 
     const { dayWrappers } = useTimeSlotEvent();
@@ -41,15 +43,17 @@ export const TimeSlotEvent: FC = memo(() => {
 
     const renderSpannedContent: (eventInfo: ProcessedEventsData) => ReactNode = (eventInfo: ProcessedEventsData) => {
         if (timeScale.enable) {
+            const { isOverflowTop, isOverflowBottom } =
+                PositioningService.getOverflowDirection(eventInfo, renderDates, startHourTuple, endHourTuple);
             return (
                 <Fragment>
-                    {!eventInfo.isFirstDay && (
+                    {isOverflowTop && (
                         <div className={`${CSS_CLASSES.INDICATOR} ${CSS_CLASSES.ICONS} ${CSS_CLASSES.UP_ARROW_ICON}`}>
                             <ChevronUpDoubleIcon />
                         </div>
                     )}
                     {renderStandardEventContent(eventInfo)}
-                    {!eventInfo.isLastDay && (
+                    {isOverflowBottom && (
                         <div className={`${CSS_CLASSES.INDICATOR} ${CSS_CLASSES.ICONS} ${CSS_CLASSES.DOWN_ARROW_ICON}`}>
                             <ChevronDownDoubleIcon />
                         </div>
@@ -107,7 +111,7 @@ export const TimeSlotEvent: FC = memo(() => {
         if (eventTemplate) {
             return eventTemplate(eventInfo.event);
         }
-        else if (eventInfo.totalSegments) {
+        else if (eventInfo.totalSegments || startHourTuple || endHourTuple) {
             return renderSpannedContent(eventInfo);
         }
         return renderStandardEventContent(eventInfo);
@@ -202,7 +206,8 @@ export const TimeSlotEvent: FC = memo(() => {
                 return (
                     <div className={CSS_CLASSES.DAY_WRAPPER} key={dayWrapper.key} data-date={dayWrapper.dateTimestamp}>
                         {eventsToRender.map((eventInfo: ProcessedEventsData) => {
-                            const { isOverflowTop, isOverflowBottom } = PositioningService.getOverflowDirection(eventInfo, renderDates);
+                            const { isOverflowTop, isOverflowBottom } =
+                                PositioningService.getOverflowDirection(eventInfo, renderDates, startHourTuple, endHourTuple);
                             const className: string = eventInfo.eventClasses.join(' ');
                             const commonProps: React.HTMLAttributes<HTMLDivElement> = {
                                 style: eventInfo.eventStyle,

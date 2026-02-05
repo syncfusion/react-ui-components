@@ -1289,6 +1289,7 @@ export interface PieLegendClickEvent {
  * or surrounding elements, helping to control layout and visual balance.
  */
 export interface PieChartPaddingProps {
+
     /**
      * Padding on the left side of the chart, in pixels.
      *
@@ -1653,6 +1654,7 @@ export interface PieChartTooltipProps {
  * Defines the input parameters for the tooltip formatter callback in the Pie Chart.
  */
 export interface PieChartTooltipFormatterProps {
+
     /**
      * The tooltip content to be formatted.
      * Can be a single string or an array of strings for multiline tooltips.
@@ -1664,12 +1666,15 @@ export interface PieChartTooltipFormatterProps {
  * Defines the input parameters for the data label formatter callback in the Pie Chart.
  */
 export interface PieChartDataLabelFormatterProps {
+
     /**
      * The zero-based index of the data point being formatted.
      */
     index: number;
+
     /**
      * The current text/value of the data label for the data point.
      */
     text: string;
 }
+

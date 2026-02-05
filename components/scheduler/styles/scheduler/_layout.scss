@@ -29,13 +29,7 @@
         visibility: hidden;
       }
       .sf-resize-container {
-        height: 100%
-      }
-    }
-
-    .sf-month-view, .sf-header-section {
-      .sf-event-clone .sf-appointment-details {
-        display: flex;
+        height: 100%;
       }
     }
 
@@ -255,7 +249,7 @@
         }
       }
       
-      &.sf-hide-childs > span {
+      &.sf-hide-children > span {
         display: none;
       }
     }
@@ -551,10 +545,6 @@
       }
     }
 
-    .sf-day-wrapper .sf-appointment-details {
-      display: block;
-    }
-
     .sf-indicator {
       display: flex;
       justify-content: center;
@@ -577,11 +567,17 @@
     }
 
     .sf-appointment-details {
-      display: flex;
+      display: block;
       align-items: center;
       height: 100%;
       padding-inline: $scheduler-appointment-padding;
       gap: $scheduler-appointment-padding;
+    }
+
+    .sf-month-view .sf-appointment-details,
+    .sf-header-section .sf-event-clone .sf-appointment-details,
+    .sf-header-section .sf-all-day-row .sf-appointment-details {
+      display: flex;
     }
 
     .sf-block-indicator {
@@ -605,7 +601,7 @@
       height: 100%;
       width: 100%;
       font-size: $scheduler-font-size-sm;
-      z-index: 3;
+      z-index: 1;
 
       .sf-subject {
         overflow: hidden;
@@ -635,13 +631,20 @@
         height: 100%;
       }
 
-      .sf-appointment {
-        &:has(.sf-indicator) {
-          display: flex;  
-        }
+      .sf-resize-container {
+        display: flex;
+        width: 100%;
+      }
 
-        &:has(.sf-right-icon) {
-          justify-content: space-between;
+      .sf-day-wrapper .sf-appointment-details {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        align-items: start;
+        gap: 0;
+
+        .sf-subject {
+          flex: 0;
         }
       }
     }
@@ -668,16 +671,8 @@
       border: $scheduler-drag-clone-border;
       box-shadow: $scheduler-popup-box-shadow-1;
 
-      .sf-appointment-details {
-        display: block;
-      }
-
       .sf-subject {
         padding-inline-start: $scheduler-drag-padding;
-      }
-
-      .sf-event-time {
-        line-height: $scheduler-day-event-line-height;
       }
     }
   }

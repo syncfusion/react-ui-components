@@ -2,7 +2,7 @@ import { ForwardedRef, forwardRef, JSX, useContext, useEffect, useLayoutEffect }
 import { useLayout } from '../layout/LayoutContext';
 import { PieChartMarginProps, PieChartSizeProps, PieChartTitleProps, PieChartFontProps } from '../base/interfaces';
 import { ChartContext } from '../layout/ChartProvider';
-import { TextOverflow, TitlePosition } from '../../common';
+import { TextAnchor, TextOverflow, TitlePosition } from '../../common';
 import { HorizontalAlignment } from '@syncfusion/react-base';
 
 import { getMaxRotatedTextSize, getMaxTextSize, getTextAnchor, getTitle, measureText, titlePositionX } from '../utils/helper';
@@ -223,7 +223,7 @@ function titleElement(chart: Chart, titleProps: PieChartTitleProps, ref: Forward
             id={chart.element?.id + '_ChartTitle'}
             x={titleOptions.x}
             y={titleOptions.y}
-            textAnchor={titleOptions.textAnchor}
+            textAnchor={titleOptions.textAnchor as TextAnchor}
             fill={titleProps.font?.color || chart.themeStyle.chartTitleFont.color}
             fontFamily={titleProps.font?.fontFamily || chart.themeStyle.chartTitleFont.fontFamily}
             fontSize={titleProps.font?.fontSize || chart.themeStyle.chartTitleFont.fontSize}

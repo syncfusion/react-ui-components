@@ -419,7 +419,7 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuComponentPr
                 onOpen?.(((event as TapEventArgs).originalEvent ? (event as TapEventArgs).originalEvent : event) as Event);
                 if (onOpen && open === false) { return; }
                 setIsOpen(true);
-            }, []);
+            }, [onOpen, open]);
 
         const touchModule: React.RefObject<ITouch | null> =
             useRef<ITouch>(Touch(Browser.isIos && targetRef ? targetRef : { current: null } as unknown as React.RefObject<HTMLElement>,
@@ -474,7 +474,7 @@ export const ContextMenu: React.ForwardRefExoticComponent<ContextMenuComponentPr
                     targetElement.removeEventListener('contextmenu', handleTargetContextMenu);
                 }
             };
-        }, [targetRef]);
+        }, [targetRef, onOpen]);
 
         useEffect(() => {
             if (!open && initialShowState.current === open) { return; }

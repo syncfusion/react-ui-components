@@ -201,7 +201,7 @@ forwardRef<IQuickInfoPopup, QuickInfoPopupProps>((props: QuickInfoPopupProps,  r
 
     const { onClose, onEditEvent, onMoreDetails } = props;
 
-    const { schedulerRef, eventSettings, showQuickInfoPopup, showDeleteAlert, view, readOnly } = useSchedulerPropsContext();
+    const { schedulerRef, eventSettings, showQuickInfoPopup, showDeleteAlert, view, readOnly, timeFormat } = useSchedulerPropsContext();
 
     const [cellData, setCellData] = useState<SchedulerCellClickEvent>({} as SchedulerCellClickEvent);
     const [eventData, setEventData] = useState<EventModel>({} as EventModel);
@@ -348,7 +348,11 @@ forwardRef<IQuickInfoPopup, QuickInfoPopupProps>((props: QuickInfoPopupProps,  r
     }, [eventData, handleClose, onEditEvent]);
 
     const handleMoreDetails: () => void = useCallback((): void => {
-        onMoreDetails(cellData);
+        const updatedCellData: SchedulerCellClickEvent = {
+            ...cellData,
+            [eventSettings.fields.subject]: textBoxRef?.current?.value
+        };
+        onMoreDetails(updatedCellData);
         handleClose();
     }, [cellData, handleClose, onMoreDetails]);
 
@@ -415,7 +419,7 @@ forwardRef<IQuickInfoPopup, QuickInfoPopupProps>((props: QuickInfoPopupProps,  r
                     <div className={`${CSS_CLASSES.CELL_TIME} ${CSS_CLASSES.DISPLAY_FLEX}`}>
                         <TimelineDayIcon />
                         <span className={CSS_CLASSES.POPUP_TIME_TEXT}>
-                            {DateService.formatCellDateRange(new Date(cellData.startTime), new Date(cellData.endTime), locale)}
+                            {DateService.formatCellDateRange(new Date(cellData.startTime), new Date(cellData.endTime), locale, timeFormat)}
                         </span>
                     </div>
                 )}
@@ -467,7 +471,7 @@ forwardRef<IQuickInfoPopup, QuickInfoPopupProps>((props: QuickInfoPopupProps,  r
                     <div className={`${CSS_CLASSES.CELL_TIME} ${CSS_CLASSES.DISPLAY_FLEX}`}>
                         <TimelineDayIcon />
                         <span className={CSS_CLASSES.POPUP_TIME_TEXT}>
-                            {DateService.formatPopupDateRange(eventData, locale)}
+                            {DateService.formatPopupDateRange(eventData, locale, timeFormat)}
                         </span>
                     </div>
                 )}

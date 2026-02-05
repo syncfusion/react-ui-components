@@ -794,9 +794,10 @@ export class DateService {
      *
      * @param {EventModel} eventData Start date and time
      * @param {string} locale Locale string for formatting
+     * @param {string} timeFormat Optional time format
      * @returns {string} Formatted date range string
      */
-    static formatPopupDateRange(eventData: EventModel, locale: string): string {
+    static formatPopupDateRange(eventData: EventModel, locale: string, timeFormat?: string): string {
         const resolvedLocale: string = locale || 'en-US';
         const { getString } = useSchedulerLocalization(resolvedLocale);
 
@@ -808,8 +809,12 @@ export class DateService {
 
         const endDateDetails: string = formatDate(end, { type: 'date', skeleton: 'long', locale: resolvedLocale });
 
-        const startTimeStr: string = formatDate(start, { type: 'time', skeleton: 'short', locale: resolvedLocale });
-        const endTimeStr: string = formatDate(end, { type: 'time', skeleton: 'short', locale: resolvedLocale });
+        const startTimeStr: string = timeFormat
+            ? formatDate(start, { type: 'time', format: timeFormat, locale: resolvedLocale })
+            : formatDate(start, { type: 'time', skeleton: 'short', locale: resolvedLocale });
+        const endTimeStr: string = timeFormat
+            ? formatDate(end, { type: 'time', format: timeFormat, locale: resolvedLocale })
+            : formatDate(end, { type: 'time', skeleton: 'short', locale: resolvedLocale });
 
         const isMultiDay: boolean = this.getDaysCount(start, end, isAllDay) > 1;
 
@@ -851,19 +856,25 @@ export class DateService {
      * @param {Date} startDate Start date and time
      * @param {Date} endDate End date and time
      * @param {string} locale Locale string for formatting
+     * @param {string} timeFormat Optional time format
      * @returns {string} Formatted date range string for cell popup (e.g., "July 14, 2025 (9:30 AM - 10:00 AM)")
      */
     static formatCellDateRange(
         startDate: Date,
         endDate: Date,
-        locale: string
+        locale: string,
+        timeFormat?: string
     ): string {
         const monthNames: string[] = this.getMonthNames(locale);
         const month: string = monthNames[startDate.getMonth()];
         const day: number = startDate.getDate();
         const year: number = startDate.getFullYear();
-        const startTime: string = formatDate(startDate, { type: 'time', skeleton: 'short', locale: locale });
-        const endTime: string = formatDate(endDate, { type: 'time', skeleton: 'short', locale: locale });
+        const startTime: string = timeFormat
+            ? formatDate(startDate, { type: 'time', format: timeFormat, locale })
+            : formatDate(startDate, { type: 'time', skeleton: 'short', locale });
+        const endTime: string = timeFormat
+            ? formatDate(endDate, { type: 'time', format: timeFormat, locale })
+            : formatDate(endDate, { type: 'time', skeleton: 'short', locale });
         return `${month} ${day}, ${year} (${startTime} - ${endTime})`;
     }
 

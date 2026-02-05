@@ -7,7 +7,7 @@ import { RectOption } from '../base/Legend-base';
 import { JSX } from 'react';
 import { PointData } from '../renderer/TooltipRenderer';
 import { AxisModel, Chart, ColumnProps, MarginModel, PathOptions, Points, Rect, RowProps, SeriesProperties, ChartSizeProps, TextOption, TextStyleModel, VisibleRangeProps, RenderOptions } from '../chart-area/chart-interfaces';
-import { TextOverflow, TitlePosition } from '../../common';
+import { TextAnchor, TextOverflow, TitlePosition } from '../../common';
 
 /**
  * Measures the size of the given text using the specified font and theme font style.
@@ -216,17 +216,17 @@ export function stringToNumber(value: string | null | undefined, containerSize: 
  * @param {HorizontalAlignment} alignment - The alignment setting for the text.
  * @param {boolean} enableRtl - A boolean that represents whether right-to-left text is enabled.
  * @param {TitlePosition} position - The position where the title is placed (e.g., 'Left', 'Center', etc.).
- * @returns {string} The computed text anchor for the given alignment, RTL, and position.
+ * @returns {TextAnchor} The computed text anchor for the given alignment, RTL, and position.
  * @private
  */
-export function getTextAnchor(alignment: HorizontalAlignment, enableRtl: boolean, position: TitlePosition): string {
+export function getTextAnchor(alignment: HorizontalAlignment, enableRtl: boolean, position: TitlePosition): TextAnchor {
     if (position === 'Left') {
-        let anchor: string = alignment === 'Left' ? 'end' : alignment === 'Right' ? 'start' : 'middle';
+        let anchor: TextAnchor = alignment === 'Left' ? 'end' : alignment === 'Right' ? 'start' : 'middle';
         anchor = enableRtl ? (anchor === 'end' ? 'start' : anchor === 'start' ? 'end' : anchor) : anchor;
         return anchor;
     }
     if (position === 'Right') {
-        let anchor: string = alignment === 'Left' ? 'start' : alignment === 'Right' ? 'end' : 'middle';
+        let anchor: TextAnchor = alignment === 'Left' ? 'start' : alignment === 'Right' ? 'end' : 'middle';
         anchor = enableRtl ? (anchor === 'end' ? 'start' : anchor === 'start' ? 'end' : anchor) : anchor;
         return anchor;
     }
@@ -1008,6 +1008,7 @@ export const calculateLegendShapes: (
                 merge(options, { 'd': dir });
                 break;
             case 'StepLine':
+            case 'StepArea':
                 options.fill = 'transparent';
                 dir = 'M' + ' ' + (lx + (-width / 2) - (padding / 4)) + ' ' + (ly + (height / 2)) + ' ' + 'L' + ' ' + (lx +
                         (-width / 2) + (width / 10)) + ' ' + (ly + (height / 2)) + ' ' + 'L' + ' ' + (lx + (-width / 2) + (width / 10))

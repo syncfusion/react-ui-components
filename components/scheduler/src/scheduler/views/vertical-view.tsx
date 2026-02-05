@@ -27,7 +27,7 @@ export const VerticalView: FC<VerticalViewProps> = (props: VerticalViewProps) =>
 
     return (
         <div className={`${CSS_CLASSES.VERTICAL_VIEW} ${viewClassName}`}>
-            <div className={CSS_CLASSES.MAIN_SCROLL_CONTAINER}>
+            <div className={CSS_CLASSES.MAIN_SCROLL_CONTAINER} tabIndex={0}>
                 <div className={CSS_CLASSES.STICKY_HEADER}>
                     <DateHeader />
                 </div>

@@ -1,5 +1,15 @@
 # Changelog
 
+## 32.1.23 (2026-01-13)
+
+### Scheduler
+
+#### Bug Fixes
+
+- Fixed an issue where event resizing did not work when TimeScale was disabled.
+- Fixed an issue that prevented scheduling an event on the same day when its end time matched another event’s start time.
+- Fixed an issue where the 24-hour time format was not displayed in the cell and event quick info popup.
+
 ## 32.1.19 (2025-12-16)
 
 ### Scheduler

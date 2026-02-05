@@ -420,10 +420,6 @@ export const Dialog: React.ForwardRefExoticComponent<DialogComponentProps & Reac
                 if (typeof window !== 'undefined') {
                     window.removeEventListener('resize', handleResize);
                 }
-                setDialogState({
-                    internalOpen: false,
-                    dynamicMaxHeight: ''
-                });
             };
         }, []);
 

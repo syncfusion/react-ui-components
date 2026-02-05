@@ -8,7 +8,7 @@ import { formatDate, useProviderContext, getDatePattern } from '@syncfusion/reac
 import { ChevronUpDoubleIcon, ChevronDownDoubleIcon } from '@syncfusion/react-icons';
 
 export const TimeSlotEventClone: FC<ProcessedEventsData> = (eventInfo: ProcessedEventsData) => {
-    const { timeFormat } = useSchedulerPropsContext();
+    const { timeFormat, startHourTuple, endHourTuple } = useSchedulerPropsContext();
     const { renderDates } = useSchedulerRenderDatesContext();
     const { locale } = useProviderContext();
 
@@ -23,8 +23,8 @@ export const TimeSlotEventClone: FC<ProcessedEventsData> = (eventInfo: Processed
     };
 
     const renderStandardEventContent: (info: ProcessedEventsData) => ReactNode  = (info: ProcessedEventsData): ReactNode => {
-        const { event, startDate, endDate } = info;
-        const timeText: string = startDate && endDate ? getTimeString(startDate, endDate) : '';
+        const { event } = info;
+        const timeText: string = event.startTime && event.endTime ? getTimeString(event.startTime, event.endTime) : '';
         return (
             <div className={CSS_CLASSES.APPOINTMENT_DETAILS}>
                 <div className={`${CSS_CLASSES.SUBJECT}`}>
@@ -43,7 +43,8 @@ export const TimeSlotEventClone: FC<ProcessedEventsData> = (eventInfo: Processed
     };
 
     const renderSpannedContent: (info: ProcessedEventsData) => ReactNode = (info: ProcessedEventsData): ReactNode => {
-        const { isOverflowTop, isOverflowBottom } = PositioningService.getOverflowDirection(info, renderDates);
+        const { isOverflowTop, isOverflowBottom } =
+            PositioningService.getOverflowDirection(info, renderDates, startHourTuple, endHourTuple);
         return (
             <Fragment>
                 {isOverflowTop && (
@@ -61,7 +62,7 @@ export const TimeSlotEventClone: FC<ProcessedEventsData> = (eventInfo: Processed
         );
     };
 
-    const content: ReactNode = eventInfo.totalSegments && eventInfo.totalSegments > 1
+    const content: ReactNode = (eventInfo.totalSegments && eventInfo.totalSegments > 1) || startHourTuple || endHourTuple
         ? renderSpannedContent(eventInfo)
         : renderStandardEventContent(eventInfo);
 

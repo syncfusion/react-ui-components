@@ -3,7 +3,7 @@ import { ForwardedRef, forwardRef, JSX, useEffect, useLayoutEffect } from 'react
 import { useLayout } from '../layout/LayoutContext';
 import { ChartTitleProps } from '../base/interfaces';
 import { getMaxRotatedTextSize, getTextAnchor, getTitle, measureText, titlePositionX } from '../utils/helper';
-import { TextOverflow, TitlePosition } from '../../common';
+import { TextAnchor, TextOverflow, TitlePosition } from '../../common';
 import { Chart, MarginModel, Rect, ChartSizeProps, TextStyleModel, TitleOptions } from '../chart-area/chart-interfaces';
 import { HorizontalAlignment } from '@syncfusion/react-base';
 
@@ -89,7 +89,7 @@ function computeSubtitlePosition(chart: Chart, subtitleProps: ChartTitleProps, t
     let positionY: number = 0;
     let rotation: string = '';
     const subtitleBorderWidth: number = subtitleProps.border?.width || 0;
-    const textAnchor: string = getTextAnchor(
+    const textAnchor: TextAnchor = getTextAnchor(
         subtitleProps.align as HorizontalAlignment, chart.enableRtl, subtitleProps.position as TitlePosition);
     const padding: number = 5;
     const chartAreaPadding: number = 10;

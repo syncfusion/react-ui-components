@@ -33,7 +33,6 @@ export function splinePath(points: ChartLocationProps[]): string {
         const currentPoint: ChartLocationProps  = extendedPoints[i as number];
         const nextPoint: ChartLocationProps = extendedPoints[i + 1];
         const afterNextPoint : ChartLocationProps = extendedPoints[i + 2];
-
         const tension : number = 1 / 6;
         // Calculate control points
         const controlPoint1: ChartLocationProps = {
@@ -74,7 +73,6 @@ export function interpolateSplinePolylinePath(
     }
     const roundTo3Decimals: (value: number) => number = (value: number): number =>
         Math.round(value * 1000) / 1000;
-
     const interpolatedPoints: ChartLocationProps[] = [];
 
     for (let i: number = 0; i < startSegment.length; i++) {
@@ -88,10 +86,8 @@ export function interpolateSplinePolylinePath(
             y: roundTo3Decimals(startY + (endY - startY) * progress)
         });
     }
-
     return splinePath(interpolatedPoints);
 }
-
 
 /**
  * @private
@@ -129,23 +125,19 @@ export function interpolateSplineRangeAreaPath(startD: string, endD: string, pro
         if (!startSegment || !endSegment) {
             return interpolatePathD(startD, endD, progress);
         }
-
         const lowPath: string = interpolateSplinePolylinePath(startSegment.low, endSegment.low, progress);
         let highPath: string = interpolateSplinePolylinePath(startSegment.high, endSegment.high, progress);
 
         if (lowPath && highPath.startsWith('M')) {
             highPath = highPath.replace(/^M\s+/, 'L ');
         }
-
         output += lowPath + highPath;
         if (startSegment.closedWithZ || endSegment.closedWithZ) {
             output += 'Z ';
         }
-
         startCmdIndex = startSegment.nextIndex;
         endCmdIndex = endSegment.nextIndex;
     }
-
     return output.trim();
 }
 
@@ -161,13 +153,11 @@ export function interpolateSplineRangeAreaPath(startD: string, endD: string, pro
  */
 export function interpolateSplineRangeBorderPath(startD: string, endD: string, progress: number): string {
     if (!startD || !endD) {return endD || startD || ''; }
-
     const startCommands: PathCommand[] = parsePathCommands(startD);
     const endCommands: PathCommand[] = parsePathCommands(endD);
     if (startCommands.length === 0 || endCommands.length === 0) {
         return interpolatePathD(startD, endD, progress);
     }
-
     const extractPolylines: (commands: PathCommand[]) => ChartLocationProps[][] = (commands: PathCommand[]): ChartLocationProps[][] => {
         const polylines: ChartLocationProps[][] = [];
         let index: number = 0;
@@ -184,7 +174,6 @@ export function interpolateSplineRangeBorderPath(startD: string, endD: string, p
         }
         return polylines;
     };
-
     const startPolylines: ChartLocationProps[][] = extractPolylines(startCommands);
     const endPolylines: ChartLocationProps[][] = extractPolylines(endCommands);
     const segmentCount: number = Math.max(startPolylines.length, endPolylines.length);
@@ -221,7 +210,6 @@ export function getPathBounds(pathD: string): { minX: number; maxX: number; minY
             }
         }
     }
-
     return {
         minX: xCoordinate.length > 0 ? Math.min(...xCoordinate) : 0,
         maxX: xCoordinate.length > 0 ? Math.max(...xCoordinate) : 0,
@@ -243,10 +231,8 @@ export function getPathBounds(pathD: string): { minX: number; maxX: number; minY
  */
 export function generateInitialPath(finalPath: string, isBorder: boolean, _isInverted: boolean): string {
     if (!finalPath) {return ''; }
-
     const commands : PathCommand[] = parsePathCommands(finalPath);
     if (commands.length === 0) {return ''; }
-
     let firstPoint: ChartLocationProps | null = null;
     for (const command of commands) {
         if (command.type === 'M') {
@@ -254,7 +240,6 @@ export function generateInitialPath(finalPath: string, isBorder: boolean, _isInv
             break;
         }
     }
-
     if (!firstPoint) {return ''; }
 
     let initialPath: string = `M ${firstPoint.x} ${firstPoint.y} `;
@@ -276,7 +261,6 @@ export function generateInitialPath(finalPath: string, isBorder: boolean, _isInv
             break;
         }
     }
-
     return initialPath.trim();
 }
 
@@ -297,15 +281,19 @@ const SplineRangeAreaSeriesRenderer: RangeAreaSeriesRendererType = {
         animatedClipPath?: string;
     } => {
         const { isInitialRenderRef, renderedPathDRef, animationProgress } = animationState;
-
         if (!renderedPathDRef.current) {
             (renderedPathDRef as React.RefObject<Record<string, string>>).current = {};
         }
-
         const pathD: string = (pathOptions.d as string) || '';
         const id: string = pathOptions.id ? pathOptions.id.toString() : '';
         const isBorder: boolean = id.includes('_border_');
-
+        const isMarker: boolean = id.includes('_Marker_') || id.includes('_marker_');
+        if (isMarker) {
+            return {
+                strokeDasharray: 'none',
+                strokeDashoffset: 0
+            };
+        }
         const idParts: string[] = id.split('_');
         const seriesIndexStr: string = idParts.length > 0 ? idParts[idParts.length - 1] : '0';
         const seriesIndex: number = parseInt(seriesIndexStr, 10);
@@ -322,7 +310,6 @@ const SplineRangeAreaSeriesRenderer: RangeAreaSeriesRendererType = {
 
                 if (hasBounds) {
                     const isInverted: boolean = currentSeries.chart?.requireInvertedAxis ?? false;
-
                     if (!isInverted) {
                         const minX: number = Math.min(bounds.minX, bounds.maxX);
                         const maxX: number = Math.max(bounds.minX, bounds.maxX);
@@ -332,12 +319,10 @@ const SplineRangeAreaSeriesRenderer: RangeAreaSeriesRendererType = {
                         const clipPathString: string = isXAxisInverse
                             ? `inset(0 0 0 ${Math.max(0, range - visibleWidth)}px)`
                             : `inset(0 ${Math.max(0, range - visibleWidth)}px 0 0)`;
-
                         if (animationProgress >= 1) {
                             isInitialRenderRef.current[index as number] = false;
                             (renderedPathDRef as React.RefObject<Record<string, string>>).current[storedKey as string] = pathD;
                         }
-
                         return {
                             strokeDasharray: isBorder ? (pathOptions.dashArray ?? 'none') : 'none',
                             strokeDashoffset: 0,
@@ -362,7 +347,6 @@ const SplineRangeAreaSeriesRenderer: RangeAreaSeriesRendererType = {
                         };
                     }
                 }
-
                 // Fallback to path morphing if clip-path is not applicable
                 const initialPath: string = generateInitialPath(pathD, isBorder, currentSeries.chart?.requireInvertedAxis ?? false);
                 const interpolatedD: string = isBorder
@@ -373,14 +357,12 @@ const SplineRangeAreaSeriesRenderer: RangeAreaSeriesRendererType = {
                     isInitialRenderRef.current[index as number] = false;
                     (renderedPathDRef as React.RefObject<Record<string, string>>).current[storedKey as string] = pathD;
                 }
-
                 return {
                     strokeDasharray: isBorder ? (pathOptions.dashArray ?? 'none') : 'none',
                     strokeDashoffset: 0,
                     interpolatedD
                 };
             }
-
             if (isBorder) {
                 if (animationProgress >= 1) {
                     (renderedPathDRef as React.RefObject<Record<string, string>>).current[storedKey as string] = pathD;
@@ -395,7 +377,6 @@ const SplineRangeAreaSeriesRenderer: RangeAreaSeriesRendererType = {
                 (renderedPathDRef as React.RefObject<Record<string, string>>).current[storedKey as string] = pathD;
             }
         }
-
         return {
             strokeDasharray: isBorder ? (pathOptions.dashArray ?? 'none') : 'none',
             strokeDashoffset: 0
@@ -409,10 +390,8 @@ const SplineRangeAreaSeriesRenderer: RangeAreaSeriesRendererType = {
 
         // Fallback to series.dashArray if border.dashArray not set
         const borderDashArray: string = (series.border?.dashArray as string) || (series.dashArray as string) || 'none';
-
         const emptyPointMode: string = series.emptyPointSettings?.mode as string;
         const skipLabelForEmptyPoint: boolean = !(emptyPointMode === 'Average' || emptyPointMode === 'Zero');
-
         const visiblePoints: Points[] = (LineBase as LineBaseReturnType).enableComplexProperty(series);
 
         // Allow null for skipped points
@@ -444,17 +423,14 @@ const SplineRangeAreaSeriesRenderer: RangeAreaSeriesRendererType = {
                     } else {
                         const highPath: string = splinePath(currentHighSegment);
                         const lowPathBackward: string = splinePath(currentLowSegment.slice().reverse());
-
                         const highCurveSegment: string = highPath.replace(/^M\s+[^\s]+\s+[^\s]+\s+/, '');
                         const lowCurveSegment: string = lowPathBackward.replace(/^M\s+[^\s]+\s+[^\s]+\s+/, '');
-
                         const startLow: ChartLocationProps = currentLowSegment[0];
                         const startHigh: ChartLocationProps = currentHighSegment[0];
                         const endLow: ChartLocationProps = currentLowSegment[segLen - 1];
 
                         fillPath += `M ${startLow.x} ${startLow.y} L ${startHigh.x} ${startHigh.y} ` + highCurveSegment + `L ${endLow.x} ${endLow.y} ` + lowCurveSegment + 'Z ';
                     }
-
                     // Inline segment generation for border
                     if (borderWidth > 0) {
                         if (segLen === 1) {
@@ -467,7 +443,6 @@ const SplineRangeAreaSeriesRenderer: RangeAreaSeriesRendererType = {
                             borderPath += lowPath + ' ' + highPathFull + ' ';
                         }
                     }
-
                     currentLowSegment = [];
                     currentHighSegment = [];
                 }
@@ -496,7 +471,6 @@ const SplineRangeAreaSeriesRenderer: RangeAreaSeriesRendererType = {
             // Collect for current segment
             currentLowSegment.push(lowPoint);
             currentHighSegment.push(highPoint);
-
             lowPoints[i as number] = lowPoint;
             highPoints[i as number] = highPoint;
 
@@ -534,17 +508,14 @@ const SplineRangeAreaSeriesRenderer: RangeAreaSeriesRendererType = {
                 } else {
                     const highPath: string = splinePath(currentHighSegment);
                     const lowPathBackward: string = splinePath(currentLowSegment.slice().reverse());
-
                     const highCurveSegment: string = highPath.replace(/^M\s+[^\s]+\s+[^\s]+\s+/, '');
                     const lowCurveSegment: string = lowPathBackward.replace(/^M\s+[^\s]+\s+[^\s]+\s+/, '');
-
                     const startLow: ChartLocationProps = currentLowSegment[0];
                     const startHigh: ChartLocationProps = currentHighSegment[0];
                     const endLow: ChartLocationProps = currentLowSegment[segLen - 1];
 
                     fillPath += `M ${startLow.x} ${startLow.y} L ${startHigh.x} ${startHigh.y} ` + highCurveSegment + `L ${endLow.x} ${endLow.y} ` + lowCurveSegment + 'Z ';
                 }
-
                 if (borderWidth > 0) {
                     if (segLen === 1) {
                         const low: ChartLocationProps = currentLowSegment[0];
@@ -556,14 +527,11 @@ const SplineRangeAreaSeriesRenderer: RangeAreaSeriesRendererType = {
                         borderPath += lowPath + ' ' + highPathFull + ' ';
                     }
                 }
-
                 currentLowSegment = [];
                 currentHighSegment = [];
             }
         }
-
         series.visiblePoints = visiblePoints;
-
         const renderOptions: RenderOptions[] = [];
 
         renderOptions.push({
@@ -588,20 +556,9 @@ const SplineRangeAreaSeriesRenderer: RangeAreaSeriesRendererType = {
             });
         }
 
-        const originalAnimate: boolean = series.animation?.enable ?? true;
-        series.skipMarkerAnimation = true;
-
-        if (series.animation) {
-            series.animation.enable = false;
-        }
-
         const marker: ChartMarkerProps | null = series.marker?.visible
             ? (MarkerRenderer.render(series) as ChartMarkerProps)
             : null;
-
-        if (series.animation) {
-            series.animation.enable = originalAnimate;
-        }
 
         return marker ? { options: renderOptions, marker } : renderOptions;
     }

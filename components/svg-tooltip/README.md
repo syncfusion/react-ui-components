@@ -44,7 +44,7 @@ Product support is available through following mediums.
 * Live chat
 
 ## Changelog
-Check the changelog [here](https://github.com/syncfusion/react-ui-components/blob/master/components/chart/CHANGELOG.md). Get minor improvements and bug fixes every week to stay up to date with frequent updates.
+Check the changelog [here](https://github.com/syncfusion/react-ui-components/blob/master/components/svg-tooltip-component/CHANGELOG.md). Get minor improvements and bug fixes every week to stay up to date with frequent updates.
 
 ## License and copyright
 

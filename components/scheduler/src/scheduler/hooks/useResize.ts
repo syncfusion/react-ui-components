@@ -213,7 +213,8 @@ UseResizeResult {
             performAutoScroll(evt);
         }
         const currentTargetCell: HTMLElement | null = resizeInfo.current.getCellUnderPointer(evt);
-        if (resizeInfo.current.cloneRef && target && !(resizeInfo.current.isAllDaySource || resizeInfo.current.isMonthView)) {
+        if (resizeInfo.current.cloneRef && target && timeScale.enable &&
+            !(resizeInfo.current.isAllDaySource || resizeInfo.current.isMonthView)) {
             setCorrectResizeTime(currentTargetCell);
         }
         updateResizeCloneSegments(currentTargetCell);
@@ -249,7 +250,9 @@ UseResizeResult {
             }
             return;
         }
-        const original: EventModel = Array.isArray(data) ? (data[0] as EventModel) : (data as EventModel);
+        const currentData: EventModel = Array.isArray(data) ? (data[0]) : (data);
+        const original: EventModel =
+            { ...currentData, startTime: new Date(currentData.startTime), endTime: new Date(currentData.endTime) };
         if (directionRef.current === Position.Top) {
             DateService.setHours(original.startTime, requiredTimeRef.current);
         } else if (directionRef.current === Position.Bottom) {
@@ -344,12 +347,13 @@ UseResizeResult {
 
     const updateResizeCloneSegments: (cell: HTMLElement | null) => void = (cell: HTMLElement | null): void => {
         if (!data.guid) { return; }
-        const original: EventModel = EventService.getEventByGuid(eventsData, data.guid);
-        if (!original) { return; }
-
-        if (!(resizeInfo.current?.isMonthView || resizeInfo.current?.isAllDaySource)) {
+        const currentData: EventModel = EventService.getEventByGuid(eventsData, data.guid);
+        if (!currentData) { return; }
+        const original: EventModel = { ...currentData, startTime: new Date(currentData.startTime), endTime: new Date(currentData.endTime) };
+        const isDayEvent: boolean = resizeInfo.current?.isMonthView || resizeInfo.current?.isAllDaySource;
+        if (!isDayEvent && timeScale.enable) {
             const tempEvent: EventModel =
-                { ...original, startTime: new Date(original.startTime), endTime: new Date(original.endTime) } as EventModel;
+                { ...original } as EventModel;
             if (directionRef.current === Position.Top) {
                 DateService.setHours((tempEvent).startTime, requiredTimeRef.current);
             } else if (directionRef.current === Position.Bottom) {
@@ -393,9 +397,11 @@ UseResizeResult {
         const segments: ProcessedEventsData[] = EventService.processCloneEvent(schedulerRef, scheduleRenderDates, original,
                                                                                showWeekend, workDays,
                                                                                resizeInfo.current.cellWidth,
-                                                                               resizeInfo.current.isAllDaySource, dir === 'rtl'
+                                                                               resizeInfo.current.isAllDaySource, dir === 'rtl',
+                                                                               resizeInfo.current.isMonthView,
+                                                                               elementRef.current
         );
-        cloneEventState?.show({ guid: data.guid, segments, isDayEvent: true });
+        cloneEventState?.show({ guid: data.guid, segments, isDayEvent: isDayEvent });
     };
 
     const getSyncResizeClone: () => void = (): void => {

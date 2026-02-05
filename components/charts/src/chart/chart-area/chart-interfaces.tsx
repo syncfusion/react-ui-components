@@ -2,7 +2,7 @@ import { JSX, ReactElement } from 'react';
 import { ChartBorderProps, ChartAreaProps, ChartComponentProps, ChartStackLabelsProps, ChartFontProps, ZoomEndEvent, MajorGridLines, MajorTickLines, ChartMarkerProps, MinorGridLines, MinorTickLines, TitleSettings, ChartTooltipProps, ChartSeriesProps, ChartZoomSettingsProps, ChartAxisProps, ChartStripLineProps, ChartTitleProps, ChartLegendProps, Column, Row, ChartDataLabelProps, ChartLocationProps, CornerRadius, ChartCrosshairProps, ChartCrosshairTooltipProps, ChartSelectionProps, ChartHighlightProps, ChartAnnotationProps, ChartErrorBarProps } from '../base/interfaces';
 import { ChartSeriesType, ChartMarkerShape, IntervalType, LegendShape, Orientation, StripLineSizeUnit, ZIndex, SeriesValueType } from '../base/enum';
 import { BaseLegend } from '../base/Legend-base';
-import { Animation } from '../../common';
+import { Animation, TextAnchor } from '../../common';
 import { DataLabelRendererResults } from '../renderer/SeriesRenderer/DataLabelRender';
 import { IThemeStyle } from '../utils/theme';
 import { ChartAxisLabelProps, ChartAxisTitleProps } from '../chart-axis/base';
@@ -2762,7 +2762,7 @@ export interface TitleOptions {
     /**
      * The SVG text-anchor alignment for the title (e.g., 'start', 'middle', 'end').
      */
-    textAnchor: string;
+    textAnchor: TextAnchor;
 
     /**
      * The text style settings applied to the title.

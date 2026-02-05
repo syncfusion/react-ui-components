@@ -671,9 +671,6 @@ forwardRef<IFormValidator, FormComponentProps>((props: FormComponentProps, ref: 
                 formRef.current = null;
             }
             formStateRef.current = null;
-            if (onFormStateChange) {
-                onFormStateChange(formStateRef.current as unknown as FormState );
-            }
         };
     }, []);
 

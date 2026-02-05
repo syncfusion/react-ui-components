@@ -190,15 +190,10 @@ export class EventService {
         for (const currentEvent of sortedEvents) {
             let addedToGroup: boolean = false;
             for (const group of overlapGroups) {
-                let overlapsWithAllInGroup: boolean = true;
-                for (const groupEvent of group) {
-                    if (!this.eventsOverlap(currentEvent, groupEvent)) {
-                        overlapsWithAllInGroup = false;
-                        break;
-                    }
-                }
-                // If it overlaps with all events in this group, add it to the group
-                if (overlapsWithAllInGroup) {
+                const overlapsWithAnyInGroup: boolean = group.some((groupEvent: ProcessedEventsData) =>
+                    this.eventsOverlap(currentEvent, groupEvent));
+                // If it overlaps with any events in this group, add it to the group
+                if (overlapsWithAnyInGroup) {
                     group.push(currentEvent);
                     addedToGroup = true;
                     break;
@@ -213,32 +208,42 @@ export class EventService {
     }
 
     static convertOverlapGroupsToEventGroups(overlapGroups: ProcessedEventsData[][]): ProcessedEventsData[][] {
-        const eventGroups: ProcessedEventsData[][] = [];
-        for (const group of overlapGroups) {
-            const groupEvents: ProcessedEventsData[] = [];
-            // If there's only one event in the group, it's straightforward
-            if (group.length === 1) {
-                groupEvents.push({
-                    ...group[0],
-                    positionIndex: 0,
-                    totalOverlapping: 1
-                });
-            } else {
+        const eventGroups: ProcessedEventsData[][] = overlapGroups
+            .filter((group: ProcessedEventsData[]) => group.length > 0)
+            .map((group: ProcessedEventsData[]) => {
+                if (group.length === 1) {
+                    return [{
+                        ...group[0],
+                        positionIndex: 0,
+                        totalOverlapping: 1
+                    }];
+                }
                 // For multiple events, assign proper position indices
                 const sortedGroupEvents: ProcessedEventsData[] = [...group].sort((a: ProcessedEventsData, b: ProcessedEventsData) => {
                     if (!a.event.startTime || !b.event.startTime) { return 0; }
                     return a.event.startTime.getTime() - b.event.startTime.getTime();
                 });
-                for (const [index, currentEvent] of sortedGroupEvents.entries()) {
-                    groupEvents.push({
-                        ...currentEvent,
-                        positionIndex: index,
-                        totalOverlapping: sortedGroupEvents.length
-                    });
-                }
-            }
-            eventGroups.push(groupEvents);
-        }
+
+                const eventEndTimes: Date[] = [];
+                const positions: number[] = [];
+
+                sortedGroupEvents.forEach((event: ProcessedEventsData) => {
+                    let positionIndex: number = eventEndTimes.findIndex((endTime: Date) => endTime <= event.event.startTime);
+                    if (positionIndex === -1) {
+                        positionIndex = eventEndTimes.length;
+                        eventEndTimes.push(event.event.endTime);
+                    } else {
+                        eventEndTimes[parseInt(positionIndex.toString(), 10)] = event.event.endTime;
+                    }
+                    positions.push(positionIndex);
+                });
+
+                return sortedGroupEvents.map((event: ProcessedEventsData, i: number) => ({
+                    ...event,
+                    positionIndex: positions[parseInt(i.toString(), 10)],
+                    totalOverlapping: eventEndTimes.length
+                }));
+            });
         return eventGroups;
     }
 
@@ -334,18 +339,30 @@ export class EventService {
             return false;
         }
 
-        return allEvents?.some((otherEvent: EventModel) => {
+        const eventStartDate: Date = DateService.normalizeDate(newStartTime);
+        const eventEndDate: Date = DateService.normalizeDate(newEndTime);
+        const renderedEvents: EventModel[] = (allEvents || []).filter((e: EventModel) => {
+            if (e.isBlock || !e.startTime || !e.endTime) { return false; }
+            const eStart: Date = DateService.normalizeDate(e.startTime);
+            const eEnd: Date = DateService.normalizeDate(e.endTime);
+            return !(eEnd < eventStartDate || eStart > eventEndDate);
+        });
+
+        return renderedEvents.some((otherEvent: EventModel) => {
             const oldStartTime: Date = otherEvent.startTime;
             const oldEndTime: Date = otherEvent.endTime;
+            const isAllDay: boolean = otherEvent.isAllDay;
             if (otherEvent.id === event.id || otherEvent.id === event.Id || otherEvent.guid === event.guid) {
                 return false;
             }
             if (!oldStartTime || !oldEndTime) {
                 return false;
             }
-            return (
-                newStartTime <= oldEndTime && newEndTime >= oldStartTime
-            );
+            if (isAllDay) {
+                return (newStartTime <= oldEndTime && newEndTime >= oldStartTime);
+            } else {
+                return (newStartTime < oldEndTime && newEndTime > oldStartTime);
+            }
         });
     }
 
@@ -714,6 +731,8 @@ export class EventService {
      * @param {number} cellWidth - Width of a single date cell in pixels.
      * @param {boolean} isAllDaySource - Indicates all day row events.
      * @param {boolean} isRtl - Defines its RTL.
+     * @param {boolean} isMonthView - Define current view is month view or not.
+     * @param {HTMLElement} currentCell - Contains current target.
      * @returns {CSSProperties} Inline style object containing top, left, and width (in pixels).
      */
     static cloneEventPosition(
@@ -721,7 +740,9 @@ export class EventService {
         eventInfo: ProcessedEventsData,
         cellWidth: number,
         isAllDaySource: boolean,
-        isRtl: boolean = false
+        isRtl: boolean = false,
+        isMonthView: boolean,
+        currentCell?: HTMLElement
     ): CSSProperties {
         const eventStartDay: Date = DateService.normalizeDate(eventInfo.startDate);
         const eventEndDay: Date = DateService.normalizeDate(eventInfo.endDate);
@@ -730,6 +751,7 @@ export class EventService {
 
         let targetCell: HTMLElement;
         let topPx: number;
+        let heightPx: number;
         if (isAllDaySource) {
             const alldayRow: HTMLElement = schedulerRef.current?.element.querySelector(`.${CSS_CLASSES.ALL_DAY_ROW}`);
             const alldayCells: NodeListOf<HTMLElement> = alldayRow.querySelectorAll<HTMLElement>(`.${CSS_CLASSES.ALL_DAY_CELL}`);
@@ -738,16 +760,21 @@ export class EventService {
         }
         else {
             targetCell = getCellFromIndex(schedulerRef.current?.element, eventInfo.rowIndex, eventInfo.columnIndex);
-            topPx = (targetCell.querySelector(`.${CSS_CLASSES.APPOINTMENT_WRAPPER}`) as HTMLElement).offsetTop;
+            if (isMonthView) {
+                topPx = (targetCell.querySelector(`.${CSS_CLASSES.APPOINTMENT_WRAPPER}`) as HTMLElement).offsetTop;
+            } else {
+                topPx = targetCell?.offsetTop;
+                heightPx = Math.max(0, (currentCell.offsetHeight));
+            }
         }
 
-        const style: CSSProperties = { top: `${topPx}px`, width: `${widthPx}px` };
+        const style: CSSProperties = { top: `${topPx}px`, width: `${widthPx}px`, height: `${heightPx}px` };
         if (isRtl) {
             const rightpx: number = targetCell.parentElement ? Math.max(0, (targetCell.parentElement.clientWidth -
                 (targetCell.offsetLeft + targetCell.offsetWidth))) : 0;
-            style.right = `${rightpx}px`;
+            style.insetInlineStart = `${rightpx}px`;
         } else {
-            style.left = `${targetCell.offsetLeft}px`;
+            style.insetInlineStart = `${targetCell.offsetLeft}px`;
         }
         return style;
     }
@@ -764,7 +791,7 @@ export class EventService {
             const weekEnd: Date = DateService.normalizeDate(week[week.length - 1]);
             const weekEndExclusive: Date = DateService.addDays(weekEnd, 1);
 
-            const overlaps: boolean = (originalEventStart < weekEndExclusive) && (originalEventEnd > weekStart);
+            const overlaps: boolean = (originalEventStart <= weekEndExclusive) && (originalEventEnd >= weekStart);
             if (!overlaps) { return; }
 
             const isStartInThisWeek: boolean = eventStartDate >= weekStart && eventStartDate <= weekEnd;
@@ -806,7 +833,9 @@ export class EventService {
         workDays: number[],
         cellWidth: number,
         isAllDaySource: boolean,
-        isRtl: boolean = false
+        isRtl: boolean = false,
+        isMonthView: boolean,
+        currentCell?: HTMLElement
     ): ProcessedEventsData[] {
         const rowDates: Date[][] = isAllDaySource ? [renderDates] :
             DateService.getRenderWeeks(renderDates, showWeekend, workDays);
@@ -814,7 +843,7 @@ export class EventService {
         const isMultiDay: boolean = EventService.isMultiDayEvent(event);
 
         segments.forEach((segment: ProcessedEventsData) => {
-            segment.eventStyle = this.cloneEventPosition(schedulerRef, segment, cellWidth, isAllDaySource, isRtl);
+            segment.eventStyle = this.cloneEventPosition(schedulerRef, segment, cellWidth, isAllDaySource, isRtl, isMonthView, currentCell);
             segment.totalSegments = isMultiDay ? DateService.getDaysCount(segment.startDate, segment.endDate, segment.event?.isAllDay) : 1;
         });
 

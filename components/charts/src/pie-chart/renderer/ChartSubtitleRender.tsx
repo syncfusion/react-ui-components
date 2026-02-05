@@ -3,7 +3,7 @@ import { ForwardedRef, forwardRef, JSX, useEffect, useLayoutEffect } from 'react
 import { useLayout } from '../layout/LayoutContext';
 import { PieChartSizeProps, PieChartTitleProps, PieChartFontProps, PieChartMarginProps } from '../base/interfaces';
 import { getMaxRotatedTextSize, getTextAnchor, getTitle, measureText, titlePositionX } from '../utils/helper';
-import { TextOverflow, TitlePosition } from '../../common';
+import { TextAnchor, TextOverflow, TitlePosition } from '../../common';
 import { HorizontalAlignment } from '@syncfusion/react-base';
 import { Chart, Rect, TitleOptions } from '../base/internal-interfaces';
 
@@ -237,7 +237,7 @@ function renderSubTitleElement(chart: Chart, titleProps: PieChartTitleProps, ref
             id={chart.element?.id + '_ChartSubTitle'}
             x={subTitleOptions.x}
             y={subTitleOptions.y}
-            textAnchor={subTitleOptions.textAnchor}
+            textAnchor={subTitleOptions.textAnchor as TextAnchor}
             fill={titleProps.font?.color || chart.themeStyle.chartSubTitleFont.color}
             fontFamily={titleProps.font?.fontFamily || chart.themeStyle.chartSubTitleFont.fontFamily}
             fontSize={titleProps.font?.fontSize || chart.themeStyle.chartSubTitleFont.fontSize}

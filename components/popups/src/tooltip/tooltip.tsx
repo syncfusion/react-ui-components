@@ -526,11 +526,22 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
             clearTimeout(timers.current.show as NodeJS.Timeout);
             clearTimeout(timers.current.hide as NodeJS.Timeout);
             clearTimeout(timers.current.autoClose as NodeJS.Timeout);
+            timers.current = { show: null, hide: null, autoClose: null };
             tooltipEle.current = null;
             touchModule.current = null;
             originalData.current = { event: null, showAnimation: null, hideAnimation: null, hideEvent: null,
                 hideTarget: null, showTarget: null };
             mouseEventsRef.current = { event: null, target: null };
+            if (followCursor && targetRef.current) {
+                targetRef.current.removeEventListener('mousemove', onMouseMove as EventListener);
+                targetRef.current.removeEventListener('touchstart', onMouseMove as EventListener);
+                targetRef.current.removeEventListener('mouseenter', onMouseMove as EventListener);
+            }
+            targetRef.current = null;
+            rootElemRef.current = null;
+            stickyElementRef.current = null;
+            containerElement.current = null;
+            arrowElementRef.current = null;
         };
     }, []);
 
@@ -1388,7 +1399,11 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
         for (const opensOn of triggerList) {
             if (opensOn === 'Custom') { return; }
             if (opensOn === 'Focus') {
-                wireFocusEvents();
+                if (!isNullOrUndefined(props.target) && !isNullOrUndefined(props.target?.current)) {
+                    props.target?.current.addEventListener('focus', targetHover as EventListener);
+                } else {
+                    newEventProps.onFocus = targetHover;
+                }
             }
             if (opensOn === 'Click') {
                 newEventProps.onMouseDown = targetClick;
@@ -1405,10 +1420,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
                 }
             }
         }
-        setEventProps((prevProps: {[key: string]: object; }) => ({
-            ...prevProps,
-            ...newEventProps
-        }));
+        setEventProps(newEventProps);
     };
 
     const getTriggerList: (trigger: string) => string[] = (trigger: string): string[] => {
@@ -1417,19 +1429,6 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
             trigger = (Browser.isDevice) ? 'Hover' : 'Hover Focus';
         }
         return trigger.split(' ');
-    };
-
-    const wireFocusEvents: () => void = () => {
-        const focusEventProps: { [key: string]: object } = {};
-        if (!isNullOrUndefined(props.target) && !isNullOrUndefined(props.target?.current)) {
-            props.target?.current.addEventListener('focus', targetHover as EventListener);
-        } else {
-            focusEventProps.onFocus = targetHover;
-        }
-        setEventProps((prevProps: {[key: string]: object; }) => ({
-            ...prevProps,
-            ...focusEventProps
-        }));
     };
 
     const wireMouseEvents: (e: Event, target: Element) => void = (e: Event, target: Element) => {
@@ -1462,44 +1461,17 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
 
     const unWireEvents: (trigger: string) => void = (trigger: string) => {
         const triggerList: string[] = getTriggerList(trigger);
-        const newEventProps: { [key: string]: undefined } = {};
         for (const opensOn of triggerList) {
             if (opensOn === 'Custom') { return; }
             if (opensOn === 'Focus') {
-                unWireFocusEvents();
+                if (!isNullOrUndefined(props.target) && !isNullOrUndefined(props.target?.current) && rootElemRef.current) {
+                    props.target?.current.removeEventListener('focus', targetHover as EventListener);
+                }
             }
-            if (opensOn === 'Click') {
-                newEventProps.onMouseDown = undefined;
-            }
-            if (opensOn === 'Hover') {
-                if (touchModule.current && touchModule.current.destroy) { touchModule.current.destroy(); }
-                newEventProps.onTouchEnd = undefined;
-                newEventProps.onMouseOver = undefined;
+            if (opensOn === 'Hover' && touchModule.current && touchModule.current.destroy) {
+                touchModule.current.destroy();
             }
         }
-        setEventProps((prevProps: {[key: string]: object; }) => {
-            const updatedProps: {[key: string]: object; } = { ...prevProps };
-            Object.keys(newEventProps).forEach((key: string) => {
-                delete updatedProps[key as string];
-            });
-            return updatedProps;
-        });
-    };
-
-    const unWireFocusEvents: () => void = () => {
-        const focusEventProps: { [key: string]: undefined } = {};
-        if (!isNullOrUndefined(props.target) && !isNullOrUndefined(props.target?.current) && rootElemRef.current) {
-            props.target?.current.removeEventListener('focus', targetHover as EventListener);
-        } else {
-            focusEventProps.onFocus = undefined;
-        }
-        setEventProps((prevProps: {[key: string]: object; }) => {
-            const updatedProps: {[key: string]: object; } = { ...prevProps };
-            Object.keys(focusEventProps).forEach((key: string) => {
-                delete updatedProps[key as string];
-            });
-            return updatedProps;
-        });
     };
 
     const unWireMouseEvents: (target: Element) => void = (target: Element) => {

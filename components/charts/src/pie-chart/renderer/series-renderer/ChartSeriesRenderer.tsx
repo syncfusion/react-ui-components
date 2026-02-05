@@ -16,6 +16,7 @@ import { Chart, PathElementOption, PieBase, Points, Rect, SeriesProperties } fro
 import { buildConnectorPath, renderDataLabels } from './DataLabelRenderer';
 import { calculateVisibleSeries } from '../ChartRenderer';
 import { Animation } from '../../../common/interfaces';
+import { TextAnchor } from '../../../common';
 
 /**
  * Represents a single data point with dynamic keys and object values.
@@ -1242,7 +1243,7 @@ export const ChartSeriesRenderer: React.ForwardRefExoticComponent<PieChartSeries
                                             fontStyle={font?.fontStyle as string}
                                             fontFamily={font?.fontFamily as string}
                                             fontWeight={font?.fontWeight as string}
-                                            textAnchor={textAnchor}
+                                            textAnchor={textAnchor as TextAnchor}
                                             transform={rotate}
                                             dominantBaseline="auto"
                                         >

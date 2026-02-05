@@ -143,6 +143,10 @@
       justify-content: center;
   }
 
+  .sf-grid .sf-checkbox-label {
+    width: auto;
+  }
+
   .sf-grid:not(.sf-row-min-height) .sf-empty-cell {
     height: calc($grid-rowcell-line-height + $grid-content-padding + $grid-content-padding);
   }

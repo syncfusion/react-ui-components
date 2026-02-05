@@ -8,6 +8,7 @@ import * as React from 'react';
 import { Browser, IL10n, L10n } from '@syncfusion/react-base';
 import { BaseZoom, Chart, Rect } from '../../chart-area/chart-interfaces';
 import { ToolbarItems } from '../../base/enum';
+import { TextAnchor } from '../../../common';
 
 /**
  * Interface representing the state of the zoom tooltip
@@ -269,7 +270,7 @@ export const ZoomToolkit: React.FC<ChartZoomSettingsProps> = (props: ChartZoomSe
                     fontSize="10px"
                     fontFamily="Segoe UI"
                     fill="black"
-                    textAnchor={anchor}
+                    textAnchor={anchor as TextAnchor}
                 >
                     {zoomTooltipState.text}
                 </text>

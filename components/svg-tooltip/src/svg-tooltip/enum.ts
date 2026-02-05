@@ -53,3 +53,22 @@ export type TooltipPlacement =
   'Top' |
   /** Places the tooltip at the bottom of the target. */
   'Bottom';
+
+/**
+ * Specifies the alignment of text relative to a given point.
+ *
+ * Possible values:
+ * ```props
+ * * start :- Aligns the text to start at the given point.
+ * * middle :- Centers the text on the given point.
+ * * end :- Aligns the text to end at the given point.
+ * * inherit :- Inherits the text alignment from its parent element.
+ * ```
+ *
+ *@private
+ */
+export type TextAnchor =
+    'start' |
+    'middle' |
+    'end' |
+    'inherit'

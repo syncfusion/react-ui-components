@@ -41,6 +41,7 @@ import RangeColumnSeriesRenderer from './RangeColumnSeriesRenderer';
 import SplineRangeAreaRenderer from './SplineRangeAreaSeriesRenderer';
 import { renderErrorBarsJSX } from './ErrorBarRender';
 import MultiColoredLineSeriesRenderer from './MultiColoredLineSeriesRenderer';
+import { isNullOrUndefined } from '@syncfusion/react-base';
 
 // Create a global chart instance for storing options
 export const chart: Chart = {} as Chart;
@@ -619,14 +620,25 @@ export const SeriesRenderer: React.ForwardRefExoticComponent<ChartSeriesProps[] 
                  */
                 const startAnimation: (startTime: DOMHighResTimeStamp) => void = (startTime: DOMHighResTimeStamp) => {
                     seriesOptionsByChartId[chartId as string] = seriesOptionsByChartId[chartId as string] ?? [];
-                    seriesOptionsByChartId[chartId as string].push(options);
-                    (chart as Chart & ChartExtensions as ChartExtensions).seriesOptions = seriesOptionsByChartId[chartId as string];
+                    const hasSeries: boolean = options?.length > 0 &&
+                    seriesOptionsByChartId[chartId as string].some((seriesOption: RenderOptions[]) =>
+                        seriesOption?.[0]?.id === options?.[0]?.id);
+                    if (!hasSeries) {
+                        seriesOptionsByChartId[chartId as string].push(options);
+                        (chart as Chart & ChartExtensions as ChartExtensions).seriesOptions = seriesOptionsByChartId[chartId as string];
+                    }
 
                     if (marker) {
-                        // Store marker options directly in chart
                         markersOptionsByChartId[chartId as string] = markersOptionsByChartId[chartId as string] ?? [];
-                        markersOptionsByChartId[chartId as string].push(marker);
-                        (chart as Chart).markerOptions = markersOptionsByChartId[chartId as string];
+                        const firstMarkerOption: MarkerOptions = (marker as MarkerProperties)?.markerOptionsList?.[0] as MarkerOptions;
+                        const markerId: string = firstMarkerOption?.id;
+                        const hasMarker: boolean = !isNullOrUndefined(markerId) &&
+                        markersOptionsByChartId[chartId as string].some((chartMarker: ChartMarkerProps) =>
+                            (chartMarker as MarkerProperties)?.markerOptionsList?.[0]?.id === markerId);
+                        if (!hasMarker) {
+                            markersOptionsByChartId[chartId as string].push(marker);
+                            (chart as Chart).markerOptions = markersOptionsByChartId[chartId as string];
+                        }
                     }
                     animatePath(startTime, series.animation?.duration as number, setAnimationProgress, animationFrameRef, startTime);
                 };

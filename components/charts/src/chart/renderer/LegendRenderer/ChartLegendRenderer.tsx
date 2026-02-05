@@ -17,6 +17,7 @@ import { registerChartEventHandler, useLegendShapeRenderVersion } from '../../ho
 import { Chart, PathOptions, Rect, SeriesProperties, TextOption } from '../../chart-area/chart-interfaces';
 import { LegendShape } from '../../base/enum';
 import { HorizontalAlignment } from '@syncfusion/react-base';
+import { TextAnchor } from '../../../common';
 
 // Define reducer state and action types
 type LegendState = {
@@ -257,7 +258,7 @@ const LegendTitle: React.FC<LegendTitleProps> = ({
             fontFamily={props.titleStyle?.fontFamily || chartTheme.legendTitleFont.fontFamily}
             fontWeight={props.titleStyle?.fontWeight || chartTheme.legendTitleFont.fontWeight}
             opacity={props.titleStyle?.opacity || props.opacity}
-            textAnchor={textAnchor}
+            textAnchor={textAnchor as TextAnchor}
         >
             {(legend.legendTitleCollections as Required<string[]>).map((line: string, index: number) => (
                 index === 0 ? (
@@ -365,7 +366,7 @@ const LegendPaging: React.FC<LegendPagingProps> = ({
                 fontStyle={pageTextOption.fontStyle || chartTheme.legendLabelFont.fontStyle}
                 fontFamily={pageTextOption.fontFamily || chartTheme.legendLabelFont.fontFamily}
                 fontWeight={pageTextOption.fontWeight || chartTheme.legendLabelFont.fontWeight}
-                textAnchor={pageTextOption.anchor}
+                textAnchor={pageTextOption.anchor as TextAnchor}
                 pointerEvents="none"
             >
                 {pageText}
@@ -544,7 +545,7 @@ const LegendItem: React.FC<LegendItemProps> = ({
                 fontStyle={props.textStyle?.fontStyle || chartTheme.legendLabelFont.fontStyle}
                 fontWeight={props.textStyle?.fontWeight || chartTheme.legendLabelFont.fontWeight}
                 opacity={props.textStyle?.opacity as Required<number>}
-                textAnchor={textOption.anchor}
+                textAnchor={textOption.anchor as TextAnchor}
             >
                 {(Array.isArray(textOption.text) ? textOption.text : [textOption.text]).map((line: string, index: number) =>
                     index === 0 ? (

@@ -248,6 +248,7 @@ export const EditorPopup: FC<EditorPopupProps> = ({ open, onClose, editor }: Edi
                                         value={startDateOnly}
                                         format={dateFormat}
                                         onChange={handleStartDateChange}
+                                        strictMode={true}
                                     />
                                 </FormField>
                             </div>
@@ -262,6 +263,7 @@ export const EditorPopup: FC<EditorPopupProps> = ({ open, onClose, editor }: Edi
                                             value={startTimeOnly}
                                             format={timeFormat}
                                             onChange={handleStartTimeChange}
+                                            strictMode={true}
                                         />
                                     </FormField>
                                 </div>
@@ -277,6 +279,7 @@ export const EditorPopup: FC<EditorPopupProps> = ({ open, onClose, editor }: Edi
                                         value={endDateOnly}
                                         format={dateFormat}
                                         onChange={handleEndDateChange}
+                                        strictMode={true}
                                     />
                                 </FormField>
                             </div>
@@ -291,6 +294,7 @@ export const EditorPopup: FC<EditorPopupProps> = ({ open, onClose, editor }: Edi
                                             value={endTimeOnly}
                                             format={timeFormat}
                                             onChange={handleEndTimeChange}
+                                            strictMode={true}
                                         />
                                     </FormField>
                                 </div>

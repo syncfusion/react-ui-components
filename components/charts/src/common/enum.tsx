@@ -69,3 +69,38 @@ export type LegendPosition =
 export type FadeOutMode =
     'Click' |
     'Move';
+
+/**
+ * Specifies the alignment of text relative to a given point.
+ *
+ * Possible values:
+ * ```props
+ * * start :- Aligns the text to start at the given point.
+ * * middle :- Centers the text on the given point.
+ * * end :- Aligns the text to end at the given point.
+ * * inherit :- Inherits the text alignment from its parent element.
+ * ```
+ *
+ *@private
+ */
+export type TextAnchor =
+    'start' |
+    'middle' |
+    'end' |
+    'inherit'
+
+/**
+ * Specifies the dominant baseline alignment for text rendering.
+ * This property determines how the text is aligned vertically relative to its baseline.
+ *
+ * Possible values:
+ * - `inherit`: Inherits the dominant baseline from the parent element.
+ * - `auto`: The browser determines the dominant baseline automatically.
+ * - `middle`: Aligns the text to the middle of the baseline.
+ *
+ * @private
+ */
+export type DominantBaseLine =
+    'inherit' |
+    'auto' |
+    'middle'
