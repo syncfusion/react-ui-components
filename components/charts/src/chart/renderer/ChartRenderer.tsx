@@ -241,7 +241,7 @@ function createChartLayoutConfig(
         animateSeries: !disableAnimation,
         border: border,
         availableSize: availableSize,
-        enableRtl: dir === 'rtl' ? true : false,
+        enableRtl: dir === 'rtl' || locale === 'ar'  ? true : false,
         rect: { x: borderWidth / 2, y: borderWidth / 2, width: rectWidth, height: rectHeight },
         background: props.background || 'transparent',
         backgroundImage: props.backgroundImage,

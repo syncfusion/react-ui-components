@@ -65,6 +65,7 @@ export const MonthRow: FC = () => {
                 className={`sf-content-table ${additionalClass}`}
                 style={contentTableStyle}
             >
+                <div className={CSS_CLASSES.DAY_CLONE_CONTAINER}></div>
                 {weeksToRender.map((weekRenderDates: Date[], rowIndex: number): ReactNode => (
                     <MonthCells
                         key={`week-${rowIndex}`}

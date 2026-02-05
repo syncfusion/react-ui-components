@@ -385,6 +385,10 @@ export const useScheduler: (props: UseSchedulerProps) => UseSchedulerResult = (p
             handleCurrentViewChange,
             getAvailableViews
         };
+        if (mergedProps.startHour !== '00:00' || mergedProps.endHour !== '24:00') {
+            mergedProps.startHourTuple = [Number(mergedProps.startHour?.split(':')[0]), Number(mergedProps.startHour?.split(':')[1])];
+            mergedProps.endHourTuple = [Number(mergedProps.endHour?.split(':')[0]), Number(mergedProps.endHour?.split(':')[1])];
+        }
         return mergedProps;
     };
 

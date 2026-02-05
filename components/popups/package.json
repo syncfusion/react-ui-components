@@ -1,6 +1,6 @@
 {
   "name": "@syncfusion/react-popups",
-  "version": "32.1.19",
+  "version": "32.2.3",
   "description": "Syncfusion React popup package is a feature-rich collection of UI components such as Dialog and Tooltip, used to display contextual information or messages in separate pop-ups.",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
@@ -32,9 +32,9 @@
   "module": "./index.js",
   "readme": "README.md",
   "dependencies": {
-    "@syncfusion/react-base": "~32.1.19",
-    "@syncfusion/react-buttons": "~32.1.19",
-    "@syncfusion/react-icons": "~32.1.19"
+    "@syncfusion/react-base": "~32.2.3",
+    "@syncfusion/react-buttons": "~32.2.3",
+    "@syncfusion/react-icons": "~32.2.3"
   },
   "devDependencies": {
     "gulp": "4.0.2",

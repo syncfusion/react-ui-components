@@ -1,6 +1,6 @@
 {
   "name": "@syncfusion/react-data",
-  "version": "32.1.19",
+  "version": "32.2.3",
   "description": "Syncfusion React data package provides foundational data management classes, utilities, and methods for handling data operations across UI components.",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
@@ -21,7 +21,7 @@
   "module": "./index.js",
   "readme": "README.md",
   "dependencies": {
-    "@syncfusion/react-base": "~32.1.19"
+    "@syncfusion/react-base": "~32.2.3"
   },
   "devDependencies": {
     "gulp": "4.0.2",

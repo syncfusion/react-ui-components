@@ -140,12 +140,6 @@ export const useTimeIndicator: ({
         return undefined;
     }, [showTimeIndicator, updatePosition]);
 
-    useEffect(() => {
-        if (onPositionUpdate) {
-            onPositionUpdate(position, isVisible && isWithinBounds);
-        }
-    }, [position, isVisible, isWithinBounds, onPositionUpdate]);
-
     /**
      * Gets date information about rendered dates
      */
@@ -204,6 +198,12 @@ export const useTimeIndicator: ({
             isCurrentDayRendered
         };
     }, [isMultiDayView, hasValidRenderDates, renderDates]);
+
+    useEffect(() => {
+        if (onPositionUpdate) {
+            onPositionUpdate(position, isVisible && isWithinBounds && getMultiDayViewInfo().isCurrentDayRendered);
+        }
+    }, [position, isVisible, isWithinBounds, onPositionUpdate, getMultiDayViewInfo]);
 
     return {
         position,

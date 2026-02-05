@@ -12,6 +12,7 @@ import { calculateRowSize } from './ChartRowsRender';
 import { calculateColumnSize } from './ChartColumnsRender';
 import { AxisModel, Chart, ChartAxisLayout, ColumnProps, PathOptions, Rect, RowProps, ChartSizeProps, TextOption, TextStyleModel, Thickness, VisibleLabel } from '../../chart-area/chart-interfaces';
 import { crossAt, updateCrossValue, axisInside } from './AxisTypeRenderer/CrossAxisHerlper';
+import { DominantBaseLine, TextAnchor } from '../../../common';
 
 /**
  * Measures and computes the layout of axes within the given chart rectangle.
@@ -824,7 +825,7 @@ export function drawXAxisLabels(axis: AxisModel, index: number, rect: Rect, char
                 id={options.id}
                 x={options.x}
                 y={options.y}
-                textAnchor={options.anchor}
+                textAnchor={options.anchor as TextAnchor}
                 style={{
                     transition: 'fill 0.4s ease, opacity 0.4s ease'
                 }}
@@ -834,7 +835,7 @@ export function drawXAxisLabels(axis: AxisModel, index: number, rect: Rect, char
                 fontStyle={options.fontStyle}
                 fontWeight={options.fontWeight}
                 opacity={options.opacity}
-                dominantBaseline={options.baseLine}
+                dominantBaseline={options.baseLine as DominantBaseLine}
                 transform={axis.angle !== undefined ? `rotate(${axis.angle}, ${options.x}, ${options.y})` : ''}
             >
                 {typeof options.text !== 'string' && options.text.length > 1
@@ -1110,7 +1111,7 @@ export function drawYAxisLabels(axis: AxisModel, index: number, rect: Rect, char
                 id={options.id}
                 x={options.x}
                 y={options.y}
-                textAnchor={options.anchor}
+                textAnchor={options.anchor as TextAnchor}
                 style={{
                     transition: 'fill 0.4s ease, opacity 0.4s ease'
                 }}
@@ -1120,7 +1121,7 @@ export function drawYAxisLabels(axis: AxisModel, index: number, rect: Rect, char
                 fontStyle={options.fontStyle}
                 fontWeight={options.fontWeight}
                 opacity={options.opacity}
-                dominantBaseline={options.baseLine}
+                dominantBaseline={options.baseLine as DominantBaseLine}
                 transform={axis.angle !== undefined ? `rotate(${axis.angle}, ${options.x}, ${pointY})` : ''}
             >
                 {typeof options.text !== 'string' && options.text.length > 1
@@ -1219,7 +1220,7 @@ function calculateYAxisTitleOptions(axis: AxisModel, index: number, rect: Rect, 
         id: `${chart.element.id}_AxisTitle_${index}`,
         x: x,
         y: finalY,
-        anchor: anchor,
+        anchor: anchor as TextAnchor,
         text: axis.titleCollection,
         transform: transform,
         labelRotation: labelRotation,
@@ -1352,7 +1353,6 @@ export function isBorder(axis: AxisModel, index: number, value: number, seriesCl
  * Calculates the appropriate tick size for an axis in relation to its crossing axis.
  *
  * @param {AxisModel} axis - The main axis model for which the tick size is calculated.
- * @param {AxisModel} crossAxis - The crossing axis model that may influence the tick size.
  * @returns {number} The computed tick size for the main axis.
  * @private
  */
@@ -1540,7 +1540,7 @@ export function drawAxisTitle(axis: AxisModel, chart: Chart, index: number, curr
                 key={title.id || i}
                 x={title.x}
                 y={title.y}
-                textAnchor={title.anchor}
+                textAnchor={title.anchor as TextAnchor}
                 style={{ transition: 'all 0.4s ease' }}
                 fill={currentAxis.titleStyle?.color || chart.themeStyle.axisTitleFont.color}
                 fontFamily={currentAxis.titleStyle?.fontFamily || chart.themeStyle.axisTitleFont.fontFamily}
@@ -1548,7 +1548,7 @@ export function drawAxisTitle(axis: AxisModel, chart: Chart, index: number, curr
                 fontStyle={currentAxis.titleStyle?.fontStyle || chart.themeStyle.axisTitleFont.fontStyle}
                 fontWeight={currentAxis.titleStyle?.fontWeight || chart.themeStyle.axisTitleFont.fontWeight}
                 opacity={currentAxis.titleStyle?.opacity}
-                dominantBaseline={title.baseLine}
+                dominantBaseline={title.baseLine as DominantBaseLine}
                 transform={title.transform}
             >
                 {axis.titleCollection.length > 1

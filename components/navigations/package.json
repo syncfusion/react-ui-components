@@ -1,6 +1,6 @@
 {
   "name": "@syncfusion/react-navigations",
-  "version": "32.1.19",
+  "version": "32.2.3",
   "description": "Syncfusion React Navigations with Toolbar and Context Menu for seamless page navigation",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
@@ -21,11 +21,11 @@
   "module": "./index.js",
   "readme": "README.md",
   "dependencies": {
-    "@syncfusion/react-base": "~32.1.19",
-    "@syncfusion/react-buttons": "~32.1.19",
-    "@syncfusion/react-icons": "~32.1.19",
-    "@syncfusion/react-inputs": "~32.1.19",
-    "@syncfusion/react-popups": "~32.1.19"
+    "@syncfusion/react-base": "~32.2.3",
+    "@syncfusion/react-buttons": "~32.2.3",
+    "@syncfusion/react-icons": "~32.2.3",
+    "@syncfusion/react-inputs": "~32.2.3",
+    "@syncfusion/react-popups": "~32.2.3"
   },
   "devDependencies": {
     "gulp": "4.0.2",

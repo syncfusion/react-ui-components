@@ -1,6 +1,6 @@
 {
   "name": "@syncfusion/react-base",
-  "version": "32.1.19",
+  "version": "32.2.3",
   "description": "A common package of core React base, methods and class definitions",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
@@ -22,7 +22,8 @@
   "module": "./index.js",
   "readme": "README.md",
   "bin": {
-    "syncfusion-license": "bin/syncfusion-license.js"
+    "syncfusion-license": "bin/syncfusion-license.js",
+    "syncfusion-react-license": "bin/syncfusion-react-license.js"
   },
   "devDependencies": {
     "gulp": "4.0.2",

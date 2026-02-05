@@ -81,8 +81,23 @@ export const HighlightRenderer: React.FC<ChartHighlightProps> = (props: ChartHig
                 targetElement.id.indexOf('_legend_text') > -1 ||
                 targetElement.id.indexOf('_legend_g_') > -1;
 
-            if (chartHighlight.isLegendSelection) {
+            if (chartHighlight.isLegendSelection && chartLegend.toggleVisibility) {
                 resetHighlight(chart, chartHighlight, legendRef, seriesRef);
+                setTimeout(() => {
+                    const currentChart: Chart = layoutRef.current?.chart as Chart;
+                    const currentHighlight: BaseSelection = layoutRef.current?.chartHighlight as BaseSelection;
+                    const hasSelection: boolean =
+                        !!layoutRef.current?.chartSelection &&
+                        ((layoutRef.current?.chartSelection as BaseSelection).chartSelectedDataIndexes?.length as number) > 0;
+                    highlightChart(
+                        currentChart,
+                        currentHighlight,
+                        targetElement,
+                        legendRef,
+                        seriesRef,
+                        hasSelection
+                    );
+                }, 5);
             }
         };
 

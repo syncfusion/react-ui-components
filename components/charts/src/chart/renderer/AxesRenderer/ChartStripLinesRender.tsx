@@ -9,6 +9,7 @@ import { StripLineSizeUnit, ZIndex } from '../../base/enum';
 import { ChartStripLineProps } from '../../base/interfaces';
 import { Rect, AxisModel, Chart, ChartSizeProps, TextStyleModel, StriplineOptions, VisibleRangeProps, SeriesProperties } from '../../chart-area/chart-interfaces';
 import { useAxisRenderVersion } from '../../hooks/useClipRect';
+import { TextAnchor } from '../../../common';
 
 /**
  * Props interface for strip line renderer components.
@@ -749,7 +750,7 @@ function renderText(stripline: ChartStripLineProps, rect: Rect, id: string, char
             fontStyle={stripline.text?.font?.fontStyle || 'Normal'}
             fontFamily={stripline.text?.font?.fontFamily || 'Roboto'}
             fontWeight={stripline.text?.font?.fontWeight || '400'}
-            textAnchor={mapToTextAnchor(anchor)}
+            textAnchor={mapToTextAnchor(anchor) as TextAnchor}
             transform={`rotate(${rotation} ${tx},${ty})`}
             opacity={stripline.text?.font?.opacity}
             dominantBaseline="middle"

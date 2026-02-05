@@ -46,26 +46,41 @@ export class PositioningService {
      *
      * @param {ProcessedEventsData} eventInfo - The event information
      * @param {Date[]} renderDates - The dates being rendered
+     * @param {[number, number]} startHourTuple - The start hour of the scheduler
+     * @param {[number, number]} endHourTuple - The end hour of the scheduler
      * @returns {Object} Overflow direction indicators
      */
     static getOverflowDirection(
         eventInfo: ProcessedEventsData,
-        renderDates: Date[]
+        renderDates: Date[],
+        startHourTuple?: [number, number],
+        endHourTuple?: [number, number]
     ): { isOverflowLeft: boolean, isOverflowRight: boolean, isOverflowTop: boolean, isOverflowBottom: boolean } {
-        if (!eventInfo.totalSegments || !eventInfo.event?.startTime || !eventInfo.event?.endTime || !renderDates?.length) {
+        if ((!eventInfo.totalSegments && !startHourTuple && !endHourTuple)
+            || !eventInfo.event?.startTime || !eventInfo.event?.endTime || !renderDates?.length) {
             return { isOverflowLeft: false, isOverflowRight: false, isOverflowTop: false, isOverflowBottom: false };
         }
         const eventStartDay: Date = DateService.normalizeDate(eventInfo.event.startTime);
         const eventEndDay: Date = DateService.normalizeDate(eventInfo.event.endTime);
         const firstRenderDate: Date = DateService.normalizeDate(renderDates[0]);
         const lastRenderDate: Date = DateService.normalizeDate(renderDates[renderDates.length - 1]);
-        const isOverflowTop: boolean = eventInfo.isFirstDay === false;
-        const isOverflowBottom: boolean = eventInfo.isLastDay === false;
+        let isOverflowTop: boolean = eventInfo.isFirstDay === false;
+        let isOverflowBottom: boolean = eventInfo.isLastDay === false;
         if (!eventStartDay || !eventEndDay || !firstRenderDate || !lastRenderDate) {
             return { isOverflowLeft: false, isOverflowRight: false, isOverflowTop, isOverflowBottom };
         }
         const isOverflowLeft: boolean = eventStartDay.getTime() < firstRenderDate.getTime();
         const isOverflowRight: boolean = eventEndDay.getTime() > lastRenderDate.getTime();
+        if (startHourTuple && endHourTuple) {
+            eventStartDay.setHours(startHourTuple[0], startHourTuple[1], 0, 0);
+            eventEndDay.setHours(endHourTuple[0], endHourTuple[1], 0, 0);
+            if (!isOverflowTop && eventStartDay > eventInfo.event.startTime) {
+                isOverflowTop = true;
+            }
+            if (!isOverflowBottom && eventEndDay < eventInfo.event.endTime) {
+                isOverflowBottom = true;
+            }
+        }
         return { isOverflowLeft, isOverflowRight, isOverflowTop, isOverflowBottom };
     }
 

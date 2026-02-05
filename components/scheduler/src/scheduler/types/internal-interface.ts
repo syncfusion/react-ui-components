@@ -11,6 +11,16 @@ import { useConfirmationDialog } from '../hooks/useConfirmationDialog';
 export interface ActiveViewProps extends SchedulerProps, ViewSpecificProps {
 
     /**
+     * Pre-parsed start hour [hour, minute] to avoid repeated string splits
+     */
+    startHourTuple?: [number, number];
+
+    /**
+     * Pre-parsed end hour [hour, minute] to avoid repeated string splits
+     */
+    endHourTuple?: [number, number];
+
+    /**
      * Scheduler component reference
      */
     schedulerRef?: RefObject<IScheduler>;

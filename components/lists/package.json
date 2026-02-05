@@ -1,6 +1,6 @@
 {
   "name": "@syncfusion/react-lists",
-  "version": "32.1.19",
+  "version": "32.2.3",
   "description": "Syncfusion React List package is a feature-rich UI components, including ListView, for dynamic list interactions in React apps.",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
@@ -39,10 +39,10 @@
   "module": "./index.js",
   "readme": "README.md",
   "dependencies": {
-    "@syncfusion/react-base": "~32.1.19",
-    "@syncfusion/react-buttons": "~32.1.19",
-    "@syncfusion/react-data": "~32.1.19",
-    "@syncfusion/react-icons": "~32.1.19"
+    "@syncfusion/react-base": "~32.2.3",
+    "@syncfusion/react-buttons": "~32.2.3",
+    "@syncfusion/react-data": "~32.2.3",
+    "@syncfusion/react-icons": "~32.2.3"
   },
   "devDependencies": {
     "gulp": "4.0.2",

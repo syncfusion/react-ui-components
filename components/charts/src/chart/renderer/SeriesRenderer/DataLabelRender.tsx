@@ -5,6 +5,7 @@ import { LabelPosition } from '../../base/enum';
 import { LayoutMap } from '../../layout/LayoutContext';
 import { Chart, ColorValue, dataLabelOptions, DataLabelProperties, DataLabelRendererResult, LabelLocation, MarginModel, Points, Rect, SeriesProperties, ChartSizeProps, TextOption, TextStyleModel, DataLabelContentProps } from '../../chart-area/chart-interfaces';
 import { HorizontalAlignment } from '@syncfusion/react-base';
+import { TextAnchor } from '../../../common';
 
 
 /**
@@ -1246,7 +1247,7 @@ export function renderDataLabelTextJSX(
                         fontFamily={labelData.textOption.renderOptions['font-family']}
                         fontWeight={labelData.textOption.renderOptions['font-weight']}
                         fontStyle={labelData.textOption.renderOptions['font-style']}
-                        textAnchor={labelData.textOption.renderOptions['text-anchor']}
+                        textAnchor={labelData.textOption.renderOptions['text-anchor'] as TextAnchor}
                         transform={labelData.textOption.renderOptions.transform}
                         dominantBaseline={'middle'}
                     >

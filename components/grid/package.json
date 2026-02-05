@@ -1,6 +1,6 @@
 {
   "name": "@syncfusion/react-grid",
-  "version": "32.1.19",
+  "version": "32.2.3",
   "description": "Syncfusion React Data Grid, a high-performance component designed for modern web applications.",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
@@ -28,16 +28,16 @@
   "module": "./index.js",
   "readme": "README.md",
   "dependencies": {
-    "@syncfusion/react-base": "~32.1.19",
-    "@syncfusion/react-buttons": "~32.1.19",
-    "@syncfusion/react-calendars": "~32.1.19",
-    "@syncfusion/react-data": "~32.1.19",
-    "@syncfusion/react-dropdowns": "~32.1.19",
-    "@syncfusion/react-inputs": "~32.1.19",
-    "@syncfusion/react-navigations": "~32.1.19",
-    "@syncfusion/react-notifications": "~32.1.19",
-    "@syncfusion/react-pager": "~32.1.19",
-    "@syncfusion/react-popups": "~32.1.19"
+    "@syncfusion/react-base": "~32.2.3",
+    "@syncfusion/react-buttons": "~32.2.3",
+    "@syncfusion/react-calendars": "~32.2.3",
+    "@syncfusion/react-data": "~32.2.3",
+    "@syncfusion/react-dropdowns": "~32.2.3",
+    "@syncfusion/react-inputs": "~32.2.3",
+    "@syncfusion/react-navigations": "~32.2.3",
+    "@syncfusion/react-notifications": "~32.2.3",
+    "@syncfusion/react-pager": "~32.2.3",
+    "@syncfusion/react-popups": "~32.2.3"
   },
   "devDependencies": {
     "gulp": "4.0.2",

@@ -376,7 +376,6 @@ const StepAreaSeriesRenderer: {
                     const maxY: number = Math.max(...yCoordinates);
                     const yRange: number = maxY - minY;
                     const animatedHeight: number = yRange * animationProgress;
-                    // clipPathString = `inset(${Math.max(0, yRange - animatedHeight)}px 0 0 0)`;
                     clipPathString = isYAxisInverted
                         ? `inset(${Math.max(0, yRange - animatedHeight)}px 0 0 0)`
                         : `inset(${Math.max(0, yRange - animatedHeight)}px 0 0 0)`;
@@ -387,7 +386,6 @@ const StepAreaSeriesRenderer: {
                     animatedClipPath: clipPathString
                 };
             }
-            // Non-initial render logic remains unchanged
             else if (pathData && (renderedPathDRef as React.RefObject<Record<string, string>>).current[storedPathKey as string]) {
                 const storedPathData: string = (renderedPathDRef as
                      React.RefObject<Record<string, string>>).current[storedPathKey as string];
@@ -462,108 +460,126 @@ const StepAreaSeriesRenderer: {
         series: SeriesProperties,
         isInverted: boolean
     ): RenderOptions[] | { options: RenderOptions[]; marker: ChartMarkerProps } => {
-        type GetCoordinateFn = (
-            x: number,
-            y: number,
-            xAxis: AxisModel | undefined,
-            yAxis: AxisModel | undefined,
-            isInverted: boolean,
-            series: SeriesProperties
-        ) => ChartLocationProps;
 
-        const getCoordinate: GetCoordinateFn = getPoint as GetCoordinateFn;
-        const isDropMode: boolean = (series.emptyPointSettings?.mode === 'Drop');
-        const visiblePoints: Points[] = lineBaseInstance.enableComplexProperty(series);
-        const pointSegments: Points[][] = [];
-        let activeSegment: Points[] = [];
-        let seriesFill: string | undefined;
-        for (let pointIndex: number = 0; pointIndex < visiblePoints.length; pointIndex++) {
-            const currentPoint: Points = visiblePoints[pointIndex as number];
-            currentPoint.regions = [];
-            currentPoint.symbolLocations = [];
+    type GetCoordinateFn = (
+        x: number,
+        y: number,
+        xAxis: AxisModel | undefined,
+        yAxis: AxisModel | undefined,
+        isInverted: boolean,
+        series: SeriesProperties
+    ) => ChartLocationProps;
 
-            if (currentPoint.visible && currentPoint.yValue !== null && currentPoint.yValue !== undefined) {
-                lineBaseInstance.storePointLocation(currentPoint, series, isInverted, getCoordinate);
-                activeSegment.push(currentPoint);
+    const getCoordinate: GetCoordinateFn = getPoint as GetCoordinateFn;
+    const visiblePoints: Points[] = lineBaseInstance.enableComplexProperty(series);
 
-                const customizedValues: string = applyPointRenderCallback(({
-                    seriesIndex: series.index as number, color: series.interior as string,
-                    xValue: currentPoint.xValue as number | Date | string | null,
-                    yValue: currentPoint.yValue as number | Date | string | null
-                }), series.chart);
-                currentPoint.interior = customizedValues;
+    const pointSegments: Points[][] = [];
+    let activeSegment: Points[] = [];
+    let seriesFill: string | undefined;
 
-                if (!seriesFill) { seriesFill = customizedValues; }
+    for (let pointIndex: number = 0; pointIndex < visiblePoints.length; pointIndex++) {
+        const currentPoint: Points = visiblePoints[pointIndex as number];
+        currentPoint.regions = [];
+        currentPoint.symbolLocations = [];
 
-                // If next point is invisible and not Drop, end segment
-                if (
-                    pointIndex < visiblePoints.length - 1 &&
-                    !visiblePoints[pointIndex + 1].visible &&
-                    !isDropMode
-                ) {
-                    pointSegments.push([...activeSegment]);
-                    activeSegment = [];
-                }
-            } else {
-                pointSegments.push([]);
+        if (currentPoint.visible && currentPoint.yValue !== null && currentPoint.yValue !== undefined) {
+            lineBaseInstance.storePointLocation(currentPoint, series, isInverted, getCoordinate);
+            activeSegment.push(currentPoint);
+            const customizedValues: string = applyPointRenderCallback(({
+                seriesIndex: series.index as number,
+                color: series.interior as string,
+                xValue: currentPoint.xValue as number | Date | string | null,
+                yValue: currentPoint.yValue as number | Date | string | null
+            }), series.chart);
+            currentPoint.interior = customizedValues;
+            if (!seriesFill) { seriesFill = customizedValues; }
+            if (
+                pointIndex < visiblePoints.length - 1 &&
+                !visiblePoints[pointIndex + 1].visible
+            ) {
+                pointSegments.push([...activeSegment]);
+                activeSegment = [];
             }
-        }
-        if (activeSegment.length > 0) {
-            pointSegments.push([...activeSegment]);
-        }
-        const renderOptions: RenderOptions[] = [];
-        let stepPosition: StepPosition;
-        if (series.step === 'Center' || series.step === 'Right') {
-            stepPosition = series.step;
         } else {
-            stepPosition = 'Left'; // default branch explicitly hit
+            pointSegments.push([]);
+        }
+    }
+
+    if (activeSegment.length > 0) {
+        pointSegments.push([...activeSegment]);
+    }
+
+    let stepPosition: StepPosition;
+    if (series.step === 'Center' || series.step === 'Right') {
+        stepPosition = series.step;
+    } else {
+        stepPosition = 'Left';
+    }
+
+    let combinedAreaDirection: string = '';
+    let combinedBorderDirection: string = '';
+
+    for (const segment of pointSegments) {
+        const transformedPoints: Points[] = [];
+        for (const point of segment) {
+            const location: ChartLocationProps = getCoordinate(
+                point.xValue as number,
+                point.yValue as number,
+                series.xAxis,
+                series.yAxis,
+                isInverted,
+                series
+            );
+            transformedPoints.push({ ...point, x: location.x, y: location.y } as Points);
+        }
+        if (transformedPoints.length === 0) {
+            continue;
         }
 
-        for (const segment of pointSegments) {
-            const transformedPoints: Points[] = [];
-            for (const point of segment) {
-                const location: ChartLocationProps = getCoordinate(point.xValue as number, point.yValue as number
-                    , series.xAxis, series.yAxis, isInverted, series);
-                transformedPoints.push({ ...point, x: location.x, y: location.y } as Points);
-            }
-            if (transformedPoints.length === 0) {
-                continue;
-            }
+        const areaDirection: string =
+            getStepAreaPathDirection(transformedPoints, series, isInverted, getCoordinate);
+        combinedAreaDirection += areaDirection + '';
 
-            // Area path: always closed to baseline
-
-            const areaDirection: string = getStepAreaPathDirection(transformedPoints, series, isInverted, getCoordinate);
-            const seriesElementId: string = `${series.chart.element.id}${ID_PREFIX}${series.index}`;
-            renderOptions.push({
-                id: seriesElementId,
-                fill: seriesFill as string,
-                strokeWidth: 0,
-                stroke: 'none',
-                opacity: series.opacity,
-                dashArray: '',
-                d: areaDirection
-            });
-
-            // Border path: respects noRisers (skip vertical risers)
-            if (series.border?.width) {
-                const borderDirection: string = getStepAreaBorderPath(transformedPoints, stepPosition, series);
-                const borderElementId: string = `${series.chart.element.id}${BORDER_SUFFIX}${series.index}`;
-                renderOptions.push({
-                    id: borderElementId,
-                    fill: 'none',
-                    strokeWidth: series.border.width,
-                    stroke: series.border.color ?? seriesFill,
-                    opacity: series.opacity,
-                    dashArray: series.border.dashArray ?? series.dashArray ?? '',
-                    d: borderDirection
-                });
-            }
+        if (series.border?.width) {
+            const borderDirection: string =
+                getStepAreaBorderPath(transformedPoints, stepPosition, series);
+            combinedBorderDirection += borderDirection + '';
         }
-        series.visiblePoints = visiblePoints;
-        const marker: ChartMarkerProps | null = series.marker?.visible
-            ? (MarkerRenderer.render(series) as ChartMarkerProps)
-            : null;
-        return marker ? { options: renderOptions, marker } : renderOptions;
+    }
+    const renderOptions: RenderOptions[] = [];
+
+    const seriesElementId: string =
+        `${series.chart.element.id}${ID_PREFIX}${series.index}`;
+
+    renderOptions.push({
+        id: seriesElementId,
+        fill: seriesFill as string,
+        strokeWidth: 0,
+        stroke: 'none',
+        opacity: series.opacity,
+        dashArray: '',
+        d: combinedAreaDirection
+    });
+
+    if (series.border?.width) {
+        const borderElementId: string =
+            `${series.chart.element.id}${BORDER_SUFFIX}${series.index}`;
+
+        renderOptions.push({
+            id: borderElementId,
+            fill: 'none',
+            strokeWidth: series.border.width,
+            stroke: series.border.color ?? seriesFill,
+            opacity: series.opacity,
+            dashArray: series.border.dashArray ?? series.dashArray ?? '',
+            d: combinedBorderDirection
+        });
+    }
+    series.visiblePoints = visiblePoints;
+    const marker: ChartMarkerProps | null = series.marker?.visible
+        ? (MarkerRenderer.render(series) as ChartMarkerProps) : null;
+
+    return marker ? { options: renderOptions, marker } : renderOptions;
     }
 };
 

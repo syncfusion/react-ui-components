@@ -838,9 +838,26 @@ export const LayoutProvider: React.FC = () => {
         }
 
         chart.resizeTo = +setTimeout(() => {
+            const chartContainer: HTMLElement = parentElement.element as HTMLElement;
+            const svg: SVGSVGElement | null = chartContainer.querySelector('svg') as SVGSVGElement | null;
+
+            // Temporarily collapse the SVG so it does not contribute to parent's size.
+            let prevCssText: string = '';
+            if (svg) {
+                prevCssText = (svg.style && svg.style.cssText) || '';
+                svg.style.cssText = `${prevCssText};position:absolute !important;visibility:hidden !important;width:0 !important;height:0 !important;overflow:hidden !important;pointer-events:none !important;`;
+            }
+            const measuredHeight: number = chartContainer.clientHeight || 450;
+            const measuredWidth: number = chartContainer.clientWidth || 600;
+
+            // Restore SVG styles
+            if (svg) {
+                svg.style.cssText = prevCssText;
+            }
+
             chart.availableSize = {
-                height: stringToNumber(chartProps.height, parentElement.element.clientHeight) || 450,
-                width: stringToNumber(chartProps.width, parentElement.element.clientWidth) || parentElement.element.clientWidth
+                height: stringToNumber(chartProps.height, measuredHeight) || measuredHeight || 450,
+                width: stringToNumber(chartProps.width, measuredWidth) || measuredWidth
             };
             parentElement.availableSize = arg.currentSize = chart.availableSize;
             triggerRemeasure();

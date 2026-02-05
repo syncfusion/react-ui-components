@@ -1,5 +1,13 @@
 # Changelog
 
+## 32.2.3 (2026-02-05)
+
+### Context Menu
+
+#### Bug Fixes
+
+- Fixed an issue where sample states were not updated in the `onOpen` event callback of the ContextMenu component.
+
 ## 31.1.17 (2025-09-05)
 
 ### Context Menu

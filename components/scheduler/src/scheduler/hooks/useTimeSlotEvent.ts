@@ -65,7 +65,8 @@ export const useTimeSlotEvent: () => UseTimeSlotEventResult = (): UseTimeSlotEve
         timeScale,
         startHour,
         endHour,
-        maxEventsPerRow = 3
+        maxEventsPerRow = 3,
+        startHourTuple, endHourTuple
     } = useSchedulerPropsContext();
 
     const { renderDates } = useSchedulerRenderDatesContext();
@@ -78,11 +79,22 @@ export const useTimeSlotEvent: () => UseTimeSlotEventResult = (): UseTimeSlotEve
     const processTimeSlotEvents: (date: Date, eventsData: EventModel[]) => ProcessedEventsData[] =
     useCallback((date: Date, eventsData: EventModel[]): ProcessedEventsData[] => {
 
+        const occursWithinSchedulerHours: (start: Date, end: Date) => boolean = (start: Date, end: Date): boolean => {
+            if (startHourTuple && endHourTuple) {
+                const startTime: Date = DateService.normalizeDate(start);
+                const endTime: Date = DateService.normalizeDate(DateService.isMidnight(end) ? DateService.addDays(end, -1) : end);
+                startTime?.setHours(startHourTuple[0], startHourTuple[1], 0, 0);
+                endTime?.setHours(endHourTuple[0], endHourTuple[1], 0, 0);
+                return end > startTime && start < endTime;
+            } else {
+                return true;
+            }
+        };
         if (timeScale?.enable) {
             const spannedEventPlacement: SpannedEventPlacement = eventSettings.spannedEventPlacement || 'AllDayRow';
             const eventsToRender: ProcessedEventsData[] = [];
             let multiDayEvents: EventModel[] = eventsData.filter((event: EventModel) =>
-                (!event.isAllDay || event.isBlock) && EventService.isMultiDayEvent(event));
+                !event.isAllDay && !event.isBlock && EventService.isMultiDayEvent(event));
 
             if (spannedEventPlacement === 'AllDayRow') {
                 multiDayEvents = multiDayEvents.filter((event: EventModel) =>
@@ -92,12 +104,16 @@ export const useTimeSlotEvent: () => UseTimeSlotEventResult = (): UseTimeSlotEve
 
             multiDayEvents.forEach((event: EventModel) => {
                 const eventSegments: ProcessedEventsData[] = EventService.splitEventByDay(event, [date]);
-                eventsToRender.push(...eventSegments);
+                eventsToRender.push(
+                    ...eventSegments.filter((seg: ProcessedEventsData) => occursWithinSchedulerHours(seg.startDate, seg.endDate))
+                );
             });
 
             const singleDayEvents: EventModel[] = eventsData.filter((event: EventModel) =>
-                (!event.isAllDay || event.isBlock) && !EventService.isMultiDayEvent(event) &&
-                DateService.isSameDay(new Date(event.startTime), date));
+                !event.isAllDay && !event.isBlock && !EventService.isMultiDayEvent(event) &&
+                DateService.isSameDay(new Date(event.startTime), date) &&
+                occursWithinSchedulerHours(event.startTime, event.endTime)
+            );
 
             // Convert EventModel[] to ProcessedEventsData[]
             const processedEvents: ProcessedEventsData[] = singleDayEvents.map((event: EventModel) => ({
@@ -108,15 +124,21 @@ export const useTimeSlotEvent: () => UseTimeSlotEventResult = (): UseTimeSlotEve
             eventsToRender.push(...processedEvents);
 
             const eventGroups: ProcessedEventsData[][] = EventService.calculateOverlappingEvents(eventsToRender, eventOverlap);
+
+            // Block events- filtered separately
+            const blockEvents: EventModel[] = eventsData.filter((event: EventModel) =>
+                event.isBlock && DateService.isSameDay(new Date(event.startTime), date));
+
             const processedData: ProcessedEventsData[] = [];
-            eventGroups.forEach((group: ProcessedEventsData[]) => {
-                group.forEach((overlapEvent: ProcessedEventsData) => {
-                    const { event } = overlapEvent;
+
+            const prepareEventForRender: (segment: ProcessedEventsData, props?: Partial<ProcessedEventsData>) => void
+                = (segment: ProcessedEventsData, props: Partial<ProcessedEventsData> = {}): void => {
+                    const { event } = segment;
                     if (!event.startTime || !event.endTime) {
                         return;
                     }
                     const eventPosition: CSSProperties = PositioningService.calculateEventPosition(
-                        overlapEvent,
+                        segment,
                         timeScale,
                         startHour,
                         endHour
@@ -141,6 +163,14 @@ export const useTimeSlotEvent: () => UseTimeSlotEventResult = (): UseTimeSlotEve
                         eventKey,
                         eventClasses,
                         eventStyle,
+                        ...props
+                    });
+                };
+
+            // Process normal events
+            eventGroups.forEach((group: ProcessedEventsData[]) => {
+                group.forEach((overlapEvent: ProcessedEventsData) => {
+                    prepareEventForRender(overlapEvent, {
                         totalOverlapping: overlapEvent.totalOverlapping,
                         totalSegments: overlapEvent.totalSegments,
                         isFirstDay: overlapEvent.isFirstDay,
@@ -151,6 +181,16 @@ export const useTimeSlotEvent: () => UseTimeSlotEventResult = (): UseTimeSlotEve
                 });
             });
 
+            // Process block events individually
+            blockEvents.forEach((event: EventModel) => {
+                const blockSegment: ProcessedEventsData = {
+                    event,
+                    startDate: event.startTime,
+                    endDate: event.endTime
+                };
+                prepareEventForRender(blockSegment);
+            });
+
             return processedData;
         }
 
@@ -158,7 +198,7 @@ export const useTimeSlotEvent: () => UseTimeSlotEventResult = (): UseTimeSlotEve
 
         const events: ProcessedEventsData[] = [];
         processedEvents.forEach((seg: ProcessedEventsData) => {
-            if (!DateService.isSameDay(seg.startDate, date)) { return; }
+            if (!DateService.isSameDay(seg.startDate, date) || !occursWithinSchedulerHours(seg.startDate, seg.endDate)) { return; }
 
             const eventKey: string = `${seg.startDate.toISOString()}-${seg.event.id}`;
             const timeDisplay: string = DateService.formatTimeDisplay(seg.event, locale, timeFormat);

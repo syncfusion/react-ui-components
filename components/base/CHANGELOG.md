@@ -1,5 +1,13 @@
 # Changelog
 
+## 32.2.3 (2026-02-05)
+
+### Common 
+
+#### Features
+
+- Added a dedicated `npx` command `npx syncfusion-react-license activate` to activate the license for Pure React components. This is especially useful for projects that use both EJ2 React and Pure React components together.
+
 ## 32.1.19 (2025-12-16)
 
 ### Common

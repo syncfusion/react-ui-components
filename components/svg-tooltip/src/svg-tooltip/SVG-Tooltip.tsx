@@ -10,7 +10,7 @@ import {
     createSize,
     getTooltipThemeColor
 } from './helper';
-import { TooltipPlacement } from './enum';
+import { TextAnchor, TooltipPlacement } from './enum';
 import { TextStyle, MarkerShape, TextSpanElement, TooltipProps, ITooltipThemeStyle, RenderOption, PathOption, Rect, Size, TooltipLocation } from './models';
 
 const defaultProps: Partial<TooltipProps> = {
@@ -1422,7 +1422,7 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
                         fontSize={(mergedProps?.textStyle && mergedProps?.textStyle.size) || themeStyle?.textStyle.size}
                         opacity={(mergedProps?.textStyle && mergedProps?.textStyle.opacity) || themeStyle?.textStyle.opacity}
                         fill={(mergedProps?.textStyle && mergedProps?.textStyle.color) || themeStyle?.textStyle.color}
-                        textAnchor={mergedProps?.enableRTL ? 'end' : ''}
+                        textAnchor={mergedProps?.enableRTL ? 'end' : '' as TextAnchor}
                     >
                         {renderTextSpans()}
                     </text>

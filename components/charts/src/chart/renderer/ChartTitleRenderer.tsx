@@ -3,7 +3,7 @@ import { useLayout } from '../layout/LayoutContext';
 import { ChartTitleProps, ChartMarginProps } from '../base/interfaces';
 import { getMaxRotatedTextSize, getMaxTextSize, getTextAnchor, getTitle, measureText, titlePositionX } from '../utils/helper';
 import { ChartContext } from '../layout/ChartProvider';
-import { TextOverflow, TitlePosition } from '../../common';
+import { TextAnchor, TextOverflow, TitlePosition } from '../../common';
 import { Chart, MarginModel, Rect, ChartSizeProps, TextStyleModel, TitleOptions } from '../chart-area/chart-interfaces';
 import { HorizontalAlignment } from '@syncfusion/react-base';
 
@@ -42,7 +42,7 @@ export const ChartTitleRenderer: React.ForwardRefExoticComponent<ChartTitleProps
                     const titleCollection: string[] = getTitle(props.text, titleStyle, ((props.position === 'Top' ||
                         props.position === 'Bottom') ? rect.width : rect.height), chart.enableRtl, chart.themeStyle.chartTitleFont, props.textOverflow as TextOverflow);
                     const alignment: HorizontalAlignment = props.align as HorizontalAlignment;
-                    const aligmentAnchor: string = getTextAnchor(alignment, chart.enableRtl, props.position as TitlePosition);
+                    const aligmentAnchor: TextAnchor = getTextAnchor(alignment, chart.enableRtl, props.position as TitlePosition);
                     const titleOptions: TitleOptions = calculateTitlePosition(
                         props, titleStyle, chart, titleCollection, aligmentAnchor, chartSubTitle);
                     chart.titleSettings = titleOptions;
@@ -79,7 +79,7 @@ export const ChartTitleRenderer: React.ForwardRefExoticComponent<ChartTitleProps
  * @private
  */
 function calculateTitlePosition(
-    titleProps: ChartTitleProps, textStyle: TextStyleModel, chart: Chart, title: string[], alignment: string,
+    titleProps: ChartTitleProps, textStyle: TextStyleModel, chart: Chart, title: string[], alignment: TextAnchor,
     subTitle: ChartTitleProps): TitleOptions {
     const margin: MarginModel = chart.margin;
     let titleSize: ChartSizeProps = getMaxTextSize(title, textStyle, chart.themeStyle.chartTitleFont);

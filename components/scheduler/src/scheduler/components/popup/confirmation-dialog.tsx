@@ -31,6 +31,7 @@ export const ConfirmationDialog: FC<ConfirmationDialogProps> = (props: Confirmat
             header={title || getString('deleteEvent')}
             open={visible}
             style={{ maxWidth: '400px' }}
+            animation={{effect: 'Zoom', duration: 400, delay: 1}}
             footer={
                 <>
                     <Button onClick={onConfirm} variant={Variant.Standard}>

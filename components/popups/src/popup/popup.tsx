@@ -360,10 +360,16 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
         }, []);
 
         useEffect(() => {
+            if (!open) {
+                return;
+            }
             updatePosition();
         }, [targetRef, position, offsetX, offsetY, viewPortElementRef]);
 
         useEffect(() => {
+            if (!open) {
+                return;
+            }
             checkCollision();
         }, [collision]);
 

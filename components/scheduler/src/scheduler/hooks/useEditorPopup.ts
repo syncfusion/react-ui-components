@@ -4,6 +4,7 @@ import { DateService } from '../services/DateService';
 import { CalendarChangeEvent } from '@syncfusion/react-calendars';
 import { CheckboxChangeEvent } from '@syncfusion/react-buttons';
 import { TextBoxChangeEvent, TextAreaChangeEvent } from '@syncfusion/react-inputs';
+import { useSchedulerPropsContext } from '../context/scheduler-context';
 
 /** @private */
 export interface UseEditorPopupResult {
@@ -120,6 +121,8 @@ export const useEditorPopup: (
     const setMode: (value: 'cell' | 'event') => void = useCallback((value: 'cell' | 'event') => dispatch({ type: 'setField', key: 'mode', value }), [dispatch]);
     const setOriginalData: (value: EventModel) => void = useCallback((value?: EventModel) => dispatch({ type: 'setField', key: 'originalData', value }), [dispatch]);
 
+    const { eventSettings } = useSchedulerPropsContext();
+
     const onCellDoubleClickHandler: (args: SchedulerCellClickEvent) => void = useCallback((args: SchedulerCellClickEvent): void => {
         onCellDoubleClick?.(args);
         if (args.cancel) { return; }
@@ -202,6 +205,7 @@ export const useEditorPopup: (
     const handleStartTimeChange: (args: CalendarChangeEvent) => void = useCallback((args: CalendarChangeEvent): void => {
         const time: Date = args?.value as Date;
         setStartTimeOnly(time);
+        if (!time) { return; }
         const startCombined: Date = combineDateAndTime(startDateOnly, time);
         const endCombined: Date = combineDateAndTime(endDateOnly ?? startDateOnly, endTimeOnly);
         if (!endTimeChanged && DateService.isMidnight(endTimeOnly)) {
@@ -220,8 +224,9 @@ export const useEditorPopup: (
     }, []);
 
     const handleEndTimeChange: (args: CalendarChangeEvent) => void = useCallback((args: CalendarChangeEvent): void => {
-        setEndTimeOnly(args?.value as Date);
-        setEndTimeChanged(true);
+        const time: Date = args?.value as Date;
+        setEndTimeOnly(time);
+        setEndTimeChanged(!!time);
     }, []);
 
     const handleIsAllDayChange: (args: CheckboxChangeEvent) => void = useCallback((args: CheckboxChangeEvent): void => {
@@ -272,7 +277,7 @@ export const useEditorPopup: (
 
     const onMoreDetails: (cellData: SchedulerCellClickEvent) => void = useCallback((cellData: SchedulerCellClickEvent): void => {
         setMode('cell');
-        setSubject('');
+        setSubject(cellData[eventSettings.fields.subject] ?? '');
         setLocation('');
         setDescription('');
         setOriginalData(undefined);

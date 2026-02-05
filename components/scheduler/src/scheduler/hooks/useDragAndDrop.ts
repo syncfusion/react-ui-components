@@ -190,8 +190,8 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
     (newStartDate?: Date): void => {
         const eventInfo: EventModel = EventService.getEventByGuid(eventsData, data.guid);
         if (!eventInfo || !dragInfo.current) { return; }
-
-        if (dragInfo.current.isMonthView || dragInfo.current.isAllDaySource) {
+        const isDayEvent: boolean = dragInfo.current.isMonthView || dragInfo.current.isAllDaySource;
+        if (isDayEvent || !timeScale.enable) {
             if (newStartDate) {
                 const durationMs: number = Math.max(0, eventInfo.endTime.getTime() - eventInfo.startTime.getTime());
                 eventInfo.startTime = new Date(newStartDate);
@@ -200,9 +200,10 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
             const segments: ProcessedEventsData[] = EventService.processCloneEvent(schedulerRef, renderDates, eventInfo,
                                                                                    showWeekend, workDays,
                                                                                    dragInfo.current.cellWidth,
-                                                                                   dragInfo.current.isAllDaySource, dir === 'rtl'
+                                                                                   dragInfo.current.isAllDaySource, dir === 'rtl',
+                                                                                   dragInfo.current.isMonthView, elementRef.current
             );
-            cloneEventState?.show({ guid: data.guid, segments, isDayEvent: true });
+            cloneEventState?.show({ guid: data.guid, segments, isDayEvent: isDayEvent });
             return;
         }
 

@@ -5,6 +5,7 @@ import { getCenterLabelTextAnchor, measureText, textWrap } from '../utils/helper
 import { useCenterLabelRenderVersion, useSeriesRenderVersion } from '../hooks/events';
 import { HorizontalAlignment } from '@syncfusion/react-base';
 import { CenterLabelOptionsProps, CenterLabelRenderResultsProps, Chart, Points, SeriesProperties } from '../base/internal-interfaces';
+import { TextAnchor } from '../../common';
 
 /**
  * Renders the center label(s) for a chart by calculating their positions, wrapping text if necessary,
@@ -229,7 +230,7 @@ export const CenterLabelRenderer: React.FC<PieChartCenterLabelProps> = (props: P
                         id={`${layoutRef.current.element.id}_centerLabel_${labelIndex}`}
                         x={optionForIndex.centerLabelOptions.x}
                         y={optionForIndex.centerLabelOptions.y}
-                        textAnchor={optionForIndex.centerLabelOptions.anchor}
+                        textAnchor={optionForIndex.centerLabelOptions.anchor as TextAnchor}
                         dominantBaseline="auto"
                         style={{
                             fontFamily: styleForIndex?.fontFamily,
