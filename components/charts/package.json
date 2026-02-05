@@ -1,6 +1,6 @@
 {
   "name": "@syncfusion/react-charts",
-  "version": "32.1.19",
+  "version": "32.2.3",
   "description": "Syncfusion React Charts for feature-rich data visualization",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
@@ -19,9 +19,9 @@
   "module": "./index.js",
   "readme": "README.md",
   "dependencies": {
-    "@syncfusion/react-base": "~32.1.19",
-    "@syncfusion/react-data": "~32.1.19",
-    "@syncfusion/react-svg-tooltip": "~32.1.19"
+    "@syncfusion/react-base": "~32.2.3",
+    "@syncfusion/react-data": "~32.2.3",
+    "@syncfusion/react-svg-tooltip": "~32.2.3"
   },
   "devDependencies": {
     "gulp": "4.0.2",
