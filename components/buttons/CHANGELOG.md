@@ -1,5 +1,41 @@
 # Changelog
 
+## 34.1.29 (2026-07-06)
+
+### Switch
+
+The Switch component offers a flexible and user-friendly way to allow users to toggle between two states. It supports various configurations and customization options to accommodate different use cases in applications.
+
+Explore the demo <a href="https://react.syncfusion.com/switch" target="_blank" rel="noopener noreferrer">here</a>
+
+**Key features**
+
+- **Toggle Functionality:** The Switch component allows users to toggle between ON and OFF states, providing immediate visual feedback through the handle animation and track color changes.
+
+- **Color Variants:** Customize the appearance with predefined `color` options including `Primary`, `Secondary`, `Warning`, `Success`, `Error`, and `Info` to match your application's design language.
+
+- **Size Options:** Choose from multiple size presets (`Small`, `Medium`, `Large`) to accommodate different UI contexts and maintain visual consistency across your application.
+
+- **Label Support:** Display informative text alongside the switch to clearly convey its purpose. Configure label placement with the `labelPlacement` prop for left, right, top, or bottom positioning.
+
+- **Icon Customization:** Add custom icons or visual indicators inside the handle for checked and unchecked states, or display labels directly on the track for enhanced visual cues.
+
+- **Controlled & Uncontrolled Modes:** Supports both controlled and uncontrolled component patterns, allowing flexible state management depending on your application's requirements.
+
+### Checkbox
+
+#### Features
+
+- **Validation Support:** Added `valid`, `required`, `validationMessage`, and `validityStyles` props with `aria-invalid` attribute and custom validation message support.
+
+### Chip
+
+#### Features
+
+- **Size Property:** Added `size` prop to control chip dimensions with options 'Small', 'Medium', and 'Large', allowing better flexibility for different UI contexts.
+
+- This `size` feature is also supported in the `ChipList` component, enabling consistent sizing across all chips in the list.
+
 ## 31.1.17 (2025-09-05)
 
 ### Button
@@ -46,7 +82,7 @@ Explore the demo <a href="https://react.syncfusion.com/button" target="_blank" r
 
 **Key features**
 
-- **Colour Variants:** Style buttons with distinct `color` options like 'warning', 'success', 'danger', and 'info' to fit your application's theme.
+- **Color Variants:** Style buttons with distinct `color` options like 'warning', 'success', 'danger', and 'info' to fit your application's theme.
 
 - **Icon Support:**  Integrate SVG icons within buttons for enhanced visual cues. Configure the icon's position to be left, right, top, or bottom relative to button text.
 
@@ -82,7 +118,7 @@ Explore the demo <a href="https://react.syncfusion.com/chip" target="_blank" rel
 
 - **Variants:** Display chips with different visual styles using either 'filled' or 'outlined' variants to match your design requirements.
 
-- **Colours:** Customize the appearance with predefined `color` options including primary, info, danger, success, and warning.
+- **Colors:** Customize the appearance with predefined `color` options including primary, info, danger, success, and warning.
 
 - **Icons and Avatars:** Enhance visual representation with leading icons, trailing icons, or avatars to provide additional context.
 
@@ -112,7 +148,7 @@ Explore the demo <a href="https://react.syncfusion.com/floating-action-button" t
 
 **Key features**
 
-- **Colour Variants:** Customizable `color` options such as 'warning', 'success', 'danger', and 'info' are available to help the FAB blend seamlessly with your application's `color` scheme.
+- **Color Variants:** Customizable `color` options such as 'warning', 'success', 'danger', and 'info' are available to help the FAB blend seamlessly with your application's `color` scheme.
 
 - **Icon Customization:** Integrate SVG icons within buttons for enhanced visual appeal. Control icon placement relative to text with configurable options for positioning.
 

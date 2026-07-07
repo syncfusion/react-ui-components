@@ -1,12 +1,11 @@
-import * as React from 'react';
+import { ReactNode, type MouseEvent, type KeyboardEvent, type ChangeEvent as ReactChangeEvent } from 'react';
 import { DataManager, Query } from '@syncfusion/react-data';
-import { Size, LabelMode, Variant, SortOrder } from '@syncfusion/react-base';
+import { Size, LabelMode, Variant, SortOrder, HorizontalAlignment } from '@syncfusion/react-base';
 import { VirtualizationProps, ScrollEvent } from '@syncfusion/react-lists';
 import { CollisionAxis, PositionAxis, CollisionType, ResizeEvent } from '@syncfusion/react-popups';
 import { validationProps } from '@syncfusion/react-inputs';
 import { DropDownProps, DropDownFilterIconProps, DropDownSelectionProps, InputProps } from '../common/types';
-
-export { LabelMode, Variant, Size, ScrollEvent, SortOrder, PositionAxis, CollisionAxis, CollisionType, ResizeEvent };
+export { LabelMode, Variant, Size, ScrollEvent, SortOrder, PositionAxis, CollisionAxis, CollisionType, ResizeEvent, HorizontalAlignment };
 
 /**
  * Specifies a datasource item type.
@@ -114,7 +113,7 @@ export interface FilterEvent {
     /**
      * Specifies the filter input change event arguments.
      */
-    event: React.ChangeEvent<HTMLInputElement>;
+    event: ReactChangeEvent<HTMLInputElement>;
 
     /**
      * Specifies the search text value.
@@ -207,7 +206,7 @@ export interface PopupEvent {
     /**
      * Specifies the event that triggered the popup action.
      */
-    event?: React.MouseEvent<HTMLElement> | React.KeyboardEvent<HTMLElement> | Event;
+    event?: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement> | Event;
 }
 
 /**
@@ -223,27 +222,17 @@ export interface ChangeEvent {
     /**
      * Specifies the previously selected list item.
      */
-    previousItemData:
-    | string
-    | number
-    | boolean
-    | { [key: string]: unknown }
-    | null;
+    previousItemData: T | null;
 
     /**
      * Specifies the currently selected list item.
      */
-    itemData:
-    | string
-    | number
-    | boolean
-    | { [key: string]: unknown }
-    | null;
+    itemData: T | null;
 
     /**
      * Specifies the original event arguments.
      */
-    event: React.MouseEvent<Element> | React.KeyboardEvent<Element> | React.ChangeEvent<HTMLInputElement>;
+    event: MouseEvent<Element> | KeyboardEvent<Element> | ReactChangeEvent<HTMLInputElement>;
 }
 
 /**
@@ -256,7 +245,7 @@ export interface DropDownListProps extends DropDownProps, DropDownFilterIconProp
      *
      * @default -
      */
-    valueTemplate?: Function | React.ReactNode;
+    valueTemplate?: Function | ReactNode;
 
     /**
      * Specifies the placeholder text to be shown in the filter bar of the dropdown component.

@@ -44,15 +44,7 @@
   }
 
   .sf-tooltip-close {
-    background-color: $tooltip-icon-bg-color;
-    border-radius: $tooltip-close-icon-border-radius;
-    border: $tooltip-close-icon-border;
     color: $tooltip-icon-color;
-
-    &:hover {
-      background-color: $tooltip-icon-bg-hover;
-      color: $tooltip-icon-hover-color;
-    }
   }
 
   .sf-tooltip-content {

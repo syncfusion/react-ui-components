@@ -4,10 +4,10 @@ import { defaultChartConfigs } from '../base/default-properties';
 import { PieChartTitleProps } from '../base/interfaces';
 
 /**
- * PieChartTitle component for configuring and setting the main title of the chart.
+ * Configures the main title for the Pie Chart.
  *
- * @param {PieChartTitleProps} props - Props used to customize the chart title.
- * @returns {null} This component does not render any visible output.
+ * @param {PieChartTitleProps} props - Properties used to customize the chart title, including text, position, and font styling.
+ * @returns {null} It is used only to pass the title configuration into the pie chart through React context.
  */
 export const PieChartTitle: React.FC<PieChartTitleProps> = (props: PieChartTitleProps) => {
     const context: ChartProviderChildProps = useContext(ChartContext);

@@ -1,5 +1,8 @@
-import { useState, useEffect, useCallback, useImperativeHandle, useRef, forwardRef, Ref, JSX, InputHTMLAttributes } from 'react';
-import { preRender, useProviderContext, useRippleEffect, getUniqueID, Color, Size, Position } from '@syncfusion/react-base';
+import { useState, useEffect, useCallback, useImperativeHandle, useRef, forwardRef, Ref, JSX, InputHTMLAttributes,
+    useMemo, ReactNode, ForwardRefExoticComponent, RefAttributes, RefObject, ChangeEventHandler, type ChangeEvent,
+    type MouseEvent, type KeyboardEvent
+} from 'react';
+import { preRender, useProviderContext, useRippleEffect, Color, Size, Position, useStableId } from '@syncfusion/react-base';
 import { CheckLargeIcon, IntermediateBarIcon} from '@syncfusion/react-icons';
 
 /**
@@ -9,12 +12,47 @@ export interface CheckboxChangeEvent {
     /**
      * The initial event object received from the input element.
      */
-    event: React.ChangeEvent<HTMLInputElement>;
+    event: ChangeEvent<HTMLInputElement>;
 
     /**
      * The current checked state of the Checkbox.
      */
     value: boolean;
+}
+
+/**
+ * Validation-related properties for components.
+ */
+interface validationProps {
+    /**
+     * Specifies whether the component is a required field in a form. When set to true,
+     * the component will be marked as required.
+     *
+     * @default -
+     */
+    required?: boolean;
+
+    /**
+     * Specifies whether to override the validity state of the component. If valid is set, the required property will be ignored.
+     *
+     * @default -
+     */
+    valid?: boolean;
+
+    /**
+     * Specifies the form error message of the component.
+     *
+     * @default ''
+     */
+    validationMessage?: string;
+
+    /**
+     * Specifies whether to apply visual representation of the invalid state of the component.
+     * If set to false, no visual representation of the invalid state of the component will be applied.
+     *
+     * @default true
+     */
+    validityStyles?: boolean;
 }
 
 const CHECK: string = 'sf-checkbox-checked';
@@ -29,7 +67,7 @@ const CHECKBOX_CLASS: string = 'sf-checkbox';
  * Properties interface for the Checkbox component
  *
  */
-export interface CheckboxProps {
+export interface CheckboxProps extends validationProps {
 
     /**
      * Specifies if the Checkbox is in an `indeterminate` state, which visually presents it as neither checked nor unchecked; setting this to `true` will make the Checkbox appear in an indeterminate state.
@@ -57,21 +95,21 @@ export interface CheckboxProps {
      *
      * @default -
      */
-    icon?: React.ReactNode;
+    icon?: ReactNode;
 
     /**
      * Specifies a custom icon to be displayed in checked state. This replaces the default Checkbox check mark.
      *
      * @default -
      */
-    checkedIcon?: React.ReactNode;
+    checkedIcon?: ReactNode;
 
     /**
      * Specifies a custom icon to be displayed in the indeterminate state. This replaces the default indeterminate icon.
      *
      * @default -
      */
-    indeterminateIcon?: React.ReactNode;
+    indeterminateIcon?: ReactNode;
 
     /**
      * Specifies the position of the label relative to the Checkbox. It determines whether the label appears before or after the Checkbox element in the UI.
@@ -143,7 +181,7 @@ type ICheckboxProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | '
  * ```
  */
 
-export const Checkbox: React.ForwardRefExoticComponent<ICheckboxProps & React.RefAttributes<ICheckbox>> =
+export const Checkbox: ForwardRefExoticComponent<ICheckboxProps & RefAttributes<ICheckbox>> =
     forwardRef<ICheckbox, ICheckboxProps>((props: ICheckboxProps, ref: Ref<ICheckbox>) => {
         const {
             onChange,
@@ -161,27 +199,37 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckboxProps & React.Re
             label = '',
             value = '',
             size = Size.Medium,
-            id= getUniqueID('checkbox'),
+            id,
+            required,
+            valid,
+            validationMessage = '',
+            validityStyles = true,
             ...domProps
         } = props;
 
         const isControlled: boolean = checked !== undefined;
         const [checkedState, setCheckedState] = useState<boolean>(() => {
             if (isControlled) {
-                return checked!;
+                return !!checked;
             }
             return defaultChecked;
         });
 
         const [isIndeterminate, setIsIndeterminate] = useState(indeterminate);
         const [isFocused, setIsFocused] = useState(false);
-        const inputRef: React.RefObject<HTMLInputElement | null> = useRef<HTMLInputElement | null>(null);
-        const wrapperRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement | null>(null);
-        const rippleContainerRef: React.RefObject<HTMLSpanElement | null> = useRef<HTMLSpanElement | null>(null);
+        const inputRef: RefObject<HTMLInputElement | null> = useRef<HTMLInputElement | null>(null);
+        const wrapperRef: RefObject<HTMLDivElement | null> = useRef<HTMLDivElement | null>(null);
+        const rippleContainerRef: RefObject<HTMLSpanElement | null> = useRef<HTMLSpanElement | null>(null);
         const { dir, ripple } = useProviderContext();
         const { rippleMouseDown, Ripple} = useRippleEffect(ripple, {isCenterRipple: true});
-
-        const publicAPI: Partial<ICheckbox> = {
+        const isReadOnly: boolean = !!domProps.readOnly && !disabled;
+        const ariaReadonlyValue: 'true' | undefined = isReadOnly ? 'true' : undefined;
+        const requiredAttribute: boolean | undefined = (!disabled && (required === true || valid === false)) ? true : undefined;
+        const isChecked: boolean = isControlled ? !!checked : checkedState;
+        const isInputValid: boolean = valid !== undefined ? !!valid : (required ? isChecked : true);
+        const ariaInvalidValue: 'true' | undefined = !isInputValid ? 'true' : undefined;
+        const uniqueId: string = id ?? useStableId('sf-checkbox');
+        const publicAPI: Partial<ICheckbox> = useMemo(() => ({
             checked,
             indeterminate,
             value,
@@ -189,12 +237,22 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckboxProps & React.Re
             size,
             icon,
             checkedIcon
-        };
+        }), [checked, indeterminate, value, color, size, icon, checkedIcon]);
 
         useImperativeHandle(ref, () => ({
             ...publicAPI as ICheckbox,
             element: inputRef.current
         }), [publicAPI]);
+
+        useEffect(() => {
+            const element: HTMLInputElement | null = inputRef.current;
+            if (!element || typeof element.setCustomValidity !== 'function') { return; }
+            if (isInputValid) {
+                element.setCustomValidity('');
+            } else if (validationMessage) {
+                element.setCustomValidity(validationMessage);
+            }
+        }, [isInputValid, validationMessage]);
 
         useEffect(() => {
             if (isControlled) {
@@ -210,11 +268,12 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckboxProps & React.Re
             setIsIndeterminate(indeterminate);
         }, [indeterminate]);
 
-        const handleStateChange: React.ChangeEventHandler<HTMLInputElement> = useCallback(
-            (event: React.ChangeEvent<HTMLInputElement>): void => {
+        const handleStateChange: ChangeEventHandler<HTMLInputElement> = useCallback(
+            (event: ChangeEvent<HTMLInputElement>): void => {
+                if (isReadOnly) {
+                    return;
+                }
                 const newChecked: boolean = event.target.checked;
-                setIsIndeterminate(isIndeterminate);
-                setIsFocused(false);
                 if (!isControlled) {
                     setCheckedState(newChecked);
                 }
@@ -222,7 +281,7 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckboxProps & React.Re
                     onChange({ event, value: newChecked });
                 }
             },
-            [onChange, isControlled, isIndeterminate]
+            [onChange, isControlled, isReadOnly]
         );
 
         const handleFocus: () => void = () => {
@@ -233,61 +292,81 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckboxProps & React.Re
             setIsFocused(false);
         };
 
-        const handleMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+        const handleMouseDown: (e: MouseEvent<HTMLDivElement>) => void = useCallback((e: MouseEvent<HTMLDivElement>) => {
             if (!ripple || !rippleContainerRef.current || !rippleMouseDown){
                 return;
             }
-            const syntheticEvent: React.MouseEvent<HTMLSpanElement, MouseEvent> = {
+            const syntheticEvent: MouseEvent<HTMLSpanElement, globalThis.MouseEvent> = {
                 ...e,
                 currentTarget: rippleContainerRef.current,
                 target: rippleContainerRef.current,
                 preventDefault: e.preventDefault,
                 stopPropagation: e.stopPropagation
-            } as React.MouseEvent<HTMLSpanElement>;
+            } as MouseEvent<HTMLSpanElement>;
             rippleMouseDown(syntheticEvent);
         }, [ripple, rippleMouseDown]);
 
-        const wrapperClass: string = [
+        const handleKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void =
+            useCallback((e: KeyboardEvent<HTMLInputElement>) => {
+                if (isReadOnly && (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Enter')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            }, [isReadOnly]);
+
+        const wrapperClass: string = useMemo(() => [
             WRAPPER,
             className,
             color && color.toLowerCase() !== 'secondary' ? `sf-${color.toLowerCase()}` : '',
             disabled ? DISABLED : '',
             isFocused ? 'sf-focus' : '',
             dir === 'rtl' ? 'sf-rtl' : '',
-            size && size.toLowerCase() !== 'medium' ? `sf-${size.toLowerCase()}` : ''
-        ].filter(Boolean).join(' ');
+            size && size.toLowerCase() !== 'medium' ? `sf-${size.toLowerCase()}` : '',
+            isReadOnly ? 'sf-readonly' : ''
+        ].filter(Boolean).join(' '), [className, color, disabled, isFocused, dir, size, isReadOnly]);
 
-        const renderRipple: () => JSX.Element = useCallback(() => (
-            <span ref={rippleContainerRef} className={`sf-checkbox-ripple sf-checkbox-ripple-${size.toLowerCase().substring(0, 2)}  ${(labelPlacement === 'Top' || labelPlacement === 'Bottom') ? 'sf-checkbox-vertical' : 'sf-checkbox-horizontal'}`}>
+        const renderRipple: () => JSX.Element = () => (
+            <span ref={rippleContainerRef} className={`sf-checkbox-ripple sf-checkbox-ripple-${size.toLowerCase().substring(0, 2)}`}>
                 {ripple && <Ripple />}
+                <input
+                    ref={inputRef}
+                    id={uniqueId}
+                    className={`${CHECKBOX_CLASS} ${className}`}
+                    type="checkbox"
+                    name={name}
+                    value={value}
+                    checked={isChecked}
+                    disabled={disabled}
+                    aria-readonly={ariaReadonlyValue}
+                    required={requiredAttribute}
+                    aria-invalid={ariaInvalidValue}
+                    onFocus={handleFocus}
+                    onBlur={handleBlur}
+                    onChange={handleStateChange}
+                    onKeyDown={handleKeyDown}
+                    {...domProps}
+                />
+                {isChecked && checkedIcon ? checkedIcon : !checkedState && icon ? icon : renderIcons()}
             </span>
-        ), [ripple, size, labelPlacement, rippleContainerRef]);
+        );
 
-        const sizeMap: Record<string, string> = {
-            small: 'sf-font-size-sm',
-            large: 'sf-font-size-base'
-        };
-        const labelFontSizeClass: string = size ? sizeMap[size.toLowerCase()] ?? 'sf-font-size-sm' : 'sf-font-size-sm';
-
+        const showError: boolean = validityStyles !== false && !isInputValid;
         const renderIcons: () => JSX.Element = () => {
-            const getSizeDimensions: (size: Size) => number = (size: Size): number => {
-                const sizeMap: Record<Size, number> = {
-                    [Size.Small]: 12,
-                    [Size.Medium]: 14,
-                    [Size.Large]: 16
-                };
-                return sizeMap[size as Size] ?? 14;
-            };
-            const dimensions: number = getSizeDimensions(size);
+            const iconError: boolean = showError && !isChecked && !isIndeterminate;
             return (
-                <span className={`sf-checkbox-icons ${FRAME}-${size.toLowerCase().substring(0, 2)} ${isIndeterminate ? INDETERMINATE : checkedState ? CHECK : ''}`}>
+                <span className={[
+                    'sf-checkbox-icons',
+                    `${FRAME}-${size.toLowerCase().substring(0, 2)}`,
+                    isIndeterminate ? INDETERMINATE : isChecked ? CHECK : '',
+                    iconError ? 'sf-error' : ''
+                ].filter(Boolean).join(' ')}>
                     {isIndeterminate && indeterminateIcon ? (
                         indeterminateIcon
                     ) : isIndeterminate && (
                         <IntermediateBarIcon width={20} height={20} fill='currentColor' />
                     )}
-                    {checkedState && !isIndeterminate && (
-                        <CheckLargeIcon width={dimensions} height={dimensions} fill="currentColor" />
+                    {isChecked && !isIndeterminate && (
+                        <CheckLargeIcon fill="currentColor" />
                     )}
                 </span>
             );
@@ -300,25 +379,10 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckboxProps & React.Re
                 aria-disabled={disabled ? 'true' : 'false'}
                 onMouseDown={handleMouseDown}
             >
-                <label className={`sf-checkbox-label sf-${labelPlacement.toLowerCase()} sf-checkbox-${size.toLowerCase()}`}>
-                    <input
-                        ref={inputRef}
-                        id={id}
-                        className={`${CHECKBOX_CLASS} ${className}`}
-                        type="checkbox"
-                        name={name}
-                        value={value}
-                        checked={isControlled ? checked : checkedState}
-                        disabled={disabled}
-                        onFocus={handleFocus}
-                        onBlur={handleBlur}
-                        onChange={handleStateChange}
-                        {...domProps}
-                    />
-                    {label && (<span className={`${LABEL} ${labelFontSizeClass}`}>{label}</span>)}
-                    {ripple && renderRipple()}
-                    {checkedState ? checkedIcon : icon}
-                    {!checkedIcon && !icon && renderIcons()}
+                <label className={`sf-checkbox-label sf-${labelPlacement.toLowerCase()} sf-checkbox-${size.toLowerCase()}`}
+                >
+                    {label && (<span className={`${LABEL}`}>{label}</span>)}
+                    {renderRipple()}
                 </label>
             </div>
         );
@@ -326,54 +390,3 @@ export const Checkbox: React.ForwardRefExoticComponent<ICheckboxProps & React.Re
 
 Checkbox.displayName = 'Checkbox';
 export default Checkbox;
-
-// Define the type for the component's props
-interface CSSCheckboxProps {
-    className?: string;
-    checked?: boolean;
-    label?: string;
-}
-
-const createCSSCheckbox: (props: CSSCheckboxProps) => JSX.Element = (props: CSSCheckboxProps): JSX.Element => {
-    const {
-        className = '',
-        checked = false,
-        label = '',
-        ...domProps
-    } = props;
-    const { dir, ripple } = useProviderContext();
-    const rippleContainerRef: React.RefObject<HTMLSpanElement | null> = useRef<HTMLSpanElement | null>(null);
-    const { rippleMouseDown, Ripple} = useRippleEffect(ripple, {isCenterRipple: true});
-    const handleMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-        if (ripple && rippleContainerRef.current && rippleMouseDown) {
-            const syntheticEvent: React.MouseEvent<HTMLSpanElement, MouseEvent> = {
-                ...e,
-                currentTarget: rippleContainerRef.current,
-                target: rippleContainerRef.current,
-                preventDefault: e.preventDefault,
-                stopPropagation: e.stopPropagation
-            } as React.MouseEvent<HTMLSpanElement>;
-            rippleMouseDown(syntheticEvent);
-        }
-    }, [ripple, rippleMouseDown]);
-    return (
-        <div className={`sf-checkbox-wrapper ${className} ${(dir === 'rtl') ? 'sf-rtl' : ''}`} onMouseDown={handleMouseDown} {...domProps}>
-            {<span ref={rippleContainerRef} className={`sf-ripple-container sf-checkbox-ripple sf-checkbox-ripple-me ${checked ? 'sf-ripple-check' : ''} sf-checkbox-horizontal`}>
-                {ripple && <Ripple />}
-            </span>}
-            <span className={`sf-checkbox-frame-me sf-checkbox-icons ${checked ? 'sf-checkbox-checked' : ''}`}>
-                {checked && (
-                    <CheckLargeIcon width={12} height={12} fill='currentColor'/>
-                )}
-            </span>
-            {label && (
-                <span className={LABEL}>{label}</span>
-            )}
-        </div>
-    );
-};
-
-// Component definition for Checkbox using create function
-export const CSSCheckbox: React.FC<CSSCheckboxProps> = (props: CSSCheckboxProps): JSX.Element => {
-    return createCSSCheckbox(props);
-};

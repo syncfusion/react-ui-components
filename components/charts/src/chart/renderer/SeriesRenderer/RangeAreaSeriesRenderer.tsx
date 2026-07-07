@@ -416,7 +416,7 @@ const RangeAreaSeriesRenderer: RangeAreaSeriesRendererType = {
         }
 
         // Compose options
-        const seriesName: string = `${series.chart.element.id}_Series_${series.index}`;
+        const seriesName: string = series.category === 'Indicator' ? series.chart.element.id + '_Indicator_Series_' + series.index + '_' + series.name : `${series.chart.element.id}_Series_${series.index}`;
 
         const fillOptions: RenderOptions = {
             id: seriesName,

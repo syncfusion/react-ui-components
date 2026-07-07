@@ -195,7 +195,7 @@ const BubbleSeries: BubbleSeriesType = {
      * Animates the Bubble points.
      *
      * @param {SeriesProperties} series - Series which should be animated.
-     * @returns {Function} Returns the animated points.
+     * @returns {void}
      */
     doAnimation: (series: SeriesProperties) => {
         const duration: number = series.animation?.duration as number;

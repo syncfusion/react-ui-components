@@ -1,9 +1,10 @@
-import { getNumberFormat, isNullOrUndefined } from '@syncfusion/react-base';
+import { getNumberFormat, isNullOrUndefined, SanitizeHtmlHelper } from '@syncfusion/react-base';
 import { degreeToLocation, measureText, stringToNumber, subtractThickness } from '../../utils/helper';
-import { ConnectorProps, PieChartDataLabelProps, PieChartMarginProps, PieChartSizeProps, PieChartBorderProps, PieChartFontProps, PieChartLocationProps, PieDataLabelContentFunction, PieChartDataLabelFormatterProps } from '../../base/interfaces';
+import { PieChartDataLabelProps, PieChartMarginProps, PieChartSizeProps, PieChartBorderProps, PieChartFontProps, PieChartLocationProps, PieDataLabelContentFunction, PieChartDataLabelFormatterProps } from '../../base/interfaces';
 import { Chart, PieBase, Points, Rect, SeriesProperties, TextRenderOptions } from '../../base/internal-interfaces';
 import { PieLabelPosition } from '../../base/enum';
 import { useTextTrim } from './series-helper';
+import { ConnectorProps } from '../../../common/interfaces';
 
 // Utilities to derive readable text color similar to chart renderer
 interface RGB { r: number; g: number; b: number }
@@ -97,7 +98,8 @@ function applyPieDataLabelContentCallback(
     if (contentCallback && typeof contentCallback === 'function') {
         try {
             const args: PieChartDataLabelFormatterProps = { index, text };
-            return contentCallback(args);
+            const formatterResult: string = contentCallback(args);
+            return SanitizeHtmlHelper.sanitize(formatterResult);
         } catch {
             return text;
         }
@@ -187,6 +189,7 @@ function renderDataLabel(
 ): void {
     const border: PieChartBorderProps = { width: dataLabel.border?.width, color: dataLabel.border?.color };
     point.label = getDatalabelText(dataLabel.format as string, point.originalText || point.y.toString());
+    point.label = SanitizeHtmlHelper.sanitize(point.label);
     const isInside: boolean = (dataLabel.position as PieLabelPosition) === 'Inside';
     const theme: string = (accumulation as Chart).theme || '';
     const defaultBgForTheme: string = (theme.indexOf('Dark') > -1) ? 'black' : 'white';
@@ -212,6 +215,7 @@ function renderDataLabel(
     if (typeof customText === 'string') {
         argsData.text = customText;
     }
+    argsData.text = SanitizeHtmlHelper.sanitize(argsData.text);
     //accumulation.trigger(textRender, argsData);
     point.argsData = argsData;
     //const isTemplate: boolean = argsData.template !== null;

@@ -26,6 +26,24 @@ export interface PageSettings {
     pageSize?: number;
 
     /**
+     * Specifies who controls the page size used for server-side paging requests.
+     *
+     * - When set to `'server'`, the grid sends only the `skip` parameter.
+     *   The page size is inferred from the initial server response, and subsequent
+     *   `skip` values are calculated based on the number of rows returned by the server.
+     *   This mode is suitable for infinite scrolling and scenarios where the server
+     *   determines page boundaries or uses continuation-based paging.
+     *
+     * - When set to `'client'`, the grid sends both `skip` and `take` parameters
+     *   based on the configured `pageSize` and current page index.
+     *   This allows the server to return a specific slice of data for each request
+     *   and is ideal for virtual scrolling with a known total row count.
+     *
+     * @default 'client'
+     */
+    pageSizeControlledBy?: 'server' | 'client';
+
+    /**
      * Controls the range of page numbers displayed for navigation, enhancing usability.
      * Affects the pager’s visual layout and navigation options.
      *
@@ -51,6 +69,15 @@ export interface PageSettings {
      * @private
      */
     totalRecordsCount?: number;
+
+    /**
+     * Provides an estimate of the total number of records in the data source when the exact count is unavailable.
+     * Used in scenarios like infinite scrolling where the server may not provide a total count.
+     * Upto estimatedTotalRecordsCount, the grid will send both `skip` and `take` parameters for paging requests based on server provided `pageSize`. Once the loaded records reach this count, the grid will switch to sending only `skip` in `pageSizeControlledBy: 'server'` default mode for subsequent requests, treating it as an infinite scroll scenario.
+     *
+     * @default 0
+     */
+    estimatedTotalRecordsCount?: number;
 
     /**
      * Defines a custom template for rendering the pager component.

@@ -2,11 +2,20 @@ import { Orientation } from '@syncfusion/react-base';
 import { CalendarType } from '../calendar-core';
 import { CalendarCellProps } from './calendar-cell';
 import * as React from 'react';
+export { CalendarType };
 
 /**
  * Defines the context passed to a custom Calendar header template.
  */
 export interface CalendarHeaderProps {
+    /**
+     * Internal identifier used by the Calendar component for
+     * accessibility relationships.
+     *
+     * @private
+     */
+    titleId?: string;
+
     /**
      * Specifies an optional CSS class to apply to the header container.
      * This is useful for reusing styling in a custom template.
@@ -217,6 +226,13 @@ export interface ViewChangeEvent {
 
 export interface CalendarBaseProps {
     /**
+     * Specifies the calendar system to use, such as 'gregorian' or 'islamic'.
+     *
+     * @default 'gregorian'
+     */
+    calendarType?: CalendarType;
+
+    /**
      * Specifies the minimum date that can be selected in the Calendar.
      *
      * @default new Date(1900, 0, 1)
@@ -338,6 +354,34 @@ export interface CalendarBaseProps {
      * @event onOutOfRangeNavigation
      */
     onOutOfRangeNavigation?: (direction: 'left' | 'right' | 'up' | 'down', date: Date) => boolean;
+
+    /**
+     * When true, prevents applying focus styling to dates outside the current month view.
+     *
+     * @private
+     * @default false
+     */
+    focusTodayOnOtherMonth?: boolean;
+
+    /**
+     * Specifies hiding of `sf-selected` on range endpoints while preserving
+     * `sf-in-range` highlighting. Used by DateRangePicker to avoid
+     * duplicate selection styling on the inactive calendar.
+     *
+     * @private
+     * @default false
+     */
+    suppressRangeSelection?: boolean;
+
+    /**
+     * Specifies whether the current range is a hover preview range.
+     * Used by DateRangePicker to avoid applying `sf-selected` styling
+     * to duplicated outside-month or outside-year cells during hover preview.
+     *
+     * @private
+     * @default false
+     */
+    isRangePreview?: boolean;
 }
 
 
@@ -382,14 +426,6 @@ export interface CalendarUiProps {
 }
 
 export interface CalendarProps extends CalendarBaseProps, CalendarUiProps {
-    /**
-     * Specifies the calendar system to use, such as 'gregorian' or 'islamic'.
-     *
-     * @private
-     * @default 'gregorian'
-     */
-    calendarType?: CalendarType;
-
     /**
      * Specifies the selected date of the Calendar in controlled mode.
      *

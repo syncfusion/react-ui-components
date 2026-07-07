@@ -1,5 +1,47 @@
 # Changelog
 
+## 34.1.29 (2026-07-06)
+
+### Calendar
+
+**Features**
+
+- **Islamic Calendar Support:** The Calendar component now supports Islamic (`Hijri`) calendar display and selection via the `calendarType` prop. Seamless switching between Gregorian and Islamic calendar systems is enabled, with automatic date conversion, localized month and day names, and accurate year calculations.
+- Islamic calendar support is also available for the DatePicker, DateTimePicker, and DateRangePicker components, enabling seamless interaction with multiple calendar systems.
+
+### DatePicker
+
+**Features**
+
+- **Segment-Based Masked Input:** Enable masked input with the `inputMask` prop to divide the date input into separate segments (day, month, year). Customize placeholders for each segment using the `maskPlaceholder` prop. Supports keyboard navigation between segments and validation for each part.
+- This masked input support is also available for DateRangePicker, DateTimePicker, and TimePicker components, ensuring consistent data entry experiences across all picker components.
+
+- **Helper Text Support:** The DatePicker component supports a `helperText` prop, allowing to display descriptive or instructional text below the input field for improved user guidance and accessibility.
+- This helper text support is also available for DateRangePicker, DateTimePicker, and TimePicker components, enabling consistent contextual messaging across all input fields.
+
+### DateRangePicker
+
+**Features**
+
+- **Month and Year Range Selection Support:** The DateRangePicker component now supports range selection at month and year levels using the `start` and `depth` properties with `CalendarView.Year` and `CalendarView.Decade`, enabling direct selection through YearView and DecadeView with consistent range highlighting and interaction.
+
+## 33.2.3 (2026-04-21)
+
+### DatePicker
+
+**Features**
+
+- **Adornments Support:** The DatePicker component supports `prefix` and `suffix` props, allowing to display custom icons or elements at the start and end of the input field for enhanced customization and usability.
+- This adornment support is also available for DateRangePicker, DateTimePicker, and TimePicker components, enabling consistent UI customization across all calendar input fields.
+
+## 33.1.46 (2026-03-31)
+
+### DatePicker
+
+#### Bug Fixes
+
+- `#F1017233` - Added `inputProps` support to apply required attributes directly to the underlying input.
+
 ## 33.1.44 (2026-03-16)
 
 ### DateTimePicker
@@ -23,7 +65,7 @@ Explore the demo <a href="https://react.syncfusion.com/react-ui/datetimepicker" 
 
 ### DateRangePicker
 
-The React DateRangePicker component is a dual‑date selector that provides a single input with a popup or inline panel to choose a start and end date. It supports presets, strict ranges, min/max constraints, optional min/max span limits, keyboard navigation, and customizable templates. With localization and RTL support it suits booking flows, analytics filters, and reporting UIs.
+The React DateRangePicker component is a dual‑date selector that provides a single input with a popup or inline panel to choose a start and end date. It supports presets, strict ranges, min/max constraints, optional min/max span limits, keyboard navigation, and customizable templates. With localization and RTL support it suits booking flows, analytics filters, and reporting interfaces.
 
 Explore the demo <a href="https://react.syncfusion.com/react-ui/daterangepicker" target="_blank" rel="noopener noreferrer">here</a>
 

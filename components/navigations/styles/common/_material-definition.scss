@@ -1,0 +1,29 @@
+@use '../../../base/styles/themes/variables' as *;
+
+$base-menu-icon-color: rgb($icon-color) !default;
+$base-menu-icon-disabled: $icon-color-disabled !default;
+$base-menu-icon-font-size: $font-size-xl !default;
+$base-menu-submenu-icon-font-size: $font-size-base !default;
+
+$base-menu-menu-color: rgb($flyout-text-color) !default;
+$base-menu-color: rgb($flyout-text-color) !default;
+$base-menu-text-disabled: $content-text-color-disabled !default;
+$base-menu-bg-color-disabled: $white !default;
+
+$base-menu-ul-margin: $spacing-0 !default;
+$base-menu-ul-padding: $spacing-4 $spacing-0 !default;
+$base-menu-ul-border: 1px solid rgb($border-light) !default;
+$base-menu-ul-border-radius: $radius-4 !default;
+$base-menu-ul-box-shadow: $shadow-md !default;
+$base-menu-ul-bg-color: rgb($content-bg-color) !default;
+$base-menu-font-size: $font-size-sm !default;
+
+$base-menu-li-line-height: $line-height-sm !default;
+$base-menu-li-padding: $spacing-10 $spacing-16 !default;
+$base-menu-li-items-gap: $spacing-12 !default;
+$base-menu-li-bg-color: $content-bg-color-hover !default;
+$base-menu-li-selected-bg-color: rgb($content-bg-color-selected) !default;
+$base-menu-li-active-bg-color: $content-bg-color-pressed !default;
+
+$base-menu-separator-bg: linear-gradient(rgb($border-light), rgb($border-light)) center / 100% $spacing-1 no-repeat;
+$base-menu-blank-icon-padding: $spacing-48 $spacing-16 !default;

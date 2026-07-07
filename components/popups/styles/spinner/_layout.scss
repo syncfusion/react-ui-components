@@ -27,6 +27,9 @@
     gap: $spinner-gap;      
     position: relative;
     height: 100%;
+    font-size: $spinner-font-size;
+    line-height: $spinner-line-height;
+    font-weight: $spinner-font-weight;
   }
 
   .sf-spinner-primary {

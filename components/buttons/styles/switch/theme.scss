@@ -1,0 +1,207 @@
+@use "sass:map";
+@use 'theme-variables' as *;
+
+@include export-module('switch-theme') {
+
+  .sf-switch-wrapper {
+    .sf-switch-track:hover {
+      .sf-switch-handle {
+        background-color: $switch-handle-off-bg-hover;
+      }
+
+      &.sf-switch-track-checked {
+        .sf-switch-handle {
+          background-color: $switch-handle-on-bg-hover;
+        }
+
+        .sf-switch-state-layer {
+          background-color: $switch-state-layer-on-hover;
+        }
+      }
+
+      .sf-switch-state-layer {
+        background-color: $switch-state-layer-off-hover;
+      }
+    }
+
+    .sf-switch:focus-visible + .sf-switch-track {
+      box-shadow: $switch-focus-ring;
+      background-color: $switch-track-off-bg-focus;
+
+      .sf-switch-handle {
+        background-color: $switch-handle-off-bg-active-focus;
+      }
+
+      &.sf-switch-track-checked {
+        .sf-switch-handle {
+          background-color: $switch-handle-on-bg;
+        }
+
+        .sf-switch-state-layer {
+          background-color: $switch-state-layer-on-focus;
+        }
+      }
+
+      .sf-switch-state-layer {
+        background-color: $switch-state-layer-off-focus;
+      }
+    }
+
+    .sf-switch-track:active {
+      box-shadow: $switch-active-ring;
+      background-color: $switch-track-off-bg-active;
+      .sf-switch-handle {
+        background-color: $switch-handle-off-bg-active-focus;
+      }
+
+      &.sf-switch-track-checked {
+        .sf-switch-state-layer {
+          background-color: $switch-state-layer-on-pressed;
+        }
+      }
+
+      .sf-switch-state-layer {
+        background-color: $switch-state-layer-off-pressed;
+      }
+    }
+
+    &.sf-disabled {
+      opacity: $switch-disabled-opacity;
+      .sf-switch-track {
+        background-color: $switch-track-disabled-off-bg;
+        border-color: $switch-track-disabled-off-border;
+
+        &.sf-switch-track-checked {
+          background-color: $switch-track-disabled-on-bg;
+          border-color: transparent;
+        }
+      }
+
+      .sf-switch-label {
+        color: $switch-label-disabled-color;
+      }
+      .sf-switch-handle {
+        background-color: $switch-handle-disabled-off-bg;
+      }
+
+      .sf-switch-track-checked .sf-switch-handle {
+        background-color: $switch-handle-disabled-on-bg;
+      }
+
+      .sf-switch-icon {
+        color: $switch-handle-disabled-icon-color;
+      }
+    }
+
+    .sf-switch-track-label > * {
+      color: $switch-track-off-icon-color;
+    }
+
+    .sf-switch-track-checked .sf-switch-track-label > * {
+      color: $switch-track-on-icon-color;
+    }
+  }
+
+  .sf-switch-label {
+    color: $switch-label-color;
+  }
+
+  .sf-switch-track {
+    background-color: $switch-track-off-bg;
+    border-color: $switch-track-off-border;
+
+    &.sf-switch-track-checked {
+      background-color: $switch-track-on-bg;
+      border-color: $switch-track-on-border;
+    }
+  }
+
+  .sf-switch-handle {
+    background-color: $switch-handle-off-bg;
+
+    &.sf-switch-handle-checked {
+      background-color: $switch-handle-on-bg;
+    }
+  }
+
+  .sf-switch-icon {
+    color: $switch-handle-off-icon-color;
+  }
+
+  .sf-switch-track-checked .sf-switch-icon {
+    color: $switch-handle-on-icon-color;
+  }
+
+  .sf-switch-track-label {
+    color: $switch-handle-off-icon-color;
+  }
+
+  .sf-switch-track-label-on {
+    color: $switch-track-on-text-color;
+  }
+
+  .sf-switch-track-label-off {
+    color: $switch-track-off-text-color;
+  }
+
+  // ─── Color variant overrides (ON state only) ────────────────────────────────
+  @each $variant, $colors in $switch-variants {
+    .sf-switch-wrapper.sf-#{$variant} {
+      .sf-switch-track.sf-switch-track-checked {
+        background-color: map.get($colors, track-on-bg);
+        border-color: map.get($colors, track-on-border);
+      }
+
+      .sf-switch-track-checked .sf-switch-handle {
+        background-color: map.get($colors, handle-on-bg);
+      }
+
+      .sf-switch-track:hover,
+      .sf-switch-track:active {
+        &.sf-switch-track-checked .sf-switch-handle {
+          background-color: map.get($colors, handle-on-bg-hover);
+        }
+
+        &.sf-switch-track-checked .sf-switch-state-layer {
+          background-color: map.get($colors, state-layer-on-hover);
+        }
+      }
+
+      .sf-switch:focus-visible + .sf-switch-track {
+        box-shadow: map.get($colors, foucs-ring);
+
+        .sf-switch-handle:not(.sf-switch-handle-checked) {
+          background-color: map.get($colors, handle-off-active-focus);
+          .sf-switch-icon {
+            color: map.get($colors, handle-off-icon-focus);
+          }
+        }
+        
+        &.sf-switch-track-checked {
+          .sf-switch-handle {
+            background-color: map.get($colors, handle-on-active-focus);
+          }
+        }
+
+        &:not(.sf-switch-track-checked) {
+          border-color: map.get($colors, track-off-border-active-focus);
+        }
+      }
+
+      .sf-switch-track:active {
+        box-shadow: map.get($colors, active-ring);
+
+        .sf-switch-handle:not(.sf-switch-handle-checked) {
+          background-color: map.get($colors, handle-off-active-focus);
+          .sf-switch-icon {
+            color: map.get($colors, handle-off-icon-focus);
+          }
+        }
+
+        &:not(.sf-switch-track-checked) {
+          border-color: map.get($colors, track-off-border-active-focus);
+        }
+      }
+    }
+  }
+}

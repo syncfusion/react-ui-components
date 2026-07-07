@@ -28,6 +28,13 @@ const getResizeHandlerClass: (dir: Position) => string = (dir: Position): string
     }
 };
 
+const getResizeHandlerMobClass: (dir: Position) => string = (dir: Position): string => {
+    switch (dir) {
+    case Position.Top: return CSS_CLASSES.MOB_RESIZE_TOP; case Position.Bottom: return CSS_CLASSES.MOB_RESIZE_BOTTOM;
+    case Position.Left: return CSS_CLASSES.MOB_RESIZE_LEFT; default: return CSS_CLASSES.MOB_RESIZE_RIGHT;
+    }
+};
+
 const Handler: ({ dir, resizeStart, showResizeHandle }: { dir: Position;
     resizeStart?: (d: Position, e: ReactMouseEvent | ReactTouchEvent) => void; showResizeHandle?: boolean; }) => JSX.Element | null = ({
     dir, resizeStart, showResizeHandle }: { dir: Position; resizeStart?: (d: Position, e: ReactMouseEvent | ReactTouchEvent) => void;
@@ -42,7 +49,7 @@ const Handler: ({ dir, resizeStart, showResizeHandle }: { dir: Position;
             {dir === Position.Top || dir === Position.Bottom ? (<div className={CSS_CLASSES.VERTICAL_RESIZE_INNER} />) :
                 (<div className={CSS_CLASSES.HORIZONTAL_RESIZE_INNER} /> )}
             {Browser.isDevice && showResizeHandle && (
-                <div className={CSS_CLASSES.MOB_RESIZE_DOT}
+                <div className={`${CSS_CLASSES.MOB_RESIZE_DOT} ${getResizeHandlerMobClass(dir)}`}
                     onMouseDown={(e: ReactMouseEvent<HTMLDivElement>) => { stop(e); resizeStart?.(dir, e); }}
                     onTouchStart={(e: ReactTouchEvent<HTMLDivElement>) => { stop(e); resizeStart?.(dir, e); }}
                 />

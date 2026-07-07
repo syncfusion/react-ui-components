@@ -22,6 +22,7 @@
 
   .sf-pager-icons:hover {
     background-color: $pager-hover-bg-color;
+    color: $pager-item-hover-text-color;
   }
 
   .sf-spacing {
@@ -36,10 +37,12 @@
   .sf-current-item,
   .sf-current-item.sf-focused {
     background-color: $pager-active-bg-color;
+    color: $pager-item-active-text-color;
   }
 
   .sf-current-item:hover {
     background-color: $pager-current-hover-bg-color;
+    color: $pager-item-active-text-color;
   }
 
   @media (max-width: 590px) {

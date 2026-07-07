@@ -1,14 +1,20 @@
 import { AlertAction, CrudAction, View } from '../types/enums';
 import { ReactElement, CSSProperties, RefObject } from 'react';
-import { EventModel, TimeSlotProps, SchedulerProps, ViewSpecificProps, EventDragProps, EventResizeProps } from './scheduler-types';
+import { EventModel, TimeSlotProps, SchedulerProps, ViewSpecificProps, EventDragProps, EventResizeProps, SchedulerResource } from './scheduler-types';
 import { CalendarView, CalendarChangeEvent } from '@syncfusion/react-calendars';
 import { IMorePopup } from '../components/popup/more-popup';
 import { IQuickInfoPopup } from '../components/popup/quick-info-popup';
 import { IScheduler } from '../index';
 import { useConfirmationDialog } from '../hooks/useConfirmationDialog';
+import { MonthCell } from '../hooks/useMonthCells';
 
 /** @private */
 export interface ActiveViewProps extends SchedulerProps, ViewSpecificProps {
+
+    /**
+     * Specifies whether to use the displayDate or not.
+     */
+    useDisplayDate?: boolean;
 
     /**
      * Pre-parsed start hour [hour, minute] to avoid repeated string splits
@@ -142,6 +148,7 @@ export interface AllDayRowProps {
     isCollapsed: boolean;
     onCollapseChange?: () => void;
     onMoreEventsChange?: (hasMoreEvents: boolean) => void;
+    renderDates?: CellData[];
 }
 
 /** @private */
@@ -155,6 +162,11 @@ export interface DayEventProps extends ProcessedEventsData {
      * Specifies the all day blocked event for month view.
      */
     isBlockedEvent?: boolean;
+
+    /**
+     * Unique index identifying the resource group.
+     */
+    groupIndex?: number;
 }
 
 /** @private */
@@ -177,12 +189,20 @@ export interface MonthCellsProps {
     /**
      * Specifies to hide the other month dates.
      */
-    hideOtherMonths: boolean;
+    hideOtherMonths?: boolean;
 
     /**
      * Callback to share the calculated height for this row
      */
     onHeightCalculated?: (rowIndex: number, height: string) => void;
+
+    /**
+     * Pre-generated cells list for grouped/resource layouts
+     * If provided, these cells will be used instead of generating from weekRenderDates
+     *
+     * @private
+     */
+    resourceWorkCells?: MonthCell[];
 }
 
 /** @private */
@@ -207,7 +227,9 @@ export interface ProcessedEventsData {
     columnIndex?: number;
     isOverflowLeft?: boolean;
     isOverflowRight?: boolean;
-    week?: Date[]
+    week?: Date[];
+    groupIndex?: number;
+    resourceIndex?: number;
 }
 
 /** @private */
@@ -227,3 +249,86 @@ export type Point = { clientX: number; clientY: number; }
 
 /** @private */
 export type AlertDialog = { isValid: boolean; shouldAlert: boolean; messageKey?: string; }
+
+/** @private */
+export interface CellData {
+    /**
+     * Specifies the cell type.
+     */
+    type: 'resourceHeader' | 'dateHeader' | 'monthWeekday';
+
+    /**
+     * Specifies the resource configuration.
+     */
+    resource?: SchedulerResource;
+
+    /**
+     * Specifies the resource data instance.
+     */
+    resourceData?: Record<string, any>;
+
+    /**
+     * Specifies the date value.
+     */
+    date?: Date;
+
+    /**
+     * Specifies the display name of the weekday.
+     */
+    dayName?: string;
+
+    /**
+     * Specifies the weekday index.
+     */
+    weekdayIndex?: number;
+
+    /**
+     * Specifies the CSS class for styling.
+     */
+    cssClass?: string;
+
+    /**
+     * Specifies resource-specific CSS classes.
+     */
+    className?: string[];
+
+    /**
+     * Specifies the column span for merged headers.
+     */
+    colSpan?: number;
+
+    /**
+     * Specifies the display text.
+     */
+    displayName?: string;
+
+    /**
+     * Specifies the level in the hierarchy.
+     */
+    level?: number;
+
+    /**
+     * Specifies the resource level index.
+     */
+    resourceLevelIndex?: number;
+
+    /**
+     * Specifies the hierarchical group order path.
+     */
+    groupOrder?: string[];
+
+    /**
+     * Specifies the group ID.
+     */
+    groupId?: string;
+
+    /**
+     * Specifies the sequential index for the resource slot.
+     */
+    groupIndex?: number;
+
+    /**
+     * Specifies the render dates for the resource.
+     */
+    renderDates?: Date[];
+}

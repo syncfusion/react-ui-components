@@ -35,21 +35,10 @@ export type PieLabelPosition =
     'Outside';
 
 /**
- * Defines the style of connector lines used for data labels in a pie chart.
- * ```props
- * Line :- Renders the connector as a straight line from the slice to the label.
- * Curve :- Renders the connector as a smooth curved line for a more elegant appearance.
- * ```
- */
-export type ConnectorType =
-    'Line' |
-    'Curve';
-
-/**
  * Defines the shapes available for legend items in the chart.
  * ```props
  * Circle :- Renders a circular legend shape.
- * Rectangle :-Renders a rectangular legend shape.
+ * Rectangle :- Renders a rectangular legend shape.
  * Triangle :- Renders a triangular legend shape.
  * Diamond :- Renders a diamond-shaped legend.
  * Cross :- Renders a cross-shaped legend.
@@ -97,22 +86,22 @@ export type LegendAlignment = 'Left' | 'Top' | 'Center' | 'Bottom' | 'Right';
  * * None :- No highlighting or selection pattern.
  * * Chessboard :- Applies a chessboard pattern.
  * * Dots :- Applies a dotted pattern.
- * * DiagonalForward :- Applies a diagonal forward pattern
+ * * DiagonalForward :- Applies a diagonal forward pattern.
  * * Crosshatch :- Applies a crosshatch pattern.
  * * Pacman :- Applies a pacman-style pattern.
- * * Diagonalbackward :- Applies a diagonal backward pattern.
+ * * DiagonalBackward :- Applies a diagonal backward pattern.
  * * Grid :- Applies a grid pattern.
  * * Turquoise :- Applies a turquoise pattern.
  * * Star :- Applies a star pattern.
  * * Triangle :- Applies a triangle pattern.
  * * Circle :- Applies a circle pattern.
  * * Tile :- Applies a tile pattern.
- * * Horizontaldash :- Applies a vertical dash pattern.
- * * Verticaldash :- Applies a rectangle pattern.
+ * * HorizontalDash :- Applies a horizontal dash pattern.
+ * * VerticalDash :- Applies a vertical dash pattern.
  * * Rectangle :- Applies a box pattern.
  * * Box :- Applies a vertical stripe pattern.
- * * Verticalstripe :- Applies a vertical stripe pattern.
- * * Horizontalstripe :- Applies a horizontal stripe pattern.
+ * * VerticalStripe :- Applies a vertical stripe pattern.
+ * * HorizontalStripe :- Applies a horizontal stripe pattern.
  * * Bubble :- Applies a bubble pattern.
  * ```
  */
@@ -147,4 +136,4 @@ export type PieSelectionPattern =
  */
 export type PieSelectionMode =
     'None' |
-    'Point' ;
+    'Point';

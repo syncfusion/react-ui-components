@@ -10,20 +10,6 @@ const lineBaseInstance: LineBaseReturnType = LineBase;
 const StepLineSeriesRenderer: StepLineSeriesType = {
     previousX: 0,
     previousY: 0,
-
-    /**
-     * Animates the step line while rendering.
-     *
-     * @param {RenderOptions} pathOptions - The rendering options for the step line path.
-     * @param {number} index - The index of the current series in the chart.
-     * @param {Object} animationState - Represent the state of animation and its properties.
-     * @param {boolean} enableAnimation - Flag indicating whether animation should be performed.
-     * @param {SeriesProperties} _currentSeries - The current series being rendered.
-     * @param {Points | undefined} _currentPoint - The current point being rendered.
-     * @param {number} _pointIndex - The index of the current point.
-     * @param {SeriesProperties[]} [visibleSeries] - Optional array of all visible series in the chart.
-     * @returns {RenderOptions} The animated render options with interpolated path data
-     */
     doAnimation: (
         pathOptions: RenderOptions,
         index: number,

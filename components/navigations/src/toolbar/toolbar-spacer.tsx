@@ -6,17 +6,6 @@ import {
 const CLS_ITEM: string = 'sf-toolbar-item';
 const CLS_SPACER: string = 'sf-toolbar-spacer';
 
-export interface IToolbarSpacer {
-    /**
-     * Spacer element within the toolbar.
-     *
-     * @default null
-     */
-    element?: HTMLElement | null;
-}
-
-type IToolbarSpacerProps = IToolbarSpacer & HTMLAttributes<HTMLDivElement>;
-
 /**
  * The ToolbarSpacer component is used to render an adjustable space within a Toolbar.
  *
@@ -29,10 +18,30 @@ type IToolbarSpacerProps = IToolbarSpacer & HTMLAttributes<HTMLDivElement>;
  * </Toolbar>
  * ```
  */
-export const ToolbarSpacer: ForwardRefExoticComponent<IToolbarSpacerProps & RefAttributes<IToolbarSpacer>> = memo(forwardRef<
-IToolbarSpacer,
+export interface ToolbarSpacerProps {
+    /**
+     * Specifies an optional CSS class to apply to the toolbar spacer.
+     * This is useful for reusing styling in a custom template.
+     *
+     * @default -
+     */
+    className?: string;
+
+    /**
+     * Spacer element within the toolbar.
+     *
+     * @private
+     * @default -
+     */
+    element?: HTMLElement | null;
+}
+
+type IToolbarSpacerProps = ToolbarSpacerProps & HTMLAttributes<HTMLDivElement>;
+
+export const ToolbarSpacer: ForwardRefExoticComponent<IToolbarSpacerProps & RefAttributes<IToolbarSpacerProps>> = memo(forwardRef<
+ToolbarSpacerProps,
 IToolbarSpacerProps
->((props: IToolbarSpacerProps, ref: Ref<IToolbarSpacer>) => {
+>((props: IToolbarSpacerProps, ref: Ref<ToolbarSpacerProps>) => {
     const {
         className = '',
         ...eleAttr

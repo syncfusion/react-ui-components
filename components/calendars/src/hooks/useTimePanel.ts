@@ -21,6 +21,12 @@ export interface UseTimePanelResult {
     forwardListKeyDown: (e: React.KeyboardEvent<HTMLElement>, isOpen: boolean) => void;
 }
 
+/**
+ * Hook for managing time panel state, including time list generation, formatting, parsing, and keyboard navigation.
+ *
+ * @param {UseTimePanelOptions} options - Configuration options including step, min/max time, locale, and format.
+ * @returns {UseTimePanelResult} Object containing displayed times and interaction utilities.
+ */
 export default function useTimePanel(options: UseTimePanelOptions): UseTimePanelResult {
     const { step, minTime, maxTime, locale, timeFormat } = options;
 

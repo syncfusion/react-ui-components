@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import * as React from 'react';
 import { PieChartCenterLabelProps, PieChartFontProps, PieChartSizeProps, PieChartLabelProps, PieChartCenterLabelTextProps } from '../base/interfaces';
 import { useLayout } from '../layout/LayoutContext';
 import { getCenterLabelTextAnchor, measureText, textWrap } from '../utils/helper';
@@ -141,7 +142,7 @@ interface VersionInfo {
  *
  * @param {PieChartCenterLabelProps} props - The properties defining the text style and content for the center label(s).
  *
- * @returns {JSX.Element | null} Returns one or more <text> SVG elements with wrapped <tspan> elements if rendering conditions are met; otherwise, null.
+ * @returns {Element | null} Returns one or more <text> SVG elements with wrapped <tspan> elements if rendering conditions are met; otherwise, null.
  */
 export const CenterLabelRenderer: React.FC<PieChartCenterLabelProps> = (props: PieChartCenterLabelProps) => {
     const { layoutRef, phase, reportMeasured, isSeriesAnimated } = useLayout();

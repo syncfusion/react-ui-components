@@ -1,0 +1,354 @@
+@use "sass:map";
+@use 'theme-variables' as *;
+
+@mixin switch-track($width-label, $translate-label, $width-icon, $translate-icon) {
+  &:has(.sf-switch-track-label) {
+    width: $width-label;
+
+    .sf-switch-handle.sf-switch-handle-checked {
+      transform: translateX($translate-label);
+    }
+  }
+
+  &:has(.sf-switch-track-label .sf-icon) {
+    width: $width-icon;
+
+    .sf-switch-handle.sf-switch-handle-checked {
+      transform: translateX($translate-icon);
+    }
+  }
+}
+@mixin switch-track-icon($track-icon-on-left, $track-icon-off-left) {
+  .sf-switch-track-label-on:has(*) {
+    inset-inline-start: $track-icon-on-left;
+  }
+
+  .sf-switch-track-label-off:has(*) {
+    inset-inline-end: $track-icon-off-left;
+  }
+}
+
+@include export-module('switch-layout') {
+  .sf-switch {
+    position: relative;
+    height: $switch-height;
+    width: $switch-width;
+    opacity: $switch-opacity;
+    pointer-events: none;
+  }
+
+  .sf-switch-wrapper {
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .sf-switch-label {
+    cursor: pointer;
+    align-items: center;
+    gap: $switch-label-gap;
+    font-size: $switch-label-font-size-me;
+    line-height: $switch-label-line-height-me;
+    font-weight: $switch-label-font-weight;
+
+    &.sf-left,
+    &.sf-right {
+      flex-direction: row;
+      justify-content: flex-start;
+      align-items: center;
+    }
+
+    &.sf-top,
+    &.sf-bottom {
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+    }
+  }
+
+  .sf-switch-track {
+    position: relative;
+    align-items: center;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    overflow: visible;
+    height: $switch-track-height-me;
+    width: $switch-track-width-me;
+    border-radius: $switch-track-border-radius;
+    border: $switch-track-border-width solid;
+    transition: background-color $switch-transition-duration $switch-transition-easing,
+      border-color $switch-transition-duration $switch-transition-easing;
+    -webkit-tap-highlight-color: transparent;
+
+    &:active {
+      .sf-switch-handle {
+        padding: $switch-handle-off-active-padding-me;
+        inset-inline-start: $switch-handle-on-active-left-me;
+      }
+
+      .sf-switch-track.sf-switch-track-checked {
+        .sf-switch-handle {
+          padding: $switch-handle-on-active-padding-me;
+        }
+      }
+    }
+
+    @include switch-track($switch-track-width-me-label, $switch-handle-translate-on-me-label, $switch-track-width-me-icon, $switch-handle-translate-on-me-icon);
+  }
+
+  .sf-switch-handle {
+    position: absolute;
+    border-radius: $switch-track-border-radius;
+    box-sizing: border-box;
+    padding: $switch-handle-off-padding-me;
+    transform: translateX($switch-handle-translate-off-me);
+    transition: transform $switch-transition-duration $switch-transition-easing,
+      width $switch-transition-duration $switch-transition-easing,
+      height $switch-transition-duration $switch-transition-easing,
+      background-color $switch-transition-duration $switch-transition-easing;
+
+    &.sf-switch-handle-checked {
+      padding: $switch-handle-on-padding-me;
+      transform: translateX($switch-handle-translate-on-me);
+    }
+
+    &.sf-switch-handle-icon {
+      padding: $switch-handle-off-icon-me;
+    }
+  }
+
+  .sf-switch-state-layer {
+    position: absolute;
+    border-radius: $switch-track-border-radius;
+    pointer-events: none;
+    width: $switch-state-layer-me;
+    height: $switch-state-layer-me;
+    top: $switch-state-layer-top;
+    inset-inline-start: $switch-state-layer-left;
+    transform: $switch-state-layer-transform;
+  }
+
+  .sf-switch-icon {
+    position: absolute;
+    font-size: $switch-icon-me;
+
+    svg {
+      width: $switch-icon-me;
+      height: $switch-icon-me;
+    }
+  }
+
+  .sf-switch-track-label {
+    position: absolute;
+    top: $switch-state-layer-top;
+    transform: translateY($switch-track-label-transfom);
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    user-select: none;
+    z-index: $switch-track-label-z-index;
+    font-size: $switch-track-font-size-me;
+    font-weight: $switch-track-font-weight;
+    white-space: nowrap;
+    line-height: $switch-track-label-line-height;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .sf-switch-track-label > * {
+    font-size: $switch-track-icon-font-size-me;
+  }
+
+  .sf-switch-track-label-on {
+    inset-inline-start: $switch-me-track-on-left;
+  }
+
+  .sf-switch-track-label-off {
+    inset-inline-end: $switch-me-track-off-left;
+  }
+
+  @include switch-track-icon($switch-track-label-icon-on-left, $switch-track-label-icon-off-left);
+
+  .sf-switch-wrapper.sf-small {
+    .sf-switch-label {
+      font-size: $switch-label-font-size-sm;
+      line-height: $switch-label-line-height-sm;
+      gap: $switch-label-gap-sm;
+    }
+
+    .sf-switch-track {
+      height: $switch-track-height-sm;
+      width: $switch-track-width-sm;
+
+      &:active {
+        .sf-switch-handle {
+          padding: $switch-handle-off-active-padding-sm;
+          inset-inline-start: $switch-handle-on-active-left-sm;
+        }
+
+        .sf-switch-track.sf-switch-track-checked {
+          .sf-switch-handle {
+            padding: $switch-handle-on-active-padding-sm;
+          }
+        }
+      }
+
+      @include switch-track($switch-track-width-sm-label, $switch-handle-translate-on-sm-label, $switch-track-width-sm-icon, $switch-handle-translate-on-sm-icon);
+    }
+
+    .sf-switch-handle {
+      padding: $switch-handle-off-padding-sm;
+      transform: translateX($switch-handle-translate-off-sm);
+
+      &.sf-switch-handle-checked {
+        padding: $switch-handle-on-padding-sm;
+        transform: translateX($switch-handle-translate-on-sm);
+      }
+
+      &.sf-switch-handle-icon {
+        padding: $switch-handle-off-icon-sm;
+      }
+    }
+
+    .sf-switch-state-layer {
+      width: $switch-state-layer-sm;
+      height: $switch-state-layer-sm;
+    }
+
+    .sf-switch-track-label {
+      font-size: $switch-track-font-size-sm;
+    }
+
+    .sf-switch-track-label > * {
+      font-size: $switch-track-icon-font-size-sm;
+    }
+
+    .sf-switch-track-label-on {
+      inset-inline-start: $switch-sm-track-label-on-left;
+    }
+
+    .sf-switch-track-label-off {
+      inset-inline-end: $switch-sm-track-label-off-left;
+    }
+
+    @include switch-track-icon($switch-sm-track-label-icon-on-left, $switch-sm-track-label-icon-off-left);
+
+    .sf-switch-icon {
+      font-size: $switch-icon-sm;
+
+      svg {
+        width: $switch-icon-sm;
+        height: $switch-icon-sm;
+      }
+    }
+  }
+
+  .sf-switch-wrapper.sf-large {
+    .sf-switch-label {
+      font-size: $switch-label-font-size-la;
+      line-height: $switch-label-line-height-la;
+      gap: $switch-label-gap-la;
+    }
+
+    .sf-switch-track {
+      height: $switch-track-height-la;
+      width: $switch-track-width-la;
+
+      &:active {
+        .sf-switch-handle {
+          padding: $switch-handle-off-active-padding-la;
+          inset-inline-start: $switch-handle-on-active-left-la;
+        }
+
+        .sf-switch-track.sf-switch-track-checked {
+          .sf-switch-handle {
+            padding: $switch-handle-on-active-padding-la;
+          }
+        }
+      }
+
+      @include switch-track($switch-track-width-la-label, $switch-handle-translate-on-la-label, $switch-track-width-la-icon, $switch-handle-translate-on-la-icon);
+    }
+
+    .sf-switch-handle {
+      padding: $switch-handle-off-padding-la;
+      transform: translateX($switch-handle-translate-off-la);
+
+      &.sf-switch-handle-checked {
+        padding: $switch-handle-on-padding-la;
+        transform: translateX($switch-handle-translate-on-la);
+      }
+
+      &.sf-switch-handle-icon {
+        padding: $switch-handle-off-icon-la;
+      }
+    }
+
+    .sf-switch-state-layer {
+      width: $switch-state-layer-la;
+      height: $switch-state-layer-la;
+    }
+
+    .sf-switch-track-label {
+      font-size: $switch-track-font-size-la;
+    }
+
+    .sf-switch-track-label > * {
+      font-size: $switch-track-icon-font-size-la;
+    }
+
+    .sf-switch-track-label-on {
+      inset-inline-start: $switch-la-track-label-on-left;
+    }
+
+    .sf-switch-track-label-off {
+      inset-inline-end: $switch-la-track-label-off-left;
+    }
+
+    @include switch-track-icon($switch-la-track-label-icon-on-left, $switch-la-track-label-icon-off-left);
+
+    .sf-switch-icon {
+      font-size: $switch-icon-la;
+
+      svg {
+        width: $switch-icon-la;
+        height: $switch-icon-la;
+      }
+    }
+  }
+
+  .sf-rtl.sf-switch-wrapper {
+    .sf-switch-handle {
+      inset-inline-start: 0;
+      transform: translateX(calc(-1 * $switch-handle-translate-off-me));
+
+      &.sf-switch-handle-checked {
+        transform: translateX(calc(-1 * $switch-handle-translate-on-me));
+      }
+    }
+
+    .sf-switch-state-layer {
+      inset-inline-end: $switch-state-layer-left;
+      inset-inline-start: auto;
+      transform: $switch-state-layer-transform;
+    }
+
+    &.sf-small {
+      .sf-switch-handle {
+        transform: translateX(calc(-1 * $switch-handle-translate-off-sm));
+
+        &.sf-switch-handle-checked {
+          transform: translateX(calc(-1 * $switch-handle-translate-on-sm));
+        }
+      }
+    }
+
+    &.sf-large {
+      .sf-switch-handle {
+        transform: translateX(calc(-1 * $switch-handle-translate-off-la));
+
+        &.sf-switch-handle-checked {
+          transform: translateX(calc(-1 * $switch-handle-translate-on-la));
+        }
+      }
+    }
+  }
+}

@@ -16,7 +16,7 @@ export type LineBaseReturnType = {
      * @param {Points} point - The data point to store location for
      * @param {SeriesProperties} series - Series configuration properties
      * @param {boolean} isInverted - Flag indicating if chart orientation is inverted
-     * @param {GetLocationFunction} getLocation - Function to convert data coordinates to chart pixel coordinates
+     * @param {Function} getLocation - Function to convert data coordinates to chart pixel coordinates
      * @returns {void} This function doesn't return a value
      */
     storePointLocation: (point: Points, series: SeriesProperties, isInverted: boolean, getLocation: Function) => void;
@@ -102,7 +102,7 @@ const enableComplexProperty: (series: SeriesProperties) => Points[] = (series: S
  * @param {Points} point - The data point to store location for
  * @param {SeriesProperties} series - Series configuration properties including marker information
  * @param {boolean} isInverted - Flag indicating if chart orientation is inverted
- * @param {GetLocationFunction} getLocation - Function to convert data coordinates to chart pixel coordinates
+ * @param {Function} getLocation - Function to convert data coordinates to chart pixel coordinates
  * @returns {void} This function doesn't return a value
  */
 const storePointLocation: (point: Points, series: SeriesProperties, isInverted: boolean, getLocation: Function) => void
@@ -130,8 +130,7 @@ const storePointLocation: (point: Points, series: SeriesProperties, isInverted: 
  * @param {ChartLocationProps} previousPoint - Defines the previous point.
  * @param {StepPosition} stepLineType - Defines the step line type.
  * @param {string} command - Defines the command.
- * @param {Series} series - Defines the series.
- * @param {boolean} isBorder - Defines the isBorder.
+ * @param {SeriesProperties} series - Defines the series.
  * @returns {string} - Returns a string of path.
  */
 const getStepLineDirection: (currentPoint: ChartLocationProps,

@@ -22,6 +22,14 @@
     text-indent: 0;
   }
 
+  .sf-small .sf-dd-group .sf-list-item {
+    padding-inline-start: $dd-small-group-list-padding;
+  }
+
+  .sf-large .sf-dd-group .sf-list-item {
+    padding-inline-start: $dd-large-group-list-padding;
+  }
+
   .sf-dd-nodata {
     color: $dd-no-data-font-color;
     cursor: default;
@@ -49,4 +57,7 @@
     font-weight: $dd-highlight-font-weight;
   }
 
+  .sf-dropdown .sf-spinner-content {
+    padding: $dropdown-spinner-padding;
+  }
 }

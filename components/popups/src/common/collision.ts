@@ -140,6 +140,19 @@ export const isCollide: (element: HTMLElement, viewPortElement: HTMLElement | nu
     return data;
 };
 
+const fallBackCalculation: (element: HTMLElement, target: HTMLElement, offsetX: number,  offsetY: number, positionX: string,
+    positionY: string, viewPortElement: HTMLElement | null, axis: CollisionCoordinates) => OffsetPosition =
+    (element: HTMLElement, target: HTMLElement, offsetX: number, offsetY: number,  positionX: string, positionY: string,
+     viewPortElement: HTMLElement | null, axis: CollisionCoordinates) => {
+        if (viewPortElement) {
+            const basePosition: OffsetPosition = calculatePosition(target, positionX, positionY);
+            const positionWithOffset: OffsetPosition = { left: basePosition.left + offsetX, top: basePosition.top + offsetY };
+            return fit(element, viewPortElement, axis, positionWithOffset);
+        }
+        return calculatePosition(target, positionX, positionY);
+
+    };
+
 export const flip: (
     element: HTMLElement,
     target: HTMLElement,
@@ -191,10 +204,19 @@ export const flip: (
         let adjustedOffsetY: number = offsetY;
 
         if (combination.posX !== positionX) {
-            adjustedOffsetX = -1 * (offsetX + elementRect.width);
+            if (positionX.toLowerCase() === 'right' && combination.posX.toLowerCase() === 'left') {
+                adjustedOffsetX = offsetX - elementRect.width;
+            } else if (positionX.toLowerCase() === 'left' && combination.posX.toLowerCase() === 'right') {
+                adjustedOffsetX = offsetX;
+            }
         }
+
         if (combination.posY !== positionY) {
-            adjustedOffsetY = -1 * (offsetY + elementRect.height);
+            if (positionY.toLowerCase() === 'bottom' && combination.posY.toLowerCase() === 'top') {
+                adjustedOffsetY = offsetY - elementRect.height;
+            } else if (positionY.toLowerCase() === 'top' && combination.posY.toLowerCase() === 'bottom') {
+                adjustedOffsetY = offsetY;
+            }
         }
 
         const evaluation: {canFit: boolean; position: OffsetPosition; eEdge: EdgeOffset; } =
@@ -210,11 +232,20 @@ export const flip: (
     if (selectedPosition === null) {
         const isTargetVisible: boolean = isTargetInViewport(target);
         if (isTargetVisible) {
-            const basePosition: OffsetPosition = calculatePosition(target, finalPosX, finalPosY);
-            const positionWithOffset: OffsetPosition = { left: basePosition.left + finalOffsetX, top: basePosition.top + finalOffsetY };
-            selectedPosition = fit(element, viewPortElement, axis, positionWithOffset);
+            const targetRect: DOMRect | null = getElementReact(target);
+            for (const combination of combinationPriority) {
+                const basePosition: OffsetPosition = calculatePosition(target, combination.posX, combination.posY);
+                const positionWithOffset: OffsetPosition = { left: basePosition.left + finalOffsetX, top: basePosition.top + finalOffsetY };
+                const finalPosition: OffsetPosition = fit(element, viewPortElement, axis, positionWithOffset);
+                if (targetRect && !checkElementOverlapsTarget(finalPosition, elementRect, targetRect)) {
+                    selectedPosition = finalPosition;
+                }
+            }
+            if (!selectedPosition) {
+                selectedPosition = fallBackCalculation(element, target, offsetX, offsetY, positionX, positionY, viewPortElement, axis);
+            }
         } else {
-            selectedPosition = calculatePosition(target, positionX, positionY);
+            selectedPosition = fallBackCalculation(element, target, offsetX, offsetY, positionX, positionY, viewPortElement, axis);
         }
     }
 
@@ -398,13 +429,31 @@ void = (eStatus: EdgeOffset, pos: PositionLocation, elementRect: DOMRect): void 
          elementRect.width };
 };
 
+const checkElementOverlapsTarget: (elementPosition: OffsetPosition, elementRect: DOMRect, targetRect: DOMRect) => boolean =
+    (elementPosition: OffsetPosition, elementRect: DOMRect, targetRect: DOMRect): boolean => {
+        const elemLeft: number = elementPosition.left;
+        const elemRight: number = elementPosition.left + elementRect.width;
+        const elemTop: number = elementPosition.top;
+        const elemBottom: number = elementPosition.top + elementRect.height;
+        return elemLeft < targetRect.right && elemRight > targetRect.left &&
+            elemTop < targetRect.bottom && elemBottom > targetRect.top;
+    };
+
+const getContainerScrollDimension: (dimension?: number) => number | undefined =
+    (dimension?: number): number | undefined => {
+        if (!targetContainer || typeof document === 'undefined' || targetContainer === document.documentElement || targetContainer === document.body) {
+            return undefined;
+        }
+        return dimension;
+    };
+
 const leftCollideCheck: (left: number, right: number) => LeftCorners = ( left: number, right: number ): LeftCorners => {
     let leftSide: boolean = false;
     let rightSide: boolean = false;
     if (left - getBodyScrollLeft() < ContainerLeft()) {
         leftSide = true;
     }
-    if (right > ContainerRight()) {
+    if (right > ContainerRight(getContainerScrollDimension(targetContainer?.scrollWidth))) {
         rightSide = true;
     }
     return { leftSide, rightSide };
@@ -416,7 +465,7 @@ const topCollideCheck: (top: number, bottom: number) => TopCorners = ( top: numb
     if (top - getBodyScrollTop() < ContainerTop()) {
         topSide = true;
     }
-    if (bottom > ContainerBottom()) {
+    if (bottom > ContainerBottom(getContainerScrollDimension(targetContainer?.scrollHeight))) {
         bottomSide = true;
     }
     return { topSide, bottomSide };
@@ -461,15 +510,20 @@ const ContainerLeft: () => number = (): number => {
     }
     return 0;
 };
-const ContainerRight: () => number = (): number => {
+const getEffectiveContainerDimension: (scrollDimension: number | undefined, fallbackDimension: () => number) => number =
+(scrollDimension: number | undefined, fallbackDimension: () => number): number => {
+    return scrollDimension && scrollDimension > 0 ? scrollDimension : fallbackDimension();
+};
+
+const ContainerRight: (scrollLeft?: number) => number = (scrollLeft: number = 0): number => {
     if (targetContainer) {
-        return getBodyScrollLeft() + getTargetContainerLeft() + getTargetContainerWidth();
+        return getBodyScrollLeft() + getTargetContainerLeft() + getEffectiveContainerDimension(scrollLeft, getTargetContainerWidth);
     }
     return getBodyScrollLeft() + getViewPortWidth();
 };
-const ContainerBottom: () => number = (): number => {
+const ContainerBottom: (scrollTop?: number) => number = (scrollTop: number = 0): number => {
     if (targetContainer) {
-        return getBodyScrollTop() + getTargetContainerTop() + getTargetContainerHeight();
+        return getBodyScrollTop() + getTargetContainerTop() + getEffectiveContainerDimension(scrollTop, getTargetContainerHeight);
     }
     return getBodyScrollTop() + getViewPortHeight();
 };

@@ -1,9 +1,9 @@
 import { ForwardedRef, RefObject, useCallback, useEffect, useMemo, useRef } from 'react';
-import { useDraggable, useProviderContext, Touch, HelperEvent } from '@syncfusion/react-base';
+import { useDraggable, useProviderContext, Touch, HelperEvent, isNullOrUndefined } from '@syncfusion/react-base';
 import { useSchedulerPropsContext } from '../context/scheduler-context';
 import { CSS_CLASSES } from '../common/constants';
-import { DateService, MS_PER_MINUTE } from '../services/DateService';
-import { EventModel, SchedulerDragEvent } from '../types/scheduler-types';
+import { DateService, MINUTES_PER_HOUR, MS_PER_MINUTE, MS_PER_SECOND } from '../services/DateService';
+import { EventModel, SchedulerDragEvent, SchedulerNavigateProps } from '../types/scheduler-types';
 import { useSchedulerEventsContext } from '../context/scheduler-events-context';
 import { CloneBase } from '../utils/clone-manager';
 import { useSchedulerRenderDatesContext } from '../context/scheduler-render-dates-context';
@@ -15,6 +15,9 @@ import { IScheduler } from '../scheduler';
 import { View, AlertType } from '../types/enums';
 import { getRecurrenceStringFromDate } from '../../recurrence-editor/util';
 import { editOccurrenceValidation, updateDatasource } from '../utils/event-base';
+import { useResourceGroupingContext } from '../context/resource-grouping-context';
+import { useSetResourceValues } from './useResourceGrouping';
+import { getGroupIndexFromElement } from '../utils/actions';
 
 type UseDragAndDropResult = { mergedRef: (node: HTMLDivElement) => void; composedProps: React.HTMLAttributes<HTMLDivElement>; };
 type UseDragAndDropParams = { ref: ForwardedRef<HTMLDivElement>; data: EventModel;
@@ -30,7 +33,8 @@ type UseDragAndDropParams = { ref: ForwardedRef<HTMLDivElement>; data: EventMode
 export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropParams): UseDragAndDropResult {
     const activeViewProps: ActiveViewProps = useSchedulerPropsContext();
     const { timeScale, startHour, endHour, schedulerRef, eventSettings, showWeekend, workDays,
-        onDragStart, onDrag, onDragStop, eventOverlap, confirmationDialog, eventDrag, enableRecurrenceValidation } = activeViewProps;
+        onDragStart, onDrag, onDragStop, eventOverlap, confirmationDialog, eventDrag, enableRecurrenceValidation,
+        handleNextClick, handlePreviousClick, timezone, resources } = activeViewProps;
     const eventData: EventModel = useMemo(() => {
         return {
             ...data,
@@ -43,7 +47,9 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
     const { dir } = useProviderContext();
     const { eventsData, eventsProcessed } = useSchedulerEventsContext();
     const { renderDates } = useSchedulerRenderDatesContext();
+    const { metadata } = useResourceGroupingContext();
     const cloneEventState: CloneEventContextValue = useCloneEventContext();
+    const setResourceValues: (groupIndex: number) => Record<string, any> = useSetResourceValues();
     const elementRef: RefObject<HTMLDivElement> = useRef<HTMLDivElement>(null);
     const dragTargetRef: RefObject<HTMLDivElement> = elementRef;
     const dragInfo: RefObject<CloneBase | null> = useRef<CloneBase | null>(null);
@@ -60,6 +66,9 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
     const currentTarget: RefObject<HTMLElement | RefObject<IScheduler>> = useRef<HTMLElement | RefObject<IScheduler>>(null);
     const currenView: RefObject<View> = useRef<View>(null);
     const isAllDayEvent: RefObject<boolean> = useRef<boolean>(false);
+    const navigationIntervalRef: RefObject<number | null> = useRef<number | null>(null);
+    const clientXRef: RefObject<number | null> = useRef<number | null>(null);
+    const targetGroupIndex: RefObject<number | undefined> = useRef<number | undefined>(undefined);
 
     Touch(elementRef, {
         tapHold: () => { isScrollingRef.current = false; }
@@ -115,6 +124,10 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
             }
             dragInfo.current?.removeDocListenersRef?.();
         }
+        if (navigationIntervalRef.current != null) {
+            window.clearInterval(navigationIntervalRef.current as number);
+            navigationIntervalRef.current = null;
+        }
         if (scrollAnimationRef.current != null) {
             cancelAnimationFrame(scrollAnimationRef.current);
             (scrollAnimationRef).current = null;
@@ -164,7 +177,7 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
     const handleAutoScroll: (e: MouseEvent | TouchEvent) => void = useCallback((e: MouseEvent | TouchEvent): void => {
         if (!dragInfo.current) { return; }
         const element: HTMLElement = eventDrag.externalDragAndDrop ?
-            dragInfo.current.getCellUnderPointer(e) || elementRef.current : elementRef.current;
+            dragInfo.current.getCellUnderPointer(e) || elementRef.current : elementRef.current || dragInfo.current.currentCell;
         dragInfo.current.performAutoScrolling(e, element);
         if (dragInfo.current.scrollInterval !== null && scrollAnimationRef.current === null && !dragInfo.current.isMonthView) {
             (scrollAnimationRef).current = requestAnimationFrame(getSyncClone);
@@ -264,7 +277,7 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
             eventInfo.startTime = new Date(newStartDate);
             eventInfo.endTime = new Date(eventInfo.startTime.getTime() + durationMs);
         }
-        if (isExternal && newStartDate) {
+        if ((isExternal || eventDrag?.navigation?.enable) && newStartDate) {
             const normalizedCurrentDate: number = DateService.normalizeDate(currentCellDate ?? newStartDate).getTime();
             const existsInRender: boolean = currentRenderDates.some((d: Date) =>
                 DateService.normalizeDate(d).getTime() === normalizedCurrentDate
@@ -285,7 +298,9 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
                                                                                    eventInfo, showWeekend, workDays,
                                                                                    dragInfo.current.cellWidth,
                                                                                    dragInfo.current.isAllDaySource, dir === 'rtl',
-                                                                                   dragInfo.current.isMonthView, elementRef.current
+                                                                                   dragInfo.current.isMonthView, elementRef.current,
+                                                                                   resources, targetGroupIndex.current, metadata,
+                                                                                   eventSettings?.resourceColorField
             );
             if (isExternal) {
                 dispatchCloneShow(segments, isDayEvent);
@@ -298,7 +313,9 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
         const segments: ProcessedEventsData[] = EventService.processTimeSlotCloneEvent(isExternal ?
             currentTarget.current as HTMLDivElement : schedulerRef.current?.element, currentRenderDates,
                                                                                        eventInfo, timeScale, startHour, endHour,
-                                                                                       dragInfo.current.cellWidth, dir === 'rtl');
+                                                                                       dragInfo.current.cellWidth, dir === 'rtl', cellHeightRef.current || undefined,
+                                                                                       resources, targetGroupIndex.current, metadata,
+                                                                                       eventSettings?.resourceColorField);
         if (isExternal) {
             dispatchCloneShow(segments, false);
         } else {
@@ -391,6 +408,7 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
         const containerEl: HTMLElement | null = info.getContentWrap(cell);
         const containerRect: DOMRect | undefined = containerEl?.getBoundingClientRect();
         if (containerRect) {
+            targetGroupIndex.current = getGroupIndexFromElement(cell);
             if (data) {
                 let cellDateAttr: number | null = Number(cell.getAttribute('data-date'));
                 if (!cellDateAttr || isNaN(cellDateAttr)) { return; }
@@ -471,10 +489,16 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
         }
         if (cell) {
             dragInfo.current.setCursorClass('move');
+            clientXRef.current = (args.event as MouseEvent).clientX;
+            updateNavigatingPosition();
             getAutoScroll(args);
             if (eventDrag.externalDragAndDrop) {
                 currentTarget.current = cell.closest(`.${CSS_CLASSES.SCHEDULER}`) as HTMLElement;
                 dragInfo.current.cloneRef.classList.add(CSS_CLASSES.DRAG_CLONE);
+            }
+            const targetCellHeight: number = cell.offsetHeight ?? 0;
+            if (targetCellHeight > 0) {
+                cellHeightRef.current = targetCellHeight;
             }
             let currentCellDate: Date = new Date(Number(cell.getAttribute('data-date')));
             let newStartDate: Date = currentCellDate;
@@ -569,8 +593,12 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
     const getUpdateEvent: (original: EventModel, newStartTime: Date, newEndTime: Date, args: SchedulerDragEvent) => void =
         (original: EventModel, newStartTime: Date, newEndTime: Date, args: SchedulerDragEvent) => {
             if (!dragInfo.current) { return; }
+            const resourceFields: Record<string, any> = (!isNullOrUndefined(targetGroupIndex.current))
+                ? setResourceValues(targetGroupIndex.current) :
+                {};
             const updatedEvent: EventModel =
-                updateDatasource(original, newStartTime, newEndTime, schedulerRef, eventSettings.fields, eventsData);
+                updateDatasource(original, newStartTime, newEndTime, schedulerRef, eventSettings.fields, eventsData, timezone,
+                                 resourceFields);
             endDragCleanup();
             args.cancel = true;
             onDragStop?.({ ...args, data: updatedEvent });
@@ -644,12 +672,12 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
             if (newStartTime && newEndTime) {
                 const updatedEvent: EventModel = { ...original, startTime: newStartTime, endTime: newEndTime };
 
-                if (!eventOverlap && EventService.checkEventOverlap(updatedEvent, eventsData, true)) {
+                if (!eventOverlap && EventService.checkEventOverlap(updatedEvent, eventsData)) {
                     revertAndAlert('eventOverlap', 'overlapAlert');
                     return;
                 }
 
-                if (EventService.isBlockRange(updatedEvent, eventsData, true)) {
+                if (EventService.isBlockRange(updatedEvent, eventsData)) {
                     revertAndAlert('alert', 'blockAlert');
                     return;
                 }
@@ -706,6 +734,50 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
             (containerProps)?.onClick?.(e as React.MouseEvent<HTMLDivElement>);
         }
     } as React.HTMLAttributes<HTMLDivElement>;
+
+    const viewNavigation: () => void = useCallback((): void => {
+        if (!dragInfo.current) { return; }
+        const container: HTMLElement | null = dragInfo.current.getContentWrap(elementRef.current || dragInfo.current.currentCell);
+        if (!container) { return; }
+        const rect: DOMRect = container.getBoundingClientRect();
+        if (clientXRef.current == null) { return; }
+        if (container.scrollLeft === 0 &&
+            Math.round(clientXRef.current) <= Math.round(rect.left + dragInfo.current.cellWidth + window.pageXOffset)) {
+            if (handlePreviousClick && dir !== 'rtl') {
+                handlePreviousClick();
+            } else {
+                handleNextClick?.();
+            }
+        } else if (Math.round(container.scrollLeft + container.clientWidth) === container.scrollWidth &&
+            Math.round(clientXRef.current) >= Math.round(rect.right - dragInfo.current.cellWidth + window.pageXOffset)) {
+            if (handleNextClick && dir !== 'rtl') {
+                handleNextClick();
+            } else {
+                handlePreviousClick?.();
+            }
+        }
+    }, [dragInfo, dir, handlePreviousClick, handleNextClick]);
+
+    const updateNavigatingPosition: () => void = useCallback((): void => {
+        const navigation: SchedulerNavigateProps = eventDrag?.navigation;
+        if (!navigation?.enable) { return; }
+        navigation.timeDelay = navigation.timeDelay ?? 2000;
+        if (navigationIntervalRef.current == null) {
+            let currentDate: Date = new Date();
+            navigationIntervalRef.current = window.setInterval(() => {
+                if (currentDate) {
+                    const now: Date = new Date();
+                    const end: number = now.getSeconds();
+                    let start: number = currentDate.getSeconds() + (navigation.timeDelay / MS_PER_SECOND);
+                    start = (start >= MINUTES_PER_HOUR) ? start - MINUTES_PER_HOUR : start;
+                    if (start === end) {
+                        currentDate = new Date();
+                        viewNavigation();
+                    }
+                }
+            }, navigation.timeDelay);
+        }
+    }, [eventDrag, viewNavigation]);
 
     return { mergedRef, composedProps };
 }

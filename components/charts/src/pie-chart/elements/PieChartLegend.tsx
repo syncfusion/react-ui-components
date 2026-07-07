@@ -4,11 +4,10 @@ import { defaultChartConfigs } from '../base/default-properties';
 import { PieChartLegendProps } from '../base/interfaces';
 
 /**
- * React component that configures the legend appearance and behavior for the chart.
- * This component doesn't render any UI elements but manages legend configuration through context.
+ * Configures legend settings for the Pie Chart.
  *
- * @param {PieChartLegendProps} props - Legend configuration properties.
- * @returns {null} This component doesn't render any elements.
+ * @param {PieChartLegendProps} props - Properties to customize legend appearance and behavior, such as visibility, position, alignment, and styling.
+ * @returns {null} - It is used only to pass the legend configuration into the pie chart through React context.
  */
 export const PieChartLegend: React.FC<PieChartLegendProps> = (props: PieChartLegendProps) => {
     const context: ChartProviderChildProps = React.useContext(ChartContext);
@@ -33,4 +32,3 @@ export const PieChartLegend: React.FC<PieChartLegendProps> = (props: PieChartLeg
 
     return null;
 };
-

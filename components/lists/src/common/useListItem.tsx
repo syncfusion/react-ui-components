@@ -1,4 +1,4 @@
-import * as React from 'react';
+import { HTMLAttributes, LiHTMLAttributes, ReactNode, useMemo } from 'react';
 import { isNullOrUndefined, getUniqueID } from '@syncfusion/react-base';
 import type { ListAriaAttributes } from './listItems';
 import { defaultMappedFields } from './listItems';
@@ -16,19 +16,19 @@ export interface UseListItemResult {
     fieldData: { [key: string]: Object };
     uid: string;
     grpLI: boolean;
-    liProps: React.LiHTMLAttributes<HTMLLIElement>;
+    liProps: LiHTMLAttributes<HTMLLIElement>;
     displayText: string;
     hasIcon: boolean;
     hasImage: boolean;
     hasUrl: boolean;
-    templateContent?: React.ReactNode;
+    templateContent?: ReactNode;
     ariaAttributes?: ListAriaAttributes;
 }
 
 export const useListItem: (item: { [key: string]: Object } | string | number, fields?: FieldsMapping,
     index?: number, focusedItemIndex?: number,
-    itemTemplate?: Function | React.ReactNode,
-    groupTemplate?: Function | React.ReactNode,
+    itemTemplate?: Function | ReactNode,
+    groupTemplate?: Function | ReactNode,
     ariaAttributes?: ListAriaAttributes,
     parentClass?: string,
     itemClassName?: string,
@@ -37,18 +37,18 @@ UseListItemResult = (item: { [key: string]: Object } | string | number,
                      fields?: FieldsMapping,
                      index?: number,
                      focusedItemIndex?: number,
-                     itemTemplate?: Function | React.ReactNode,
-                     groupTemplate?: Function | React.ReactNode,
+                     itemTemplate?: Function | ReactNode,
+                     groupTemplate?: Function | ReactNode,
                      ariaAttributes?: ListAriaAttributes,
                      parentClass?: string,
                      itemClassName?: string): UseListItemResult => {
-    const mergedFields: FieldsMapping = React.useMemo(() => ({ ...defaultMappedFields, ...fields }), [fields]);
+    const mergedFields: FieldsMapping = useMemo(() => ({ ...defaultMappedFields, ...fields }), [fields]);
 
-    const fieldData: { [key: string]: Object } = React.useMemo(() => (
+    const fieldData: { [key: string]: Object } = useMemo(() => (
         getFieldValues(item, mergedFields) as { [key: string]: Object }
     ), [item, mergedFields]);
 
-    const uid: string = React.useMemo(
+    const uid: string = useMemo(
         () => {
             const idVal: string | number | undefined = fieldData[String(mergedFields.id)] as string | number | undefined;
             return (idVal != null && String(idVal) !== '') ? String(idVal) : getUniqueID('listitem');
@@ -56,28 +56,28 @@ UseListItemResult = (item: { [key: string]: Object } | string | number,
         [fieldData, mergedFields.id]
     );
 
-    const grpLI: boolean = React.useMemo(
+    const grpLI: boolean = useMemo(
         () => Boolean(Object.prototype.hasOwnProperty.call(item, 'isHeader') && fieldData.isHeader),
         [item]
     );
 
 
 
-    const displayText: string = React.useMemo(() => (
+    const displayText: string = useMemo(() => (
         (fieldData[String(mergedFields.text)] as string) || (mergedFields.id && fieldData[String(mergedFields.id)] ? fieldData[String(mergedFields.id)].toString() : '')
     ), [mergedFields.text, mergedFields.id, fieldData]);
 
-    const hasIcon: boolean = React.useMemo(() => {
+    const hasIcon: boolean = useMemo(() => {
         return String(mergedFields.icon) in fieldData && !isNullOrUndefined(fieldData[String(mergedFields.icon)]);
     }, [fieldData, mergedFields.icon]);
 
-    const hasImage: boolean = React.useMemo(() => (
+    const hasImage: boolean = useMemo(() => (
         Boolean(fieldData[String(mergedFields.imageUrl)])
     ), [fieldData, mergedFields.imageUrl]);
 
-    const hasUrl: boolean = React.useMemo(() => (Boolean(fieldData[String(mergedFields.url)])), [fieldData, mergedFields.url]);
+    const hasUrl: boolean = useMemo(() => (Boolean(fieldData[String(mergedFields.url)])), [fieldData, mergedFields.url]);
 
-    const templateContent: React.ReactNode = React.useMemo(() => {
+    const templateContent: ReactNode = useMemo(() => {
         if (!grpLI && itemTemplate) {
             return typeof itemTemplate === 'function' ? itemTemplate(item) : itemTemplate;
         } else if (grpLI && groupTemplate) {
@@ -86,7 +86,7 @@ UseListItemResult = (item: { [key: string]: Object } | string | number,
         return null;
     }, [grpLI, groupTemplate, itemTemplate, item]);
 
-    const className: string = React.useMemo(() => {
+    const className: string = useMemo(() => {
         const classes: string[] = [
             grpLI ? GROUP_CLASS : LI_CLASS,
             grpLI && index === 0 ? 'sf-list-group-first-item' : '',
@@ -101,8 +101,8 @@ UseListItemResult = (item: { [key: string]: Object } | string | number,
     }, [grpLI, ariaAttributes?.level, fieldData, mergedFields.disabled,
         parentClass, itemClassName, index, focusedItemIndex]);
 
-    const baseLiProps: React.LiHTMLAttributes<HTMLLIElement> = React.useMemo(() => {
-        const props: React.LiHTMLAttributes<HTMLLIElement> = {
+    const baseLiProps: LiHTMLAttributes<HTMLLIElement> = useMemo(() => {
+        const props: LiHTMLAttributes<HTMLLIElement> = {
             className,
             role: (ariaAttributes?.groupItemRole !== '' && ariaAttributes?.itemRole !== '') ? (grpLI ? ariaAttributes?.groupItemRole : ariaAttributes?.itemRole) : undefined,
             'aria-level': ariaAttributes?.groupItemRole === 'presentation' || ariaAttributes?.itemRole === 'presentation' ? undefined : ariaAttributes?.level
@@ -116,13 +116,13 @@ UseListItemResult = (item: { [key: string]: Object } | string | number,
         return props;
     }, [className, ariaAttributes, grpLI, mergedFields, index, fieldData]);
 
-    const liProps: React.LiHTMLAttributes<HTMLLIElement> = React.useMemo(() => {
+    const liProps: LiHTMLAttributes<HTMLLIElement> = useMemo(() => {
         if (!fieldData || !Object.prototype.hasOwnProperty.call(fieldData, String(mergedFields.htmlAttributes))
                 || !fieldData[String(mergedFields.htmlAttributes)]) {
             return baseLiProps;
         }
-        let updatedProps: React.LiHTMLAttributes<HTMLLIElement> = { ...baseLiProps };
-        const htmlAttributes: React.HTMLAttributes<HTMLLIElement> =
+        let updatedProps: LiHTMLAttributes<HTMLLIElement> = { ...baseLiProps };
+        const htmlAttributes: HTMLAttributes<HTMLLIElement> =
                 fieldData[String(mergedFields.htmlAttributes)];
         const { className, style, ...restProps } = htmlAttributes;
         if (className) {

@@ -502,7 +502,8 @@ export function triggerRangeRender(minimum: number, maximum: number, interval: n
 function calculateVisibleLabels(axis: AxisModel, chart: Chart): void {
     axis.visibleLabels = [];
     let tempInterval: number = axis.visibleRange.minimum;
-    if ((axis.zoomFactor as number) < 1 || (axis.zoomPosition as number) > 0 || axis.paddingInterval) {
+    const isPolarRadar: boolean = (chart as Chart).chartAreaType === 'PolarRadar';
+    if (!isPolarRadar && ((axis.zoomFactor as number) < 1 || (axis.zoomPosition as number) > 0 || axis.paddingInterval)) {
         tempInterval = axis.visibleRange.minimum - (axis.visibleRange.minimum % axis.visibleRange.interval);
     }
     const format: string = getFormat(axis);

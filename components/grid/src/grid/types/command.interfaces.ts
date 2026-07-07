@@ -139,8 +139,8 @@ export interface UseCommandColumnResult<T = unknown> {
     commandEditRef: RefObject<{ [key: string]: boolean; }>;
 
     /**
-     * Reference object mapping row UIDs to their individual edit state object
-     * Allows tracking which specific rows with its updated data in edit mode
+     * Reference object mapping row UIDs to their individual edit state object.
+     * Allows tracking which specific rows with its updated data in edit mode.
      */
     commandEditStateRef: RefObject<{ [key: string]: EditState<T>; }>;
     /**

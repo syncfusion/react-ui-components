@@ -1,5 +1,51 @@
 # Changelog
 
+## 34.1.29 (2026-07-06)
+
+### MultiSelect
+
+**Features**
+
+- **Grouped Checkbox Support:** The MultiSelect component includes checkboxes in group headers, making it easy to select or clear all items in a group at once for faster bulk selection.
+
+- **Selection Order Support:** The MultiSelect component keeps selected items grouped at the top of the list when checkbox selection is enabled, making current selections easier to review and manage.
+
+- **Helper Text Support:** The MultiSelect component supports a `helperText` prop, allowing to display descriptive or instructional text below the input field for improved user guidance and accessibility.
+- This helper text support is also available for Autocomplete, ComboBox, and Dropdown List components, enabling consistent contextual messaging across all input fields.
+
+## 33.2.3 (2026-04-21)
+
+### Autocomplete
+
+**Features**
+
+- **Adornments Support:** The Autocomplete component supports `prefix` and `suffix` props, allowing to display custom icons or elements at the start and end of the input field for enhanced customization and usability.
+- This adornment support is also available for ComboBox, MultiSelect, and Dropdown List components, enabling consistent UI customization across all dropdown input fields.
+
+## 33.1.44 (2026-03-16)
+
+### Dropdown List
+
+#### Bug Fixes
+
+- `#I820104` - Fixed an issue where the dropdown filter input loses focus when pressing the Space key.
+
+### Autocomplete
+ 
+**Features**
+ 
+- **Helper Text Support:** The Autocomplete component supports a `helperText` prop, allowing to display descriptive or instructional text below the input field for improved user guidance and accessibility.
+- This helper text support is also available for ComboBox, MultiSelect, and Dropdown List components, enabling consistent contextual messaging across all input fields.
+
+## 33.2.3 (2026-04-21)
+
+### Autocomplete
+
+**Features**
+
+- **Adornments Support:** The Autocomplete component supports `prefix` and `suffix` props, allowing to display custom icons or elements at the start and end of the input field for enhanced customization and usability.
+- This adornment support is also available for ComboBox, MultiSelect, and Dropdown List components, enabling consistent UI customization across all dropdown input fields.
+
 ## 33.1.44 (2026-03-16)
 
 ### Dropdown List

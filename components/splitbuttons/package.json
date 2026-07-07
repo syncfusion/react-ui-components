@@ -1,6 +1,6 @@
 {
   "name": "@syncfusion/react-splitbuttons",
-  "version": "33.1.44",
+  "version": "34.1.29",
   "description": "Syncfusion React SplitButton package is a feature-rich collection of UI components, including SplitButton and DropDownButton, designed for advanced button interactions in React applications.",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
@@ -28,10 +28,10 @@
   "module": "./index.js",
   "readme": "README.md",
   "dependencies": {
-    "@syncfusion/react-base": "~33.1.44",
-    "@syncfusion/react-buttons": "~33.1.44",
-    "@syncfusion/react-icons": "~33.1.44",
-    "@syncfusion/react-popups": "~33.1.44"
+    "@syncfusion/react-base": "~34.1.29",
+    "@syncfusion/react-buttons": "~34.1.29",
+    "@syncfusion/react-icons": "~34.1.29",
+    "@syncfusion/react-popups": "~34.1.29"
   },
   "devDependencies": {
     "gulp": "4.0.2",

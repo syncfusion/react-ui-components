@@ -18,7 +18,6 @@
 
 @mixin appointment-style {
   position: absolute;
-  overflow: hidden;
   cursor: pointer;
   height: $scheduler-day-event-height;
   width: $scheduler-day-event-width;
@@ -53,6 +52,12 @@
   white-space: nowrap;
 }
 
+@mixin ellipsis-style {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @include export-module('scheduler-layout') {
 
   .sf-scheduler {
@@ -66,6 +71,7 @@
         visibility: hidden;
       }
       .sf-resize-container {
+        width: 100%;
         height: 100%;
       }
     }
@@ -123,7 +129,8 @@
       }
     }
 
-    .sf-vertical-view {
+    .sf-vertical-view,
+    .sf-agenda-view {
       @include flex-column;
       height: 100%;
       overflow: hidden;
@@ -171,18 +178,40 @@
       &.sf-left-handler   { inset-inline-start: 0; }
       &.sf-right-handler  { inset-inline-end: 0; }
 
-      .sf-mob-resize-dot {
+    }
+
+    .sf-mob-resize-dot {
         position: absolute;
         width: 6px;
         height: 6px;
-        border-radius: 50%;
+        border-radius: $scheduler-resize-mob-border-radius;
+        border: 1px solid $scheduler-appointment-bg-color;
         background: currentColor;
         opacity: 0.9;
         pointer-events: auto;
         top: 54%;
         left: 50%;
-        transform: translate(-50%, -50%);
-      }
+
+        &.sf-mob-left-resize-handler {
+          inset-block-start: 50%;
+          inset-inline-start: 4%;
+          transform: translate(-50%, -50%);
+        }
+        &.sf-mob-right-resize-handler {
+          inset-block-start: 50%;
+          inset-inline-end: 4%;
+          transform: translate(50%, -50%);
+        }
+        &.sf-mob-top-resize-handler {
+          inset-inline-start: 50%;
+          inset-block-start: 6%;
+          transform: translate(-50%, -50%);
+        }
+        &.sf-mob-bottom-resize-handler {
+          inset-block-start: 50%;
+          inset-inline-end: 6%;
+          transform: translate(-50%, 50%);
+        }
     }
 
     .sf-header-row {
@@ -197,12 +226,8 @@
       @include flex-column;
       align-items: center;
       width: $scheduler-header-cells-width;
-      border-inline-start: 1px solid $scheduler-border-color;
+      border-inline-end: 1px solid $scheduler-border-color;
       gap: $scheduler-header-cells-gap;
-
-      &:first-child {
-        border-inline-start: none;
-      }
     }
 
     .sf-all-day-row {
@@ -219,11 +244,7 @@
       flex: 1;
       position: relative;
       overflow: visible;
-      border-inline-start: 1px solid $scheduler-border-color;
-
-      &:first-child {
-        border-inline-start: none;
-      }
+      border-inline-end: 1px solid $scheduler-border-color;
     }
 
     .sf-date-header-container {
@@ -323,7 +344,7 @@
     .sf-header-day {
       font-size: $scheduler-header-day-font-size;
       line-height: $scheduler-header-day-line-height;
-      text-transform: uppercase;
+      text-transform: $scheduler-header-day-text-transform;
       letter-spacing: $scheduler-header-day-letter-spacing;
     }
 
@@ -332,7 +353,7 @@
       @include flex-column;
     }
 
-    .sf-content-section {
+    .sf-vertical-view .sf-content-section {
       @include flex-row;
       flex: 1;
       min-width: max-content;
@@ -366,11 +387,7 @@
         width: $scheduler-work-cells-width;
         overflow: visible;
         border-block-end: 1px solid $scheduler-border-color;
-        border-inline-start: 1px solid $scheduler-border-color;
-
-        &:first-child {
-          border-inline-start: none;
-        }
+        border-inline-end: 1px solid $scheduler-border-color;
 
         &.sf-alternate-cells {
           border-bottom-style: $scheduler-alternate-cell-border;
@@ -387,7 +404,6 @@
       position: absolute;
       inset: $scheduler-more-indicator-position;
       line-height: $scheduler-more-indicator-line-height;
-      width: fit-content;
       z-index: 2;
     }
 
@@ -405,7 +421,7 @@
       .sf-date-header-container {
         display: flex;
         align-items: center;
-        height: 36px;
+        height: $scheduler-month-header-height;
         flex: none;
       }
 
@@ -423,6 +439,10 @@
         padding-top: 6px;
         color: $scheduler-text-color;
         border-bottom: 1px solid $scheduler-border-color;
+
+        &:last-child {
+          border-bottom: none;
+        }
       }
 
       .sf-week-number-wrapper {
@@ -447,10 +467,6 @@
         flex: 1;
         border-inline-end: 1px solid $scheduler-border-color;
         @include flex-column;
-
-        &:last-child {
-          border-inline-end: none;
-        }
 
         .sf-date-header-container {
           justify-content: space-between;
@@ -492,6 +508,128 @@
         text-overflow: ellipsis;
         width: 100%;
       }
+
+      .sf-resource-group-month-header .sf-date-header-container {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        height: auto;
+        flex: 1 1 auto;
+
+        .sf-resource-header .sf-resource-header-cell.sf-header-cells {
+          height: $scheduler-month-header-height;
+          width: $scheduler-work-cells-width;
+        }
+      }
+
+      .sf-resource-group-month-cell {
+        width: $scheduler-work-cells-width;
+      }
+    }
+
+    .sf-agenda-view {
+      letter-spacing: $scheduler-agenda-letter-spacing;
+
+      .sf-empty-state {
+        font-size: $scheduler-agenda-empty-state-font-size;
+        line-height: $scheduler-agenda-empty-state-line-height;
+        padding: $scheduler-agenda-empty-state-padding;
+        @include ellipsis-style;
+      }
+
+      .sf-date-header {
+        @include flex-row;
+        width: 100%;
+        overflow: hidden;
+      }
+
+      .sf-agenda-date-label {
+        width: $scheduler-agenda-header-date-label-width;
+        padding: $scheduler-agenda-header-date-label-padding;
+        flex-shrink: 0;
+      }
+
+      .sf-agenda-date-label .sf-agenda-date-number {
+        font-size: $scheduler-agenda-header-date-font-size;
+        line-height: $scheduler-agenda-header-date-line-height;
+      }
+
+      .sf-agenda-date-label .sf-agenda-date-name {
+        font-size: $scheduler-agenda-header-day-font-size;
+        line-height: $scheduler-agenda-header-day-line-height;
+      }
+
+      .sf-appointment .sf-location {
+        font-size: $scheduler-agenda-event-location-font-size;
+        line-height: $scheduler-agenda-event-location-line-height;
+      }
+
+      .sf-appointment .sf-time {
+        font-size: $scheduler-agenda-event-time-font-size;
+        line-height: $scheduler-agenda-event-time-line-height;
+      }
+
+      .sf-agenda-events-container {
+        flex: 1;
+        min-width: 0;
+        border-bottom: $scheduler-agenda-event-container-border;
+
+        .sf-agenda-event-list {
+          @include flex-column;
+          margin: $scheduler-agenda-event-list-margin;
+          padding: $scheduler-agenda-event-list-padding;
+          gap: $scheduler-agenda-event-list-gap;
+        }
+
+        .sf-appointment {
+          @include flex-row;
+        }
+
+        .sf-appointment-details {
+          width: 100%;
+          padding: $scheduler-agenda-event-details-padding;
+          border-inline-start: $scheduler-agenda-event-strip;
+        }
+
+        .sf-subject-wrap {
+          display: flex;
+          align-items: center;
+          overflow: hidden;
+          white-space: nowrap;
+          gap: $scheduler-agenda-event-subject-wrapper-gap;
+        }
+
+        .sf-subject {
+          font-size: $scheduler-agenda-event-subject-font-size;
+          line-height: $scheduler-agenda-event-subject-line-height;
+          @include ellipsis-style;
+          flex: 0 1 auto;
+        }
+
+        .sf-agenda-no-events {
+          height: 100%;
+          display: block;
+          padding: $scheduler-agenda-no-events-padding;
+          font-size: $scheduler-agenda-no-events-font-size;
+          line-height: $scheduler-agenda-no-events-line-height;
+          @include ellipsis-style;
+        }
+
+        .sf-location {
+          @include ellipsis-style;
+          flex: 0 1 auto;
+        }
+
+        .sf-event-recurrence-icon {
+          flex: none;
+        }
+
+        .sf-time {
+          padding-top: $scheduler-agenda-event-time-padding;
+          @include ellipsis-style;
+          width: 100%;
+        }
+      }
     }
 
     .sf-custom-weeks {
@@ -507,6 +645,21 @@
     .sf-content-wrap {
       flex: 1;
       position: relative;
+    }
+
+    .sf-vertical-view,
+    .sf-more-popup-wrapper {
+      .sf-subject {
+        padding: 0;
+        flex: 1;
+        font-size: $scheduler-day-event-subject-font-size;
+        line-height: $scheduler-day-event-line-height;
+        font-weight: $scheduler-subject-font-weight;
+
+        &.sf-text-center {
+          text-align: center;
+        }
+      }
     }
 
     .sf-event-container {
@@ -562,17 +715,26 @@
       border-top: 1px dashed $scheduler-active-font-color;
     }
 
-    .sf-appointment {
-      @include appointment-style;
-      z-index: 2;
+    .sf-vertical-view,
+    .sf-more-popup-wrapper {
+      .sf-appointment {
+        @include appointment-style;
+        z-index: 2;
 
-      .sf-event-time,
-      .sf-event-location {
-        @include location-details;
-      }
+        .sf-inner-appointment {
+          height: 100%;
+          width: 100%;
+          overflow: hidden;
+        }
 
-      .sf-time {
-        @include time-details;
+        .sf-event-time,
+        .sf-event-location {
+          @include location-details;
+        }
+
+        .sf-time {
+          @include time-details;
+        }
       }
     }
 
@@ -608,29 +770,23 @@
     }
 
     .sf-event-recurrence-icon, .sf-event-recurrence-edit-icon {
-      position: absolute;
-      inset-block-end: $spacing-1;
-      inset-inline-end: $spacing-5;
+      display: flex;
 
       .sf-icon-size {
         font-size: $font-size-xs;
       }
     }
 
-    .sf-block-indicator {
-      line-height: $scheduler-block-indicator-line-height;
+    .sf-content-wrap, .sf-time-slot-clone-container {
+      .sf-event-recurrence-icon, .sf-event-recurrence-edit-icon {
+        position: absolute;
+        inset-block-end: $spacing-5;
+        inset-inline-end: $spacing-5;
+      }
     }
 
-    .sf-subject {
-      padding: 0;
-      flex: 1;
-      font-size: $scheduler-day-event-subject-font-size;
-      line-height: $scheduler-day-event-line-height;
-      font-weight: $scheduler-subject-font-weight;
-    
-      &.sf-text-center {
-        text-align: center;
-      }
+    .sf-block-indicator {
+      line-height: $scheduler-block-indicator-line-height;
     }
 
     .sf-block-appointment {
@@ -684,6 +840,10 @@
           flex: 0;
         }
       }
+
+      .sf-inner-appointment {
+        display: flex;
+      }
     }
 
     &.sf-rtl {
@@ -702,7 +862,7 @@
       opacity: $scheduler-drag-opacity;
     }
 
-    .sf-event-clone {
+    .sf-vertical-view .sf-event-clone {
       box-sizing: border-box;
       z-index: 1000;
       border: $scheduler-drag-clone-border;
@@ -716,6 +876,35 @@
     .sf-tooltip {
       position: relative;
       overflow: hidden;
+    }
+
+    .sf-resource-header {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      border-bottom: 1px solid $scheduler-border-color;
+      min-height: $scheduler-all-day-expand-btn-size;
+      align-items: stretch;
+      min-width: max-content;
+
+      &.sf-resource-header-last-level {
+        border-bottom: none;
+      }
+    }
+
+    .sf-resource-header-cell {
+      height: $scheduler-resource-header-cell-height;
+      flex: var(--sf-scheduler-col-span, 1) 0 auto;
+      min-width: calc(var(--sf-spacing) * 3.125 * var(--sf-scheduler-col-span, 1));
+      width: calc(var(--sf-spacing) * 3.125 * var(--sf-scheduler-col-span, 1));
+      display: flex;
+      align-items: center;
+      padding: $scheduler-resource-header-cell-padding;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      border-inline-end: 1px solid $scheduler-border-color;
+      box-sizing: border-box;
     }
   }
 
@@ -746,6 +935,10 @@
     .sf-delete-event {
       margin-inline-end: auto;
     }
+
+    .sf-all-day-time-zone-row {
+      gap: $scheduler-timezone-gap;
+    }
   }
 
   .sf-quickinfo-popup-wrapper {
@@ -762,20 +955,22 @@
     }
 
     .sf-quickinfo-popup-footer {
-      padding-block: $scheduler-popup-footer-padding-block;
+      padding: $scheduler-popup-footer-padding;
       justify-content: end;
       gap: $scheduler-popup-button-gap;
+      border-top: $scheduler-popup-footer-border;
     }
 
     .sf-quickinfo-popup-header {
       padding: $scheduler-popup-header-padding;
       align-items: center;
+      border-bottom: $scheduler-popup-header-border;
 
       .sf-popup-event-subject {
         flex: 1;
         font-size: $scheduler-popup-subject-font-size;
         line-height: $scheduler-popup-subject-line-height;
-        font-weight: $scheduler-subject-font-weight;
+        font-weight: $scheduler-popup-subject-font-weight;
       }
     }
 
@@ -786,12 +981,15 @@
     .sf-quickinfo-popup-content {
       font-size: $scheduler-font-size-sm;
       line-height: $scheduler-popup-content-line-height;
+      padding: $scheduler-quickinfo-popup-content-padding;
     }
 
     .sf-cell-time,
     .sf-location,
+    .sf-time-zone,
     .sf-rule-summary,
-    .sf-description {
+    .sf-description,
+    .sf-resource-details {
       padding-top: $scheduler-event-popup-content-padding;
       align-items: center;
       gap: $scheduler-popup-icon-gap;
@@ -806,6 +1004,7 @@
     overflow-y: auto;
 
     &.sf-popup .sf-appointment {
+      display: flex;
       position: relative;
       padding: $scheduler-more-popup-event-padding;
     }
@@ -876,6 +1075,13 @@
 
       .sf-scheduler-toolbar-container .sf-toolbar-popup-items .sf-view-button {
         border: none;
+      }
+
+      .sf-agenda-view {
+        .sf-agenda-date-label {
+          width: $scheduler-agenda-header-date-label-width-mobile;
+          padding: $scheduler-agenda-header-date-label-padding-mobile;
+        }
       }
     }
 

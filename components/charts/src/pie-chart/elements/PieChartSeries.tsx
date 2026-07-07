@@ -21,19 +21,28 @@ interface PieSeriesCollectionProps {
     children?: ReactElement<PieChartSeriesProps>[] | ReactElement<PieChartSeriesProps>;
 }
 
+/**
+ * Acts as a container for Pie Chart series components.
+ *
+ * This component extracts and returns only the first valid child element from the provided children collection.
+ * It is primarily used to structure and organize series definitions within the chart configuration.
+ *
+ * @param {PieSeriesCollectionProps} props - Props containing child series components.
+ * @returns {React.JSX.Element} The first child element, or an empty fragment if no valid child is provided.
+ */
 export const PieChartSeriesCollection: React.FC<PieSeriesCollectionProps> = (props: PieSeriesCollectionProps) => {
     const children: React.JSX.Element = (React.Children.toArray(props.children)[0] || <></>) as React.JSX.Element;
     return <>{children}</>;
 };
 
 /**
- * Represents a circular chart series component.
+ * Represents a single Pie Chart series configuration.
  *
  * This component serializes its props (excluding children and other React-specific props)
  * using `JSON.stringify` and memoizes the result to avoid unnecessary recalculations.
  *
- * @param {PieChartSeriesProps} props - The properties used to configure the circular chart series.
- * @returns {React.JSXElement } A React functional component for rendering circular chart series.
+ * @param {PieChartSeriesProps} props - The properties used to configure the pie chart series.
+ * @returns {React.JSXElement } A React functional component for rendering pie chart series.
  */
 export const PieChartSeries: React.FC<PieChartSeriesProps> = (props: PieChartSeriesProps) => {
     const childArray: React.ReactNode[] = React.Children.toArray(props.children);

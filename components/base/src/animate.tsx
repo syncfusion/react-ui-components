@@ -423,7 +423,9 @@ export const Animate: React.ForwardRefExoticComponent<GlobalAnimateProps & React
             element: getActualElement(elementRef) as HTMLElement,
             stop: stopAnimation
         }));
-
+        if (!children) {
+            return undefined;
+        }
         return cloneElement(
             children,
             {

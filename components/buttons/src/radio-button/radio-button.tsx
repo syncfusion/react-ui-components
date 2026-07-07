@@ -1,6 +1,7 @@
-import * as React from 'react';
-import { useRef, useImperativeHandle, useState, useEffect, forwardRef, Ref, InputHTMLAttributes, useCallback } from 'react';
-import { preRender, useProviderContext, useRippleEffect, Color, Size, LabelPlacement } from '@syncfusion/react-base';
+import { useRef, useImperativeHandle, useState, useEffect, forwardRef, Ref, InputHTMLAttributes, useCallback, useMemo,
+    ChangeEvent, ForwardRefExoticComponent, RefAttributes, RefObject, ChangeEventHandler, memo, type MouseEvent
+} from 'react';
+import { preRender, useProviderContext, useRippleEffect, Color, Size, LabelPlacement, useStableId } from '@syncfusion/react-base';
 export { LabelPlacement };
 
 /**
@@ -10,7 +11,7 @@ export interface RadioButtonChangeEvent {
     /**
      * The initial event object received from the input element.
      */
-    event: React.ChangeEvent<HTMLInputElement>;
+    event: ChangeEvent<HTMLInputElement>;
 
     /**
      * The selected value of the RadioButton.
@@ -100,7 +101,7 @@ type IRadioButtonProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' 
  * <RadioButton checked={true} label="Choose this option" name="choices" />
  * ```
  */
-export const RadioButton: React.ForwardRefExoticComponent<IRadioButtonProps & React.RefAttributes<IRadioButton>> =
+export const RadioButton: ForwardRefExoticComponent<IRadioButtonProps & RefAttributes<IRadioButton>> =
     forwardRef<IRadioButton, IRadioButtonProps>((props: IRadioButtonProps, ref: Ref<IRadioButton>) => {
         const {
             checked,
@@ -118,11 +119,12 @@ export const RadioButton: React.ForwardRefExoticComponent<IRadioButtonProps & Re
         } = props;
         const isControlled: boolean = checked !== undefined;
         const [isChecked, setIsChecked] = useState<boolean>(() => isControlled ? !!checked : defaultChecked);
-        const radioInputRef: React.RefObject<HTMLInputElement | null> = useRef<HTMLInputElement>(null);
+        const radioInputRef: RefObject<HTMLInputElement | null> = useRef<HTMLInputElement>(null);
         const [isFocused, setIsFocused] = useState(false);
-        const rippleContainerRef: React.RefObject<HTMLSpanElement | null> = useRef<HTMLSpanElement>(null);
+        const rippleContainerRef: RefObject<HTMLSpanElement | null> = useRef<HTMLSpanElement>(null);
         const { dir, ripple } = useProviderContext();
         const { rippleMouseDown, Ripple} = useRippleEffect(ripple, { duration: 400, isCenterRipple: true });
+        const inputId: string = domProps.id ?? useStableId('sf-radio');
 
         useEffect(() => {
             if (isControlled) {
@@ -134,46 +136,46 @@ export const RadioButton: React.ForwardRefExoticComponent<IRadioButtonProps & Re
             preRender('radio');
         }, []);
 
-        const publicAPI: Partial<IRadioButton> = {
+        const publicAPI: Partial<IRadioButton> = useMemo<Partial<IRadioButton>>(() => ({
             checked: isChecked,
             label,
             labelPlacement,
             value,
             size,
             color
-        };
+        }), [isChecked, label, labelPlacement, value, size, color]);
 
         useImperativeHandle(ref, () => ({
             ...publicAPI as IRadioButton,
             element: radioInputRef.current
         }), [publicAPI]);
 
-        const onRadioChange: React.ChangeEventHandler<HTMLInputElement> = (event: React.ChangeEvent<HTMLInputElement>): void => {
-            if (!isControlled) {
-                setIsChecked(event.target.checked);
-            }
-            if (onChange) {
-                onChange({ event, value: value });
-            }
-        };
-        const handleMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-            if (disabled) { return; }
-            if (ripple && rippleContainerRef.current && rippleMouseDown) {
-                const syntheticEvent: React.MouseEvent<HTMLSpanElement, MouseEvent> = {
-                    ...e,
-                    currentTarget: rippleContainerRef.current,
-                    target: rippleContainerRef.current
-                } as unknown as React.MouseEvent<HTMLSpanElement>;
-                rippleMouseDown(syntheticEvent);
-            }
-        }, [disabled, ripple, rippleMouseDown]);
+        const onRadioChange: ChangeEventHandler<HTMLInputElement> = useCallback(
+            (event: ChangeEvent<HTMLInputElement>): void => {
+                if (!isControlled) {
+                    setIsChecked(event.target.checked);
+                }
+                if (onChange) {
+                    onChange({ event, value: value });
+                }
+            }, [disabled, onChange, value]);
 
-        const handleFocus: () => void = () => {
-            setIsFocused(true);
-        };
-        const handleBlur: () => void = () => {
-            setIsFocused(false);
-        };
+        const handleMouseDown: (e: MouseEvent<HTMLDivElement>) => void = useCallback(
+            (e: MouseEvent<HTMLDivElement>) => {
+                if (disabled) { return; }
+                if (ripple && rippleContainerRef.current && rippleMouseDown) {
+                    const syntheticEvent: MouseEvent<HTMLSpanElement, globalThis.MouseEvent> = {
+                        ...e,
+                        currentTarget: rippleContainerRef.current,
+                        target: rippleContainerRef.current
+                    } as unknown as MouseEvent<HTMLSpanElement>;
+                    rippleMouseDown(syntheticEvent);
+                }
+            }, [disabled, ripple, rippleMouseDown]);
+
+        const handleFocus: () => void = (): void => setIsFocused(true);
+
+        const handleBlur: () => void = (): void => setIsFocused(false);
 
         const sizeLower: string = String(size).toLowerCase();
         const colorLower: string = color ? String(color).toLowerCase() : '';
@@ -196,7 +198,7 @@ export const RadioButton: React.ForwardRefExoticComponent<IRadioButtonProps & Re
                 <input
                     ref={radioInputRef}
                     type="radio"
-                    id={domProps.id ? domProps.id : `sf-${value}`}
+                    id={inputId}
                     name={name}
                     value={value}
                     disabled={disabled}
@@ -208,7 +210,7 @@ export const RadioButton: React.ForwardRefExoticComponent<IRadioButtonProps & Re
                     defaultChecked={!isControlled ? isChecked : undefined}
                     {...domProps}
                 />
-                <label className={`sf-radio-label sf-control sf-radio-${size.toLowerCase().substring(0, 2)} ${labelBefore ? 'sf-right' : ''} ${labelBottom ? 'sf-bottom' : ''} ${isFocused ? 'sf-focus' : ''} ${rtlClass}`} htmlFor={domProps.id ? domProps.id : `sf-${value}`}>
+                <label className={`sf-radio-label sf-control sf-radio-${size.toLowerCase().substring(0, 2)} ${labelBefore ? 'sf-right' : ''} ${labelBottom ? 'sf-bottom' : ''} ${isFocused ? 'sf-focus' : ''} ${rtlClass}`} htmlFor={inputId}>
                     <span ref={rippleContainerRef} className="sf-ripple-container" >
                         {ripple && !disabled && <Ripple />}
                     </span>
@@ -218,4 +220,4 @@ export const RadioButton: React.ForwardRefExoticComponent<IRadioButtonProps & Re
         );
     });
 
-export default React.memo(RadioButton);
+export default memo(RadioButton);

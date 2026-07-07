@@ -1,10 +1,10 @@
 import * as React from 'react';
 import { ChartBorderProps, ChartFontProps, ChartLocationProps, ChartDataLabelTemplateProps, DataLabelContentFunction } from '../../base/interfaces';
-import { calculateRect, getDataLabelText, getPosition, getRectanglePoints, getVisiblePoints, isCollide, isDataLabelOverlapWithChartBound, isRotatedRectIntersect, measureText, rotateTextSize, textElement } from '../../utils/helper';
-import { LabelPosition } from '../../base/enum';
+import { calculateRect, getDataLabelText, getPosition, getRectanglePoints, getVisiblePoints, isCollide, isDataLabelOverlapWithChartBound, isRotatedRectIntersect, measureText, rotateTextSize, textElement, getPoint } from '../../utils/helper';
+import { ChartSeriesType, LabelPosition } from '../../base/enum';
 import { LayoutMap } from '../../layout/LayoutContext';
-import { Chart, ColorValue, dataLabelOptions, DataLabelProperties, DataLabelRendererResult, LabelLocation, MarginModel, Points, Rect, SeriesProperties, ChartSizeProps, TextOption, TextStyleModel, DataLabelContentProps } from '../../chart-area/chart-interfaces';
-import { HorizontalAlignment } from '@syncfusion/react-base';
+import { Chart, ColorValue, DataLabelOptions, DataLabelProperties, DataLabelRendererResult, LabelLocation, MarginModel, Points, Rect, SeriesProperties, ChartSizeProps, TextOption, TextStyleModel, DataLabelContentProps, AxisModel } from '../../chart-area/chart-interfaces';
+import { HorizontalAlignment, SanitizeHtmlHelper } from '@syncfusion/react-base';
 import { TextAnchor } from '../../../common';
 
 
@@ -238,7 +238,7 @@ export function applyDataLabelContentCallback(
     if (contentCallback && typeof contentCallback === 'function') {
         try {
             const customProps: string | boolean = contentCallback(index, text);
-            return customProps;
+            return (typeof customProps === 'string') ? SanitizeHtmlHelper.sanitize(customProps) : customProps;
         } catch (error) {
             return text;
         }
@@ -295,17 +295,25 @@ export const DataLabelRenderer: IDataLabelRenderer  = {
         const dataLabelFont: ChartFontProps = dataLabel.font as ChartFontProps;
         const results: DataLabelRendererResults[] = [];
         const isBorder: boolean = Number(border.width) > 0 && border.color !== 'Transparent' && border.color !== '';
-        const dataLabelPosition: LabelPosition | undefined = series.isRectSeries && dataLabel.position === 'Auto'
-            ? ((series?.type!.indexOf('Bar') > -1 || series?.type!.indexOf('Column') > -1) ? ((series?.type!.indexOf('Stacking') === -1)
+        const seriesType: ChartSeriesType = series?.type as ChartSeriesType;
+        const dataLabelPosition: LabelPosition | undefined = (series.isRectSeries && series.type !== 'BoxAndWhisker' && dataLabel.position === 'Auto')
+            ? ((seriesType.indexOf('Bar') > -1 || seriesType.indexOf('Column') > -1) ? ((seriesType.indexOf('Stacking') === -1)
                 ? 'Outer' : 'Top') : 'Top') : dataLabel.position;
         const resolvedPosition: LabelPosition = (series.type === 'Waterfall' && dataLabel.position === 'Auto')
             ? 'Middle' : (dataLabel.position ?? 'Auto');
         const isFinancialSeries: boolean = (series.type === 'Hilo' || series.type === 'HiloOpenClose' || series.type === 'Candle');
         if (isFinancialSeries) { return results; }
-        if (
-            (point.symbolLocations?.length && point.symbolLocations[0])
-        ) {
+        const isBoxAndWhiskerSeries: boolean = series.type === 'BoxAndWhisker';
+        let canRenderDataLabel: boolean = false;
+        if (isBoxAndWhiskerSeries) {
+            canRenderDataLabel = (point.regions?.length as number) > 0;
+        } else {
+            canRenderDataLabel =
+                (point.symbolLocations?.length as number) > 0 && !!point.symbolLocations?.[0];
+        }
+        if (canRenderDataLabel) {
             labelText = getDataLabelText(point, series, series.chart) as string[];
+            labelText = labelText.map((text: string) => SanitizeHtmlHelper.sanitize(text));
             labelLength = labelText.length;
             for (let i: number = 0; i < labelLength; i++) {
                 const pointFont: ChartFontProps = {
@@ -329,9 +337,11 @@ export const DataLabelRenderer: IDataLabelRenderer  = {
                 if (customText && typeof customText !== 'boolean') {
                     dataLabel.fontBackground = argsData.color;
                     DataLabelRenderer.isDataLabelShape(argsData, dataLabel);
-                    dataLabel.markerHeight = dataLabel.markerHeight!;
+                    dataLabel.markerHeight = dataLabel.markerHeight as number;
                 }
-
+                if (series.type === 'BoxAndWhisker') {
+                    dataLabel.markerHeight = i > 4 ? (series.marker?.height ?? 0) / 2 : 0;
+                }
                 const rotatedTextSize: ChartSizeProps = rotateTextSize(
                     dataLabel.font as ChartFontProps, customText as string,
                     dataLabel.rotationAngle as number, series.chart,
@@ -378,7 +388,7 @@ export const DataLabelRenderer: IDataLabelRenderer  = {
                 const CenterY: number = rect.y + (rect.height / 2);
                 xPos = CenterX;
                 yPos = CenterY;
-                if (series.type !== 'Waterfall' && !isDataLabelOverlap && series.isRectSeries && point.regions && point.regions[0] && dataLabelPosition !== 'Outer') {
+                if (series.type !== 'Waterfall' && series.type !== 'BoxAndWhisker' && !isDataLabelOverlap && series.isRectSeries && point.regions && point.regions[0] && dataLabelPosition !== 'Outer') {
                     const pointRegion: Rect = point.regions[0];
                     const rectCheck: Rect = isBorder ? rect : labelRect;
 
@@ -414,11 +424,11 @@ export const DataLabelRenderer: IDataLabelRenderer  = {
 
                     xPos -= xPos + (textSize.width / 2) > clip.width ? (!series.chart.requireInvertedAxis && xPos > clip.width) ? 0 :
                         (xPos + textSize.width / 2) - clip.width : 0;
-                    yPos -= (yPos + textSize.height > clip.y + clip.height && !(series.type!.indexOf('Bar') > -1)) ? (yPos + textSize.height) - (clip.y + clip.height) : 0;
+                    yPos -= (yPos + textSize.height > clip.y + clip.height && !(seriesType.indexOf('Bar') > -1)) ? (yPos + textSize.height) - (clip.y + clip.height) : 0;
 
                     if (dataLabel.border?.color !== '' && dataLabel.border?.width !== 0 && !dataLabel.enableRotation) {
                         if (rect.x + rect.width > clip.width) {
-                            rect.x = rect.x - (rect.x + rect.width - (clip.width - border.width!));
+                            rect.x = rect.x - (rect.x + rect.width - (clip.width - (border.width as number)));
                             xPos = rect.x + rect.width / 2;
                         }
                     }
@@ -479,7 +489,6 @@ export const DataLabelRenderer: IDataLabelRenderer  = {
         dataLabel.borderWidth = style.border.width;
         void (!dataLabel.isShape && (dataLabel.margin = { left: 0, right: 0, bottom: 0, top: 0 }));
     },
-
     calculateTextPosition: (point: Points, series: SeriesProperties, textSize: ChartSizeProps,
                             dataLabel: DataLabelProperties, labelIndex: number): Rect => {
         const yValue: number = typeof point.yValue === 'number' ? point.yValue
@@ -489,10 +498,37 @@ export const DataLabelRenderer: IDataLabelRenderer  = {
         const padding: number = 5;
         const clipRect: Rect = series.clipRect as Rect;
         const isRectSeries: boolean = isRectSeriesType(series);
-        const dataLabelPosition: LabelPosition | undefined = isRectSeries && dataLabel.position === 'Auto' ? ((series?.type!.indexOf('Bar') > -1 || series?.type!.indexOf('Column') > -1) ? ((series?.type!.indexOf('Stacking') === -1) ? 'Outer' : 'Top') : 'Top') : dataLabel.position;
+        const seriesType: ChartSeriesType = series?.type as ChartSeriesType;
+        const dataLabelPosition: LabelPosition | undefined = isRectSeries && dataLabel.position === 'Auto' ? ((seriesType.indexOf('Bar') > -1 || seriesType.indexOf('Column') > -1) ? ((seriesType.indexOf('Stacking') === -1) ? 'Outer' : 'Top') : 'Top') : dataLabel.position;
         const finalPosition: LabelPosition | undefined = series.type === 'Waterfall' && dataLabelPosition === 'Auto' ? 'Middle'
             : dataLabelPosition;
-        if (!series.chart.requireInvertedAxis || !isRectSeries) {
+        if (series.type === 'BoxAndWhisker') {
+            const bwPosition: LabelPosition = getBoxAndWhiskerAutoPosition(series, labelIndex);
+            dataLabel.locationX = location.x;
+            const alignmentValue: number = textSize.height + (dataLabel.borderWidth as number * 2) +
+                (dataLabel.markerHeight as number) + (dataLabel.margin?.bottom as number) +
+                (dataLabel.margin?.top as number) + padding;
+
+            location.x =
+                DataLabelRenderer.calculateAlignment(
+                    alignmentValue,
+                    location.x,
+                    dataLabel.textAlign as HorizontalAlignment,
+                    false,
+                    series.chart.requireInvertedAxis
+                );
+
+            location.y = DataLabelRenderer.calculatePathPosition(
+                location.y,
+                bwPosition,
+                textSize,
+                dataLabel,
+                series,
+                point,
+                labelIndex
+            );
+        }
+        else if (!series.chart.requireInvertedAxis || !isRectSeries) {
             dataLabel.locationX = location.x;
             const alignmentValue: number = textSize.height + (dataLabel.borderWidth as number * 2) + (dataLabel.markerHeight as number) +
                 (dataLabel.margin?.bottom as number)  + (dataLabel.margin?.top as number) + padding;
@@ -556,6 +592,9 @@ export const DataLabelRenderer: IDataLabelRenderer  = {
     },
 
     getLabelLocation: (point: Points, series: SeriesProperties, labelIndex: number): ChartLocationProps => {
+        if (series.type === 'BoxAndWhisker') {
+            return getBoxAndWhiskerLabelLocation(point, series, labelIndex);
+        }
         let location: ChartLocationProps = { x: 0, y: 0 };
         const labelRegion: Rect = point.regions?.[0] as Rect;
         const isInverted: boolean = series.chart.requireInvertedAxis;
@@ -615,6 +654,18 @@ export const DataLabelRenderer: IDataLabelRenderer  = {
         labelIndex: number,
         dataLabel: DataLabelProperties
     ): number => {
+        if (series.type === 'BoxAndWhisker') {
+            const bwPosition: LabelPosition = getBoxAndWhiskerAutoPosition(series, labelIndex);
+            return DataLabelRenderer.calculatePathPosition(
+                y,
+                bwPosition,
+                size,
+                dataLabel,
+                series,
+                point,
+                labelIndex
+            );
+        }
         const points: Points[] = series.points || [];
         const index: number = point.index;
         let position: LabelPosition;
@@ -717,7 +768,7 @@ export const DataLabelRenderer: IDataLabelRenderer  = {
             extraSpace = Number(dataLabel?.borderWidth) +
                 ((Math.abs(rect.height - textSize.height / 2) < padding) ? 0 : padding);
         } else {
-            extraSpace = (dataLabel.isShape ? dataLabel?.borderWidth as number : 0) + textLength / 2 + (position !== 'Outer' && series.type!.indexOf('Column') > -1 &&
+            extraSpace = (dataLabel.isShape ? dataLabel?.borderWidth as number : 0) + textLength / 2 + (position !== 'Outer' && (series.type as ChartSeriesType).indexOf('Column') > -1 &&
                 (Math.abs(rect.height - textSize.height) < padding) ? 0 : padding);
         }
         //  normalize position by series type
@@ -725,7 +776,6 @@ export const DataLabelRenderer: IDataLabelRenderer  = {
             position = 'Middle';
         }
         const inverted: boolean  = series.chart.requireInvertedAxis;
-        const yAxisInversed: boolean  = series.yAxis?.inverted ?? false;
 
         switch (position) {
         case 'Bottom':
@@ -752,7 +802,7 @@ export const DataLabelRenderer: IDataLabelRenderer  = {
 
         default:
             labelLocation = calculateTopAndOuterPosition(labelLocation, rect, position, series, labelIndex
-                , extraSpace, isMinus, point, inverted, yAxisInversed);
+                , extraSpace, isMinus, point, inverted);
             break;
         }
 
@@ -777,13 +827,87 @@ export const DataLabelRenderer: IDataLabelRenderer  = {
 };
 
 /**
+ * Resolves the pixel location for a Box-and-Whisker data label
+ * (median, min, max, quartiles, or outliers) based on label index
+ * and centers it within the category band.
+ *
+ * @param {Points} point - Box-and-whisker data point
+ * @param {SeriesProperties} series - Chart series reference
+ * @param {number} labelIndex - Index representing the statistic to label
+ * @returns {ChartLocationProps} Calculated label location
+ * @private
+ */
+function getBoxAndWhiskerLabelLocation(
+    point: Points,
+    series: SeriesProperties,
+    labelIndex: number
+): ChartLocationProps {
+    const xAxis: AxisModel = series.xAxis;
+    const yAxis: AxisModel = series.yAxis;
+    const isInverted: boolean = series.chart.requireInvertedAxis;
+    const xValue: number = (typeof point.xValue === 'number' ? point.xValue : point.index) as number;
+
+    let location: ChartLocationProps;
+
+    if (labelIndex === 0) {
+        location = getPoint(xValue, point.maximum as number, xAxis, yAxis, isInverted);
+    } else if (labelIndex === 1) {
+        location = getPoint(xValue, point.upperQuartile as number, xAxis, yAxis, isInverted);
+    } else if (labelIndex === 2) {
+        location = getPoint(xValue, point.median as number, xAxis, yAxis, isInverted);
+    } else if (labelIndex === 3) {
+        location = getPoint(xValue, point.lowerQuartile as number, xAxis, yAxis, isInverted);
+    } else if (labelIndex === 4) {
+        location = getPoint(xValue, point.minimum as number, xAxis, yAxis, isInverted);
+    } else {
+        const outlierValue: number =
+            (point.outliers?.[labelIndex - 5] as number) ?? (point.median as number);
+        location = getPoint(xValue, outlierValue, xAxis, yAxis, isInverted);
+    }
+
+    if (isInverted) {
+        location.y = (point.regions?.[0]?.y ?? 0) + ((point.regions?.[0]?.height ?? 0) / 2);
+    } else {
+        location.x = (point.regions?.[0]?.x ?? 0) + ((point.regions?.[0]?.width ?? 0) / 2);
+    }
+
+    return location;
+}
+
+/**
+ * Determines the automatic label position for Box-and-Whisker
+ * data labels based on label index and Y-axis inversion.
+ *
+ * @param {SeriesProperties} series - Series containing axis info
+ * @param {number} labelIndex - Index of the label being rendered
+ * @returns {LabelPosition} Resolved label position
+ * @private
+ */
+function getBoxAndWhiskerAutoPosition(
+    series: SeriesProperties,
+    labelIndex: number
+): LabelPosition {
+    if (labelIndex === 2) {
+        return 'Middle';
+    }
+    if (labelIndex === 0) {
+        return series.yAxis.isAxisInverse ? 'Bottom' : 'Top';
+    }
+    if (labelIndex === 1 || labelIndex > 4) {
+        return series.yAxis.isAxisInverse ? 'Bottom' : 'Top';
+    }
+
+    return series.yAxis.isAxisInverse ? 'Top' : 'Bottom';
+}
+
+/**
  * To determine whether the series is rect series ot not.
  *
  * @param {SeriesProperties} series - series to be checked.
  * @returns {boolean} Returns if rect series, false if not.
  */
 function isRectSeriesType(series: SeriesProperties): boolean {
-    return series.isRectSeries || series.type === 'RangeArea' || series.type === 'SplineRangeArea';
+    return series.isRectSeries || series.type === 'RangeArea' || series.type === 'RangeStepArea' || series.type === 'SplineRangeArea';
 }
 
 /**
@@ -799,13 +923,12 @@ function isRectSeriesType(series: SeriesProperties): boolean {
  * @param {boolean} isMinus - Whether the value is negative
  * @param {Points} point - The data point object
  * @param {boolean} inverted - Whether the chart axes are inverted
- * @param {boolean} _yAxisInversed - Whether the Y-axis direction is inversed
  * @returns {number} The calculated position for the label
  * @private
  */
 export function calculateTopAndOuterPosition(
     location: number, rect: Rect, position: LabelPosition, series: SeriesProperties, index: number,
-    extraSpace: number, isMinus: boolean, point: Points,    inverted: boolean, _yAxisInversed: boolean
+    extraSpace: number, isMinus: boolean, point: Points,    inverted: boolean
 ): number {
     const margin: MarginModel = (series.marker?.dataLabel?.margin) as MarginModel ||
         { left: 0, right: 0, top: 0, bottom: 0 } as MarginModel;
@@ -814,7 +937,10 @@ export function calculateTopAndOuterPosition(
     let top: boolean;
     switch (series.type) {
     case 'RangeArea':
+    case 'RangeStepArea':
     case 'SplineRangeArea':
+    case 'PolarRangeColumn':
+    case 'RadarRangeColumn':
     case 'RangeColumn':
         top = (index === 0 && !series.yAxis?.isAxisInverse) || (index === 1 && series.yAxis?.isAxisInverse);
         location = updateLabelLocation(series, position, location, extraSpace, margin, rect, top, false);
@@ -860,7 +986,7 @@ export function updateLabelLocation(
     inside: boolean = false
 ): number {
     const markerHalf: number = (series.marker?.height as number) / 2 || 0;
-    const isPointWiseRenderingType: boolean = (series.type === 'RangeColumn');
+    const isPointWiseRenderingType: boolean = (series.type === 'RangeColumn' || series.type === 'RadarRangeColumn' || series.type === 'PolarRangeColumn');
 
     if (!series.chart?.requireInvertedAxis) {
         if (series.yAxis?.inverted === true && isPointWiseRenderingType) {
@@ -917,9 +1043,11 @@ function easeInOutQuad(progress: number): number {
 
 /**
  * Global store for tracking data label positions across chart animations
- * Maps chart and series ids to data label positions and transforms
+ * Maps chart and series ids to data label positions and transforms.
+ *
+ * @private
  */
-const previousDataLabelPositions: Map<string, Map<string, dataLabelOptions[]>> = new Map<string, Map<string, {
+export const previousDataLabelPositions: Map<string, Map<string, DataLabelOptions[]>> = new Map<string, Map<string, {
     x: number,
     y: number,
     transform?: string,
@@ -960,7 +1088,7 @@ export function renderDataLabelShapesJSX(
         previousDataLabelPositions.set(chartKey, new Map());
     }
 
-    const chartPositions: Map<string, dataLabelOptions[]> = previousDataLabelPositions.get(chartKey)!;
+    const chartPositions: Map<string, DataLabelOptions[]> = previousDataLabelPositions.get(chartKey)!;
 
     return (
         <g id={series.category === 'TrendLine' ? `${chartId}TrendlineShapeGroup${series.trendIndex}` : `containerShapeGroup${index}`}
@@ -1020,7 +1148,7 @@ export function renderDataLabelShapesJSX(
 
                 // If we have previous position data with dimensions
                 if (chartPositions.has(labelKey)) {
-                    const previousDimensions: dataLabelOptions = chartPositions.get(labelKey)![0];
+                    const previousDimensions: DataLabelOptions = chartPositions.get(labelKey)![0];
                     if (previousDimensions.width !== undefined &&
                         previousDimensions.height !== undefined &&
                         animationProgress < 1) {
@@ -1041,7 +1169,7 @@ export function renderDataLabelShapesJSX(
                     if (!chartPositions.has(labelKey)) {
                         chartPositions.set(labelKey, []);
                     }
-                    const positions: dataLabelOptions[] = chartPositions.get(labelKey)!;
+                    const positions: DataLabelOptions[] = chartPositions.get(labelKey)!;
                     positions[0] = {
                         x: currentX,
                         y: currentY,
@@ -1137,7 +1265,6 @@ function parseFormattedText(text: string | number): {
  * @param {number} index - Series index.
  * @param {React.RefObject<LayoutMap>} layoutRef - Reference to layout map/chart context.
  * @param {number} [animationProgress=1] - Animation progress (0-1).
- * @param {number} [_legendClick] - Used to rerender after legend click (not used directly).
  * @returns {React.ReactNode} SVG <g> element with <text> labels, or null.
  * @private
  */
@@ -1145,8 +1272,7 @@ export function renderDataLabelTextJSX(
     dataLabel: DataLabelRendererResult[],
     index: number,
     layoutRef: React.RefObject<LayoutMap>,
-    animationProgress: number = 1,
-    _legendClick?: number
+    animationProgress: number = 1
 ): React.ReactNode {
     if (!dataLabel || dataLabel.length === 0 || !(layoutRef.current?.chart as Chart)?.visibleSeries?.[index as number]) {
         return null;
@@ -1156,14 +1282,14 @@ export function renderDataLabelTextJSX(
     const clipX: number = series.clipRect?.x as number;
     const clipY: number = series.clipRect?.y as number;
     const chartId: string = (layoutRef.current.chart as Chart).element.id;
-
+    const themeStyle: TextStyleModel = (layoutRef.current?.chart as Chart)?.themeStyle?.datalabelFont;
     // Get or initialize positions map for this chart
     const chartKey: string = chartId;
     if (!previousDataLabelPositions.has(chartKey)) {
         previousDataLabelPositions.set(chartKey, new Map());
     }
 
-    const chartPositions: Map<string, dataLabelOptions[]> = previousDataLabelPositions.get(chartKey)!;
+    const chartPositions: Map<string, DataLabelOptions[]> = previousDataLabelPositions.get(chartKey) as Map<string, DataLabelOptions[]>;
     return (
         <g id={series.category === 'TrendLine' ? `${chartId}TrendlineTextGroup${series.trendIndex}` : `containerTextGroup${index}`}
             transform={series.category === 'TrendLine' ? '' : `translate(${clipX}, ${clipY})`}
@@ -1186,7 +1312,7 @@ export function renderDataLabelTextJSX(
 
                 // Check if we have previous position data
                 if (chartPositions.has(labelKey)) {
-                    const pos: dataLabelOptions = chartPositions.get(labelKey)![0];
+                    const pos: DataLabelOptions = chartPositions.get(labelKey)![0];
                     previousX = pos.x;
                     previousY = pos.y;
                 }
@@ -1206,7 +1332,7 @@ export function renderDataLabelTextJSX(
                     if (!chartPositions.has(labelKey)) {
                         chartPositions.set(labelKey, []);
                     }
-                    const positions: dataLabelOptions[] = chartPositions.get(labelKey)!;
+                    const positions: DataLabelOptions[] = chartPositions.get(labelKey)!;
                     positions[0] = { x: currentX, y: currentY, transform: currentTransform };
                 }
                 const pointIndex: number = labelIndex;
@@ -1279,11 +1405,11 @@ export function renderDataLabelTextJSX(
                         id={labelData.textOption.renderOptions.id}
                         x={x}
                         y={y}
-                        fill={labelData.textOption.renderOptions.fill}
-                        fontSize={labelData.textOption.renderOptions['font-size']}
-                        fontFamily={labelData.textOption.renderOptions['font-family']}
-                        fontWeight={labelData.textOption.renderOptions['font-weight']}
-                        fontStyle={labelData.textOption.renderOptions['font-style']}
+                        fill={labelData.textOption.renderOptions.fill || themeStyle?.color}
+                        fontSize={labelData.textOption.renderOptions['font-size'] || themeStyle?.fontSize}
+                        fontFamily={labelData.textOption.renderOptions['font-family'] || themeStyle?.fontFamily}
+                        fontWeight={labelData.textOption.renderOptions['font-weight'] || themeStyle?.fontWeight}
+                        fontStyle={labelData.textOption.renderOptions['font-style'] || themeStyle?.fontStyle}
                         textAnchor={labelData.textOption.renderOptions['text-anchor'] as TextAnchor}
                         transform={labelData.textOption.renderOptions.transform}
                         dominantBaseline={'middle'}

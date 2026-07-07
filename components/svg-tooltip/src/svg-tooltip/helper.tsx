@@ -30,6 +30,42 @@ export function getTooltipThemeColor(theme: TooltipTheme): ITooltipThemeStyle {
             textStyle: { fontFamily: 'Roboto', color: '#313033', fontWeight: '400', size: '12px', headerTextSize: '12px', boldTextSize: '12px' }
         };
         break;
+    case 'Tailwind':
+        style = {
+            tooltipFill: '#111827',
+            tooltipBoldLabel: '#F9FAFB',
+            tooltipLightLabel: '#F9FAFB',
+            tooltipHeaderLine: '#D1D5DB',
+            textStyle: { fontFamily: 'Inter', color: '#F9FAFB', fontWeight: '400', size: '14px', fontStyle: 'Regular', headerTextSize: '12px', boldTextSize: '12px' }
+        };
+        break;
+    case 'TailwindDark':
+        style = {
+            tooltipFill: '#F9FAFB',
+            tooltipBoldLabel: '#1F2937',
+            tooltipLightLabel: '#1F2937',
+            tooltipHeaderLine: '#374151',
+            textStyle: { fontFamily: 'Inter', color: '#1F2937', fontWeight: '400', size: '14px', fontStyle: 'Regular', headerTextSize: '12px', boldTextSize: '12px' }
+        };
+        break;
+    case 'Bootstrap':
+        style = {
+            tooltipFill: '#000000E5',
+            tooltipBoldLabel: '#FFFFFF',
+            tooltipLightLabel: '#FFFFFF',
+            tooltipHeaderLine: '#DEE2E6',
+            textStyle: { fontFamily: 'Helvetica Neue', color: '#FFFFFF', fontWeight: '400', size: '12px', fontStyle: 'Regular', headerTextSize: '12px', boldTextSize: '12px' }
+        };
+        break;
+    case 'BootstrapDark':
+        style = {
+            tooltipFill: '#FFFFFFE5',
+            tooltipBoldLabel: '#212529',
+            tooltipLightLabel: '#212529',
+            tooltipHeaderLine: '#444C54',
+            textStyle: { fontFamily: 'Helvetica Neue', color: '#212529', fontWeight: '400', size: '14px', fontStyle: 'Regular', headerTextSize: '12px', boldTextSize: '12px' }
+        };
+        break;
     }
     return style;
 }

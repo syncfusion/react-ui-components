@@ -10,17 +10,21 @@ $toast-progressbar-height: $spacing-4 !default;
 $toast-content-padding: $spacing-8 $spacing-0 $spacing-2 $spacing-0 !default;
 $toast-border-radius: $radius-4 !default;
 $toast-font-size: $font-size-sm !default;
+$toast-line-height: $line-height-sm !default;
 $toast-title-font-size: $font-size-base !default;
+$toast-title-line-height: $line-height-base !default;
 $toast-title-font-weight: $font-weight-medium !default;
-$toast-border: $radius-0 !default;
+$toast-border: $spacing-1 solid !default;
 $toast-box-shadow: $shadow-lg !default;
+$toast-border-color: rgb($tooltip-bg-color) !default;
 
 $toast-icon-font-size: $font-size-xl !default;
 $toast-icon-inline-margin: $spacing-12 !default;
+$toast-icon-block-margin: $spacing-1 !default;
 $toast-icon-hover-border-radius: $radius-full !default;
 
 $toast-close-icon-padding: $spacing-6 !default;
-$toast-close-icon-font-size: $font-size-xl !default;
+$toast-close-icon-font-size: $font-size-base !default;
 $toast-close-icon-inline-margin: $spacing-6 !default;
 
 $toast-progress-color: rgb($primary) !default;
@@ -32,3 +36,15 @@ $toast-success-bg-color: rgb($success) !default;
 $toast-info-bg-color: rgb($info-dark) !default;
 $toast-warning-bg-color: rgb($warning-dark) !default;
 $toast-danger-bg-color: rgb($error-dark) !default;
+
+$toast-success-border-color: rgb($success) !default;
+$toast-success-color: rgb($content-bg-color) !default;
+ 
+$toast-info-border-color: rgb($info-dark) !default;
+$toast-info-color: rgb($content-bg-color) !default;
+ 
+$toast-warning-border-color: rgb($warning-dark) !default;
+$toast-warning-color: rgb($content-bg-color) !default;
+ 
+$toast-danger-border-color: rgb($error-dark) !default;
+$toast-danger-color: rgb($content-bg-color) !default;

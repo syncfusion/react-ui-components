@@ -1,4 +1,4 @@
-import { JSX, memo, MemoExoticComponent, useMemo, MouseEvent, ComponentProps, ReactElement } from 'react';
+import { JSX, memo, MemoExoticComponent, useMemo, useCallback, MouseEvent, ComponentProps, ReactElement } from 'react';
 import { CommandItemType, CommandItemProps, ICommandColumnBase, IRow, ColumnProps } from '../types';
 import { Button, Variant } from '@syncfusion/react-buttons';
 import { SaveIcon, CloseIcon, EditIcon, TrashIcon } from '@syncfusion/react-icons';
@@ -7,6 +7,19 @@ import { Color, IL10n, isNullOrUndefined, Size } from '@syncfusion/react-base';
 
 // CSS class constants
 const CSS_COMMAND_ITEMS: string = 'sf-grid-command-items';
+
+/**
+ * Builds the button CSS class name with optional custom classes
+ * Extracts styling logic for reusability and memoization
+ *
+ * @param {string} [cssClass] - Optional custom CSS class
+ * @returns {string} Combined CSS class string with base radius class
+ * @private
+ */
+const getButtonClassName: (cssClass?: string) => string = (cssClass?: string): string => {
+    const baseClass: string = 'sf-radius-28';
+    return cssClass ? cssClass + ' ' + baseClass : baseClass;
+};
 
 /**
  * Generates an appropriate aria-label based on the command item type
@@ -70,11 +83,30 @@ const getButtonTitle: (type?: CommandItemType, localization?: IL10n) => string =
 const CommandItem: (props: Partial<CommandItemProps>) => JSX.Element = memo((props: Partial<CommandItemProps>) => {
 
     const { getRowObjectFromUID, serviceLocator } = useGridComputedProvider();
-    const { editModule, currentViewData, cssClass } = useGridMutableProvider();
+    const { editModule, cssClass } = useGridMutableProvider();
     const localization: IL10n = serviceLocator?.getService<IL10n>('localization');
 
     const itemType: CommandItemType = props.type;
     const buttonProps: ComponentProps<typeof Button> = props.buttonProps || {};
+
+    /**
+     * Memoized onClick handler for command button execution
+     * Handles Edit, Delete, Update, and Cancel operations with proper row reference
+     */
+    const handleCommandClick: (args: MouseEvent) => void = useCallback((args: MouseEvent) => {
+        const row: HTMLTableRowElement = (args.target as HTMLElement).closest('.sf-grid-content-row');
+        const uid: string = row.getAttribute('data-uid');
+        if (itemType === CommandItemType.Edit) {
+            editModule.editRecord(row);
+        } else if (itemType === CommandItemType.Delete) {
+            const rowObj: IRow<ColumnProps> = getRowObjectFromUID(uid);
+            editModule.deleteRecord(undefined, rowObj.data);
+        } else if (itemType === CommandItemType.Update) {
+            (editModule.saveDataChanges as Function)?.(undefined, undefined, undefined, uid);
+        } else if (itemType === CommandItemType.Cancel) {
+            (editModule.cancelDataChanges as Function)?.(undefined, uid);
+        }
+    }, [itemType, editModule, getRowObjectFromUID]);
 
     /**
      * Memoized command button with accessibility attributes
@@ -95,7 +127,7 @@ const CommandItem: (props: Partial<CommandItemProps>) => JSX.Element = memo((pro
             })
         };
 
-        const buttonClass: string = cssClass ? cssClass + ' sf-radius-28' : 'sf-radius-28';
+        const buttonClass: string = getButtonClassName(cssClass);
 
         return (
             <Button
@@ -107,26 +139,13 @@ const CommandItem: (props: Partial<CommandItemProps>) => JSX.Element = memo((pro
                                 : <></>}
                 size={Size.Small}
                 color={itemType === CommandItemType.Update ? Color.Primary : Color.Secondary}
-                onClick={(args: MouseEvent) => {
-                    const row: HTMLTableRowElement = (args.target as HTMLElement).closest('.sf-grid-content-row');
-                    const uid: string = row.getAttribute('data-uid');
-                    if (itemType === CommandItemType.Edit) {
-                        editModule.editRecord(row);
-                    } else if (itemType === CommandItemType.Delete) {
-                        const rowObj: IRow<ColumnProps> = getRowObjectFromUID(uid);
-                        editModule.deleteRecord(undefined, rowObj.data);
-                    } else if (itemType === CommandItemType.Update) {
-                        (editModule.saveDataChanges as Function)?.(undefined, undefined, undefined, uid);
-                    } else if (itemType === CommandItemType.Cancel) {
-                        (editModule.cancelDataChanges as Function)?.(undefined, uid);
-                    }
-                }}
+                onClick={handleCommandClick}
                 {...buttonProps}
                 className={buttonProps.className ? buttonProps.className + ' ' + buttonClass : buttonClass}
                 {...accessibilityAttrs}
             />
         );
-    }, [currentViewData, itemType]);
+    }, [itemType, buttonProps, cssClass, localization, handleCommandClick]);
 
     return (
         <>
@@ -172,6 +191,7 @@ const CommandColumnBase: (props: Partial<ICommandColumnBase>) => JSX.Element = m
         }
         return item.props.type === CommandItemType.Edit || item.props.type === CommandItemType.Delete;
     });
+
     commandEdit.current = props.column.visible && builtinItems?.length ? true : false;
 
     /**

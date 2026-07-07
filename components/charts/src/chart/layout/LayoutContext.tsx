@@ -31,7 +31,13 @@ import { SelectionRenderer } from '../renderer/SelectionRenderer';
 import { highlightChart, HighlightRenderer } from '../renderer/HighlightRenderer';
 import { renderDataLabelTemplates } from '../renderer/SeriesRenderer/DataLabelRender';
 import ChartCrosshairRenderer from '../renderer/ChartCrosshairRenderer';
-import ChartAnnotationRenderer, { renderChartAnnotations, isHtmlContent } from '../renderer/ChartAnnotationRenderer';
+import ChartAnnotationRenderer, { renderChartAnnotations } from '../renderer/ChartAnnotationRenderer';
+import { isHtmlContent } from '../../common/annotation';
+import { findAxisValuesFromPoint } from './Layout-helper';
+import { NoDataTemplateRenderer } from '../renderer/NoDataTemplateRenderer';
+import { ChartScrollbarsRenderer } from '../renderer/Zooming/scrollbarUtils';
+import { click as triggerMultiLevelLabelClick } from '../renderer/AxesRenderer/ChartMultiLevelLabelRender';
+import { Points } from '../chart-area/chart-interfaces';
 
 /**
  * Represents a mapping between layout keys and their corresponding layout state or chart instance.
@@ -96,6 +102,7 @@ export const LayoutProvider: React.FC = () => {
         chartZoom.selectionZoom,
         chartZoom.mouseWheelZoom,
         chartZoom.pinchZoom,
+        chartZoom.enableScrollbar,
         chartStackLabels.visible,
         chartSelection.mode,
         chartHighlight.mode
@@ -109,6 +116,8 @@ export const LayoutProvider: React.FC = () => {
     const titleRef: React.RefObject<SVGTextElement | null> = useRef<SVGTextElement>(null);
     const subtitleRef: React.RefObject<SVGTextElement | null> = useRef<SVGTextElement>(null);
     const seriesRef: React.RefObject<SVGGElement | null> = useRef<SVGGElement>(null);
+    const highlightRef: React.RefObject<SVGPatternElement | null> = useRef<SVGPatternElement>(null);
+    const selectionRef: React.RefObject<SVGPatternElement | null> = useRef<SVGPatternElement>(null);
     const legendRef: React.RefObject<SVGGElement | null> = useRef<SVGGElement>(null);
     const trackballRef: React.RefObject<SVGGElement | null> = useRef<SVGGElement>(null);
     const [animationProgress, setAnimationProgress] = useState(0);
@@ -166,6 +175,8 @@ export const LayoutProvider: React.FC = () => {
     const handleMouseMove: (event: PointerEvent) => void = useCallback((event: PointerEvent) => {
         const chart: Chart = layoutRef.current.chart as Chart;
         const rect: DOMRect = parentElement.element.getBoundingClientRect();
+        if (!chart) { return; }
+        const XYvalues: { [key: string]: number } = findAxisValuesFromPoint(chart.mouseX, chart.mouseY, chart);
 
         let pageY: number;
         let pageX: number;
@@ -182,15 +193,24 @@ export const LayoutProvider: React.FC = () => {
             }
         }
 
-        const mouseX: number = pageX - rect.left;
-        const mouseY: number = pageY - rect.top;
+        let mouseX: number = pageX - rect.left;
+        let mouseY: number = pageY - rect.top;
+
+        if (chart && chart.enableRtl) {
+            const svgElement: SVGSVGElement = parentElement.element.querySelector('svg') as SVGSVGElement;
+            const svgRect: DOMRect = svgElement?.getBoundingClientRect();
+            mouseX = (pageX - rect.left) - Math.max((svgRect?.left || 0) - rect.left, 0);
+            mouseY = (pageY - rect.top) - Math.max((svgRect?.top || 0) - rect.top, 0);
+        }
+
         void (chart && (chart.mouseX = mouseX, chart.mouseY = mouseY));
         callChartEventHandlers('mouseMove', event, chart, mouseX, mouseY);
         if (chartProps.onMouseMove) {
             const mouseArgs: ChartMouseEvent = {
                 target: (event.target as HTMLElement)?.id,
                 x: event.clientX,
-                y: event.clientY
+                y: event.clientY,
+                axisData: XYvalues
             };
             chartProps.onMouseMove(mouseArgs);
         }
@@ -210,24 +230,31 @@ export const LayoutProvider: React.FC = () => {
             const chart: Chart = layoutRef.current.chart as Chart;
             const rect: DOMRect = parentElement.element.getBoundingClientRect();
 
-            const mouseX: number = event.clientX - rect.left;
-            const mouseY: number = event.clientY - rect.top;
+            let mouseX: number = event.clientX - rect.left;
+            let mouseY: number = event.clientY - rect.top;
+
+            if (chart && chart.enableRtl) {
+                const svgElement: SVGSVGElement = parentElement.element.querySelector('svg') as SVGSVGElement;
+                const svgRect: DOMRect = svgElement?.getBoundingClientRect();
+                mouseX = (event.clientX - rect.left) - Math.max((svgRect?.left || 0) - rect.left, 0);
+                mouseY = (event.clientY - rect.top) - Math.max((svgRect?.top || 0) - rect.top, 0);
+            }
 
             // Update chart mouse coordinates
             if (chart) {
                 chart.mouseX = mouseX;
                 chart.mouseY = mouseY;
             }
-
-            // // Call chart event handlers for mouse enter
-            // callChartEventHandlers('mouseEnter', event, chart, mouseX, mouseY);
+            if (!chart) { return; }
+            const XYvalues: { [key: string]: number } = findAxisValuesFromPoint(chart.mouseX, chart.mouseY, chart);
 
             // Trigger the user-defined onMouseEnter callback if provided
             if (chartProps.onMouseEnter) {
                 const mouseArgs: ChartMouseEvent = {
                     target: (event.target as HTMLElement)?.id,
                     x: event.clientX,
-                    y: event.clientY
+                    y: event.clientY,
+                    axisData: XYvalues
                 };
                 chartProps.onMouseEnter(mouseArgs);
             }
@@ -246,18 +273,51 @@ export const LayoutProvider: React.FC = () => {
         const chart: Chart = layoutRef.current.chart as Chart;
         const targetId: string = (event.target as HTMLElement)?.id || '';
         chart.clickCount++;
+        const isRtl: boolean = chart.enableRtl;
+        let XYvalues: { [key: string]: number };
+        if (isRtl) {
+            const rect: DOMRect = parentElement.element.getBoundingClientRect();
+            const svgElement: SVGSVGElement = parentElement.element.querySelector('svg') as SVGSVGElement;
+            const svgRect: DOMRect = svgElement?.getBoundingClientRect();
+            const pageX: number = event.clientX;
+            const pageY: number = event.clientY;
+            const clickMouseX: number = (pageX - rect.left) - Math.max((svgRect?.left) - rect.left, 0);
+            const clickMouseY: number = (pageY - rect.top) - Math.max((svgRect?.top) - rect.top, 0);
+            XYvalues = findAxisValuesFromPoint(clickMouseX, clickMouseY, chart);
+        }
+        else {
+            XYvalues = findAxisValuesFromPoint(chart.mouseX, chart.mouseY, chart);
+        }
+
         // Call all registered click handlers
         callChartEventHandlers('click', event, chart, targetId);
         if (chartProps.onClick) {
             const mouseArgs: ChartMouseEvent = {
                 target: (event.target as HTMLElement)?.id,
                 x: event.clientX,
-                y: event.clientY
+                y: event.clientY,
+                axisData: XYvalues
             };
             chartProps.onClick(mouseArgs);
+            if (chart.tooltipRef && chart.tooltipRef.current) {
+                chart.tooltipRef?.current?.fadeOut();
+            }
+            if (chart.trackballRef && chart.trackballRef.current) {
+                const childElements: HTMLCollection = chart.trackballRef.current.children as HTMLCollection;
+                for (let i: number = 0; i < childElements.length; i++) {
+                    const element: HTMLElement = childElements[i as number] as HTMLElement;
+                    if (element) {
+                        element.style.display = 'none';
+                    }
+                }
+            }
         }
         if (chartProps.onAxisLabelClick) {
             triggerAxisLabelClickEvent(event as PointerEvent, layoutRef.current.chart as Chart);
+        }
+
+        if (chartProps.onMultiLevelLabelClick) {
+            triggerMultiLevelLabelClick(event, layoutRef.current.chart as Chart);
         }
 
         if (chart.clickCount === 1 && chartProps.onPointClick) {
@@ -557,8 +617,19 @@ export const LayoutProvider: React.FC = () => {
                 if (targetId?.indexOf('_Point_') > -1) {
                     const seriesIndex: number = +(targetId.split('_Series_')[1].split('_Point_')[0]);
                     const pointIndex: number = +(targetId.split('_Series_')[1].replace('_Symbol0', '').split('_Point_')[1]);
-                    const pointRegion: ChartLocationProps = chart.visibleSeries[seriesIndex as number]?.points[pointIndex as number]?.
+                    const series: SeriesProperties = chart.visibleSeries[seriesIndex as number];
+                    const point: Points = series?.points?.[pointIndex as number];
+                    let pointRegion: ChartLocationProps = chart.visibleSeries[seriesIndex as number]?.points[pointIndex as number]?.
                         symbolLocations?.[0] as ChartLocationProps;
+                    if (!pointRegion && series?.type === 'BoxAndWhisker') {
+                        const region: Rect | undefined = point?.regions?.[0];
+                        if (region) {
+                            pointRegion = {
+                                x: region.x + region.width / 2,
+                                y: region.y + region.height / 2
+                            };
+                        }
+                    }
                     const seriesType: string =  chart.visibleSeries[seriesIndex as number]?.type as string;
                     chart.mouseX = pointRegion.x + chart.chartAxislayout.initialClipRect.x -
                         (seriesType.indexOf('StackingBar') > -1 ?
@@ -679,8 +750,14 @@ export const LayoutProvider: React.FC = () => {
             chart.isTouch = event.pointerType === 'touch' || event.pointerType === '2';
         }
 
-        const mouseX: number = pageX - rect.left;
-        const mouseY: number = pageY - rect.top;
+        let mouseX: number = pageX - rect.left;
+        let mouseY: number = pageY - rect.top;
+        if (chart && chart.enableRtl) {
+            const svgElement: SVGSVGElement = parentElement.element.querySelector('svg') as SVGSVGElement;
+            const svgRect: DOMRect = svgElement?.getBoundingClientRect();
+            mouseX = (pageX - rect.left) - Math.max((svgRect?.left || 0) - rect.left, 0);
+            mouseY = (pageY - rect.top) - Math.max((svgRect?.top || 0) - rect.top, 0);
+        }
 
         chart.mouseX = mouseX;
         chart.mouseY = mouseY;
@@ -801,10 +878,13 @@ export const LayoutProvider: React.FC = () => {
         setIsMouseInside(false);
         const chart: Chart = layoutRef.current.chart as Chart;
         const element: Element = event.target as Element;
+        if (!chart) { return; }
+        const XYvalues: { [key: string]: number } = findAxisValuesFromPoint(chart.mouseX, chart.mouseY, chart);
         const mouseArgs: ChartMouseEvent = {
             target: element.id,
             x: chart?.mouseX || 0,
-            y: chart?.mouseY || 0
+            y: chart?.mouseY || 0,
+            axisData: XYvalues
         };
         if (chartProps.onMouseLeave) {
             chartProps.onMouseLeave(mouseArgs);
@@ -914,14 +994,16 @@ export const LayoutProvider: React.FC = () => {
     }
 
     const availableSize: ChartSizeProps = parentElement?.availableSize;
+
     return (
         render && <LayoutContext.Provider value={{
             setLayoutValue, layoutRef, phase, availableSize, triggerRemeasure, reportMeasured, disableAnimation,
-            setDisableAnimation, animationProgress, setAnimationProgress, seriesRef, legendRef
+            setDisableAnimation, animationProgress, setAnimationProgress, seriesRef, legendRef, highlightRef, selectionRef
         }}>
             <div
                 id={`${parentElement?.element?.id}_Secondary_Element`}
             >
+                <NoDataTemplateRenderer />
                 {renderDataLabelTemplates(layoutRef.current.chart as Chart, dataLabelOptionsByChartId, animationProgress)}
                 {chartAnnotation.length > 0 &&
                     renderChartAnnotations(
@@ -958,6 +1040,7 @@ export const LayoutProvider: React.FC = () => {
                 {(chartSeries.length > 0) &&
                     <SeriesRenderer ref={seriesRef} {...chartSeries as ChartSeriesProps[]} />
                 }
+                <ChartScrollbarsRenderer/>
                 <AxisOutsideRenderer></AxisOutsideRenderer>
                 {striplineVisibility &&
                     <StripLineAfterRenderer axes={axisCollection} />
@@ -981,13 +1064,13 @@ export const LayoutProvider: React.FC = () => {
                     <ChartAnnotationRenderer {...chartAnnotation} />
                 }
                 {chartTooltip.enable &&
-                    <TrackballRenderer ref={trackballRef}  {...chartTooltip} />
+                    <TrackballRenderer key={`trackball-${chartTooltip.shared ? 'shared' : 'single'}`} ref={trackballRef}  {...chartTooltip} />
                 }
                 {!chartTooltip.template && chartTooltip.enable &&
                     <TooltipRenderer {...chartTooltip} />
                 }
-                <SelectionRenderer {...chartSelection}></SelectionRenderer>
-                <HighlightRenderer {...chartHighlight}></HighlightRenderer>
+                <SelectionRenderer ref={selectionRef} {...chartSelection}></SelectionRenderer>
+                <HighlightRenderer ref={highlightRef} {...chartHighlight}></HighlightRenderer>
             </svg>
         </LayoutContext.Provider>
     );

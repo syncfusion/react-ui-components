@@ -220,7 +220,7 @@ export const ZoomToolkit: React.FC<ChartZoomSettingsProps> = (props: ChartZoomSe
             return renderZoomingToolkit(chart, zoom, setZoomTooltipState);
         }
         return null;
-    }, [toolkitVersion, toolkitVisible, phase, props.toolbar?.position, chart, zoom]);
+    }, [toolkitVersion, toolkitVisible, phase, props.toolbar?.visible, props.toolbar?.position, chart, zoom]);
 
     /**
      * Renders a custom SVG tooltip
@@ -442,7 +442,14 @@ function renderToolkitShadowEffects(chartId: string): JSX.Element {
  * @returns {JSX.Element} The rendered background
  */
 function renderToolkitBackground(chart: Chart): JSX.Element {
-    const zoomFillColor: string = '#FFFFFF';
+    // Map only the supported React themes to toolkit background colors
+    const zoomFillColor: string = chart.theme === 'Tailwind' ? '#F3F4F6' :
+        chart.theme === 'TailwindDark' ? '#1D2432' :
+            chart.theme === 'Material' ? '#FFFFFF' :
+                chart.theme === 'MaterialDark' ? '#1C1B1F' :
+                    chart.theme === 'Bootstrap' ? '#E9ECEF' :
+                        chart.theme === 'BootstrapDark' ? '#343A40' :
+                            '#fafafa';
     const spacing: number = 10;
     const toolboxItems: ToolbarItems[] = chart.zoomSettings.toolbar?.items as ToolbarItems[];
     const length: number = Browser.isDevice ? (toolboxItems.length === 0 ? 0 : 1) : toolboxItems.length;
@@ -834,6 +841,9 @@ function renderToolbarItemIcon(
  *
  * @param {Chart} chart - The chart instance
  * @param {Object} refs - Object containing refs for SVG elements
+ * @param {React.RefObject<SVGRectElement>} refs.rect - Reference to the rectangle element
+ * @param {React.RefObject<SVGPathElement>} refs.mainIcon - Reference to the main icon path
+ * @param {React.RefObject<SVGPolygonElement>} refs.secondaryIcon - Reference to the secondary icon polygon
  * @param {number} iconSize - The size of the icon
  * @returns {JSX.Element} The rendered icon
  */
@@ -863,6 +873,9 @@ function renderZoomInIcon(
  *
  * @param {Chart} chart - The chart instance
  * @param {Object} refs - Object containing refs for SVG elements
+ * @param {React.RefObject<SVGRectElement>} refs.rect - Reference to the rectangle element
+ * @param {React.RefObject<SVGPathElement>} refs.mainIcon - Reference to the main icon path
+ * @param {React.RefObject<SVGPolygonElement>} refs.secondaryIcon - Reference to the secondary icon polygon
  * @param {number} iconSize - The size of the icon
  * @returns {JSX.Element} The rendered icon
  */

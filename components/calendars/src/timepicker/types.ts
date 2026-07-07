@@ -1,10 +1,10 @@
-import { InputBaseProps, PickerVariant } from '../datepicker/types';
+import { InputProps, PickerVariant } from '../datepicker/types';
 
 /**
  * Interface for TimePicker component props.
  *
  */
-export interface TimePickerProps extends InputBaseProps {
+export interface TimePickerProps extends InputProps {
     /**
      * Specifies the selected time value of the component.
      *

@@ -245,7 +245,7 @@ function renderSubTitleElement(chart: Chart, titleProps: PieChartTitleProps, ref
             fontStyle={titleProps.font?.fontStyle || chart.themeStyle.chartSubTitleFont.fontStyle}
             transform={subTitleOptions.rotation}
             opacity={titleProps.font?.opacity}
-            aria-label={titleProps.accessibility?.ariaLabel}
+            aria-label={titleProps.accessibility?.ariaLabel || titleProps.text}
             role={titleProps.accessibility?.role}
             tabIndex={titleProps.accessibility?.focusable ? (titleProps.accessibility?.tabIndex ?? 0) : -1}
             style={{ outline: 'none' }}

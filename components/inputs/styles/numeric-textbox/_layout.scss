@@ -14,6 +14,10 @@
         font-size: $numeric-medium-spin-icon-size;
       }
     }
+
+    &.sf-outline .sf-input-icon:not(.sf-input-adornment-icon) {
+      border-left: $numeric-spin-border;
+    }
   }
 
 }

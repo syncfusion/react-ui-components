@@ -125,14 +125,20 @@ $severities-filled: (
   .sf-message {
     border-radius: $msg-border-radius;
     border: 1px solid;
+    border-color: $msg-border-color;
     padding: $msg-padding;
-    letter-spacing: $letter-spacing-wide;
+    letter-spacing: $msg-letter-spacing;
+    font-size: $msg-font-size;
+    line-height: $msg-line-height;
     @include sf-fill($msg-color, $msg-bg-color, null, null, $msg-border-color);
   }
 
   .sf-msg-icon {
     color: $msg-icon-color;
     margin: $msg-icon-margin;
+    .sf-icon {
+      font-size: $msg-svg-font-size;
+    }
   }
 
   .sf-msg-close-icon {

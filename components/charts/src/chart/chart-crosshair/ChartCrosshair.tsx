@@ -11,7 +11,7 @@ import { ChartProviderChildProps } from '../chart-area/chart-interfaces';
  * It acts as a configuration component that updates the chart context with crosshair properties.
  *
  * @param {ChartCrosshairProps} props - The crosshair configuration properties including enable, dashArray, line styles, and opacity
- * @returns {null} React functional component (returns null as it's a configuration component)
+ * @returns {null} - It is used only to pass the crosshair configuration to the chart through the React context.
  */
 export const ChartCrosshair: React.FC<ChartCrosshairProps> = (props: ChartCrosshairProps) => {
     /**

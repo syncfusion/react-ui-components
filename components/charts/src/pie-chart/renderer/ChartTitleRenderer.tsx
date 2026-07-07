@@ -231,7 +231,7 @@ function titleElement(chart: Chart, titleProps: PieChartTitleProps, ref: Forward
             fontStyle={titleProps.font?.fontStyle || chart.themeStyle.chartTitleFont.fontStyle}
             transform={titleOptions.rotation}
             opacity={titleProps.font?.opacity}
-            aria-label={titleProps.accessibility?.ariaLabel}
+            aria-label={titleProps.accessibility?.ariaLabel || titleProps.text}
             role={titleProps.accessibility?.role}
             tabIndex={titleProps.accessibility?.focusable ? titleProps.accessibility?.tabIndex : -1}
             style={{ outline: 'none' }}

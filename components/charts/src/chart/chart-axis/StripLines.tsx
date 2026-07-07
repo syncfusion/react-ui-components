@@ -6,7 +6,7 @@ import { ChartStripLineProps } from '../base/interfaces';
  * ChartStripLines component for configuring multiple strip lines in the chart.
  * This is a configuration-only component and does not render any visual output.
  *
- * @returns {null} This component does not render any visible output.
+ * @returns {null} - It is used only to pass the strip lines configuration to the chart through the React context.
  */
 export const ChartStripLines: React.FC<StripLineProps> = () => {
     return null;
@@ -16,7 +16,7 @@ export const ChartStripLines: React.FC<StripLineProps> = () => {
  * ChartStripLine component for configuring a single strip line in the chart.
  * This is a configuration-only component and does not render any visual output.
  *
- * @returns {null} This component does not render any visible output.
+ * @returns {null} It is used only to pass the strip line configuration to the chart through the React context.
  */
 export const ChartStripLine: React.FC<ChartStripLineProps> = () => {
     return null;

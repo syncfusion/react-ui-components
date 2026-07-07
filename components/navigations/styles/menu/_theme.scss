@@ -1,0 +1,33 @@
+  @use 'theme-variables' as *;
+
+  @include export-module('menu-theme') {
+    .sf-menu {
+      color: $menu-content-color;
+      background-color: $menu-bg-color;
+
+      .sf-menu-root .sf-menu-item {
+        &:hover {
+          color: $menu-hover-content-color;
+          .sf-menu-icon, .sf-submenu-icon {
+            color: $menu-hover-icon-color;
+          }
+        }
+
+        &:active,
+        &.sf-has-submenu {
+          color: $menu-active-content-color;
+          .sf-menu-icon, .sf-submenu-icon {
+            color: $menu-active-icon-color;
+          }
+        }
+
+        &.sf-focused:not(:active) {
+          color: $menu-focus-content-color;
+          box-shadow: $menu-focus-box-shadow;
+          .sf-menu-icon, .sf-submenu-icon {
+            color: $menu-focus-icon-color;
+          }
+        }
+      }
+    }
+  }

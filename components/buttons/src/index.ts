@@ -7,3 +7,4 @@ export * from './radio-button/index';
 export * from './floating-action-button/index';
 export * from './chip/index';
 export * from './chip-list/index';
+export * from './switch/index';

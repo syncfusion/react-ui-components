@@ -15,6 +15,7 @@ const CLS_VSCROLLCNT: string = 'sf-vscroll-content';
 
 /**
  * Specifies the props for the ToolbarScrollable component.
+ *
  * @private
  */
 export interface ToolbarScrollableProps {
@@ -54,6 +55,7 @@ export interface ToolbarScrollableProps {
 
 /**
  * Specifies the reference interface for the ToolbarScrollable component.
+ *
  * @private
  */
 export interface ToolbarScrollableRef {

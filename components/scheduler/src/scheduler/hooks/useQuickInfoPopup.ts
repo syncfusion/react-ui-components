@@ -183,7 +183,7 @@ export const usePopup: (
             onEventClick(args);
         }
         if (args.cancel) { return; }
-        if (args && args.data && args.event.currentTarget) {
+        if (args && args.data && args.event && args.event.currentTarget) {
             handleEventClick(args.data, args.event.currentTarget as HTMLElement);
         }
     }, [onEventClick, handleEventClick]);

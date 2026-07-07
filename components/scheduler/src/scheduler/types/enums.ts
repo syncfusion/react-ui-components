@@ -1,7 +1,7 @@
 /**
  * Defines the view options for the Scheduler component.
  */
-export type View = 'Day' | 'Week' | 'WorkWeek' | 'Month';
+export type View = 'Day' | 'Week' | 'WorkWeek' | 'Month' | 'Agenda';
 
 /**
  * An enum that holds the options to render the spanned events in all day row or time slot.
@@ -36,7 +36,7 @@ export type WeekRule = 'FirstDay' | 'FirstFourDayWeek' | 'FirstFullWeek';
  * DeleteFollowingEvents :- Opens a confirmation dialog to delete the current and following occurrences of a recurring event.
  * ```
  */
-export type CrudAction = 'Add' | 'Edit' | 'EditSeries' | 'EditCurrentSeries' | 'EditOccurrence' | 'Delete' | 'DeleteOccurrence' | 'DeleteSeries' | 'EditFollowingEvents' | 'DeleteFollowingEvents';
+export type CrudAction = 'Add' | 'Edit' | 'EditSeries' | 'EditCurrentSeries' | 'EditOccurrence' | 'Delete' | 'DeleteOccurrence' | 'DeleteSeries' | 'EditFollowingEvents' | 'EditCurrentFollowingEvents' | 'DeleteFollowingEvents';
 
 /**
  * An enum that represents the context type used to open the editor.
@@ -47,7 +47,7 @@ export type CrudAction = 'Add' | 'Edit' | 'EditSeries' | 'EditCurrentSeries' | '
  * EditOccurrence :- Opens the editor to modify a specific occurrence of a recurring event.
  * ```
  */
-export type EditAction = 'Add' | 'Edit' | 'EditSeries' | 'EditOccurrence';
+export type EditAction = 'Add' | 'Edit' | 'EditSeries' | 'EditOccurrence' | 'EditFollowingEvents';
 
 /**
  * Represents keyboard navigation directions used within the Scheduler.

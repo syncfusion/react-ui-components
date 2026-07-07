@@ -1,6 +1,8 @@
 import { useMemo, JSX, ReactNode } from 'react';
 import { DateService, MINUTES_PER_HOUR } from '../services/DateService';
 import { TimeScaleProps, WorkHoursProps, SchedulerCellProps } from '../types/scheduler-types';
+import { CellData } from '../types/internal-interface';
+import { useResourceGroupingContext } from '../context/resource-grouping-context';
 
 /**
  * Interface for the props accepted by useWorkCells hook
@@ -40,7 +42,6 @@ interface UseWorkCellsProps {
      * The end hour of the scheduler
      */
     endHour: string;
-
 }
 
 /**
@@ -70,6 +71,7 @@ export interface WorkCell {
     dataAttributes: {
         date: number;
         dateKey?: string;
+        groupIndex?: number;
     };
 
     /**
@@ -91,6 +93,11 @@ export interface WorkCell {
      * Whether this is an alternate cell
      */
     isAlternate?: boolean;
+
+    /**
+     * Resource group index (sequential position among leaf resources)
+     */
+    groupIndex?: number;
 }
 
 /**
@@ -134,6 +141,15 @@ export const useWorkCells: (props: UseWorkCellsProps) => UseWorkCellsResult = (p
     const { hours: endHours, minutes: endMinutes } = endHour === '24:00'
         ? { hours: 24, minutes: 0 } : DateService.parseTimeString(endHour || '24:00');
 
+    const { isGroupingEnabled, columnLevels } = useResourceGroupingContext();
+    const columnLastLevelData: CellData[] = isGroupingEnabled && columnLevels.length > 0
+        ? columnLevels[columnLevels.length - 1]
+        : [];
+
+    const effectiveRenderDates: Date[] = columnLastLevelData.length > 0
+        ? columnLastLevelData.map((cell: CellData) => cell.date as Date)
+        : renderDates;
+
     const renderCellTemplate: (date: Date) => JSX.Element | null =
     (date: Date): JSX.Element | null => {
         if (!cell) {
@@ -155,11 +171,12 @@ export const useWorkCells: (props: UseWorkCellsProps) => UseWorkCellsResult = (p
 
         if (!timeScale.enable) {
             // For disabled time scale, create a single row with full-day cells
-            const cells: WorkCell[] = renderDates.map((date: Date) => {
+            const cells: WorkCell[] = effectiveRenderDates.map((date: Date, dateIndex: number) => {
                 const cellDate: Date = new Date(date);
                 cellDate.setHours(0, 0, 0, 0);
                 const isToday: boolean = DateService.isSameDay(date, new Date());
                 const isWeekend: boolean = DateService.isWeekend(date, workDays);
+                const groupIndex: number | undefined = columnLastLevelData[parseInt(dateIndex.toString(), 10)]?.groupIndex;
 
                 const className: string = [
                     'sf-work-cells',
@@ -171,13 +188,15 @@ export const useWorkCells: (props: UseWorkCellsProps) => UseWorkCellsResult = (p
                 return {
                     date: cellDate,
                     className,
-                    key: `${date.getTime()}-timescale-disabled`,
+                    key: `${dateIndex}-${date.getTime()}-timescale-disabled`,
                     dataAttributes: {
                         date: cellDate.getTime(),
-                        dateKey: DateService.generateDateKey(date)
+                        dateKey: DateService.generateDateKey(date),
+                        groupIndex
                     },
                     isToday,
-                    isWeekend
+                    isWeekend,
+                    groupIndex
                 };
             });
 
@@ -207,12 +226,13 @@ export const useWorkCells: (props: UseWorkCellsProps) => UseWorkCellsResult = (p
                     const dataAttribute: string = `${currentHour}:${currentMinute.toString().padStart(2, '0')}`;
 
                     // Create cells for this row
-                    const cells: WorkCell[] = renderDates.map((date: Date) => {
+                    const cells: WorkCell[] = effectiveRenderDates.map((date: Date, dateIndex: number) => {
                         const cellDate: Date = new Date(date);
                         cellDate.setHours(currentHour, currentMinute, 0, 0);
                         const isWorkHour: boolean = DateService.isWorkHour(cellDate, workHours, workDays);
                         const isToday: boolean = DateService.isSameDay(date, new Date());
                         const isWeekend: boolean = DateService.isWeekend(date, workDays);
+                        const groupIndex: number | undefined = columnLastLevelData[parseInt(dateIndex.toString(), 10)]?.groupIndex;
 
                         const className: string = [
                             'sf-work-cells',
@@ -225,14 +245,16 @@ export const useWorkCells: (props: UseWorkCellsProps) => UseWorkCellsResult = (p
                         return {
                             date: cellDate,
                             className,
-                            key: `${date.getTime()}-${currentHour}-${currentMinute}`,
+                            key: `${dateIndex}-${date.getTime()}-${currentHour}-${currentMinute}`,
                             dataAttributes: {
-                                date: cellDate.getTime()
+                                date: cellDate.getTime(),
+                                groupIndex
                             },
                             isWorkHour,
                             isToday,
                             isWeekend,
-                            isAlternate
+                            isAlternate,
+                            groupIndex
                         };
                     });
 
@@ -248,14 +270,15 @@ export const useWorkCells: (props: UseWorkCellsProps) => UseWorkCellsResult = (p
 
         return rows;
     }, [
-        renderDates,
+        effectiveRenderDates,
         timeScale,
         startHours,
         startMinutes,
         endHours,
         endMinutes,
         workDays,
-        workHours
+        workHours,
+        columnLastLevelData
     ]);
 
     return {

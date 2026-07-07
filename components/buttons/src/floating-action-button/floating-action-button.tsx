@@ -1,7 +1,8 @@
-import { useRef, useImperativeHandle, forwardRef, ButtonHTMLAttributes, useEffect, Ref, useMemo } from 'react';
+import { useRef, useImperativeHandle, forwardRef, ButtonHTMLAttributes, useEffect, Ref, useMemo, memo,
+    ForwardRefExoticComponent, ReactNode, RefAttributes, RefObject
+} from 'react';
 import { Button, IButton } from '../button/button';
 import { preRender, useProviderContext, Color, Size, Position} from '@syncfusion/react-base';
-import * as React from 'react';
 
 /**
  * Defines the position of FAB (Floating Action Button) in target.
@@ -80,7 +81,7 @@ export interface FabButtonProps {
      *
      * @default -
      */
-    icon?: React.ReactNode;
+    icon?: ReactNode;
 
     /**
      * Defines the position of the icon relative to the text on the FAB. Options may include 'Left', 'Right', 'Top', or 'Bottom'.
@@ -116,6 +117,34 @@ export interface IFabButton extends FabButtonProps {
 
 }
 
+const getFabPositionClasses: (position: FabPosition) => string[] =
+(position: FabPosition): string[] => {
+    let vertical: string = '';
+    let horizontal: string = '';
+    switch (position) {
+    case FabPosition.TopLeft:
+        vertical = 'sf-fab-top'; horizontal = 'sf-fab-left'; break;
+    case FabPosition.TopCenter:
+        vertical = 'sf-fab-top'; horizontal = 'sf-fab-center'; break;
+    case FabPosition.TopRight:
+        vertical = 'sf-fab-top'; horizontal = 'sf-fab-right'; break;
+    case FabPosition.MiddleLeft:
+        vertical = 'sf-fab-middle'; horizontal = 'sf-fab-left'; break;
+    case FabPosition.MiddleCenter:
+        vertical = 'sf-fab-middle'; horizontal = 'sf-fab-center'; break;
+    case FabPosition.MiddleRight:
+        vertical = 'sf-fab-middle'; horizontal = 'sf-fab-right'; break;
+    case FabPosition.BottomLeft:
+        vertical = 'sf-fab-bottom'; horizontal = 'sf-fab-left'; break;
+    case FabPosition.BottomCenter:
+        vertical = 'sf-fab-bottom'; horizontal = 'sf-fab-center'; break;
+    case FabPosition.BottomRight:
+    default:
+        vertical = 'sf-fab-bottom'; horizontal = 'sf-fab-right'; break;
+    }
+    return [vertical, horizontal].filter(Boolean);
+};
+
 type IFabProps = FabButtonProps & ButtonHTMLAttributes<HTMLButtonElement>;
 
 /**
@@ -128,9 +157,9 @@ type IFabProps = FabButtonProps & ButtonHTMLAttributes<HTMLButtonElement>;
  * ```
  */
 
-export const Fab: React.ForwardRefExoticComponent<IFabProps & React.RefAttributes<IFabButton>> =
+export const Fab: ForwardRefExoticComponent<IFabProps & RefAttributes<IFabButton>> =
     forwardRef<IFabButton, IFabProps>((props: IFabProps, ref: Ref<IFabButton>) => {
-        const buttonRef: React.RefObject<IButton | null> = useRef<IButton | null>(null);
+        const buttonRef: RefObject<IButton | null> = useRef<IButton | null>(null);
         const { dir } = useProviderContext();
         const {
             disabled = false,
@@ -145,7 +174,7 @@ export const Fab: React.ForwardRefExoticComponent<IFabProps & React.RefAttribute
             visible = true,
             ...domProps
         } = props;
-        const fabPositionClasses: string[] = useMemo(() => getFabPositionClasses(position, dir), [position, dir]);
+        const fabPositionClasses: string[] = useMemo(() => getFabPositionClasses(position), [position]);
         const classNames: string = useMemo(() => ([
             'sf-control',
             'sf-fab',
@@ -175,35 +204,6 @@ export const Fab: React.ForwardRefExoticComponent<IFabProps & React.RefAttribute
             preRender('fab');
         }, []);
 
-        function getFabPositionClasses(position: FabPosition | string, dir: string): string[] {
-            const positions: any  = {
-                vertical: '',
-                horizontal: '',
-                middle: '',
-                align: ''
-            };
-            if (['BottomLeft', 'BottomCenter', 'BottomRight'].indexOf(position) !== -1) {
-                positions.vertical = 'sf-fab-bottom';
-            } else {
-                positions.middle = 'sf-fab-top';
-            }
-            if (['MiddleLeft', 'MiddleRight', 'MiddleCenter'].indexOf(position) !== -1) {
-                positions.vertical = 'sf-fab-middle';
-            }
-            if (['TopCenter', 'BottomCenter', 'MiddleCenter'].indexOf(position) !== -1) {
-                positions.align = 'sf-fab-center';
-            }
-            const isRight: boolean = ['TopRight', 'MiddleRight', 'BottomRight'].indexOf(position) !== -1;
-            if (
-                (!((dir === 'rtl') || isRight) || ((dir === 'rtl') && isRight))
-            ) {
-                positions.horizontal = 'sf-fab-left';
-            } else {
-                positions.horizontal = 'sf-fab-right';
-            }
-            return Object.values(positions).filter(Boolean) as string[];
-        }
-
         return (
             <Button
                 ref={buttonRef}
@@ -221,4 +221,4 @@ export const Fab: React.ForwardRefExoticComponent<IFabProps & React.RefAttribute
         );
     });
 
-export default React.memo(Fab);
+export default memo(Fab);

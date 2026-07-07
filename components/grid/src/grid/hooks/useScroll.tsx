@@ -3,8 +3,8 @@ import { Browser, isNullOrUndefined } from '@syncfusion/react-base';
 import { useGridComputedProvider, useGridMutableProvider } from '../contexts';
 import { GridRef, IGrid } from '../types/grid.interfaces';
 import { MutableGridSetter, UseScrollResult, ScrollElements, ScrollCss, VirtualRowInfo, VirtualColumnInfo, ContentPanelRef, IRow } from '../types/interfaces';
-import { ActionType, ColumnProps, NewRowPosition, PagerArgsInfo, ScrollMode } from '../types';
-import { parseUnit } from '../utils';
+import { ActionType, ColumnProps, InfiniteScrollState, NewRowPosition, PagerArgsInfo, ScrollMode } from '../types';
+import { getPageFromRowIndex, parseUnit } from '../utils';
 
 /**
  * Custom hook to manage scroll synchronization between header and content panels
@@ -16,10 +16,12 @@ import { parseUnit } from '../utils';
 export const useScroll: <T>(contentPanelRef: ContentPanelRef<T>) => UseScrollResult<T> =
 <T, >(contentPanelRef: ContentPanelRef<T>): UseScrollResult<T> => {
     const grid: Partial<GridRef<T>> & Partial<MutableGridSetter<T>> = useGridComputedProvider<T>();
-    const { height, enableRtl, enableStickyHeader, columns, rowHeight, pageSettings,
-        setCurrentPage, setGridAction, getVisibleColumns, getRowHeight } = grid;
-    const { getParentElement, currentViewData, totalVirtualColumnWidth, setOffsetX, totalRecordsCount,
-        setOffsetY, columnOffsets, virtualSettings, scrollMode, editModule } = useGridMutableProvider<T>();
+    const { height, enableRtl, enableStickyHeader, columns, rowHeight, pageSettings, detailRowHeight, isMasterDetail,
+        setCurrentPage, setGridAction, getVisibleColumns, getRowHeight, groupSettings, cachedRowObjects } = grid;
+    const { getParentElement, currentViewData, totalVirtualColumnWidth, setOffsetX, totalRecordsCount, setInfiniteScrollState,
+        setOffsetY, columnOffsets, virtualSettings, scrollMode, editModule, infiniteScrollState, expansionState, expandedGroupCountRef,
+        loadedPageWiseGroupExpandedCountRef, loadedPageWiseVirtualGroupStartEndRowIndexes
+    } = useGridMutableProvider<T>();
     const [scrollStyles, setScrollStyles] = useState<{ headerPadding: CSSProperties; headerContentBorder: CSSProperties; }>({
         headerPadding: {},
         headerContentBorder: {}
@@ -37,7 +39,8 @@ export const useScroll: <T>(contentPanelRef: ContentPanelRef<T>) => UseScrollRes
     const virtualRowInfo: RefObject<VirtualRowInfo> = useRef<VirtualRowInfo>({
         offsetY: 0,
         startIndex: 0,
-        endIndex: currentViewData?.length,
+        endIndex: groupSettings.enabled && groupSettings.columns?.length && expandedGroupCountRef.current ? expandedGroupCountRef.current :
+            currentViewData?.length,
         requiredRowsRange: [],
         currentPages: [pageSettings.currentPage],
         previousPages: [],
@@ -283,8 +286,8 @@ export const useScroll: <T>(contentPanelRef: ContentPanelRef<T>) => UseScrollRes
     }, [enableStickyHeader]);
     useEffect(() => {
         const [startRow, endRow]: number[] = virtualRowInfo.current.requiredRowsRange;
-        if (scrollMode === ScrollMode.Virtual && isNullOrUndefined(startRow) && isNullOrUndefined(endRow) &&
-            isDataOperationPreventVirtualCache.current) {
+        if ((scrollMode === ScrollMode.Virtual || scrollMode === ScrollMode.Infinite) && isNullOrUndefined(startRow) &&
+            isNullOrUndefined(endRow) && isDataOperationPreventVirtualCache.current) {
             isDataOperationPreventVirtualCache.current = false;
         }
     }, [currentViewData, scrollMode]);
@@ -317,31 +320,52 @@ export const useScroll: <T>(contentPanelRef: ContentPanelRef<T>) => UseScrollRes
     }, []);
 
     useMemo(() => {
-        if (scrollMode === ScrollMode.Virtual && !isNullOrUndefined(isDataOperationPreventVirtualCache.current)) {
+        if ((scrollMode === ScrollMode.Virtual || scrollMode === ScrollMode.Infinite) &&
+            !isNullOrUndefined(isDataOperationPreventVirtualCache.current)) {
             isDataOperationPreventVirtualCache.current = true;
         }
     }, [grid.filterSettings?.columns, grid.filterSettings?.columns.length, grid.sortSettings?.columns,
         grid.sortSettings?.columns.length, grid.searchSettings?.value, scrollMode]);
 
-    const processPagesSequentially: (pages: number[], args: PagerArgsInfo, filteredTotalRecordsCount?: number) => void =
-    useCallback((pages: number[], args: PagerArgsInfo, filteredTotalRecordsCount?: number) => {
+    const processPagesSequentially: (pages: number[], args: PagerArgsInfo, filteredTotalRecordsCount?: number, throttle?: number) => void =
+    useCallback((pages: number[], args: PagerArgsInfo, filteredTotalRecordsCount?: number, throttle?: number) => {
         let index: number = 0;
 
         const requestNextPage: () => void = () => {
             if (index >= pages.length) { return; } // Done
             const pageNo: number = pages[index as number];
-            if (pageNo > Math.ceil((filteredTotalRecordsCount ?? totalRecordsCount) / pageSettings?.pageSize)) { return; }
+            const isVirtualScrollRequest: boolean = (pageNo * pageSettings.pageSize <= totalRecordsCount) &&
+                scrollMode === ScrollMode.Infinite && pageNo <= Math.ceil((filteredTotalRecordsCount ?? totalRecordsCount) /
+                pageSettings?.pageSize);
+            if ((pageNo > Math.ceil((filteredTotalRecordsCount ?? totalRecordsCount) / pageSettings?.pageSize) &&
+                scrollMode !== ScrollMode.Infinite) || (!isVirtualScrollRequest && scrollMode === ScrollMode.Infinite &&
+                    infiniteScrollState.isInfiniteEndReached)) {
+                return;
+            } else if (pageNo < 1) {
+                index++;
+                requestNextPage();
+                return;
+            }
             args.currentPage = pageNo;
             setCurrentPage(pageNo);
             setGridAction(args);
+            if (!isVirtualScrollRequest && scrollMode === ScrollMode.Infinite) {
+                grid.showSpinner();
+            }
+            setInfiniteScrollState((prevState: InfiniteScrollState) => ({
+                ...prevState,
+                isVirtualScrollRequest: isVirtualScrollRequest
+            }));
 
             // Wait for actionComplete event before continuing
             const onActionComplete: () => void = () => {
                 grid.element.removeEventListener('virtualScrollSequencialRequest', onActionComplete);
                 index++;
-                requestAnimationFrame(() => {
-                    requestNextPage(); // Trigger next page
-                });
+                setTimeout(() => {
+                    requestAnimationFrame(() => {
+                        requestNextPage(); // Trigger next page
+                    });
+                }, throttle);
             };
 
             grid.element?.addEventListener('virtualScrollSequencialRequest', onActionComplete);
@@ -350,9 +374,10 @@ export const useScroll: <T>(contentPanelRef: ContentPanelRef<T>) => UseScrollRes
         requestNextPage(); // Start first request
     }, [grid.element, pageSettings?.pageSize, totalRecordsCount]);
 
-    const scrollIntoVirtualRowsRangeView: (startPage: number, endPage: number, filteredTotalRecordsCount?: number) => void =
-        useCallback((startPage: number, endPage: number, filteredTotalRecordsCount?: number) => {
-            if (scrollMode !== ScrollMode.Virtual) { return; }
+    const scrollIntoVirtualRowsRangeView: (startPage: number, endPage: number, filteredTotalRecordsCount?: number,
+        throttle?: number) => void =
+        useCallback((startPage: number, endPage: number, filteredTotalRecordsCount?: number, throttle?: number) => {
+            if (scrollMode === ScrollMode.Auto) { return; }
             // Prepare pager arguments
             const args: PagerArgsInfo = {
                 cancel: false,
@@ -398,7 +423,7 @@ export const useScroll: <T>(contentPanelRef: ContentPanelRef<T>) => UseScrollRes
              * Sequentially update currentPage for combined page view.
              * Multiple requestAnimationFrame calls are intentional for UX consistency.
              */
-            processPagesSequentially(requestNewPages, args, filteredTotalRecordsCount);
+            processPagesSequentially(requestNewPages, args, filteredTotalRecordsCount, throttle);
         }, [virtualSettings, pageSettings, currentViewData, isDataOperationPreventVirtualCache, scrollMode]);
 
     /**
@@ -608,7 +633,9 @@ export const useScroll: <T>(contentPanelRef: ContentPanelRef<T>) => UseScrollRes
                 const adjustedScrollTop: number = totalAddFormRenderedRowHeight < last.current.top ?
                     (last.current.top - totalAddFormRenderedRowHeight) : 0;
 
-                const totalRows: number = scrollMode === ScrollMode.Virtual ? totalRecordsCount : currentViewData?.length;
+                const totalRows: number = groupSettings?.enabled && groupSettings?.columns?.length && expandedGroupCountRef.current ?
+                    expandedGroupCountRef.current : (scrollMode === ScrollMode.Virtual || scrollMode === ScrollMode.Infinite ?
+                        totalRecordsCount : currentViewData?.length);
 
                 // Calculate row offset if stretching is active
                 let browserLimitStretchedRowOffset: number = 0;
@@ -730,17 +757,50 @@ export const useScroll: <T>(contentPanelRef: ContentPanelRef<T>) => UseScrollRes
                         }
                     }
                 } else {
+                    const rows: IRow<ColumnProps<T>>[] = contentPanelRef.getRowsObject?.().filter(
+                        (row: IRow<ColumnProps<T>>) => { return !row.isDetailRow; });
+                    if (isMasterDetail && rows.length === totalRows) {
+                        ticking.current = false;
+                        return;
+                    }
                     // Fallback to average-based (for static heights without getRowHeight)
                     const averageRowHeight: number = (
                         (contentPanelRef.totalRenderedRowHeight.current === 0 ? rowHeight :
                             contentPanelRef.totalRenderedRowHeight.current) /
                         (contentPanelRef.cachedRowObjects.current.size === 0 ? 1 : contentPanelRef.cachedRowObjects.current.size)
                     );
-                    const viewPortStartIndex: number = Math.floor(effectiveScrollTop / (averageRowHeight === 0 ? rowHeight :
+                    let viewPortStartIndex: number = Math.floor(effectiveScrollTop / (averageRowHeight === 0 ? rowHeight :
                         averageRowHeight));
+                    let bufferWidth: number = 0;
+                    if (isMasterDetail && expansionState.size) {
+                        const expandRow: number[] = [...expansionState.keys()].sort((a: number, b: number) => a - b);
+                        for (let i: number = 0; i < expandRow.length; i++) {
+                            const index: number = expandRow[parseInt(i.toString(), 10)] as number;
+                            const isStart: boolean = viewPortStartIndex - index > Math.floor(detailRowHeight / averageRowHeight);
+                            if (!isStart && index < viewPortStartIndex ) {
+                                viewPortStartIndex = index;
+                                if ((viewPortStartIndex - (virtualSettings.rowBuffer - 1)) + 1 === last.current.startRow) {
+                                    viewPortStartIndex = viewPortStartIndex + 1;
+                                }
+                                break;
+                            } else if (isStart && index < viewPortStartIndex && !(viewPortStartIndex < virtualSettings.rowBuffer)) {
+                                viewPortStartIndex -=  Math.floor(detailRowHeight / averageRowHeight);
+                            }
+                        }
+                        for (let i: number = viewPortStartIndex - 1; i > viewPortStartIndex - virtualSettings.rowBuffer && i > 0; i--) {
+                            const isAdd: boolean = expansionState.has(i);
+                            bufferWidth = bufferWidth + (isAdd ? detailRowHeight : 0);
+                        }
+                    }
                     startIndex = viewPortStartIndex < virtualSettings.rowBuffer ? 0 :
                         viewPortStartIndex - (virtualSettings.rowBuffer - 1);
-                    nextOffsetY = startIndex * averageRowHeight;
+                    const idx: number = Math.floor(effectiveScrollTop / (averageRowHeight === 0 ? rowHeight :
+                        averageRowHeight));
+                    nextOffsetY =  (idx  < virtualSettings.rowBuffer ? 0 :
+                        ((idx - (virtualSettings.rowBuffer - 1))) * averageRowHeight) - bufferWidth;
+                    if (nextOffsetY < 0) {
+                        nextOffsetY = 0;
+                    }
                 }
 
                 if (startIndex !== last.current.startRow) {
@@ -770,32 +830,67 @@ export const useScroll: <T>(contentPanelRef: ContentPanelRef<T>) => UseScrollRes
                          * Handles virtual scrolling data updates and page state changes.
                          * Combines cache pruning, view data update, and sequential page state updates.
                          */
-                        if (scrollMode === ScrollMode.Virtual) {
+                        if (scrollMode === ScrollMode.Virtual || scrollMode === ScrollMode.Infinite) {
                             if (scrollStopTimerRef.current) {
                                 clearTimeout(scrollStopTimerRef.current);
                             }
 
                             scrollStopTimerRef.current = window.setTimeout(() => {
+                                const contentScrollTop: number = contentPanelRef.contentScrollRef.scrollTop;
+                                const contentClientHeight: number = contentPanelRef.contentScrollRef.clientHeight;
+                                const contentScrollHeight: number = contentPanelRef.contentScrollRef.scrollHeight;
                                 const [startRow, endRow]: number[] = virtualRowInfo.current.requiredRowsRange;
-                                if (isNullOrUndefined(startRow) && isNullOrUndefined(endRow)) { return; }
+                                if (isNullOrUndefined(startRow) && isNullOrUndefined(endRow)) {
+                                    if ((contentScrollTop + contentClientHeight) + 1 >= contentScrollHeight &&
+                                        !infiniteScrollState?.isInfiniteEndReached && scrollMode === ScrollMode.Infinite) {
+                                        const nextPageNo: number = Math.ceil(pageSettings.totalRecordsCount / pageSettings.pageSize) + 1;
+                                        scrollIntoVirtualRowsRangeView(pageSettings.currentPage, nextPageNo);
+                                    }
+                                    return;
+                                }
+                                if (groupSettings.enabled && virtualRowInfo.current?.currentPages?.find((page: number) =>
+                                    !loadedPageWiseGroupExpandedCountRef.current.has(page))) {
+                                    return;
+                                }
                                 const pageSize: number = pageSettings.pageSize;
+                                const startRowAdjusted: number = (startRow ?? endRow);
+                                const endRowAdjusted: number = (endRow ?? startRow);
+                                const startRowObject: IRow<ColumnProps<T>> = cachedRowObjects.current?.get(startRowAdjusted);
+                                const endRowObject: IRow<ColumnProps<T>> = cachedRowObjects.current?.get(endRowAdjusted);
+
                                 // Calculate start and end pages based on row range
-                                const startPage: number = Math.floor(
-                                    ((startRow ?? endRow) - (virtualSettings.rowBuffer)) / pageSize
-                                ) + 1;
-                                const endPage: number = Math.floor(
-                                    ((endRow ?? startRow) + (virtualSettings.rowBuffer)) / pageSize
-                                ) + 1;
-                                scrollIntoVirtualRowsRangeView(startPage, endPage);
-                            }, 150); // Debounce delay
+                                const startEndRowBuffer: number = virtualSettings.rowBuffer;
+                                const startPageCalc: number = startRowAdjusted - startEndRowBuffer;
+                                const endPageCalc: number = endRowAdjusted + startEndRowBuffer;
+                                let startPage: number = Math.floor(startPageCalc / pageSize) + 1;
+                                let endPage: number = Math.floor(endPageCalc / pageSize) + 1;
+                                if (groupSettings.enabled && groupSettings.columns?.length && !startRowObject?.data &&
+                                    !endRowObject?.data) {
+                                    const pageInfo: {
+                                        startPage: number;
+                                        endPage: number;
+                                    } = getPageFromRowIndex(startPageCalc, endPageCalc,
+                                                            loadedPageWiseVirtualGroupStartEndRowIndexes.current);
+                                    startPage = pageInfo.startPage;
+                                    endPage = pageInfo.endPage;
+                                }
+                                scrollIntoVirtualRowsRangeView(startPage, endPage, null, 0);
+                            }, virtualSettings?.throttleTime); // Debounce delay
                         }
                     }
+                }
+                if (isMasterDetail && expansionState.size && startIndex === 0) {
+                    const stretchedOffsetY: number = 0 - (virtualRowInfo.current.browserLimitStretchedRowOffset || 0);
+                    setOffsetY(stretchedOffsetY);
+                    virtualRowInfo.current.offsetY = stretchedOffsetY;
+                    last.current.offsetY = stretchedOffsetY;
                 }
             }
             ticking.current = false;
         });
-    }, [columns, totalVirtualColumnWidth, rowHeight, enableRtl, virtualSettings, contentPanelRef, pageSettings,
-        totalRecordsCount, currentViewData, scrollMode, scrollToVirtualColumnIndex]);
+    }, [columns, totalVirtualColumnWidth, rowHeight, enableRtl, virtualSettings, contentPanelRef, pageSettings, groupSettings,
+        totalRecordsCount, currentViewData, scrollMode, scrollToVirtualColumnIndex, infiniteScrollState?.isInfiniteEndReached,
+        expandedGroupCountRef.current]);
 
     const onVirtualRowContentScroll: (args: UIEvent<HTMLDivElement>) => void = useCallback((args: UIEvent<HTMLDivElement>): void => {
         const { contentScrollElement } = elementsRef.current;
@@ -803,7 +898,7 @@ export const useScroll: <T>(contentPanelRef: ContentPanelRef<T>) => UseScrollRes
         contentScrollElement.scrollTop = target.scrollTop;
         args.target = contentScrollElement;
         onContentScroll(args);
-    }, [onContentScroll]);
+    }, [onContentScroll, infiniteScrollState?.isInfiniteEndReached]);
 
     const onVirtualColumnContentScroll: (args: UIEvent<HTMLDivElement>) => void = useCallback((args: UIEvent<HTMLDivElement>): void => {
         const { contentScrollElement, headerScrollElement, footerScrollElement } = elementsRef.current;
@@ -898,7 +993,7 @@ export const useScroll: <T>(contentPanelRef: ContentPanelRef<T>) => UseScrollRes
         scrollToVirtualColumnIndex,
         setVirtualColumnEndIndex
     }), [setPadding, virtualRowInfo, virtualColumnInfo, scrollIntoVirtualRowsRangeView, isDataOperationPreventVirtualCache,
-        scrollToVirtualColumnIndex, setVirtualColumnEndIndex, getScrollBarWidth]);
+        scrollToVirtualColumnIndex, setVirtualColumnEndIndex, getScrollBarWidth, expandedGroupCountRef.current]);
 
     return {
         publicScrollAPI,

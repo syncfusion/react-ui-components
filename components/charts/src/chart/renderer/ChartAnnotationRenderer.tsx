@@ -1,71 +1,12 @@
 import * as React from 'react';
 import { useEffect, useLayoutEffect, useMemo, useState} from 'react';
-import {DateFormatOptions, HorizontalAlignment, VerticalAlignment, getDateParser, getDateFormat, SanitizeHtmlHelper} from '@syncfusion/react-base';
+import {DateFormatOptions, getDateParser, getDateFormat, SanitizeHtmlHelper} from '@syncfusion/react-base';
 import { DataUtil } from '@syncfusion/react-data';
 import { AxisModel, Chart, ChartSizeProps, Rect, SeriesProperties} from '../chart-area/chart-interfaces';
 import { ChartAnnotationProps, ChartLocationProps, SeriesAccessibility } from '../base/interfaces';
 import { useLayout } from '../layout/LayoutContext';
 import { withIn, logBase, getPoint, stringToNumber } from '../utils/helper';
-
-/**
- * Internal result shape that mirrors the "options" pattern in stack labels.
- * We keep the existing rendering shape but compute and store all values ahead of render.
- */
-interface AnnotationRendererResults {
-    id: string;
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-    visible: boolean;
-    contentHtml: string;
-    ariaLabel: string;
-    role: string;
-    tabIndex: number;
-}
-
-/**
- * Determines whether the given content string contains HTML markup.
- *
- * Heuristic:
- * - Trims the string and checks if it starts with "<"
- * - Verifies presence of an HTML-like tag using a regex
- *
- * @param {string | null | undefined} content - The annotation content to evaluate.
- * @returns {boolean} True if the content appears to be HTML; otherwise, false.
- * @private
- */
-export function isHtmlContent(content?: string | null): boolean {
-    if (!content) { return false; }
-    const textElement: string = String(content).trim();
-    return (textElement.startsWith('<') && /<\/?[a-z][\s\S]*>/i.test(textElement));
-}
-
-/**
- * Calculates position based on alignment parameters
- * @param {HorizontalAlignment | VerticalAlignment | undefined} alignment - Horizontal or vertical alignment
- * @param {number} size - Size value in direction to align
- * @param {number} value - Base coordinate value
- * @returns {number} Adjusted coordinate position
- */
-function setAlignmentValue(
-    alignment: HorizontalAlignment | VerticalAlignment | undefined,
-    size: number,
-    value: number
-): number {
-    switch (alignment) {
-    case 'Top':
-    case 'Left':
-        return value - size;
-    case 'Bottom':
-    case 'Right':
-        return value;
-    case 'Center':
-        return value - size / 2;
-    default:
-        return value;
-    }
-}
+import { AnnotationRendererResults, isHtmlContent, setAlignmentValue } from '../../common/annotation';
 
 /**
  * Calculates pixel-based annotation position
@@ -111,7 +52,7 @@ function setAnnotationPixelValue(
  * @param {string} html - The HTML markup to measure.
  * @returns {ChartSizeProps} The measured size in pixels.
  */
-function measureAnnotationHtml(html: string): ChartSizeProps {
+function measureHtmlSize(html: string): ChartSizeProps {
     const container: HTMLElement = document.createElement('div');
     container.style.position = 'absolute';
     container.style.visibility = 'hidden';
@@ -222,7 +163,6 @@ function setAnnotationPointValueChart(
  *
  * @param {Chart} chart - Chart instance providing layout, axis, and size information.
  * @param {ChartAnnotationProps[]} annotations - The annotation configuration list.
- * @param {(HTMLDivElement | null)[]} htmlDivs - References to HTML divs for measurement when available.
  * @returns {AnnotationRendererResults[]} Computed options for rendering annotations.
  * @internal
  */
@@ -241,7 +181,7 @@ function renderAnnotations(
 
         const id: string = `${(chart.element as HTMLElement).id}_Annotation_${index}`;
         const annotationAccessibility: SeriesAccessibility | undefined = annotation.accessibility;
-        const ariaLabel: string = (annotationAccessibility?.ariaLabel as string | undefined) || '';
+        const ariaLabel: string = (annotationAccessibility?.ariaLabel as string | undefined) || 'Annotation';
         const role: string = (annotationAccessibility?.role as string | undefined) || 'img';
         const tabIndex: number = annotationAccessibility?.focusable ? (annotationAccessibility?.tabIndex ?? 0) : -1;
 
@@ -280,7 +220,7 @@ function renderAnnotations(
             continue;
         }
 
-        const size: ChartSizeProps = sanitizedHtml ? measureAnnotationHtml(sanitizedHtml) : { width: 1, height: 1 };
+        const size: ChartSizeProps = sanitizedHtml ? measureHtmlSize(sanitizedHtml) : { width: 1, height: 1 };
         const measuredWidth: number = size.width;
         const measuredHeight: number = size.height;
         const left: number = setAlignmentValue(annotation.hAlign, measuredWidth, location.x);
@@ -407,10 +347,10 @@ export function renderChartAnnotations(
 }
 
 /**
- * Renders chart annotations with proper positioning and types
+ * Renders chart annotations with proper positioning and types.
  *
- * @param {ChartAnnotationProps[]} props - Array of annotation properties
- * @returns {JSX.Element} HTML container containing all annotations
+ * @param {ChartAnnotationProps[]} props - Array of annotation properties.
+ * @returns {Element} HTML container containing all annotations.
  */
 export const ChartAnnotationRenderer: React.FC<ChartAnnotationProps[]> = (props: ChartAnnotationProps[] ): React.JSX.Element | null => {
     const { layoutRef, reportMeasured, phase, animationProgress } = useLayout();

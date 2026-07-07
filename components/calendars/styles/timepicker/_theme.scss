@@ -24,8 +24,13 @@
       background: $timepicker-list-focus-bg-color;
     }
     
+    &:active {
+      background: $timepicker-list-active-bg-color;
+    }
+
     &.sf-active {
       background: $timepicker-list-selected-bg-color;
+      color: $timepicker-list-selected-text-color;
     }
   }
 }

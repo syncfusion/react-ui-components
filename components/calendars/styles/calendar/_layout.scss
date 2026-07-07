@@ -12,6 +12,13 @@
     .sf-radius-full {
       border-radius: $calendar-header-border-radius;
     }
+
+    .sf-calendar-title {
+      font-weight: $calendar-title-text-font-weight;
+      font-size: $calendar-title-text-font-size;
+      line-height: $calendar-title-text-line-height;
+      letter-spacing: $calendar-title-text-letter-spacing;
+    }
   }
 
   .sf-calendar-decade .sf-calendar-title {
@@ -58,6 +65,7 @@
     height: $calendar-normal-year-decade-height-inside;
     line-height: $calendar-normal-year-decade-height-inside;
     width: $calendar-normal-year-decade-width;
+    white-space: nowrap;
   }
 
   .sf-calendar-footer {
@@ -97,6 +105,10 @@
       display: flex;
       min-width: $calendar-min-width;
       width: $calendar-orientation-width;
+    }
+
+    &.sf-week-number {
+      width: $calendar-week-number-width;
     }
   }
 

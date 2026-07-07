@@ -11,13 +11,13 @@ import { ElementWithSize, ChartSizeProps } from './chart-area/chart-interfaces';
  *
  */
 export interface IChart extends ChartComponentProps {
+
     /**
-     * Optional method to clean up or destroy the chart instance.
-     * Can be used to release resources or detach event listeners when the chart is no longer needed.
+     * Specifies the root DOM element of the chart.
      *
      * @private
      */
-    destroy?: () => void;
+    element?: HTMLElement | null;
 }
 
 /**
@@ -27,7 +27,7 @@ export interface IChart extends ChartComponentProps {
  * ```typescript
  * import { Chart, ChartPrimaryXAxis, ChartSeries, ChartSeriesCollection } from '@syncfusion/react-charts';
  *
- * <Chart >
+ * <Chart>
  *   <ChartPrimaryXAxis valueType='Category' />
  *   <ChartSeriesCollection>
  *     <ChartSeries dataSource={categoryData} xField="x" yField="y" type="Line" />
@@ -41,7 +41,6 @@ export const Chart: React.ForwardRefExoticComponent<ChartComponentProps & React.
         const chartRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
         const { dir } = useProviderContext();
         const [element, setElement] = useState<ElementWithSize | null>(null);
-        const [isDestroyed, setIsDestroyed] = useState(false);
         useEffect(() => {
             const container: HTMLDivElement = chartRef.current as HTMLDivElement;
             container.style.touchAction = 'element';
@@ -64,8 +63,9 @@ export const Chart: React.ForwardRefExoticComponent<ChartComponentProps & React.
         }, [props.height, props.width]);
 
         useImperativeHandle(ref, () => ({
-            destroy: () => { setIsDestroyed(true); }
-        }), []);
+            element: chartRef.current,
+            theme: props.theme || 'Material'
+        }), [props.theme]);
 
         useEffect(() => {
             preRender('chart');
@@ -74,7 +74,7 @@ export const Chart: React.ForwardRefExoticComponent<ChartComponentProps & React.
         const chartProps: ChartComponentProps = { ...defaultChartConfigs.chart, ...props };
         chartProps.accessibility = { ...defaultChartConfigs.accessibility, ...props.accessibility };
         return (
-            !isDestroyed && (
+            (
                 <div ref={chartRef}
                     dir={dir}
                     id={props.id}

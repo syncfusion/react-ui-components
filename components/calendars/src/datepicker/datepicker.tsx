@@ -1,22 +1,23 @@
-import { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle, useMemo, useId } from 'react';
+import { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { InputBase, renderFloatLabelElement } from '@syncfusion/react-inputs';
-import { Browser, useProviderContext, preRender, LabelMode, Orientation, Size } from '@syncfusion/react-base';
+import { InputBase, HelperText, renderFloatLabelElement } from '@syncfusion/react-inputs';
+import { Browser, useProviderContext, preRender, LabelMode, Orientation, Size, useStableId } from '@syncfusion/react-base';
 import { Popup, CollisionType, type IPopup } from '@syncfusion/react-popups';
 import { CloseIcon, TimelineTodayIcon } from '@syncfusion/react-icons';
-import { Calendar } from '../calendar';
+import { Calendar, InputPrefix, InputSuffix } from '../calendar';
 import { CalendarView, ViewChangeEvent, ICalendar, CalendarProps, CalendarChangeEvent } from '../calendar';
-import { GregorianCalendar } from '../calendar-core';
+import { CalendarSystem, createCalendarSystem } from '../calendar-core';
 import { inRange } from '../calendar/utils';
 import { DatePickerProps, PickerVariant, Variant } from './types';
 import { createIsDateDisabledByCellTemplate, getFocusableElementsInRoot } from './utils';
 import usePickerInput, { UsePickerInputResult } from '../hooks/usePickerInputs';
+import usePickerInputKeyDown from '../hooks/usePickerInputKeyDown';
 import usePickerPopup from '../hooks/usePickerPopup';
 import * as React from 'react';
 import useDateFormatting from '../hooks/useDateFormatting';
 export { LabelMode };
 
-type IDatePickerProps = IDatePicker & Omit<React.HTMLAttributes<HTMLDivElement>, 'defaultValue' | 'value' | 'onChange'>;
+type IDatePickerProps = IDatePicker & Omit<React.InputHTMLAttributes<HTMLInputElement>, keyof IDatePicker>;
 
 export interface IDatePicker extends DatePickerProps {
     /**
@@ -30,13 +31,23 @@ export interface IDatePicker extends DatePickerProps {
 
 /**
  * The DatePicker component provides an input with an integrated calendar popup for selecting a single date.
+ * It supports date formatting, parsing, min/max date constraints, strict mode validation, custom calendar templates,
+ * and can be rendered as an inline picker or a dialog-based picker.
+ *
+ * ```typescript
+ * import { DatePicker } from '@syncfusion/react-calendars';
+ *
+ * export default function App() {
+ *   return <DatePicker />;
+ * }
+ * ```
  */
 export const DatePicker: React.ForwardRefExoticComponent<IDatePickerProps & React.RefAttributes<IDatePicker>> =
     forwardRef<IDatePicker, IDatePickerProps>((props: IDatePickerProps, ref: React.Ref<IDatePicker>) => {
         const {
             className = '',
             placeholder = 'Choose a date',
-            id = `datepicker_${useId()}`,
+            id,
             disabled = false,
             readOnly = false,
             labelMode = 'Never',
@@ -65,11 +76,13 @@ export const DatePicker: React.ForwardRefExoticComponent<IDatePickerProps & Reac
             disablePastDays,
             disableFutureDays,
             variant = Variant.Standard,
-            zIndex = 1000,
+            prefix,
+            suffix,
             cellTemplate,
             footerTemplate,
             headerTemplate,
             onChange,
+            onViewChange,
             onOpen,
             onClose,
             openOnFocus = false,
@@ -78,11 +91,21 @@ export const DatePicker: React.ForwardRefExoticComponent<IDatePickerProps & Reac
             valid,
             validationMessage = '',
             validityStyles = true,
+            inputProps,
+            popupSettings,
+            helperText,
+            helperTextOnFocus = false,
+            helperTextDirection = 'Left',
+            calendarType,
+            inputMask = false,
+            maskPlaceholder,
             ...otherProps
         } = props;
 
+        const generatedId: string = useStableId('sf-datepicker');
+        const datePickerId: string = id ?? generatedId;
         const { locale, dir } = useProviderContext();
-        const calendarSystem: GregorianCalendar = useMemo<GregorianCalendar>(() => new GregorianCalendar(), []);
+        const calendarSystem: CalendarSystem = useMemo<CalendarSystem>(() => createCalendarSystem(calendarType || 'gregorian'), [calendarType]);
         const [selectedDate, setSelectedDate] = useState<Date | null>(value ?? defaultValue ?? null);
         const containerRef: React.RefObject<HTMLSpanElement | null> = useRef<HTMLSpanElement | null>(null);
         const inputRef: React.RefObject<HTMLInputElement | null> = useRef<HTMLInputElement>(null);
@@ -128,7 +151,7 @@ export const DatePicker: React.ForwardRefExoticComponent<IDatePickerProps & Reac
             onChange?.({ value: newDate, event });
         }, [isControlled, onChange]);
 
-        const { isOpen, showPopup, hidePopup, togglePopup, zIndexPopup } = usePickerPopup({
+        const { isOpen, showPopup, hidePopup, togglePopup, resolvedPopupSettings } = usePickerPopup({
             open,
             defaultOpen: false,
             disabled,
@@ -139,7 +162,7 @@ export const DatePicker: React.ForwardRefExoticComponent<IDatePickerProps & Reac
             contentRefs: [popupRef as unknown as React.RefObject<HTMLElement | null>,
                 calendarRef as unknown as React.RefObject<HTMLElement | null>],
             inputRef,
-            baseZIndex: zIndex
+            popupSettings
         });
 
         const getFocusableElements: () => HTMLElement[] = useCallback((): HTMLElement[] => {
@@ -194,8 +217,8 @@ export const DatePicker: React.ForwardRefExoticComponent<IDatePickerProps & Reac
         }, [commitValue, hidePopup, isValidDate]);
 
         const handleViewChange: (args: ViewChangeEvent) => void = useCallback((args: ViewChangeEvent): void => {
-            props.onViewChange?.({ view: args.view, date: args.date, event: args.event });
-        }, [props.onViewChange]);
+            onViewChange?.({ view: args.view, date: args.date, event: args.event });
+        }, [onViewChange]);
 
         const calendarProps: CalendarProps = useMemo(() => ({
             value: currentValue && !Array.isArray(currentValue) ? currentValue : null,
@@ -213,6 +236,7 @@ export const DatePicker: React.ForwardRefExoticComponent<IDatePickerProps & Reac
             disablePastDays,
             disableFutureDays,
             weekDaysFormat,
+            calendarType,
             cellTemplate,
             headerTemplate,
             footerTemplate,
@@ -222,7 +246,7 @@ export const DatePicker: React.ForwardRefExoticComponent<IDatePickerProps & Reac
             currentValue, minDate, maxDate, start, depth, firstDayOfWeek, weekNumber, weekRule,
             showToolBar, showTodayButton, orientation, weekDaysFormat, cellTemplate,
             headerTemplate, footerTemplate, handleCalendarChange, handleViewChange, showDaysOutsideCurrentMonth,
-            disablePastDays, disableFutureDays
+            disablePastDays, disableFutureDays, calendarType
         ]);
 
         const handleIconClick: () => void = useCallback((): void => {
@@ -241,7 +265,8 @@ export const DatePicker: React.ForwardRefExoticComponent<IDatePickerProps & Reac
             locale,
             type: 'date',
             format,
-            inputFormats
+            inputFormats,
+            calendarType
         });
 
         const pickerInput: UsePickerInputResult = usePickerInput({
@@ -263,7 +288,16 @@ export const DatePicker: React.ForwardRefExoticComponent<IDatePickerProps & Reac
             parseInput,
             isValid: isValidDate,
             commitValue,
-            onOpen: showPopup
+            onOpen: showPopup,
+            inputMask,
+            format,
+            maskPlaceholder,
+            calendarType
+        });
+
+        const handleInputKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void = usePickerInputKeyDown({
+            maskOnKeyDown: pickerInput.maskInputProps?.onKeyDown,
+            pickerOnKeyDown: handleKeyDown
         });
 
         const handleClearMouseDown: (e: React.MouseEvent<HTMLSpanElement>)
@@ -284,7 +318,6 @@ export const DatePicker: React.ForwardRefExoticComponent<IDatePickerProps & Reac
             disabled,
             open,
             clearButton,
-            zIndex,
             strictMode,
             pickerVariant,
             value: currentValue || null,
@@ -305,7 +338,12 @@ export const DatePicker: React.ForwardRefExoticComponent<IDatePickerProps & Reac
             cellTemplate,
             footerTemplate,
             headerTemplate,
-            showToolBar
+            showToolBar,
+            inputProps,
+            helperText,
+            helperTextOnFocus,
+            helperTextDirection,
+            calendarType
         };
 
         useImperativeHandle(ref, (): IDatePicker => ({
@@ -326,107 +364,139 @@ export const DatePicker: React.ForwardRefExoticComponent<IDatePickerProps & Reac
                 : ''
         ].filter(Boolean).join(' ');
 
+        const iconClassNames: string = [
+            'sf-input-icon', 'sf-icons',
+            (disabled || inputProps?.disabled) ? 'sf-disabled' : ''
+        ].filter(Boolean).join(' ');
+
+        const handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void = (
+            e: React.ChangeEvent<HTMLInputElement>
+        ) => {
+            if (!pickerInput.maskInputProps && (!editable || readOnly || disabled)) {
+                return;
+            }
+            if (pickerInput.maskInputProps?.onChange) {
+                pickerInput.maskInputProps.onChange(e);
+            } else {
+                pickerInput.handleInputChange(e);
+            }
+        };
+
         return (
-            <span
-                ref={containerRef}
-                className={classNames}
-                {...otherProps}
-            >
-                <InputBase
-                    ref={inputRef}
-                    id={id}
-                    placeholder={labelMode === 'Never' ? pickerInput.getPlaceholder : ''}
-                    disabled={disabled}
-                    readOnly={readOnly || !editable}
-                    onFocus={pickerInput.handleInputFocus}
-                    onBlur={pickerInput.handleInputBlur}
-                    value={pickerInput.inputValue}
-                    onChange={editable && !readOnly && !disabled ? pickerInput.handleInputChange : undefined}
-                    role="combobox"
-                    aria-haspopup="dialog"
-                    aria-autocomplete='none'
-                    aria-expanded={!!isOpen}
-                    aria-controls={isOpen ? `${id}_options` : undefined}
-                    aria-disabled={disabled}
-                    aria-label={pickerInput.getPlaceholder ||  'Date picker input'}
-                    onKeyDown={handleKeyDown}
-                    tabIndex={0}
-                    required={required}
-                />
-
-                {labelMode !== 'Never' && renderFloatLabelElement(
-                    labelMode,
-                    false,
-                    pickerInput.inputValue,
-                    placeholder,
-                    id
-                )}
-
-                {clearButton && !!pickerInput.inputValue && (pickerInput.isFocused || !!isOpen) && !readOnly && (
-                    <span
-                        className="sf-clear-icon sf-input-icon"
-                        aria-label="clear date value"
-                        role="button"
-                        onMouseDown={handleClearMouseDown}
-                    >
-                        <CloseIcon />
-                    </span>
-                )}
-
+            <>
                 <span
-                    className="sf-input-icon sf-icons"
-                    aria-label="select date"
-                    role="button"
-                    onClick={handleIconClick}
-                    onMouseDown={(e: React.MouseEvent<HTMLSpanElement, MouseEvent>): void => {
-                        e.preventDefault();
-                    }}
+                    ref={containerRef}
+                    className={classNames}
+                    {...otherProps}
                 >
-                    {pickerIcon === true ? <TimelineTodayIcon viewBox="0 0 24 26" /> : pickerIcon}
-                </span>
+                    <InputPrefix prefix={prefix} />
+                    <InputBase
+                        ref={inputRef}
+                        id={datePickerId}
+                        placeholder={labelMode === 'Never' && !pickerInput.showMaskSegments ? pickerInput.getPlaceholder : ''}
+                        disabled={disabled || (inputProps && inputProps.disabled)}
+                        readOnly={readOnly || (inputProps && inputProps.readOnly) || (!editable && !inputMask) || !editable}
+                        onFocus={pickerInput.handleInputFocus}
+                        onBlur={pickerInput.handleInputBlur}
+                        value={pickerInput.maskInputProps ? pickerInput.maskInputProps.value : pickerInput.inputValue}
+                        onChange={(pickerInput.maskInputProps || (editable && !readOnly && !disabled)) ? handleChange : undefined}
+                        onKeyDown={handleInputKeyDown}
+                        onClick={pickerInput.maskInputProps?.onClick}
+                        onPaste={pickerInput.maskInputProps?.onPaste}
+                        role="combobox"
+                        aria-haspopup="dialog"
+                        aria-autocomplete='none'
+                        aria-expanded={!!isOpen}
+                        aria-controls={isOpen ? `${datePickerId}_options` : undefined}
+                        aria-disabled={disabled || (inputProps && inputProps.disabled)}
+                        aria-label={pickerInput.getPlaceholder || 'Date picker input'}
+                        tabIndex={inputProps?.disabled ? -1 : 0}
+                        required={required}
+                        {...inputProps}
+                    ></InputBase>
+                    <InputSuffix suffix={suffix} />
+                    {labelMode !== 'Never' && renderFloatLabelElement(
+                        labelMode,
+                        false,
+                        pickerInput.inputValue,
+                        placeholder,
+                        datePickerId
+                    )}
 
-                {isOpen && createPortal(
-                    <>
-                        {useDialog && (
-                            <div id={`${id}_options`} className="sf-datepick-popup-wrap sf-picker-popup" style={{ zIndex: zIndexPopup.toString() }}>
-                                <div className={'sf-overlay'}></div>
+                    {clearButton && (!!pickerInput.inputValue || !!pickerInput.hasPartialInput) && (pickerInput.isFocused || !!isOpen)
+                    && !readOnly && (
+                        <span
+                            className="sf-clear-icon sf-input-icon"
+                            aria-label="clear date value"
+                            role="button"
+                            onMouseDown={handleClearMouseDown}
+                        >
+                            <CloseIcon />
+                        </span>
+                    )}
+
+                    <span
+                        className={iconClassNames}
+                        aria-label="select date"
+                        role="button"
+                        onClick={handleIconClick}
+                        onMouseDown={(e: React.MouseEvent<HTMLSpanElement, MouseEvent>): void => {
+                            e.preventDefault();
+                        }}
+                    >
+                        {pickerIcon === true ? <TimelineTodayIcon viewBox="0 0 24 26" /> : pickerIcon}
+                    </span>
+
+                    {isOpen && createPortal(
+                        <>
+                            {useDialog && (
+                                <div id={`${datePickerId}_options`} className="sf-datepick-popup-wrap sf-picker-popup" style={{ zIndex: resolvedPopupSettings?.zIndex?.toString() }}>
+                                    <div className={'sf-overlay'}></div>
+                                    <Popup
+                                        ref={popupRef}
+                                        className={'sf-datepicker sf-popup sf-content-center'}
+                                        open={!!isOpen}
+                                        style={{ top: '0px', left: '0px', position: 'relative' }}
+                                        onOpen={openPopup}
+                                        relateTo={document.body}
+                                        position={{ X: 'center', Y: 'center' }}
+                                        onKeyDown={handleKeyDown}
+                                        collision={{ X: CollisionType.Fit, Y: CollisionType.Fit }}
+                                        {...resolvedPopupSettings}
+                                    >
+                                        <Calendar ref={calendarRef} {...calendarProps} />
+                                    </Popup>
+                                </div>
+                            )}
+                            {useInline && typeof document != 'undefined' && (
                                 <Popup
                                     ref={popupRef}
-                                    className={'sf-datepicker sf-popup sf-content-center'}
+                                    id={`${datePickerId}_options`}
+                                    className="sf-datepicker sf-popup"
                                     open={!!isOpen}
-                                    style={{ top: '0px', left: '0px', position: 'relative' }}
-                                    zIndex={zIndexPopup}
                                     onOpen={openPopup}
-                                    relateTo={document.body}
-                                    position={{ X: 'center', Y: 'center' }}
+                                    relateTo={containerRef.current as HTMLElement}
+                                    position={{ X: 'left', Y: 'bottom' }}
+                                    offsetY={4}
                                     onKeyDown={handleKeyDown}
-                                    collision={{ X: CollisionType.Fit, Y: CollisionType.Fit }}
+                                    collision={{ X: CollisionType.Flip, Y: CollisionType.Flip }}
+                                    {...resolvedPopupSettings}
                                 >
                                     <Calendar ref={calendarRef} {...calendarProps} />
                                 </Popup>
-                            </div>
-                        )}
-                        {useInline && typeof document != 'undefined' && (
-                            <Popup
-                                ref={popupRef}
-                                id={`${id}_options`}
-                                className="sf-datepicker sf-popup"
-                                open={!!isOpen}
-                                zIndex={zIndexPopup}
-                                onOpen={openPopup}
-                                relateTo={containerRef.current as HTMLElement}
-                                position={{ X: 'left', Y: 'bottom' }}
-                                offsetY={4}
-                                onKeyDown={handleKeyDown}
-                                collision={{ X: CollisionType.Flip, Y: CollisionType.Flip }}
-                            >
-                                <Calendar ref={calendarRef} {...calendarProps} />
-                            </Popup>
-                        )}
-                    </>,
-                    document.body
-                )}
-            </span>
+                            )}
+                        </>,
+                        document.body
+                    )}
+                </span>
+                <HelperText
+                    helperText={helperText}
+                    helperTextOnFocus={helperTextOnFocus}
+                    isFocused={pickerInput.isFocused || isOpen}
+                    helperTextDirection={helperTextDirection}
+                />
+            </>
+
         );
     });
 

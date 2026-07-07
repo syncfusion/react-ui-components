@@ -1,5 +1,5 @@
 import { Dispatch, SetStateAction } from 'react';
-import { FilterType, FilterBarMode, ActionType, ValueType, IndicatorType } from './index';
+import { FilterType, FilterMode, ActionType, ValueType, IndicatorType } from './index';
 import { ColumnProps } from '../types/column.interfaces';
 import { ICustomOptr } from '../types/interfaces';
 import { GridActionEvent } from '../types/grid.interfaces';
@@ -62,18 +62,21 @@ export interface FilterSettings {
     loadingIndicator?: IndicatorType;
 
     /**
-     * Specifies the operational mode of the filter bar, controlling when filtering is triggered.
-     * Supports `OnEnter` (filtering starts when the Enter key is pressed) or `Immediate` (filtering starts after a time delay).
+     * Specifies the operational mode for filtering, controlling when filtering is triggered across filter bar, Excel filter, and checkbox filter.
+     * In filter bar: `OnEnter` requires Enter key press after typing; `Immediate` filters as user types.
+     * In Excel/Checkbox filter: `OnEnter` requires OK button click to apply; `Immediate` applies filtering without OK confirmation.
      * Influences the responsiveness and user experience of filtering interactions.
      *
-     * @type {FilterBarMode | string}
+     * @type {FilterMode | string}
      * @default 'Immediate'
      */
-    mode?: FilterBarMode | string;
+    mode?: FilterMode | string;
 
     /**
-     * Sets the time delay (in milliseconds) for filtering in `Immediate` mode.
+     * Sets the time delay (in milliseconds) for filtering in `Immediate` mode across all filter types.
      * Controls the wait time before the grid processes filter input, balancing responsiveness and performance.
+     * In filter bar: Delays filtering while user is typing in the filter input.
+     * In Excel/Checkbox filter: Delays filtering when user is searching or selecting items.
      * Only applicable when the filter mode is set to `Immediate`.
      *
      * @type {number}
@@ -111,6 +114,7 @@ export interface FilterSettings {
      * @default false
      */
     caseSensitive?: boolean;
+
 }
 
 /**
@@ -135,10 +139,10 @@ export interface FilterEvent extends GridActionEvent {
      * Defines the predicate object for the filter that was just applied.
      * Contains the `field`, `operator`, and `value` used in the completed filter operation.
      *
-     * @type {FilterPredicates}
+     * @type {FilterPredicates | FilterPredicates[]}
      * @default -
      */
-    currentFilterPredicate?: FilterPredicates;
+    currentFilterPredicate?: FilterPredicates | FilterPredicates[];
 
     /**
      * Lists all predicate objects representing the current filter conditions across columns.

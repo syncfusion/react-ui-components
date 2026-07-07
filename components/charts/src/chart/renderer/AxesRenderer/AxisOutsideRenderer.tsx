@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLayout } from '../../layout/LayoutContext';
 import { useAxisOutsideRendereVersion } from '../../hooks/useClipRect';
 import { AxisModel, Chart } from '../../chart-area/chart-interfaces';
+import { drawXAxisMultiLevelLabels, drawYAxisMultiLevelLabels } from './ChartMultiLevelLabelRender';
 
 
 /**
@@ -59,6 +60,17 @@ export const AxisOutsideRenderer: React.FC = () => {
                                 {axis.tickPosition === 'Inside' && axis.majorTickLineElement}
                                 {axis.tickPosition === 'Inside' && axis.minorTickLineElement}
                                 {axis.labelStyle.position === 'Inside' && axis.borderElement}
+                                {axis.lineElement}
+                                {axis.labelStyle.position === 'Inside' && (axis.multiLevelLabels?.length ?? 0) > 0 &&
+                                    drawYAxisMultiLevelLabels(
+                                        axis.multiLevelLabels ?? [],
+                                        axis,
+                                        axis.updatedRect,
+                                        idx,
+                                        chart.element.id,
+                                        chart
+                                    )
+                                }
                             </>
                         )}
 
@@ -74,6 +86,17 @@ export const AxisOutsideRenderer: React.FC = () => {
                                 {axis.tickPosition === 'Inside' && axis.majorTickLineElement}
                                 {axis.tickPosition === 'Inside' && axis.minorTickLineElement}
                                 {axis.labelStyle.position === 'Inside' && axis.borderElement}
+                                {axis.lineElement}
+                                {axis.labelStyle.position === 'Inside' && (axis.multiLevelLabels?.length ?? 0) > 0 &&
+                                    drawXAxisMultiLevelLabels(
+                                        axis.multiLevelLabels ?? [],
+                                        axis,
+                                        axis.updatedRect,
+                                        idx,
+                                        chart.element.id,
+                                        chart
+                                    )
+                                }
                             </>
                         )}
                     </g>

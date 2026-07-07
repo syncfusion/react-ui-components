@@ -10,7 +10,7 @@ import { ChartProviderChildProps } from '../chart-area/chart-interfaces';
  * This component doesn't render any UI elements but manages zoom configuration through context.
  *
  * @param {ChartZoomSettingsProps} props - Zoom settings configuration properties.
- * @returns {null} This component doesn't render any elements.
+ * @returns {null} - It is used only to pass the zooming configuration to the chart through the React context.
  */
 export const ChartZoomSettings: React.FC<ChartZoomSettingsProps> = (props: ChartZoomSettingsProps) => {
     const context: ChartProviderChildProps = React.useContext(ChartContext);
@@ -22,7 +22,7 @@ export const ChartZoomSettings: React.FC<ChartZoomSettingsProps> = (props: Chart
     }), [
         props.selectionZoom, props.accessibility, props.mouseWheelZoom,
         props.pinchZoom, props.pan,
-        props.mode, props.toolbar
+        props.mode, props.toolbar, props.enableScrollbar
     ]);
 
     // Only update context when zoomConfig changes

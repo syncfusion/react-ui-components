@@ -11,6 +11,7 @@
       display: inline-flex;
       align-items: flex-start;
       font-size: $toast-font-size;
+      line-height: $toast-line-height;
       margin: $toast-margin;
       overflow: hidden;
       padding: $toast-padding;
@@ -38,6 +39,7 @@
 
   .sf-toast-title {
     font-size: $toast-title-font-size;
+    line-height: $toast-title-line-height;
     font-weight: $toast-title-font-weight;
   }
 
@@ -70,6 +72,7 @@
   .sf-toast-icon {
     font-size: $toast-icon-font-size;
     margin-inline-end: $toast-icon-inline-margin;
+    margin-block-start: $toast-icon-block-margin;
 
     svg {
       font-size: $toast-close-icon-font-size;

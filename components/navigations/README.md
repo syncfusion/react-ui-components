@@ -27,7 +27,7 @@ The ContextMenu component displays a menu with options when triggered by a right
 **Usage**
 
 ```tsx
-import { ContextMenu } from "@syncfusion/react-navigations";
+import { ContextMenu, MenuItem, MenuItemLabel } from "@syncfusion/react-navigations";
 
 export default function App() {
   const targetRef = useRef<HTMLButtonElement>(null);
@@ -35,9 +35,15 @@ export default function App() {
     <div >
        <button ref={targetRef}> Right Click Me </button>
         <ContextMenu targetRef={targetRef as React.RefObject<HTMLElement>}>
-           <MenuItem text="Cut" />
-            <MenuItem text="Copy" />
-           <MenuItem text="Rename" />
+           <MenuItem>
+             <MenuItemLabel>Cut</MenuItemLabel>
+           </MenuItem>
+           <MenuItem>
+             <MenuItemLabel>Copy</MenuItemLabel>
+           </MenuItem>
+           <MenuItem>
+             <MenuItemLabel>Rename</MenuItemLabel>
+           </MenuItem>
        </ContextMenu>
     </div>    
   );
@@ -48,6 +54,52 @@ export default function App() {
 
 - [Context Menu Demo/Docs](https://react.syncfusion.com/react-ui/context-menu)
 - [Context Menu API](https://react.syncfusion.com/api/context-menu/overview)
+
+## React Menu
+
+The Menu component is a layout navigation menu with support for hierarchical menu items. It provides powerful control over menu interactions, customization options, and displays context-specific actions with nested submenus.
+
+**Key features**
+
+  - **Hierarchical Structure:** Create nested menus with unlimited nesting levels, allowing for organization of related menu items and commands.
+  - **Flexible Orientation:** Configure the menu in either horizontal or vertical layout to fit different UI design requirements and navigation patterns.
+  - **Icon Support:** Enhance visual recognition by adding icons to menu items using CSS classes or React components (SVG).
+  - **Submenu Rendering Modes:** Choose between inline and portal rendering modes:
+    - **Inline**: Submenu is rendered inline within the parent menu item
+    - **Portal**: Submenu is rendered in the document body for advanced positioning control
+  - **Interaction Modes:** Support for both hover-based and click-based submenu opening with customizable hover delay.
+  - **Animation Effects:** Choose from various animation effects like FadeIn, SlideDown, ZoomIn, and None to control how the menu appears.
+  - **Keyboard Navigation:** Comprehensive keyboard support for accessibility, including arrow keys for navigation, Enter for selection, and Escape to close menus.
+
+**Usage**
+
+```tsx
+import { Menu, MenuItem, MenuItemLabel, MenuItemIcon, Orientation } from "@syncfusion/react-navigations";
+
+export default function App() {
+  return (
+    <Menu orientation={Orientation.Horizontal}>
+      <MenuItem>
+        <MenuItemLabel>File</MenuItemLabel>
+        <MenuItem>
+          <MenuItemLabel>New</MenuItemLabel>
+        </MenuItem>
+        <MenuItem>
+          <MenuItemLabel>Open</MenuItemLabel>
+        </MenuItem>
+      </MenuItem>
+      <MenuItem>
+        <MenuItemLabel>Edit</MenuItemLabel>
+      </MenuItem>
+    </Menu>
+  );
+};
+```
+
+**Resources**
+
+- [Menu Demo/Docs](https://react.syncfusion.com/react-ui/menu)
+- [Menu API](https://react.syncfusion.com/api/menu/overview)
 
 ## React Toolbar
 

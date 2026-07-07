@@ -9,6 +9,7 @@ import { renderMarkerJSX } from './MarkerRenderer';
 import { LayoutMap } from '../../layout/LayoutContext';
 import { renderDataLabelJSX } from './DataLabelRender';
 import { getExponentialPoints, getLinearPoints, getMovingAveragePoints, getPolynomialPoints, getPowerPoints, getLogarithmicPoints } from '../../utils/trendlineHelper';
+import { seriesGroupAriaLabel } from './ariaLabelHelper';
 
 
 /**
@@ -563,6 +564,8 @@ export function renderTrendlineSeriesJSX(
                             transform={`translate(${clipRectX}, ${clipRectY})`}
                             style={{ outline: 'none' }}
                             role="region"
+                            aria-label={seriesGroupAriaLabel({ series: trendlineSeries
+                                , seriesIndex: trendlineSeriesIndex, totalSeriesCount: visibleSeries.length })}
                             aria-hidden="false"
                         >
                             {/* Clip path definition for trendlines */}

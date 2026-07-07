@@ -11,7 +11,7 @@ import { ChartProviderChildProps } from '../chart-area/chart-interfaces';
  * such as mode, color, and pattern when mounted.
  *
  * @param {ChartHighlightProps} props - Highlight configuration properties.
- * @returns {null} This component does not render any UI and returns null.
+ * @returns {null} - It is used only to pass the highlight configuration to the chart through the React context.
  */
 export const ChartHighlight: React.FC<ChartHighlightProps> = (props: ChartHighlightProps) => {
     const context: ChartProviderChildProps = useContext(ChartContext);

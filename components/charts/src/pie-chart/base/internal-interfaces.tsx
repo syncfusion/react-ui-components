@@ -640,7 +640,7 @@ export interface PathElementOption {
     borderDirection: string;
 
     /**
-     * Current point value that should pushed into options for aria-label.
+     * Current point value that should be pushed into options for aria-label.
      */
     point: Points;
 }
@@ -796,7 +796,7 @@ export interface BaseLegend extends PieChartLegendProps {
     /** Opacity value for the forward navigation arrow (0-1), controlled by page position. */
     forwardArrowOpacity?: number;
     /** Text description used for screen readers to improve accessibility. */
-    accessbilityText?: string;
+    accessibilityText?: string;
     /** Width of pagination arrow buttons in pixels. */
     arrowWidth?: number;
     /** Height of pagination arrow buttons in pixels. */
@@ -842,7 +842,7 @@ export interface BaseLegend extends PieChartLegendProps {
     /** SVG translate transform value specifically for legend positioning. */
     legendTranslate?: string;
     /** Calculated position for the legend title element. */
-    legendTitleLoction?: PieChartLocationProps;
+    legendTitleLocation?: PieChartLocationProps;
     /** Clipping rectangle for the chart legend. */
     legendClipRect?: Rect;
 }
@@ -1121,10 +1121,7 @@ export interface TextRenderOptions {
     color: string;
     /** Defines the border of the label. */
     border: PieChartBorderProps;
-    /** Defines the template for the data label.
-     *
-     * @aspType string
-     */
+    /** Defines the template for the data label. */
     template?: string | Function;
     /** Defines the font used for the label. */
     font: PieChartFontProps;

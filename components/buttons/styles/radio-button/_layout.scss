@@ -22,6 +22,10 @@
       content: '';
       position: absolute;
     }
+
+    .sf-label {
+      font-weight: $radio-btn-font-weight;
+    }
   }
 
   .sf-radio-label {
@@ -32,6 +36,10 @@
 
   .sf-radio:checked {
     +label {
+      &::before {
+        background-color: $radio-btn-outer-checked-bg-color;
+        border-color: $radio-btn-outer-checked-color;
+      }
       &::after {
         background-color: $radio-btn-checked-color;
         color: $radio-btn-checked-color;
@@ -71,6 +79,7 @@
       +label {
         cursor: default;
         pointer-events: none;
+        opacity: $radio-btn-disabled-opacity;
         &::before {
           background-color: $radio-btn-disabled-background-color;
           border-color: $radio-btn-disabled-border-color;
@@ -84,6 +93,14 @@
         }
         & .sf-label {
           color: $radio-btn-disabled-color;
+        }
+      }
+    }
+    &:active, &:focus {
+      +label {
+        &::before {
+          box-shadow: $radio-pressed-box-shadow;
+          border-color: $radio-pressed-border-color;
         }
       }
     }
@@ -172,18 +189,37 @@
   @each $variant, $colors in $radio-variants {
     .sf-radio-#{$variant} {
       .sf-radio:checked + label::after {
-        background-color: map.get($colors, bg);
-        border-color: map.get($colors, border);
+        background-color: map.get($colors, bg-inner);
+        border-color: map.get($colors, border-inner);
       }
 
-      .sf-radio-label::before {
-        border-color: map.get($colors, border);
+      .sf-radio:checked + label::before {
+        border-color: map.get($colors, border-outer);
+        background-color: map.get($colors, bg-outer);
       }
-
       .sf-radio-label:hover .sf-ripple-container {
         background: map.get($colors, hover);
       }
+
+      .sf-radio{
+        &:active, &:focus {
+          +label {
+            &::before {
+              box-shadow: map.get($colors, pressed-box-shadow);
+              border-color: map.get($colors, pressed-border-color);
+            }
+          }
+        }
+        &:focus-visible {
+          +label {
+            &::before {
+              box-shadow: map.get($colors, focus-box-shadow);
+            }
+          }
+        }
+      }
     }
+
   }
 
 }

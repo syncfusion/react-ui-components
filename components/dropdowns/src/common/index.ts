@@ -1,4 +1,6 @@
 /**
- * dropdown base modules
+ * Composite Dropdown Components - Root exports
  */
-export * from './drop-down-popup';
+export * from './dropdown';
+export * from './context/index';
+export * from './hooks/index';

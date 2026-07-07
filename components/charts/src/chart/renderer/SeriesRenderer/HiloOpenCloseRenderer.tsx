@@ -2,7 +2,7 @@ import * as React from 'react';
 import { ChartBorderProps, ChartMarkerProps } from '../../base/interfaces';
 import { DoubleRangeType, PointRenderingEvent, Points, Rect, RenderOptions, SeriesProperties } from '../../chart-area/chart-interfaces';
 import { ColumnBase, ColumnBaseReturnType, FinacialSeriesType } from './ColumnBase';
-import { applyPointRenderCallback, useVisiblePoints } from '../../utils/helper';
+import { applyPointRenderCallback, calculateVisiblePoints } from '../../utils/helper';
 import { handleRectAnimation } from './SeriesAnimation';
 import MarkerRenderer from './MarkerRenderer';
 
@@ -78,16 +78,6 @@ function createHiloOpenCloseSeriesRenderer(): FinacialSeriesType {
             return hiloOpenCloseBaseInstance.triggerEvent(series, point, customizedValues, border);
         };
 
-    /**
-     * Build the SVG path for Open/Close/High/Low ticks
-     *
-     * @param {SeriesProperties} series - The series to be rendered.
-     * @param {{x: number, y: number}} open - Coordinates for the Open tick.
-     * @param {{x: number, y: number}} close - Coordinates for the Close tick.
-     * @param {Rect} rect - The point region responsible for drawing Hilo ticks.
-     * @param {PointRenderingEvent} argsData - Point render event data, if triggered.
-     * @returns {string} Returns the SVG path direction as string.
-     */
     const getOpenClosePath: (series: SeriesProperties, open: {
         x: number;
         y: number;
@@ -213,7 +203,7 @@ function createHiloOpenCloseSeriesRenderer(): FinacialSeriesType {
                 }
             }
 
-            series.visiblePoints = useVisiblePoints(series);
+            series.visiblePoints = calculateVisiblePoints(series);
             const marker: ChartMarkerProps | null = series.marker?.visible ? MarkerRenderer.render(series) as ChartMarkerProps : null;
             return marker ? { options, marker } : options;
         },

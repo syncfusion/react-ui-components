@@ -1,9 +1,10 @@
 import { MouseEvent, useCallback } from 'react';
 import { useSchedulerPropsContext } from '../context/scheduler-context';
 import { SchedulerCellClickEvent } from '../types/scheduler-types';
-import { clearAndSelect } from '../utils/actions';
+import { clearAndSelect, getGroupIndexFromElement } from '../utils/actions';
 import { MS_PER_MINUTE } from '../services/DateService';
 import { CSS_CLASSES } from '../common/constants';
+import { isNullOrUndefined } from '@syncfusion/react-base';
 
 /** @private */
 export interface CellInteraction {
@@ -37,7 +38,7 @@ export const useCellInteraction: () => CellInteraction = (): CellInteraction => 
             } else {
                 endTime.setTime(date.getTime() + (timeScale.interval / timeScale.slotCount) * MS_PER_MINUTE);
             }
-            return {
+            const args: SchedulerCellClickEvent = {
                 cancel: false,
                 nativeEvent: e.nativeEvent,
                 startTime: date,
@@ -45,6 +46,11 @@ export const useCellInteraction: () => CellInteraction = (): CellInteraction => 
                 isAllDay: !!isAllDay,
                 element: e.currentTarget
             };
+            const groupIndex: number = getGroupIndexFromElement(e.currentTarget as HTMLElement);
+            if (!isNullOrUndefined(groupIndex)) {
+                args.groupIndex = groupIndex;
+            }
+            return args;
         }, [timeScale]);
 
     const handleCellClick: (e: MouseEvent<HTMLElement> | React.KeyboardEvent<HTMLElement>,

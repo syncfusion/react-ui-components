@@ -1,58 +1,75 @@
 @use "sass:map";
 @use 'theme-variables' as *;
 
-@mixin position-ripple() {
-  left: auto;
-  right: 0%;
-  transform: translate(25%, -50%);
-}
-
 @include export-module('checkbox-layout') {
 
   .sf-checkbox {
     height: 1px;
     width: 1px;
     position: absolute;
+    bottom: 20%;
+    left: 40%;
+    opacity: 0;
   }
 
   .sf-checkbox-wrapper {
     user-select: none;
     display: flex;
+    align-items: center;
 
     &:hover {
       .sf-checkbox-ripple {
         background: $cbox-checked-ripple-bgcolor;
       }
     }
-    
-    &.sf-focus {
+    &:active, &:focus {
+      .sf-checkbox-ripple {
+        box-shadow: $cbox-keyboard-pressed-box-shadow;
+        .sf-checkbox-icons {
+          border-color: $cbox-pressed-focus-border-color;
+        }
+      }
+    }
+    &:has(.sf-checkbox:focus-visible) {
       .sf-checkbox-ripple {
         box-shadow: $cbox-keyboard-focus-box-shadow;
+        .sf-checkbox-icons {
+          border-color: $cbox-pressed-focus-border-color;
+        }
       }
+    }
+    &.sf-disabled {
+      opacity: $cbox-disabled-opacity;
     }
   }
 
   .sf-checkbox-frame-sm {
-    font-size: $cbox-frame-sm-font-size;
+    width: $cbox-frame-sm-font-size;
+    height: $cbox-frame-sm-font-size;
 
     svg {
-      font-size: $cbox-icon-small-size;
+      width: $cbox-icon-small-size;
+      height: $cbox-icon-small-size;
     }
   }
 
   .sf-checkbox-frame-la {
-    font-size: $cbox-frame-la-font-size ;
+    width: $cbox-frame-la-font-size;
+    height: $cbox-frame-la-font-size;
 
     svg {
-      font-size: $cbox-icon-large-size;
+      width: $cbox-icon-large-size;
+      height: $cbox-icon-large-size;
     }
   }
 
   .sf-checkbox-frame-me {
-    font-size: $cbox-frame-me-font-size ;
+    width: $cbox-frame-me-font-size;
+    height: $cbox-frame-me-font-size;
 
     svg {
-      font-size: $cbox-icon-size;
+      width: $cbox-icon-size;
+      height: $cbox-icon-size;
     }
   }
 
@@ -62,10 +79,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-direction: inherit;
-    height: $cbox-frame-dimension;
-    width: $cbox-frame-dimension;
     flex: none;
+    background-color: $cbox-unchecked-bg-color;
+  }
+
+  .sf-checkbox-icons:not(.sf-error):not(.sf-checkbox-checked) {
+    color: $cbox-unchecked-color;
   }
 
   .sf-checkbox-checked,
@@ -81,50 +100,33 @@
     display: flex;
     align-items: center;
     color: $cbox-color;
-    gap: $cbox-margin;
-    width: 100%;
-
-    &.sf-left,
-    &.sf-right {
-      justify-content: flex-end;
-    }
 
     &.sf-right {
       flex-direction: row-reverse;
     }
 
+    &.sf-left {
+      flex-direction: row;
+    }
+
     &.sf-top {
       align-items: flex-start;
       flex-direction: column;
-      line-height: $cbox-vertical-line-height;
     }
 
     &.sf-bottom {
       align-items: flex-start;
       flex-direction: column-reverse;
-      line-height: $cbox-vertical-line-height;
+    }
+    
+    .sf-label {
+      font-weight: $cbox-label-font-weight;
     }
   }
 
   .sf-checkbox-ripple {
-    border-radius: $radius-full;
-    position: absolute;
-    z-index: 5;
-    pointer-events: none;
-  }
-
-  .sf-checkbox-horizontal {
-    top: 50%;
-    left: 0%;
-    transform: translate(-22%, -50%);
-  }
-
-  .sf-checkbox-vertical {
-    transform: translate(-25%, 0%);
-  }
-
-  .sf-left .sf-checkbox-ripple:not(.sf-rtl *) {
-    @include position-ripple();
+    border-radius: $cbox-ripple-radius;
+    position: relative;
   }
 
   .sf-checkbox-ripple-me {
@@ -137,27 +139,10 @@
 
   .sf-checkbox-ripple-la {
     padding: $cbox-ripple-large-padding;
-    transform: translate(-25%, -50%);
-  }
-
-  .sf-rtl .sf-right .sf-checkbox-ripple {
-    @include position-ripple();
-  }
-
-  .sf-rtl .sf-checkbox-vertical {
-    transform: translate(25%, 0%);
   }
 
   .sf-checkbox-wrapper {
     @at-root {
-      &.sf-rtl {
-        &:not(.sf-top):not(.sf-bottom) {
-          flex-direction: row-reverse;
-        }
-
-        flex-direction: column-reverse;
-      }
-
       @each $variant, $colors in $cbox-variants {
         &.sf-#{$variant} {
 
@@ -166,12 +151,44 @@
             background: map.get($colors, bg);
             border-color: map.get($colors, bg);
             color: map.get($colors, color);
+
+            &:hover {
+              background: map.get($colors, hover-focus-bg);
+              border-color: map.get($colors, hover-focus-bg);
+            }
+
+            &:active {
+              background: map.get($colors, pressed-bg);
+              border-color: map.get($colors, pressed-bg);
+            }
           }
 
-          &:focus,
           &:hover {
             .sf-checkbox-ripple {
               background: map.get($colors, ripple);
+            }
+          }
+          &:active, &:focus {
+            .sf-checkbox-ripple {
+              box-shadow: map.get($colors, pressed-box-shadow);
+
+              .sf-checkbox-icons {
+                border-color: map.get($colors, pressed-focus-border-color);
+              }
+            }
+          }
+          &:has(.sf-checkbox:focus-visible) {
+            .sf-checkbox-ripple {
+              box-shadow: map.get($colors, focus-box-shadow);
+
+              .sf-checkbox-checked {
+                background: map.get($colors, hover-focus-bg);
+                border-color: map.get($colors, hover-focus-bg);
+              }
+
+              .sf-checkbox-icons {
+                border-color: map.get($colors, pressed-focus-border-color);
+              }
             }
           }
         }
@@ -182,24 +199,18 @@
   .sf-checkbox-small {
     line-height: $cbox-sm-line-height;
     gap: $cbox-sm-gap;
-    .sf-font-size-sm{
     font-size: $cbox-label-sm-font-size;
-    }
   }
 
   .sf-checkbox-medium{
     line-height: $cbox-me-line-height;
     gap: $cbox-me-gap;
-    .sf-font-size-sm{
     font-size: $cbox-label-me-font-size;
-    }
   }
 
   .sf-checkbox-large {
     line-height: $cbox-la-line-height;
     gap: $cbox-la-gap;
-    .sf-font-size-base{
     font-size: $cbox-label-la-font-size;
-    }
   }
 }

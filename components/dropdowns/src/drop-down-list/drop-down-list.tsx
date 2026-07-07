@@ -1,12 +1,13 @@
-import { useEffect, forwardRef, useMemo, useImperativeHandle, useId } from 'react';
-import * as React from 'react';
-import { AnimationOptions, preRender } from '@syncfusion/react-base';
+import { useEffect, forwardRef, useMemo, useImperativeHandle, InputHTMLAttributes, ForwardRefExoticComponent, RefAttributes, Ref, RefObject, useRef, memo } from 'react';
+import { AnimationOptions, preRender, useStableId } from '@syncfusion/react-base';
 import { DropDownListProps } from './types';
-import { IDropdown, Dropdown } from '../common/drop-down';
+import { IDropdown, Dropdown } from '../common/dropdown';
+import { DropdownClearButton, DropdownValueTemplate, DropdownError, DropdownFooter, DropdownHeader, DropdownIcon, DropdownInput, DropdownListContent, DropdownMenu, DropdownNoRecords, DropdownPopupInput, DropdownPrefix, DropdownSuffix } from '../common/components';
+import { CSS_CLASSES } from '../common/constants';
 
 export { AnimationOptions };
 
-type IDropDownListProps = DropDownListProps & Omit<React.InputHTMLAttributes<HTMLDivElement>, keyof DropDownListProps>;
+type IDropDownListProps = DropDownListProps & Omit<InputHTMLAttributes<HTMLDivElement>, keyof DropDownListProps>;
 
 /**
  * Specifies the methods and extended properties for DropdownList component.
@@ -45,15 +46,15 @@ export interface IDropDownList extends DropDownListProps {
  * }
  * ```
  */
-export const DropDownList: React.ForwardRefExoticComponent<IDropDownListProps & React.RefAttributes<IDropDownList>> =
-    forwardRef<IDropDownList, IDropDownListProps>((props: IDropDownListProps, ref: React.Ref<IDropDownList>) => {
+export const DropDownList: ForwardRefExoticComponent<IDropDownListProps & RefAttributes<IDropDownList>> =
+    forwardRef<IDropDownList, IDropDownListProps>((props: IDropDownListProps, ref: Ref<IDropDownList>) => {
         const {
             dataSource,
             query,
             fields,
             value,
             placeholder = '',
-            id = `dropdownlist_${useId()}`,
+            id,
             disabled = false,
             readOnly = false,
             popupSettings = {},
@@ -89,15 +90,12 @@ export const DropDownList: React.ForwardRefExoticComponent<IDropDownListProps & 
             className,
             virtualization,
             resizable,
-            onChange,
-            onOpen,
-            onClose,
-            onError,
-            onFilter,
-            onDataRequest,
-            onDataLoad,
-            onScroll,
+            prefix,
+            suffix,
             onErrorTemplate,
+            helperText,
+            helperTextOnFocus = false,
+            helperTextDirection = 'Left',
             ...otherProps
         } = props;
 
@@ -105,7 +103,9 @@ export const DropDownList: React.ForwardRefExoticComponent<IDropDownListProps & 
             preRender('dropdownlist');
         }, []);
 
-        const baseRef: React.RefObject<IDropdown | null> = React.useRef<IDropdown>(null);
+        const generatedId: string = useStableId('sf-dropdownlist');
+        const dropdownListId: string = id ?? generatedId;
+        const baseRef: RefObject<IDropdown | null> = useRef<IDropdown>(null);
 
         const publicAPI: Partial<IDropDownList> = useMemo(() => ({
             dataSource,
@@ -113,31 +113,53 @@ export const DropDownList: React.ForwardRefExoticComponent<IDropDownListProps & 
             fields,
             value,
             placeholder,
-            id,
+            id: dropdownListId,
+            disabled,
+            readOnly,
             popupSettings,
             allowObjectBinding,
-            itemTemplate,
-            headerTemplate,
-            valueTemplate,
-            groupTemplate,
-            noRecordsTemplate,
-            footerTemplate,
             labelMode,
             open,
+            defaultOpen,
             skipDisabledItems,
+            defaultValue,
             ignoreCase,
             ignoreAccent,
             filterable,
             filterType,
             filterPlaceholder,
+            debounceDelay,
             sortOrder,
-            clearButton,
-            dropdownIcon,
             loading,
             size,
-            variant
-        }), [dataSource, fields, value, placeholder, id, popupSettings, allowObjectBinding]);
-
+            variant,
+            inputProps,
+            itemTemplate,
+            headerTemplate,
+            footerTemplate,
+            groupTemplate,
+            valueTemplate,
+            noRecordsTemplate,
+            clearButton,
+            dropdownIcon,
+            valid,
+            validationMessage,
+            validityStyles,
+            required,
+            className,
+            virtualization,
+            resizable,
+            prefix,
+            suffix,
+            onErrorTemplate,
+            helperText,
+            helperTextOnFocus,
+            helperTextDirection
+        }), [dataSource, query, fields, value, placeholder, dropdownListId, disabled, readOnly, popupSettings, allowObjectBinding, open,
+            defaultOpen, skipDisabledItems, defaultValue, ignoreCase, ignoreAccent, filterable, filterType, filterPlaceholder, labelMode,
+            debounceDelay, sortOrder, loading, size, variant, inputProps, itemTemplate, headerTemplate, footerTemplate, groupTemplate,
+            valueTemplate, noRecordsTemplate, clearButton, dropdownIcon, valid, validationMessage, validityStyles, required, className,
+            virtualization, resizable, prefix, suffix, onErrorTemplate, helperText, helperTextOnFocus, helperTextDirection]);
 
         useImperativeHandle(ref, () => ({
             ...publicAPI as IDropDownList,
@@ -147,64 +169,33 @@ export const DropDownList: React.ForwardRefExoticComponent<IDropDownListProps & 
         return (
             <Dropdown
                 {...otherProps}
-                id={id}
+                {...publicAPI}
+                id={dropdownListId}
                 ref={baseRef}
                 componentClassName='sf-ddl'
                 spanClickable
                 inputClassName='sf-dropdown-list'
                 localeComponentName='dropdownList'
                 ariaLabel='dropdownlist'
-                dataSource={dataSource}
-                query={query}
-                fields={fields}
-                value={value}
-                placeholder={placeholder}
-                disabled={disabled}
-                readOnly={readOnly}
-                popupSettings={popupSettings}
-                allowObjectBinding={allowObjectBinding}
-                labelMode={labelMode}
-                open={open}
-                defaultOpen={defaultOpen}
-                skipDisabledItems={skipDisabledItems}
-                defaultValue={defaultValue}
-                ignoreCase={ignoreCase}
-                ignoreAccent={ignoreAccent}
-                filterable={filterable}
-                filterType={filterType}
-                filterPlaceholder={filterPlaceholder}
-                debounceDelay={debounceDelay}
-                sortOrder={sortOrder}
-                loading={loading}
-                size={size}
-                variant={variant}
-                inputProps={inputProps}
-                itemTemplate={itemTemplate}
-                headerTemplate={headerTemplate}
-                footerTemplate={footerTemplate}
-                groupTemplate={groupTemplate}
-                valueTemplate={valueTemplate}
-                noRecordsTemplate={noRecordsTemplate}
-                clearButton={clearButton}
-                dropdownIcon={dropdownIcon}
-                valid={valid}
-                validationMessage={validationMessage}
-                validityStyles={validityStyles}
-                required={required}
-                className={className}
-                virtualization={virtualization}
-                resizable={resizable}
-                onChange={onChange}
-                onOpen={onOpen}
-                onClose={onClose}
-                onError={onError}
-                onFilter={onFilter}
-                onDataRequest={onDataRequest}
-                onDataLoad={onDataLoad}
-                onScroll={onScroll}
-                onErrorTemplate={onErrorTemplate}
-            />
+            >
+                <DropdownValueTemplate />
+                <DropdownPrefix />
+                <DropdownInput />
+                <DropdownSuffix />
+                <span className={CSS_CLASSES.ICONS_WRAPPER}>
+                    <DropdownClearButton />
+                    <DropdownIcon />
+                </span>
+                <DropdownMenu>
+                    <DropdownPopupInput />
+                    <DropdownHeader />
+                    <DropdownListContent />
+                    <DropdownNoRecords />
+                    <DropdownError />
+                    <DropdownFooter />
+                </DropdownMenu>
+            </Dropdown>
         );
     });
 
-export default React.memo(DropDownList);
+export default memo(DropDownList);

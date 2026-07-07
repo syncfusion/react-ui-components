@@ -1,6 +1,6 @@
 import { ChartMarkerProps } from '../../base/interfaces';
 import { DoubleRangeType, PointRenderingEvent, Points, Rect, RenderOptions, SeriesProperties } from '../../chart-area/chart-interfaces';
-import { StackValuesType, useVisiblePoints } from '../../utils/helper';
+import { StackValuesType, calculateVisiblePoints } from '../../utils/helper';
 import { ColumnBase, ColumnBaseReturnType, StackingBarSeriesRendererType } from './ColumnBase';
 import MarkerRenderer from './MarkerRenderer';
 import { handleRectAnimation } from './SeriesAnimation';
@@ -19,12 +19,11 @@ const StackingBarSeriesRenderer: StackingBarSeriesRendererType = {
      * Renders the stacking bar series with all its data points.
      * Calculates positioning, handles markers, and generates render options for each point.
      *
-     * @param {SeriesProperties} series - The series data containing points, styling, and configuration
-     * @param {boolean} _isInverted - Flag indicating if the chart is inverted (currently unused)
-     * @returns {RenderOptions[]|Object} Array of render options or object containing options and marker data
+     * @param {SeriesProperties} series - The series data containing points, styling, and configuration.
+     * @returns {RenderOptions[]|Object} Array of render options or object containing options and marker data.
      *
      */
-    render: (series: SeriesProperties, _isInverted: boolean ):
+    render: (series: SeriesProperties ):
     RenderOptions[] | { options: RenderOptions[]; marker: ChartMarkerProps } => {
         series.isRectSeries = true;
         StackingBarSeriesRenderer.sideBySideInfo[series.index] = columnBaseInstance.getSideBySideInfo(series);
@@ -44,7 +43,7 @@ const StackingBarSeriesRenderer: StackingBarSeriesRendererType = {
             }
         });
 
-        series.visiblePoints = useVisiblePoints(series);
+        series.visiblePoints = calculateVisiblePoints(series);
         const marker: ChartMarkerProps | null = series.marker?.visible
             ? MarkerRenderer.render(series) as ChartMarkerProps : null;
         return marker ? { options, marker } : options;
@@ -137,6 +136,10 @@ const StackingBarSeriesRenderer: StackingBarSeriesRendererType = {
             rect.y = series.chart.iSTransPosed ? rect.y : rect.y - (series.columnWidthInPixel / 2);
         }
 
+        if (rect.height <= 0) {
+            return undefined;
+        }
+
         const argsData: PointRenderingEvent = columnBaseInstance.triggerEvent(
             series,
             point,
@@ -160,20 +163,6 @@ const StackingBarSeriesRenderer: StackingBarSeriesRendererType = {
         return option;
     },
 
-    /**
-     * Handles animation for the stacking bar series rendering.
-     * Manages rectangle-based animations including direction and transform properties.
-     *
-     * @param {RenderOptions} pathOptions - Current rendering options for the path/rectangle
-     * @param {number} index - Index of the series being animated
-     * @param {Object} animationState - Current state of the animation system
-     * @param {boolean} enableAnimation - Flag to enable or disable animation
-     * @param {SeriesProperties} currentSeries - Current series being animated
-     * @param {Points | undefined} currentPoint - Current point being animated
-     * @param {number} pointIndex - Index of the current point
-     * @returns {Object} Animation properties object containing stroke and transform values
-     *
-     */
     doAnimation: (
         pathOptions: RenderOptions,
         index: number,

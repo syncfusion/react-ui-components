@@ -17,7 +17,7 @@ export interface ChartTrendlineCollectionProps {
  * @description Component that acts as a container for multiple ChartTrendline components.
  * This component wraps trendline definitions and passes them to the parent series.
  * @param {ChartTrendlineCollectionProps} props - Properties for the trendline collection
- * @returns {JSX.Element} A React element that renders its trendline children
+ * @returns {Element} A React element that renders its trendline children
  */
 export const ChartTrendlineCollection: React.FC<ChartTrendlineCollectionProps> = (
     props: ChartTrendlineCollectionProps
@@ -42,7 +42,7 @@ type ChartTrendlineProperty = ChartTrendlineProps & {
  * This component supports nesting ChartMarker and ChartDataLabel as children.
  * Must be used inside a ChartTrendlineCollection component.
  * @param {ChartTrendlineProperty} props - Properties for configuring the trendline
- * @returns {JSX.Element} A React element that renders the trendline with its children
+ * @returns {Element} A React element that renders the trendline with its children
  */
 export const ChartTrendline: React.FC<ChartTrendlineProperty> = (
     props: ChartTrendlineProperty

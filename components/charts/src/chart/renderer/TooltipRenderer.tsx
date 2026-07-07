@@ -5,9 +5,10 @@ import { Tooltip, TooltipRefHandle } from '@syncfusion/react-svg-tooltip';
 import { registerChartEventHandler } from '../hooks/useClipRect';
 import { isNullOrUndefined } from '@syncfusion/react-base';
 import { AxisModel, BaseZoom, Chart, Points, Rect, SeriesProperties, VisibleRangeProps } from '../chart-area/chart-interfaces';
-import { ChartMarkerShape } from '../base/enum';
+import { ChartMarkerShape, ChartSeriesType } from '../base/enum';
 import { getClosestX, getCommonXValues } from '../utils/helper';
 import { ChartContext } from '../layout/ChartProvider';
+import { getPolarColumnPoint } from '../utils/polarRadarHelper';
 
 /**
  * Represents data for a specific point in a chart series.
@@ -21,9 +22,11 @@ export interface PointData {
 
     /** Defines the series that contains this data point. */
     series: SeriesProperties;
+    regionIndex?: number;
+    hitType?: 'box' | 'outlier' | 'region';
 
     /** Optional index when multiple points overlap or are in outlier positions. */
-    lierIndex?: number;
+    outlierIndex?: number;
 
     /** Optional coordinates specifying the position of the point on the chart. */
     location?: { x: number, y: number };
@@ -48,7 +51,7 @@ function withInBounds(x: number, y: number, bounds: Rect, width: number = 0, hei
     );
 }
 
-
+const TOOLTIP_MARKER_OFFSET: number = 5;
 export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltipProps) => {
     const { layoutRef, phase } = useLayout();
     const {chartCrosshair } = useContext(ChartContext);
@@ -68,7 +71,6 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
     const [shapes, setShapes] = useState<ChartMarkerShape[]>([]);
     const [palette, setPalette] = useState<string[]>([]);
     const [currentPoints, setCurrentPoints] = useState<PointData[]>([]);
-    const [lierIndex, setLierIndex] = useState(0);
 
     // Use refs for values that shouldn't trigger re-renders
     const previousPointsRef: React.RefObject<PointData[]> = useRef<PointData[]>([]);
@@ -115,7 +117,7 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
             };
         }
         return;
-    }, [phase, layoutRef.current.chart, props.shared]);
+    }, [phase, layoutRef.current.chart, props.shared, props.followPointer]);
 
     useEffect(() => {
         return () => {
@@ -252,21 +254,30 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
      */
     function getData(): PointData | null {
         const chart: Chart = layoutRef.current.chart as Chart;
-        let point: Points | null = null;
-        let series: SeriesProperties | null = null;
         for (let len: number = chart.visibleSeries.length, i: number = len - 1; i >= 0; i--) {
-            series = chart.visibleSeries[i as number];
+            const series: SeriesProperties = chart.visibleSeries[i as number];
             const width: number = (series.type === 'Scatter' || series.drawType === 'Scatter' || (series.marker?.visible))
                 ? (series.marker?.height as number + 5) / 2 : 0;
             const height: number = (series.type === 'Scatter' || series.drawType === 'Scatter' || (series.marker?.visible))
                 ? (series.marker?.width as number + 5) / 2 : 0;
             const mouseX: number = chart.mouseX;
             const mouseY: number = chart.mouseY;
-            if (series.visible && series.clipRect && withInBounds(mouseX, mouseY, series.clipRect, width, height)) {
-                point = getRectPoint(series, series.clipRect, mouseX, mouseY);
-            }
-            if (point) {
-                return { point, series, lierIndex };
+            if (chart.chartAreaType === 'PolarRadar' && (series.type as ChartSeriesType).indexOf('Column') > -1) {
+                const point: Points  = getPolarColumnPoint(series, mouseX, mouseY) as Points;
+                if (point) {
+                    // Store tooltip indices for selection/highlight consistency
+                    chart.toolTipSeriesIndex = series.index;
+                    chart.toolTipPointIndex = point.index ?? -1;
+                    return { point, series };
+                }
+            } else if (series.visible && series.clipRect && withInBounds(mouseX, mouseY, series.clipRect, width, height)) {
+                const point: PointData | null = getRectPoint(series, series.clipRect, mouseX, mouseY);
+                if (point) {
+                    // Store tooltip indices for selection/highlight consistency
+                    chart.toolTipSeriesIndex = series.index;
+                    chart.toolTipPointIndex = point.point?.index ?? -1;
+                    return point;
+                }
             }
         }
         return null;
@@ -279,9 +290,9 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
      * @param {Rect} rect - The rectangle to check points against.
      * @param {number} x - The x-coordinate to check.
      * @param {number} y - The y-coordinate to check.
-     * @returns {Points | null} The found point or null if no points are within the rectangle.
+     * @returns {PointData | null} The found point data or null if no points are within the rectangle.
      */
-    function getRectPoint(series: SeriesProperties, rect: Rect, x: number, y: number): Points | null {
+    function getRectPoint(series: SeriesProperties, rect: Rect, x: number, y: number): PointData | null {
         const insideRegion: boolean = false;
         for (const point of series.visiblePoints as Points[]) {
             if (!point.regionData) {
@@ -289,12 +300,43 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
                     continue;
                 }
             }
+            if (!point.regions) {
+                continue;
+            }
 
-            // Check if point is in region
-            if (!insideRegion && point.regions && checkRegionContainsPoint(point.regions, rect, x, y)) {
-                return point;
-            } else if (insideRegion && point.regions && checkRegionContainsPoint(point.regions, rect, x, y)) {
-                return point;
+            const matchedRegionIndex: number | null =
+                checkRegionContainsPoint(point.regions, rect, x, y);
+
+            if (matchedRegionIndex === null) {
+                continue;
+            }
+
+            if (series.type === 'BoxAndWhisker') {
+                const isOutlierHit: boolean = matchedRegionIndex >= 3;
+                const outlierIndex: number | undefined = isOutlierHit
+                    ? matchedRegionIndex - 3 : undefined;
+                return {
+                    point,
+                    series,
+                    regionIndex: matchedRegionIndex,
+                    hitType: isOutlierHit ? 'outlier' : 'box',
+                    outlierIndex
+                };
+            }
+            else {
+                if (!insideRegion && point.regions && matchedRegionIndex !== null) {
+                    return {
+                        point,
+                        series,
+                        outlierIndex: matchedRegionIndex
+                    };
+                } else if (insideRegion && point.regions && matchedRegionIndex !== null) {
+                    return {
+                        point,
+                        series,
+                        outlierIndex: matchedRegionIndex
+                    };
+                }
             }
         }
         return null;
@@ -309,10 +351,12 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
      * @param {number} y - The y-coordinate of the point to check.
      * @returns {boolean} Returns true if the region contains the point, false otherwise.
      */
-    function checkRegionContainsPoint(regionRect: Rect[], rect: Rect, x: number, y: number): boolean {
-        return regionRect.some((region: Rect, index: number) => {
-            setLierIndex(index);
-            return withInBounds(
+    function checkRegionContainsPoint(regionRect: Rect[], rect: Rect, x: number, y: number): number | null {
+
+        for (let index: number = 0; index < regionRect.length; index++) {
+            const region: Rect = regionRect[index as number];
+            const contains: boolean = withInBounds(
+
                 x, y,
                 {
                     x: (rect.x) + region.x,
@@ -321,7 +365,11 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
                     height: region.height
                 }
             );
-        });
+            if (contains) {
+                return index;
+            }
+        }
+        return null;
     }
 
     /**
@@ -368,10 +416,17 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
         let format: string | undefined = props.format || data.series.tooltipFormat;
         const textX: string =
             data.series.type === 'Histogram' ? '${point.minimum}' + ' - ' + '${point.maximum}' : '${point.x}';
+        if (!format && data.series.type === 'BoxAndWhisker') {
+            return getBoxAndWhiskerDefaultText(data);
+        }
+
         if (!format) {
             switch (data.series.type) {
             case 'RangeArea':
+            case 'RangeStepArea':
             case 'RangeColumn':
+            case 'PolarRangeColumn':
+            case 'RadarRangeColumn':
             case 'SplineRangeArea':
             case 'Hilo':
                 format =
@@ -402,9 +457,38 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
             const placeholder: string = `\${point.${key}}`;
             const xAxis: AxisModel = data.series.xAxis;
             const yAxis: AxisModel = data.series.yAxis;
-            const value: string = formatPointValue(val, placeholder === '${point.x}' ? xAxis : yAxis, placeholder === '${point.x}', placeholder === '${point.y}');
-            text = text.split(placeholder).join(value);
+            let value: string;
+            if (data.series.type === 'BoxAndWhisker') {
+                if (
+                    key === 'outliers' &&
+                    data.hitType === 'outlier' &&
+                    typeof data.outlierIndex === 'number' &&
+                    Array.isArray(data.point.outliers)
+                ) {
+                    const hoveredOutlier: number | undefined =
+                        data.point.outliers[data.outlierIndex as number];
 
+                    value = !isNullOrUndefined(hoveredOutlier) ? formatPointValue( hoveredOutlier, yAxis, false, true ) : '';
+                } else if (key === 'minimum' || key === 'maximum' || key === 'upperQuartile' || key === 'lowerQuartile' || key === 'median')
+                {
+                    value = formatPointValue(val, yAxis, false, true);
+                } else {
+                    value = formatPointValue(
+                        val,
+                        placeholder === '${point.x}' ? xAxis : yAxis,
+                        placeholder === '${point.x}',
+                        placeholder === '${point.y}'
+                    );
+                }
+            } else {
+                value = formatPointValue(
+                    val,
+                    placeholder === '${point.x}' ? xAxis : yAxis,
+                    placeholder === '${point.x}',
+                    placeholder === '${point.y}'
+                );
+            }
+            text = text.split(placeholder).join(value);
         });
 
         // Replace series values using Object.entries
@@ -413,6 +497,8 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
             const value: string = val?.toString() || '';
             text = text.split(placeholder).join(value);
         });
+        // Only append stacked total for stacking series that are not 100% stacked
+        // and not step-style stacking (StackingStepArea), which should not show totals.
         if (data.series && data.series.type?.includes('Stacking') && !data.series.type.includes('100') && !props.format && !data.series.tooltipFormat && (!props.shared || isLast)) {
             const chart: Chart = data.series.chart;
             const stackingGroup: string = data.series.stackingGroup ?? 'undefined';
@@ -441,7 +527,7 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
      * @param {boolean} isYPoint - Whether this is a Y-axis point.
      * @returns {string} The formatted point value as a string.
      */
-    function formatPointValue(pointValue: object, axis: AxisModel, isXPoint: boolean, isYPoint: boolean): string {
+    function formatPointValue(pointValue: object | number, axis: AxisModel, isXPoint: boolean, isYPoint: boolean): string {
         let textValue: string;
         let customLabelFormat: boolean;
         let value: string;
@@ -459,6 +545,91 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
             textValue = pointValue?.toString() || '';
         }
         return textValue;
+    }
+
+    /**
+     * Returns the default tooltip text for a box-and-whisker point.
+     *
+     * Formats either the hovered outlier value or the full box summary
+     * including maximum, upper quartile, median, lower quartile, and minimum.
+     *
+     * @param {PointData} data - Point hit-test data containing the point, series, hit type, and optional outlier index.
+     * @returns {string} Formatted tooltip text for the hovered box-and-whisker element.
+     */
+    function getBoxAndWhiskerDefaultText(data: PointData): string {
+        const point: Points = data.point;
+        const series: SeriesProperties = data.series;
+
+        const formattedX: string = formatPointValue(
+            point.x,
+            series.xAxis,
+            true,
+            false
+        );
+
+        if (
+            data.hitType === 'outlier' &&
+            typeof data.outlierIndex === 'number' &&
+            Array.isArray(point.outliers)
+        ) {
+            const hoveredOutlier: number | undefined = point.outliers[data.outlierIndex as number];
+            const formattedOutlier: string = !isNullOrUndefined(hoveredOutlier) ? formatPointValue(hoveredOutlier, series.yAxis, false, true ) : '';
+            return `${formattedX} <br/>Outlier : <b>${formattedOutlier}</b>`;
+        }
+        const maximumText: string = point.maximum !== null && point.maximum !== undefined ? formatPointValue(point.maximum, series.yAxis, false, true) : '';
+        const upperQuartileText: string = point.upperQuartile !== null && point.upperQuartile !== undefined ? formatPointValue(point.upperQuartile, series.yAxis, false, true) : '';
+        const medianText: string = point.median !== null && point.median !== undefined ? formatPointValue(point.median, series.yAxis, false, true) : '';
+        const lowerQuartileText: string = point.lowerQuartile !== null && point.lowerQuartile !== undefined ? formatPointValue(point.lowerQuartile, series.yAxis, false, true) : '';
+        const minimumText: string = point.minimum !== null && point.minimum !== undefined ? formatPointValue(point.minimum, series.yAxis, false, true) : '';
+
+        return (
+            `${formattedX} <br/>` +
+            `Maximum : <b>${maximumText}</b><br/>` +
+            `Q3 : <b>${upperQuartileText}</b><br/>` +
+            `Median : <b>${medianText}</b><br/>` +
+            `Q1 : <b>${lowerQuartileText}</b><br/>` +
+            `Minimum : <b>${minimumText}</b>`
+        );
+    }
+
+    /**
+     * Returns the tooltip anchor location for a box-and-whisker point.
+     *
+     * Anchors the tooltip to the hovered outlier symbol when an outlier is hit;
+     * otherwise uses the center of the main box region.
+     *
+     * @param {PointData} data - Point hit-test data containing the point, series, hit type, and optional outlier index.
+     * @returns {{ x: number, y: number } | null} Tooltip anchor location, or null if no valid location is available.
+     */
+    function getBoxAndWhiskerLocation(
+        data: PointData
+    ): { x: number; y: number } | null {
+        const point: Points = data.point;
+        const series: SeriesProperties = data.series;
+        const clipRect: Rect | undefined = series.clipRect;
+
+        if (!clipRect) {
+            return null;
+        }
+        if (data.hitType === 'outlier' && typeof data.outlierIndex === 'number' &&
+            point.symbolLocations && point.symbolLocations[data.outlierIndex as number])
+        {
+            const outlierLocation: ChartLocationProps = point.symbolLocations[data.outlierIndex as number] as ChartLocationProps;
+            const markerHeight: number = series.marker?.height ?? 10;
+            return {
+                x: clipRect.x + outlierLocation.x,
+                y: clipRect.y + outlierLocation.y - (markerHeight / 2) - TOOLTIP_MARKER_OFFSET
+            };
+        }
+
+        if (point.regions && point.regions[0]) {
+            const boxRegion: Rect = point.regions[0] as Rect;
+            return {
+                x: clipRect.x + boxRegion.x + boxRegion.width / 2,
+                y: clipRect.y + boxRegion.y + boxRegion.height / 2
+            };
+        }
+        return null;
     }
 
     /**
@@ -491,7 +662,6 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
                         if (!withInBounds(symbolX, symbolY, chart.chartAxislayout.seriesClipRect)) {
                             continue;
                         }
-                        // Calculate distance to current point
                         const currentDistance: number = Math.sqrt(
                             Math.pow((chart.mouseX - series.clipRect.x) - pointData.point.symbolLocations[0].x, 2) +
                             Math.pow((chart.mouseY - series.clipRect.y) - pointData.point.symbolLocations[0].y, 2)
@@ -508,6 +678,7 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
                     data = closestPointData;
                 }
                 chart.toolTipSeriesIndex = data?.series?.index;
+                chart.toolTipPointIndex = data?.point?.index ?? -1;
             }
         }
 
@@ -527,10 +698,14 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
             return;
         }
         // Check if it's the same point as before
+        const previousHit: PointData | undefined = previousPointsRef.current[0];
         const isSamePoint: boolean = previousPointsRef.current.length > 0 &&
-            previousPointsRef.current[0]?.point?.index === data.point.index &&
-            previousPointsRef.current[0]?.series?.index === data.series.index;
-        if (isSamePoint) {
+            previousHit?.point?.index === data.point.index &&
+            previousHit?.series?.index === data.series.index &&
+            previousHit?.regionIndex === data.regionIndex &&
+            previousHit?.hitType === data.hitType &&
+            previousHit?.outlierIndex === data.outlierIndex;
+        if (isSamePoint && !props.followPointer) {
             // If it's the same point and tooltip is not visible, make it visible
             void (!tooltipVisible && tooltipRef.current && (
                 tooltipRef.current.fadeIn(),
@@ -554,6 +729,7 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
         // Get tooltip location
         const location: { x: number, y: number } | null = getSymbolLocation(data);
         if (location) {
+            applyTooltipDistance(location, data, layoutRef.current.chart as Chart);
             location.x = props.location?.x ?? location.x;
             location.y = props.location?.y ?? location.y;
         }
@@ -586,6 +762,42 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
         return data.point.color && data.point.color !== '#ffffff' ? data.point.color :
             data.point.interior || data.series.marker?.fill || data.series.interior;
     }
+    /**
+     * Applies intelligent tooltip distance offset based on series type and data point.
+     *
+     * @param {ChartLocationProps} location - The tooltip location to adjust
+     * @param {PointData} point - The point data for which tooltip is rendered
+     * @param {Chart} chart - The chart instance
+     * @returns {void}
+     * @private
+     */
+    function applyTooltipDistance(location: ChartLocationProps, point: PointData, chart: Chart): void {
+        // Don't apply distance when following pointer - tooltip position is driven by pointer
+        if (props.followPointer && !props.location) {
+            return;
+        }
+        const distance: number = Math.max(0, props.distance ?? 0);
+
+        if (!location || distance === 0) {
+            return;
+        }
+
+        const series: SeriesProperties = point.series;
+        //  Line / Area / Non-rect series
+        if (!series.isRectSeries) {
+            location.y -= distance;
+            return;
+        }
+        //  Column / Bar / Rect series
+        const isNegative: boolean = (point.point.yValue as number) < 0;
+
+        if (!chart.requireInvertedAxis) {
+            location.y += isNegative ? distance : -distance;
+        } else {
+            const direction: 1 | -1 = chart.enableRtl ? -1 : 1;
+            location.x += isNegative ? -distance * direction : distance * direction;
+        }
+    }
 
     /**
      * Finds the symbol location for a given data point.
@@ -594,6 +806,37 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
      * @returns {{x: number, y: number} | null} The calculated symbol location or null if not available.
      */
     function getSymbolLocation(data: PointData): { x: number, y: number } | null {
+        if (data.series.type === 'BoxAndWhisker') {
+            return getBoxAndWhiskerLocation(data);
+        }
+
+        //   Fixed location takes precedence - used when explicitly provided
+        if (props.location && (props.location.x !== undefined || props.location.y !== undefined)) {
+            return {
+                x: props.location.x ?? 0,
+                y: props.location.y ?? 0
+            };
+        }
+
+        //   Follow pointer - tooltip tracks mouse position when enabled
+        if (props.followPointer) {
+            const chart: Chart = layoutRef.current.chart as Chart;
+            const mouseX: number = chart?.mouseX;
+            const mouseY: number = chart?.mouseY;
+
+            //  Guard against invalid values (undefined, NaN)
+            if (
+                typeof mouseX === 'number' &&
+                typeof mouseY === 'number' &&
+                !isNaN(mouseX) &&
+                !isNaN(mouseY)
+            ) {
+                // Return pointer position - Tooltip component will handle boundary detection
+                // and smart positioning (left/right) based on available space
+                return { x: mouseX, y: mouseY };
+            }
+        }
+
         if (!data.point.symbolLocations || !data.point.symbolLocations[0]) {
             return null;
         }
@@ -603,8 +846,11 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
         };
         switch (data.series.type) {
         case 'RangeArea':
+        case 'RangeStepArea':
         case 'SplineRangeArea':
         case 'RangeColumn':
+        case 'PolarRangeColumn':
+        case 'RadarRangeColumn':
             return getRangeArea(data, location);
         case 'Waterfall':
             return getWaterfallRegion(data, location);
@@ -653,7 +899,7 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
         if (!props.showMarker) {
             return 'None';
         }
-        const markerShape: ChartMarkerShape = data.series.marker?.shape === 'None' ? 'None' : ((data).point.marker.shape || data.series.marker?.shape || 'Circle');
+        const markerShape: ChartMarkerShape = data.series.marker?.shape === 'None' ? 'None' : ((data).point?.marker?.shape || data.series?.marker?.shape || 'Circle');
         return markerShape;
     }
 
@@ -759,7 +1005,11 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
             location = { x: chart.mouseX, y: chart.mouseY };
         }
 
-        if (location) {
+        if (location && lastData) {
+            applyTooltipDistance(location, lastData, chart);
+            location.x = props.location?.x ?? location.x;
+            location.y = props.location?.y ?? location.y;
+        } else if (location) {
             location.x = props.location?.x ?? location.x;
             location.y = props.location?.y ?? location.y;
         }
@@ -796,10 +1046,33 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
      */
     function findSharedLocation(points: PointData[], lastData: PointData): { x: number, y: number } | null {
         const chart: Chart = layoutRef.current.chart as Chart;
-        if (points.length > 1) {
-            // Calculate proper position using mouse values
-            const mouseValues: { valueX: number, valueY: number } = findMouseValues(lastData, chart);
 
+        //   Fixed location takes precedence - used when explicitly provided
+        if (props.location && (props.location.x !== undefined || props.location.y !== undefined)) {
+            return {
+                x: props.location.x ?? 0,
+                y: props.location.y ?? 0
+            };
+        }
+        //  Follow pointer - tooltip tracks mouse position when enabled
+        if (props.followPointer) {
+            const mouseX: number = chart?.mouseX;
+            const mouseY: number = chart?.mouseY;
+            //  Guard against invalid values
+            if (
+                typeof mouseX === 'number' &&
+                typeof mouseY === 'number' &&
+                !isNaN(mouseX) &&
+                !isNaN(mouseY)
+            ) {
+                // Return pointer position - Tooltip component will handle boundary detection
+                // and smart positioning (left/right) based on available space
+                return { x: mouseX, y: mouseY };
+            }
+        }
+        //  Default positioning based on data point(s)
+        if (points.length > 1) {
+            const mouseValues: { valueX: number, valueY: number } = findMouseValues(lastData, chart);
             return {
                 x: mouseValues.valueX,
                 y: mouseValues.valueY
@@ -876,6 +1149,10 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
         seriesIndex: (tooltipData.pointData?.series as SeriesProperties)?.index
     } as ChartTooltipTemplateProps;
     const areaBounds: Rect = chart?.rect;
+    // When followPointer is enabled, disable animation and set offset to 0
+    const isFollowingPointer: boolean = (props.followPointer ?? false) && !props.location;
+    const shouldDisableAnimation: boolean = chartCrosshair.enable || isFollowingPointer;
+    const tooltipOffset: number = isFollowingPointer ? 0 : (currentPoints[0] ? findMarkerHeight(currentPoints[0]) : 0);
     return (
         <Tooltip
             ref={tooltipRef}
@@ -890,19 +1167,20 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
             palette={palette}
             shared={props.shared}
             arrowPadding={currentPoints.length > 1 ||
-                (props.location && (props.location.x !== undefined || props.location.y !== undefined)) ? 0 : 7}
-            offset={currentPoints[0] && findMarkerHeight(currentPoints[0])}
+                (props.location && (props.location.x !== undefined || props.location.y !== undefined)) ||
+                isFollowingPointer ? 0 : 7}
+            offset={tooltipOffset}
             areaBounds={areaBounds}
-            isFixed={(props.location && (props.location.x !== undefined || props.location.y !== undefined))}
+            isFixed={props.location && (props.location.x !== undefined || props.location.y !== undefined)}
             controlName="Chart"
-            enableAnimation={chartCrosshair.enable ? false : props.enableAnimation}
+            enableAnimation={shouldDisableAnimation ? false : props.enableAnimation}
             textStyle={tooltipData.textStyle}
             // isTextWrap={true}
             duration={props.duration}
             opacity={props.opacity}
             fill={props.fill}
             border={props.border}
-            inverted={chart.requireInvertedAxis && currentPoints?.[0]?.series?.isRectSeries}
+            inverted={(chart.requireInvertedAxis && currentPoints?.[0]?.series?.isRectSeries) || isFollowingPointer}
             theme={chart?.theme}
             enableRTL={chart?.locale === 'ar' ? false : chart?.enableRtl}
             markerSize={7}
@@ -960,4 +1238,3 @@ export function getWaterfallRegion(
     }
     return location;
 }
-

@@ -2,7 +2,7 @@ import { KeyboardEvent } from 'react';
 import { ActiveViewProps, ViewsInfo } from '../types/internal-interface';
 import { CSS_CLASSES } from '../common/constants';
 import { closest } from '@syncfusion/react-base';
-import { getSelectedEvents, clearAndSelectAppointment, clearAndSelect, getCellFromIndex } from '../utils/actions';
+import { getSelectedEvents, clearAndSelectAppointment, clearAndSelect, getCellFromIndex, focusElement } from '../utils/actions';
 import { EventModel } from '../types/scheduler-types';
 import { CrudAction, Direction, AlertAction } from '../types/enums';
 
@@ -104,12 +104,13 @@ export const useKeyboard: (context: ActiveViewProps, eventsData: EventModel[], e
                 const selectedEvent: EventModel = getSelectedEvents(eventsData || [], scheduleRootElement).data;
                 const items: EventModel[] = Array.isArray(selectedEvent) ? selectedEvent : [selectedEvent];
                 const firstItem: EventModel = items[0];
+                if (firstItem.isReadonly) {
+                    return;
+                }
                 if (firstItem && firstItem.recurrenceID && context.showRecurrenceAlert) {
                     const handleRecurrenceDelete: (selectOption: string) => void = (selectOption: string): void => {
                         if (firstItem) {
-                            const action: CrudAction = selectOption === 'EditOccurrence' ?
-                                'DeleteOccurrence' : 'DeleteSeries';
-                            schedulerRef?.current?.deleteEvent?.(firstItem, action);
+                            schedulerRef?.current?.deleteEvent?.(firstItem, selectOption as CrudAction);
                         }
                     };
                     context.showRecurrenceAlert?.(AlertAction.RecurrenceDelete, handleRecurrenceDelete);
@@ -255,6 +256,7 @@ export const useKeyboard: (context: ActiveViewProps, eventsData: EventModel[], e
         case 'ArrowLeft': {
             if (event.ctrlKey || event.metaKey) {
                 processPreviousView(event);
+                focusElement(schedulerRef?.current?.element, '.sf-previous-icon');
             } else {
                 if (targetElement?.closest?.('.' + CSS_CLASSES.WORK_CELLS)) {
                     processCellNavigation(Direction.Left, event);
@@ -265,6 +267,7 @@ export const useKeyboard: (context: ActiveViewProps, eventsData: EventModel[], e
         case 'ArrowRight': {
             if (event.ctrlKey || event.metaKey) {
                 processNextView(event);
+                focusElement(schedulerRef?.current?.element, '.sf-next-icon');
             } else {
                 if (targetElement?.closest?.('.' + CSS_CLASSES.WORK_CELLS)) {
                     processCellNavigation(Direction.Right, event);

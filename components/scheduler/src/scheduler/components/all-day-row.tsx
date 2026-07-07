@@ -1,12 +1,14 @@
 import { ForwardRefExoticComponent, RefAttributes, forwardRef, useRef, useImperativeHandle, useEffect,
     useCallback, useState, Ref, RefObject, ReactNode } from 'react';
-import { AllDayRowProps, IAllDayRow, ProcessedEventsData } from '../types/internal-interface';
-import { useSchedulerRenderDatesContext } from '../context/scheduler-render-dates-context';
+import { AllDayRowProps, IAllDayRow, ProcessedEventsData, CellData } from '../types/internal-interface';
 import { DateService } from '../services/DateService';
 import { useAllDayEvents } from '../hooks/useAllDayEvents';
 import { AllDayRowCell } from './all-day-row-cell';
 import { useSchedulerPropsContext } from '../context/scheduler-context';
 import { CSS_CLASSES } from '../common/constants';
+import { useResourceGroupingContext } from '../context/resource-grouping-context';
+import { useSchedulerRenderDatesContext } from '../context/scheduler-render-dates-context';
+import { ResourceLevel } from '../services/ResourceGroupingService';
 
 export const AllDayRow: ForwardRefExoticComponent<AllDayRowProps & RefAttributes<IAllDayRow>> =
 forwardRef<IAllDayRow, AllDayRowProps>((props: AllDayRowProps, ref: Ref<IAllDayRow>): ReactNode => {
@@ -22,7 +24,7 @@ forwardRef<IAllDayRow, AllDayRowProps>((props: AllDayRowProps, ref: Ref<IAllDayR
     const prevAllDayHeightRef: RefObject<number> = useRef<number>(0);
     const maxEventsPerRow: number = 3;
     const [allDayRowHeight, setAllDayRowHeight] = useState<string>('auto');
-
+    const { isGroupingEnabled, columnLevels, leafResources } = useResourceGroupingContext();
     const {
         eventsByDate,
         hasEventsExceedingMaxCount,
@@ -30,6 +32,10 @@ forwardRef<IAllDayRow, AllDayRowProps>((props: AllDayRowProps, ref: Ref<IAllDayR
         getVisibleEvents,
         getHiddenEventCount
     } = useAllDayEvents(isCollapsed, maxEventsPerRow);
+
+    const columnLastLevelData: CellData[] = isGroupingEnabled && columnLevels?.length > 0
+        ? columnLevels[columnLevels.length - 1]
+        : [];
 
     const handleCollapseToggle: () => void = useCallback((): void => {
         if (onCollapseChange) {
@@ -71,15 +77,19 @@ forwardRef<IAllDayRow, AllDayRowProps>((props: AllDayRowProps, ref: Ref<IAllDayR
         hasEventsExceedingMaxCount ? 'sf-has-more-events' : ''
     ].filter(Boolean).join(' ');
 
-    const renderDateCell: (date: Date) => ReactNode = (date: Date): ReactNode => {
-        const dateKey: string = DateService.generateDateKey(date);
-        const visibleEvents: ProcessedEventsData[] = getVisibleEvents(dateKey);
-        const hiddenEventCount: number = getHiddenEventCount(dateKey);
+    const renderCell: (cellData: CellData) => ReactNode = (cellData: CellData): ReactNode => {
+        const dateKey: string = DateService.generateDateKey(cellData.date);
+        const resourceLeaf: ResourceLevel = cellData.groupIndex !== undefined && leafResources
+            ? leafResources[cellData.groupIndex]
+            : undefined;
+        const visibleEvents: ProcessedEventsData[] = getVisibleEvents(dateKey, resourceLeaf);
+        const hiddenEventCount: number = getHiddenEventCount(dateKey, resourceLeaf);
 
         return (
             <AllDayRowCell
-                key={dateKey}
-                date={date}
+                key={`${cellData.groupIndex}-${dateKey}`}
+                date={cellData.date}
+                groupIndex={cellData.groupIndex}
                 visibleEvents={visibleEvents}
                 hiddenEventCount={hiddenEventCount}
                 onMoreIndicatorClick={handleCollapseToggle}
@@ -93,7 +103,10 @@ forwardRef<IAllDayRow, AllDayRowProps>((props: AllDayRowProps, ref: Ref<IAllDayR
             className={rowClassName}
             style={{ height: allDayRowHeight }}
         >
-            {renderDates.map(renderDateCell)}
+            {isGroupingEnabled && columnLastLevelData.length > 0
+                ? columnLastLevelData.map(renderCell)
+                : renderDates.map((date: Date) => renderCell({ date } as CellData))
+            }
         </div>
     );
 });

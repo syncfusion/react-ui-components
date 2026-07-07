@@ -18,7 +18,7 @@
     border: $scheduler-border-size $scheduler-border-type $scheduler-border-color;
 
     .sf-btn-outlined {
-      border: 1px solid $scheduler-border-color;
+      border: 1px solid $scheduler-btn-border-color;
     }
 
     .sf-toolbar-selected.sf-btn-outlined {
@@ -30,6 +30,12 @@
       }
     }
 
+    .sf-resource-header {
+      .sf-header-cells.sf-current-day {
+        color: $scheduler-active-font-color;
+      }
+    }
+
     .sf-date-header {
       border-color: $scheduler-border-color;
       border-style: $scheduler-border-type;
@@ -38,10 +44,10 @@
       .sf-header-cells {
         background: $scheduler-header-bg-color;
         color: $scheduler-header-font-color;
+      }
 
-        &.sf-current-day {
-          color: $scheduler-active-font-color;
-        }
+      .sf-current-day {
+        color: $scheduler-active-font-color;
       }
     }
 
@@ -113,12 +119,15 @@
       color: $scheduler-active-font-color;
     }
 
-    .sf-appointment {
-        @include appointment-color;
+    .sf-vertical-view,
+    .sf-more-popup-wrapper {
+      .sf-appointment {
+          @include appointment-color;
 
-        &:focus {
-          @include appointment-focus;
-        }
+          &:focus {
+            @include appointment-focus;
+          }
+      }
     }
 
     .sf-block-appointment {
@@ -133,6 +142,43 @@
     .sf-current-day .sf-header-date {
       background-color: $scheduler-focus-color;
       color: $scheduler-current-date-color;
+    }
+
+    .sf-agenda-view {
+      color: $scheduler-agenda-text-color;
+
+      .sf-empty-state {
+        color: $scheduler-agenda-empty-state-color;
+      }
+
+      .sf-agenda-events-container {
+        .sf-appointment {
+          &.sf-appointment-active {
+            background: $scheduler-agenda-selected-event-bg;
+          }
+
+          &:hover {
+            background: $scheduler-agenda-event-hover-bg;
+          }
+
+          &:focus {
+            background: $scheduler-agenda-event-focus-bg;
+          }
+        }
+
+        .sf-event-recurrence-icon,
+        .sf-event-recurrence-edit-icon {
+          color: $scheduler-agenda-event-recurrence-icon-color;
+        }
+
+        .sf-location {
+          color: $scheduler-agenda-event-location-color;
+        }
+
+        .sf-agenda-no-events {
+          color: $scheduler-agenda-no-events-color;
+        }
+      }
     }
   }
 

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useLayout } from '../../layout/LayoutContext';
 import { Column } from '../../base/interfaces';
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { Chart, ColumnProps, Rect } from '../../chart-area/chart-interfaces';
 
 /**
@@ -21,10 +21,7 @@ interface ChartColumnsRenderProps {
 
 export const ChartColumnsRender: React.FC<ChartColumnsRenderProps> = ({ columns }: { columns: Column[] }) => {
     const { phase, triggerRemeasure } = useLayout();
-    const columnWidths: string = useMemo(
-        () => columns.map((column: Column) => column.width).join(','),
-        [columns]
-    );
+    const columnWidths: string = columns.map((column: Column) => column.width).join(',');
     useEffect(() => {
         if (phase !== 'measuring') {
             triggerRemeasure();

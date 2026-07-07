@@ -1,0 +1,47 @@
+  @use 'theme-variables' as *;
+
+  .sf-menu-icon,
+  .sf-submenu-icon {
+    color: $base-menu-icon-color;
+  }
+
+  .sf-menu-url {
+    color: $base-menu-menu-color;
+  }
+
+  .sf-menu-item.sf-disabled {
+    color: $base-menu-text-disabled;
+    background: $base-menu-bg-color-disabled;
+    opacity: 1;
+    cursor: not-allowed;
+
+    .sf-menu-icon,
+    .sf-submenu-icon {
+      color: $base-menu-icon-disabled;
+    }
+
+    .sf-menu-url {
+      color: $base-menu-text-disabled;
+    }
+  }
+
+  .sf-menu-ul {
+    background: $base-menu-ul-bg-color;
+    color: $base-menu-color;
+  }
+
+  .sf-menu-item {
+
+    &.sf-focused,
+    &.sf-hovered {
+      background-color: $base-menu-li-bg-color;
+    }
+
+    &.sf-has-submenu {
+      background-color: $base-menu-li-selected-bg-color;
+    }
+
+    &:active {
+      background-color: $base-menu-li-active-bg-color;
+    }
+  }

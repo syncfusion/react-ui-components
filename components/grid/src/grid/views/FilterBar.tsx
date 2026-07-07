@@ -25,7 +25,7 @@ import { ColumnProps, IColumnBase, ColumnRef } from '../types/column.interfaces'
 import { ChangeEvent as DDLChangeEvent, DropDownList, FieldSettingsModel, PopupSettings } from '@syncfusion/react-dropdowns';
 import { useColumn } from '../hooks';
 import { NumericChangeEvent, NumericTextBox, NumericTextBoxProps, TextBox, TextBoxChangeEvent, TextBoxProps } from '@syncfusion/react-inputs';
-import { getNumberPattern, IL10n, isNullOrUndefined, Variant } from '@syncfusion/react-base';
+import { getNumberPattern, IL10n, isNullOrUndefined, LabelMode, Variant } from '@syncfusion/react-base';
 import {
     useGridComputedProvider,
     useGridMutableProvider
@@ -33,8 +33,15 @@ import {
 import { FilterIcon } from '@syncfusion/react-icons';
 import { DatePicker, DatePickerChangeEvent, DatePickerProps } from '@syncfusion/react-calendars';
 import { getCustomDateFormat } from '../utils';
-
-const CSS_FILTER_DIV_INPUT: string = 'sf-filter-cell';
+import {
+    FILTER_CSS_CLASSES,
+    NULL_OPERATORS,
+    FILTER_INPUT_ID_SUFFIX,
+    DEFAULT_DATE_FORMAT,
+    LABEL_MODES,
+    DROPDOWN_FIELD_SETTINGS,
+    DROPDOWN_POPUP_SETTINGS
+} from './FilterBarConstants';
 
 /**
  * FilterBase component renders a table cell (th or td) with appropriate content
@@ -50,7 +57,7 @@ const FilterBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
     // Get column-specific APIs and properties
     const { gridAPI, gridInternal } = useColumn(props);
     const { cssClass, filterModule, virtualSettings } = useGridMutableProvider();
-    const CSS_FILTER_INPUT_TEXT: string = 'sf-filter-text' + (cssClass !== '' ? (' ' + cssClass) : '');
+    const CSS_FILTER_INPUT_TEXT: string = FILTER_CSS_CLASSES.FILTER_INPUT_TEXT + (cssClass !== '' ? (' ' + cssClass) : '');
 
     const {
         cellType,
@@ -70,7 +77,7 @@ const FilterBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
     const grid: Partial<GridRef> & Partial<MutableGridSetter> = useGridComputedProvider();
     const { serviceLocator, scrollModule } = grid;
     const formatter: IValueFormatter = serviceLocator?.getService<IValueFormatter>('valueFormatter');
-    const filterBarClass: string = column.filterTemplate ? 'sf-filter-template-cell' : '';
+    const filterBarClass: string = column.filterTemplate ? FILTER_CSS_CLASSES.FILTER_TEMPLATE_CELL : '';
     const fltrData: FilterTemplateProps = { column: column };
     fltrData[column.field] = undefined;
     const filterBarType: string | FilterBarType = column.filter.filterBarType;
@@ -144,7 +151,7 @@ const FilterBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
     }, [filterVal]);
 
     const handleChange: (e: TextBoxChangeEvent | NumericChangeEvent | DatePickerChangeEvent) => void = (
-        e: TextBoxChangeEvent |NumericChangeEvent | DatePickerChangeEvent) => {
+        e: TextBoxChangeEvent | NumericChangeEvent | DatePickerChangeEvent) => {
         setInputValue((e as NumericChangeEvent | DatePickerChangeEvent | TextBoxChangeEvent).value);
         if (filterBarType === FilterBarType.DatePicker && grid.filterSettings?.mode === 'Immediate' && e.value instanceof Date) {
             filterModule?.filterByColumn(column.field, 'equal', e.value);
@@ -155,27 +162,22 @@ const FilterBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
     };
 
     const dropDownOnChange: (e: DDLChangeEvent) => void = useCallback((e: DDLChangeEvent) => {
-        if (e) {
-            setOperator(e.value as string);
-            setPlaceholder(operators.filter((op: { value: string; text: string }) => {
-                return (op as object as { value: string }).value === (e.value as string);
-            })[0]['text'] as string);
-            column.filter.operator = e.value as string;
-            const value: string = e.value as string;
-            if (filterModule && grid.filterSettings?.enableFilterBarOperator) {
-                const valInput: HTMLInputElement = document.getElementById(column.field + '_filterBarcell') as HTMLInputElement;
-                if (value === 'isNotNull' || value === 'isNull' ||
-                    value === 'isNotEmpty' || value === 'isEmpty') {
-                    valInput.setAttribute('readOnly', 'true');
-                    filterModule?.filterByColumn(column.field, value, null, filterModule.getFilterProperties?.predicate,
-                                                 filterModule.getFilterProperties?.caseSensitive,
-                                                 filterModule.getFilterProperties?.ignoreAccent);
-                }
-                else if (valInput && valInput.readOnly) {
-                    valInput.removeAttribute('readOnly');
-                    filterModule?.removeFilteredColsByField?.(column.field);
-                }
-            }
+        setOperator(e.value as string);
+        setPlaceholder(operators.filter((op: { value: string; text: string }) => {
+            return (op as object as { value: string }).value === (e.value as string);
+        })[0]['text'] as string);
+        column.filter.operator = e.value as string;
+        const value: string = e.value as string;
+        const valInput: HTMLInputElement = document.getElementById(column.field + FILTER_INPUT_ID_SUFFIX) as HTMLInputElement;
+        if (NULL_OPERATORS.includes(value)) {
+            valInput.setAttribute('readOnly', 'true');
+            filterModule?.filterByColumn(column.field, value, null, filterModule.getFilterProperties?.predicate,
+                                         filterModule?.getFilterProperties?.caseSensitive,
+                                         filterModule?.getFilterProperties?.ignoreAccent);
+        }
+        else if (valInput && valInput.readOnly) {
+            valInput.removeAttribute('readOnly');
+            filterModule?.removeFilteredColsByField?.(column.field);
         }
     }, [operators, grid.filterSettings?.enableFilterBarOperator]);
 
@@ -189,9 +191,12 @@ const FilterBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
      * @returns {JSX.Element} The rendered editor component as JSX element
      */
     const renderFilter: () => JSX.Element = (): JSX.Element => {
-        if (props.cell?.column?.type === ColumnType.Checkbox) { return<></>; }
-        const id: string = column.field + '_filterBarcell';
+        if (props.cell?.column?.type === ColumnType.Checkbox || props.cell?.column?.type === ColumnType.SingleGroup) { return<></>; }
+        const id: string = column.field + FILTER_INPUT_ID_SUFFIX;
         const isDisabled: boolean = !column.allowFilter;
+        const computedPlaceholder: string = isFilterbarOperator ? placeholder : '';
+        const labelModeValue: LabelMode = isFilterbarOperator ? LABEL_MODES.ALWAYS : LABEL_MODES.NEVER;
+        const variantValue: Variant = isFilterbarOperator ? Variant.Outlined : Variant.Standard;
 
         switch (filterBarType) {
         case FilterBarType.NumericTextBox:
@@ -204,9 +209,9 @@ const FilterBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
                     format={(typeof (column.format) === 'object' ? getNumberPattern(column.format, false)?.toLowerCase() :
                         (column.format as string)?.toLowerCase()) ?? 'n'} // only provided string format support.
                     onChange={handleChange}
-                    placeholder={isFilterbarOperator ? placeholder : ''}
-                    labelMode={isFilterbarOperator ? 'Always' : 'Never'}
-                    variant={isFilterbarOperator ? Variant.Outlined : Variant.Standard}
+                    placeholder={computedPlaceholder}
+                    labelMode={labelModeValue}
+                    variant={variantValue}
                     disabled={isDisabled}
                     tabIndex={isDisabled ? -1 : 0}
                     spinButton={false}
@@ -221,11 +226,11 @@ const FilterBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
                     title={title}
                     className={CSS_FILTER_INPUT_TEXT}
                     value={inputValue ? new Date(inputValue as Date) : null}
-                    format={updateColumn?.format ? getCustomDateFormat(updateColumn?.format, updateColumn?.type) : 'M/d/yyyy'} // only provided string format support
-                    onChange={handleChange as any}
-                    placeholder={isFilterbarOperator ? placeholder : ''}
-                    labelMode={isFilterbarOperator ? 'Always' : 'Never'}
-                    variant={isFilterbarOperator ? Variant.Outlined : Variant.Standard}
+                    format={updateColumn?.format ? getCustomDateFormat(updateColumn?.format, updateColumn?.type) : DEFAULT_DATE_FORMAT} // only provided string format support
+                    onChange={(e: DatePickerChangeEvent) => handleChange(e)}
+                    placeholder={computedPlaceholder}
+                    labelMode={labelModeValue}
+                    variant={variantValue}
                     disabled={isDisabled}
                     strictMode={false}
                     {...column.filter.params as DatePickerProps}
@@ -242,9 +247,9 @@ const FilterBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
                     value={inputValue?.toString() || ''}
                     onChange={handleChange}
                     clearButton={true}
-                    placeholder={isFilterbarOperator ? placeholder : ''}
-                    labelMode={isFilterbarOperator ? 'Always' : 'Never'}
-                    variant={isFilterbarOperator ? Variant.Outlined : Variant.Standard}
+                    placeholder={computedPlaceholder}
+                    labelMode={labelModeValue}
+                    variant={variantValue}
                     disabled={isDisabled}
                     tabIndex={isDisabled ? -1 : 0}
                     {...column.filter.params as TextBoxProps}
@@ -261,8 +266,8 @@ const FilterBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
     const handleBlur: () => void = useCallback(() => {
         setIsFocused(false);
     }, []);
-    const fields: FieldSettingsModel = useMemo(() => ({ text: 'text', value: 'value' }), []);
-    const popupSettings: PopupSettings = useMemo(() => ({ width: 'auto' }), []);
+    const fields: FieldSettingsModel = useMemo(() => DROPDOWN_FIELD_SETTINGS, []);
+    const popupSettings: PopupSettings = useMemo(() => DROPDOWN_POPUP_SETTINGS, []);
     const filterIcon: JSX.Element = useMemo(() => (<FilterIcon />), []);
 
     /**
@@ -281,21 +286,21 @@ const FilterBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
             >
                 {column.filterTemplate ? (typeof column.filterTemplate === 'string' || isValidElement(column.filterTemplate) ?
                     column.filterTemplate : createElement(column.filterTemplate, fltrData))
-                    : <div className={CSS_FILTER_DIV_INPUT + (isFilterbarOperator ? ' sf-grid-filterbar' : '') +
-                        (column?.type === ColumnType.Checkbox ? ' sf-disabled' : '')}>
+                    : <div className={FILTER_CSS_CLASSES.FILTER_DIV_INPUT + (isFilterbarOperator ? ` ${FILTER_CSS_CLASSES.GRID_FILTERBAR}` : '') +
+                        (column?.type === ColumnType.Checkbox || column?.type === ColumnType.SingleGroup ? ` ${FILTER_CSS_CLASSES.DISABLED}` : '')}>
                         {renderFilter()}
                         {isFilterbarOperator && <DropDownList
                             value={operator}
                             title={'operator'}
                             fields={fields}
                             dataSource={operators}
-                            onFocus={handleFocus}
-                            onBlur={handleBlur}
+                            onFocus={!updateColumn?.allowFilter ? undefined : handleFocus}
+                            onBlur={!updateColumn?.allowFilter ? undefined : handleBlur}
                             onOpen={!updateColumn?.allowFilter ? undefined : handleBlur}
-                            className={`sf-filterbar-dropdown${isFocused ? ' sf-focused' : ''}`}
+                            className={`${FILTER_CSS_CLASSES.FILTERBAR_DROPDOWN}${isFocused ? ` ${FILTER_CSS_CLASSES.FOCUSED}` : ''}`}
                             onChange={dropDownOnChange}
                             disabled={!updateColumn?.allowFilter}
-                            labelMode={'Never'}
+                            labelMode={LABEL_MODES.NEVER}
                             ignoreCase={true}
                             dropdownIcon={filterIcon}
                             popupSettings={popupSettings}
@@ -304,7 +309,7 @@ const FilterBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
                     </div>}
             </th>
         );
-    }, [cellType, index, className, isFocused, visibleClass, formattedValue, field,
+    }, [cellType, index, className, isFocused, visibleClass, formattedValue, field, updateColumn?.filterTemplate,
         inputValue, cssClass, operator, placeholder, isFilterbarOperator, operators, updateColumn?.allowFilter]);
 
     // Return the appropriate cell content based on cell type

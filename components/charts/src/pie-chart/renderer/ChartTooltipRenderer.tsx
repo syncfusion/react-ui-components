@@ -363,6 +363,14 @@ export const PieChartTooltipRenderer: React.FC<PieChartTooltipProps> = (props: P
     function buildTooltipText(data: PointData, tooltipProps: PieChartTooltipProps): string {
 
         let format: string = tooltipProps.format || '';
+        if (!format) {
+            const point: Points = data.point as Points;
+            if (point) {
+                const x: Object = point.x;
+                const y: Object = point.y;
+                format = `${x} : ${y}`;
+            }
+        }
 
         if (data.point) {
             format = replaceTokensFromObject<Points>(data.point, format, 'point');

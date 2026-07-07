@@ -47,7 +47,7 @@ const RecurrenceEditorDialog: FC = () => {
                 </Button>
             </div>
         );
-    }, [handleSave, handleCancel]);
+    }, [getString, handleSave, handleCancel]);
 
 
     if (!recurrenceOpen) { return null; }

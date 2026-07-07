@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { CalendarView } from '../types';
 import { CalendarCellData, CalendarSystem } from '../../calendar-core';
-import { buildCellState, CellState, getSelectedDateFromValue, isDateDisabledByRule } from '../utils';
+import { buildCellState, CellState, getSelectedDateFromValue, isDateDisabledByRule, isCellWithinRange } from '../utils';
 import { CalendarCell, CalendarCellProps } from '../calendar-cell';
 import { useProviderContext } from '@syncfusion/react-base';
 
@@ -23,6 +23,9 @@ export interface YearViewProps {
     animate?: boolean;
     disablePastDays?: boolean;
     disableFutureDays?: boolean;
+    range?: [Date | null, Date | null];
+    onCellHover?: (date: Date) => void;
+    suppressRangeSelection?: boolean;
 }
 
 export const YearView: React.FC<YearViewProps> = ({
@@ -40,7 +43,10 @@ export const YearView: React.FC<YearViewProps> = ({
     selectedElementRef,
     animate = false,
     disablePastDays = false,
-    disableFutureDays = false
+    disableFutureDays = false,
+    suppressRangeSelection = false,
+    range,
+    onCellHover
 }: YearViewProps): React.JSX.Element => {
     const curYear: number = currentDate.getFullYear();
     const { locale } = useProviderContext();
@@ -49,7 +55,7 @@ export const YearView: React.FC<YearViewProps> = ({
     }, [multiSelect, currentValue]);
 
     const matrix: CalendarCellData[][] = React.useMemo(() => {
-        return calendarSystem.getYearMatrix(new Date(curYear, 0, 1), { locale });
+        return calendarSystem.getYearMatrix(calendarSystem.startOfYear(currentDate), { locale });
     }, [calendarSystem, curYear, locale]);
 
     return (
@@ -60,6 +66,7 @@ export const YearView: React.FC<YearViewProps> = ({
                 row.forEach((cell: CalendarCellData) => {
                     const monthDate: Date = cell.date;
                     const label: string = cell.label as string;
+                    const rangeClass: string = cell.inRange && isCellWithinRange(monthDate, range, 'month', calendarSystem) ? ' sf-in-range' : '';
 
                     const state: CellState = buildCellState(
                         'year',
@@ -69,22 +76,23 @@ export const YearView: React.FC<YearViewProps> = ({
                             maxDate,
                             disabled: false,
                             focusedDate,
-                            selectedDate
+                            selectedDate,
+                            range,
+                            suppressRangeSelection
                         },
                         calendarSystem
                     );
 
                     const isDateRuleDisabled: boolean = isDateDisabledByRule(
                         monthDate, disablePastDays, disableFutureDays, CalendarView.Year);
-
                     const baseProps: CalendarCellProps = {
                         id: `${monthDate.valueOf()}`,
                         role: 'gridcell',
-                        className: state.className,
+                        className: (state.className + rangeClass).trim(),
                         isDisabled: !!state.ariaDisabled || isDateRuleDisabled,
                         isOutOfRange: state.isOtherRange,
                         isToday: state.isToday,
-                        isSelected: state.isSelected,
+                        isSelected: suppressRangeSelection ? false : state.isSelected,
                         isFocused: state.isFocused,
                         isWeekend: false,
                         view: currentView,
@@ -96,6 +104,12 @@ export const YearView: React.FC<YearViewProps> = ({
                             }
                         }
                     };
+
+                    const handleMouseEnter: (() => void) | undefined = onCellHover ? (): void => {
+                        if (!baseProps.isDisabled) {
+                            onCellHover(new Date(monthDate));
+                        }
+                    } : undefined;
 
                     const setCellRef: (el: HTMLTableCellElement | null) => void = (el: HTMLTableCellElement | null) => {
                         if (state.isFocused && el && focusedElementRef) {
@@ -115,7 +129,12 @@ export const YearView: React.FC<YearViewProps> = ({
                         custom ? (
                             custom
                         ) : (
-                            <CalendarCell key={baseProps.id} {...baseProps} ref={setCellRef}>
+                            <CalendarCell
+                                key={baseProps.id}
+                                {...baseProps}
+                                ref={setCellRef}
+                                onMouseEnter={handleMouseEnter}
+                            >
                                 <span className="sf-day">{label}</span>
                             </CalendarCell>
                         )

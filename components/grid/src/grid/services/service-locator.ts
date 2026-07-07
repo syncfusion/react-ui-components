@@ -1,5 +1,9 @@
 import { isNullOrUndefined } from '@syncfusion/react-base';
 import { ServiceLocator } from '../types/interfaces';
+
+// ServiceLocator constants
+const SERVICE_NOT_REGISTERED_ERROR: string = 'The service {0} is not registered';
+
 /**
  * Creates a new ServiceLocator instance
  *
@@ -17,7 +21,7 @@ export const createServiceLocator: () => ServiceLocator = (): ServiceLocator => 
             return servicesMap;
         },
 
-        register: <T, >(name: string, type: T): void => {
+        register: <T extends object>(name: string, type: T): void => {
             if (isNullOrUndefined(servicesMap[name as string])) {
                 servicesMap[name as string] = type;
             }
@@ -29,9 +33,9 @@ export const createServiceLocator: () => ServiceLocator = (): ServiceLocator => 
             });
         },
 
-        getService: <T, >(name: string): T => {
+        getService: <T extends object>(name: string): T => {
             if (isNullOrUndefined(servicesMap[name as string])) {
-                throw new Error(`The service ${name} is not registered`);
+                throw new Error(SERVICE_NOT_REGISTERED_ERROR.replace('{0}', name));
             }
             return servicesMap[name as string] as T;
         }

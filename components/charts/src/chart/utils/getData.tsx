@@ -30,9 +30,9 @@ export function getData(chart: Chart): PointData {
     // Search through all visible series for point at current mouse position
     for (let i: number = chart.visibleSeries.length - 1; i >= 0; i--) {
         series = chart.visibleSeries[i as number];
-        width = (series.type === 'Scatter' || (series.marker?.visible))
+        width = (series.type?.indexOf('Scatter') as number > -1 || (series.marker?.visible))
             ? (series.marker?.height ?? 0 + 5) / 2 : 0;
-        height = (series.type === 'Scatter' || (series.marker?.visible))
+        height = (series.type?.indexOf('Scatter') as number > -1 || (series.marker?.visible))
             ? (series.marker?.width ?? 0 + 5) / 2 : 0;
         mouseX = chart.mouseX;
         mouseY = chart.mouseY;

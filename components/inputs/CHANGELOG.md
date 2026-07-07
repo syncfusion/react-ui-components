@@ -1,5 +1,30 @@
 # Changelog
 
+## 34.1.29 (2026-07-06)
+
+### TextBox
+
+**Features**
+
+- **Helper Text Support:** The TextBox component supports a `helperText` prop, allowing to display descriptive or instructional text below the input field for improved user guidance and accessibility.
+- This helper text support is also available for NumericTextBox and TextArea components, enabling consistent contextual messaging across all input fields.
+
+### NumericTextBox
+
+**Features**
+
+- **Mouse Wheel Support:** The NumericTextBox component supports a `mouseWheel` prop, allowing users to increment or decrement the numeric value by scrolling within the focused input field for faster and more intuitive value adjustment.
+- **Invert Mouse Wheel Support:** The NumericTextBox component supports an `invertMouseWheel` prop, allowing to reverse the default scroll direction so that scrolling down increments and scrolling up decrements the value.
+
+## 33.2.3 (2026-04-21)
+
+### TextBox
+
+**Features**
+
+- **Adornments Support:** The TextBox component supports `prefix` and `suffix` props, allowing to display custom icons or elements at the start and end of the input field for enhanced customization and usability.
+- This adornment support is also available for NumericTextBox and TextArea components, enabling consistent UI customization across all input fields.
+
 ## 33.1.44 (2026-03-16)
 
 ### Form

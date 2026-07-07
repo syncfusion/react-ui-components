@@ -13,6 +13,8 @@ import { EventService } from '../services/EventService';
 import { useSchedulerLocalization } from '../common/locale';
 import { getRecurrenceStringFromDate } from '../../recurrence-editor/util';
 import { updateDatasource } from '../utils/event-base';
+import { useResourceGroupingContext } from '../context/resource-grouping-context';
+import { getGroupIndexFromElement } from '../utils/actions';
 
 type UseResizeResult = {
     resizeStart: (direction: Position, e: React.MouseEvent | React.TouchEvent) => void;
@@ -29,11 +31,12 @@ type UseResizeResult = {
 export function useResize(data: EventModel):
 UseResizeResult {
     const { onResizeStart, onResizing, onResizeStop, timeScale, startHour, endHour, schedulerRef, showWeekend, workDays,
-        eventOverlap, confirmationDialog, eventResize, eventSettings } = useSchedulerPropsContext();
+        eventOverlap, confirmationDialog, eventResize, eventSettings, timezone, resources } = useSchedulerPropsContext();
     const { eventsData } = useSchedulerEventsContext();
     const { renderDates: scheduleRenderDates } = useSchedulerRenderDatesContext();
     const cloneEventState: CloneEventContextValue = useCloneEventContext();
     const { dir } = useProviderContext();
+    const { metadata, isGroupingEnabled } = useResourceGroupingContext();
     const elementRef: React.RefObject<HTMLElement> = useRef<HTMLElement | null>(null);
     const resizeInfo: React.RefObject<CloneBase> = useRef<CloneBase | null>(null);
     const minMoveDistance: number = 10;
@@ -50,6 +53,7 @@ UseResizeResult {
     const isStepDragging: React.RefObject<boolean> = useRef<boolean>(false);
     const cellHeightRef: React.RefObject<number> = useRef<number>(0);
     const minutesPerPixel: React.RefObject<number> = useRef<number>(0);
+    const targetGroupIndex: React.RefObject<number | undefined> = useRef<number | undefined>(undefined);
     const { getString } = useSchedulerLocalization();
     const eventData: React.RefObject<{
         startTime: Date;
@@ -320,19 +324,19 @@ UseResizeResult {
             });
         };
 
-        if (!eventOverlap && EventService.checkEventOverlap(updatedEvent, eventsData, true)) {
+        if (!eventOverlap && EventService.checkEventOverlap(updatedEvent, eventsData)) {
             revertAndAlert('eventOverlap', 'overlapAlert');
             return;
         }
 
-        if (EventService.isBlockRange(updatedEvent, eventsData, true)) {
+        if (EventService.isBlockRange(updatedEvent, eventsData)) {
             revertAndAlert('alert', 'blockAlert');
             return;
         }
         if (original.recurrenceRule && original.recurrenceID) {
             original.recurrenceException = original.recurrenceException ?? getRecurrenceStringFromDate(eventData.current.startTime);
         }
-        updateDatasource(original, original.startTime, original.endTime, schedulerRef, eventSettings.fields, eventsData);
+        updateDatasource(original, original.startTime, original.endTime, schedulerRef, eventSettings.fields, eventsData, timezone);
         resizeInfo.current = null;
     }, [resizeInfo.current?.isActionPerformed, elementRef.current, resizeInfo, resizeInfo.current?.cloneRef, resizing, onResizeStop]);
 
@@ -397,6 +401,7 @@ UseResizeResult {
         const currentData: EventModel = EventService.getEventByGuid(eventsData, data.guid);
         if (!currentData) { return; }
         const original: EventModel = { ...currentData, startTime: new Date(currentData.startTime), endTime: new Date(currentData.endTime) };
+        targetGroupIndex.current = isGroupingEnabled ? getGroupIndexFromElement(elementRef?.current) : undefined;
         const isDayEvent: boolean = resizeInfo.current?.isMonthView || resizeInfo.current?.isAllDaySource;
         if (!isDayEvent && timeScale.enable) {
             const tempEvent: EventModel = { ...original };
@@ -414,7 +419,9 @@ UseResizeResult {
             const segments: ProcessedEventsData[] = EventService.processTimeSlotCloneEvent(schedulerRef.current?.element,
                                                                                            scheduleRenderDates, tempEvent,
                                                                                            timeScale, startHour, endHour,
-                                                                                           resizeInfo.current.cellWidth, dir === 'rtl');
+                                                                                           resizeInfo.current.cellWidth, dir === 'rtl', cellHeightRef.current || undefined, resources,
+                                                                                           targetGroupIndex.current, metadata,
+                                                                                           eventSettings?.resourceColorField);
             cloneEventState?.show({ guid: data.guid, segments, isDayEvent: false });
             return;
         }
@@ -446,7 +453,9 @@ UseResizeResult {
                                                                                resizeInfo.current.cellWidth,
                                                                                resizeInfo.current.isAllDaySource, dir === 'rtl',
                                                                                resizeInfo.current.isMonthView,
-                                                                               elementRef.current
+                                                                               elementRef.current, resources,
+                                                                               targetGroupIndex.current, metadata,
+                                                                               eventSettings?.resourceColorField
         );
         cloneEventState?.show({ guid: data.guid, segments, isDayEvent: isDayEvent });
     };

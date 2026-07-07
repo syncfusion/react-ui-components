@@ -44,6 +44,8 @@
   --sf-color-error-text: 255, 255, 255;
   --sf-color-info-text: 255, 255, 255;
   --sf-color-line-color: 231, 227, 240;
+  --sf-color-placeholder-text-color: 121, 116, 126;
+  --sf-color-shadow-focus-ring1: 0 0 0 1px #fff,0 0 0 3px #000;
 }
 
 :root, .sf-light-mode, .sf-dark-mode {
@@ -61,12 +63,14 @@
 
 :root, .sf-light-mode, .sf-dark-mode { 
   --sf-font-size-xs: calc(var(--sf-font-size) * 0.75);
+  --sf-font-size-2xs: calc(var(--sf-font-size) * 0.625);
   --sf-font-size-sm: calc(var(--sf-font-size) * 0.875);
   --sf-font-size-base: calc(var(--sf-font-size) * 1);
   --sf-font-size-lg: calc(var(--sf-font-size) * 1.125);
   --sf-font-size-xl: calc(var(--sf-font-size) * 1.25);
   --sf-font-size-2xl: calc(var(--sf-font-size) * 1.5);
   --sf-font-size-3xl: calc(var(--sf-font-size) * 2);
+  --sf-line-height-2xs: calc(var(--sf-font-size) * .875);
   --sf-line-height-xs: calc(var(--sf-font-size) * 1);
   --sf-line-height-sm: calc(var(--sf-font-size) * 1.25);
   --sf-line-height-base: calc(var(--sf-font-size) * 1.5);
@@ -77,6 +81,7 @@
   --sf-font-weight-normal: 400;
   --sf-font-weight-medium: 500;
   --sf-font-weight-semibold: 600;
+  --sf-font-weight-bold: 700;
   --sf-letter-spacing-normal: var(--sf-letter-spacing);
   --sf-letter-spacing-wide: calc(var(--sf-letter-spacing) + 0.1px);
   --sf-letter-spacing-wider: calc(var(--sf-letter-spacing) + 0.25px);
@@ -105,8 +110,10 @@
   --sf-spacing-28: calc(var(--sf-spacing) * 1.75);
   --sf-spacing-30: calc(var(--sf-spacing) * 1.875);
   --sf-spacing-32: calc(var(--sf-spacing) * 2);
+  --sf-spacing-36: calc(var(--sf-spacing) * 2.25);
   --sf-spacing-40: calc(var(--sf-spacing) * 2.5);
   --sf-spacing-48: calc(var(--sf-spacing) * 3);
+  --sf-spacing-52: calc(var(--sf-spacing) * 3.25);
   --sf-spacing-56: calc(var(--sf-spacing) * 3.5);
   --sf-spacing-72: calc(var(--sf-spacing) * 4.5);
   --sf-radius-0: 0px;
@@ -163,6 +170,7 @@ $info-text: sf-color('info-text') !default;
 $error-text: sf-color('error-text') !default;
 $grid-line: sf-color('line-color') !default;
 $pager-line: sf-color('line-color') !default;
+$placeholder-text-color: sf-color('placeholder-text-color') !default;
 
 $surface1: linear-gradient(0deg, rgba($primary, $opacity5), rgba($primary, $opacity5)), rgba($surface) !default;
 $surface2: linear-gradient(0deg, rgba($primary, $opacity8), rgba($primary, $opacity8)), rgba($surface) !default;
@@ -170,6 +178,10 @@ $surface3: linear-gradient(0deg, rgba($primary, $opacity11), rgba($primary, $opa
 
 $primary-text-color: $on-primary !default;
 $primary-light: $primary-container !default;
+$success-light: $success-container !default;
+$warning-light: $warning-container !default;
+$error-light: $error-container !default;
+$info-light: $info-container !default;
 $transparent: transparent !default;
 $info-dark: $info !default;
 $warning-dark: $warning !default;
@@ -187,6 +199,7 @@ $flyout-bg-color: linear-gradient(0deg, rgba($content-bg-color, 1), rgba($conten
 $flyout-bg-color-hover: rgba($on-surface, $opacity5) !default;
 $flyout-bg-color-selected: rgba($primary-container, .65) !default;
 $flyout-bg-color-focus: rgba($on-surface, $opacity4) !default;
+$flyout-bg-color-pressed: rgba($on-surface, $opacity8) !default;
 $overlay-bg-color: rgba($scrim, .5) !default;
 $table-bg-color-selected: rgba($primary-container, .65) !default;
 $table-bg-color-selected-hover: color-mix(in srgb, rgba($primary-container, .85), rgba($on-surface, 0.15));
@@ -221,7 +234,7 @@ $shadow-md: var(--sf-elevation-2) !default;
 $shadow-lg: var(--sf-elevation-3) !default;
 $shadow-inner: var(--sf-elevation-inner)!default;
 
-$shadow-focus-ring1: 0 0 0 1px #fff, 0 0 0 3px #000 !default;
+$shadow-focus-ring1: var(--sf-color-shadow-focus-ring1) !default;
 $shadow-focus-ring2: 0 0 0 2px rgba($content-text-color, 1) !default;
 
 $secondary-bg-color: linear-gradient(0deg, rgba($content-bg-color, 1), rgba($content-bg-color, 1)), rgba($content-bg-color) !default;
@@ -239,6 +252,7 @@ $primary-text: $primary-text-color !default;
 $primary-bg-color-hover: linear-gradient(0deg, rgba($primary-text, $opacity8), rgba($primary-text, $opacity8)), rgba($primary-bg-color) !default;
 $primary-bg-color-pressed: linear-gradient(0deg, rgba($primary-text, $opacity12), rgba($primary-text, $opacity12)), rgba($primary-bg-color) !default;
 $primary-text-disabled: rgba($on-surface, .38) !default;
+$primary-bg-color-disabled: rgba($secondary, .12) !default;
 
 $success-bg-color: $success !default;
 $success-border-color: $success !default;
@@ -248,6 +262,7 @@ $success-text-hover: $success-text !default;
 $success-bg-color-pressed: linear-gradient(0deg, rgba($success-text, $opacity12), rgba($success-text, $opacity12)), rgba($success-bg-color) !default;
 $success-bg-color-disabled: rgba($secondary, .12) !default;
 $success-border-color-disabled: $success-bg-color-disabled !default;
+$success-bg-color-disabled: rgba($secondary, .12) !default;
 
 $warning-bg-color: $warning !default;
 $warning-border-color: $warning !default;
@@ -255,6 +270,7 @@ $warning-text: $white !default;
 $warning-bg-color-hover: linear-gradient(0deg, rgba($warning-text, $opacity8), rgba($warning-text, $opacity8)), rgba($warning-bg-color) !default;
 $warning-text-hover: $warning-text !default;
 $warning-bg-color-pressed: linear-gradient(0deg, rgba($warning-text, $opacity12), rgba($warning-text, $opacity12)), rgba($warning-bg-color) !default;
+$warning-bg-color-disabled: rgba($secondary, .12) !default;
 
 $error-bg-color: $error !default;
 $error-border-color: $error !default;
@@ -262,6 +278,7 @@ $error-text: $white !default;
 $error-bg-color-hover: linear-gradient(0deg, rgba($error-text, $opacity8), rgba($error-text, $opacity8)), rgba($error-bg-color) !default;
 $error-text-hover: $error-text !default;
 $error-bg-color-pressed: linear-gradient(0deg, rgba($error-text, $opacity12), rgba($error-text, $opacity12)), rgba($error-bg-color) !default;
+$error-bg-color-disabled: rgba($secondary, .12) !default;
 
 $info-text: $white !default;
 $info-bg-color: $info !default;
@@ -269,6 +286,7 @@ $info-border-color: $info-bg-color !default;
 $info-bg-color-hover: linear-gradient(0deg, rgba($info-text, $opacity8), rgba($info-text, $opacity8)), rgba($info-bg-color) !default;
 $info-text-hover: $info-text !default;
 $info-bg-color-pressed: linear-gradient(0deg, rgba($info-text, $opacity12), rgba($info-text, $opacity12)), rgba($info-bg-color) !default;
+$info-bg-color-disabled: rgba($secondary, .12) !default;
 
 $primary-outline: $primary-bg-color !default;
 $success-outline: $success-bg-color !default;
@@ -413,6 +431,8 @@ $tooltip-text-color: #f9fafb !default;
   --sf-color-info-text: 0, 0, 0;
   --sf-color-error-text: 0, 0, 0;
   --sf-color-line-color: 57, 53, 67;
+  --sf-color-placeholder-text-color: 121, 116, 126;
+  --sf-color-shadow-focus-ring1: 0 0 0 1px #000,0 0 0 3px #fff;
 }
 
 $error-font-color: $error !default;

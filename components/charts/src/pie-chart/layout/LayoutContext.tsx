@@ -1,5 +1,5 @@
 //LayoutContext.tsx
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, JSX, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { ChartContext } from './ChartProvider';
 import { Chart, PieBaseSelection, Points, SeriesProperties } from '../base/internal-interfaces';
 import { ChartRenderer } from '../renderer/ChartRenderer';
@@ -9,12 +9,15 @@ import { ChartLegendRenderer, CustomLegendRenderer } from '../renderer/LegendRen
 import { ChartSeriesRenderer } from '../renderer/series-renderer/ChartSeriesRenderer';
 import { callChartEventHandlers } from '../hooks/events';
 import { CenterLabelRenderer } from '../renderer/ChartCenterLabelRender';
-import { PieChartMouseEvent, PieChartSizeProps, PiePointClickEvent, PieResizeEvent } from '../base/interfaces';
+import { PieChartMouseEvent, PieChartSizeProps, PiePointClickEvent, PieResizeEvent, PieChartAnnotationProps } from '../base/interfaces';
 import { Browser, isNullOrUndefined } from '@syncfusion/react-base';
 import { PieChartTooltipRenderer, PointData } from '../renderer/ChartTooltipRenderer';
 import { indexFinder, stringToNumber } from '../utils/helper';
 import { PieSelectionRenderer } from '../renderer/PieSelectionsRenderer';
 import { highlightChart, PieHighlightRenderer } from '../renderer/PieHighlightRenderer';
+import PieChartAnnotationRenderer, { renderPieChartAnnotations } from '../renderer/PieChartAnnotationRenderer';
+import { isHtmlContent } from '../../common/annotation';
+import { NoDataTemplateRenderer } from '../renderer/series-renderer/NoDataTemplateRenderer';
 
 /**
  * React context for managing layout-related state and operations.
@@ -33,7 +36,7 @@ export const LayoutProvider: React.FC = () => {
     const [phase, setPhase] = useState<'measuring' | 'rendering'>('measuring');
 
     const { render, parentElement, chartProps, chartTitle, chartSubTitle, chartSeries, centerLabel
-        , chartLegend, chartTooltip, chartSelection, chartHighlight } = useContext(ChartContext);
+        , chartLegend, chartTooltip, chartSelection, chartHighlight, pieChartAnnotation } = useContext(ChartContext);
 
     const measuredKeysRef: React.RefObject<Set<string>> = useRef<Set<string>>(new Set());
     const layoutRef: React.RefObject<Chart> = useRef<Chart>({} as Chart);
@@ -41,9 +44,17 @@ export const LayoutProvider: React.FC = () => {
     const subtitleRef: React.RefObject<SVGTextElement | null> = useRef<SVGTextElement>(null);
     const seriesRef: React.RefObject<SVGGElement | null> = useRef<SVGGElement>(null);
     const legendRef: React.RefObject<SVGGElement | null> = useRef<SVGGElement>(null);
+    const chart: Chart = layoutRef.current as Chart;
+    const isNoData: boolean = !chart ||
+        !chart.visibleSeries ||
+        chart.visibleSeries.length === 0 ||
+        chart.visibleSeries.every((series: SeriesProperties) =>
+            !series.points || series.points.length === 0
+        );
     const [isMouseInside, setIsMouseInside] = useState(false);
     const [disableAnimation, setDisableAnimation] = useState(false);
     const [isSeriesAnimated, setSeriesAnimated] = useState(false);
+    const [htmlAnnotationElement, setHtmlAnnotationElement] = useState<React.JSX.Element | null>(null);
 
 
     const setLayoutValue: <K extends keyof Chart>(key: K, value: Chart[K]) => void = useCallback(
@@ -73,7 +84,6 @@ export const LayoutProvider: React.FC = () => {
         layoutRef.current = {} as Chart;
         setPhase('measuring');
     }, []);
-
     const expectedKeys: string[] = useMemo(() => {
         const keys: string[] = ['Chart', 'ChartSeries'];
         if (chartTitle?.text) {
@@ -108,6 +118,47 @@ export const LayoutProvider: React.FC = () => {
             setPhase('rendering');
         }
     }, [expectedKeys]);
+
+    useEffect(() => {
+        if (phase !== 'rendering') {
+            setHtmlAnnotationElement(null);
+            return;
+        }
+
+        if (!pieChartAnnotation || pieChartAnnotation.length === 0) {
+            setHtmlAnnotationElement(null);
+            return;
+        }
+
+        const htmlAnnotations: PieChartAnnotationProps[] = (pieChartAnnotation as PieChartAnnotationProps[])
+            .filter((annotation: PieChartAnnotationProps) => isHtmlContent(annotation.content as string));
+
+        if (!htmlAnnotations.length) {
+            setHtmlAnnotationElement(null);
+            return;
+        }
+
+        const chart: Chart = layoutRef.current as Chart;
+
+        if (!chart || !chart.element || !chart.element.id) {
+            setHtmlAnnotationElement(null);
+            return;
+        }
+
+        const element: JSX.Element | null = renderPieChartAnnotations(
+            layoutRef.current as Chart,
+            htmlAnnotations,
+            isSeriesAnimated ? 1 : 0
+        );
+
+        setHtmlAnnotationElement(element);
+    }, [
+        phase,
+        parentElement?.availableSize?.width,
+        parentElement?.availableSize?.height,
+        isSeriesAnimated,
+        pieChartAnnotation
+    ]);
 
     /**
      * Handles mouse click events on the chart area.
@@ -590,70 +641,30 @@ export const LayoutProvider: React.FC = () => {
     /**
      * Handles keydown events for keyboard navigation in accumulation charts.
      * Detects Tab, Escape, and Arrow keys to manage focus and tooltip behavior.
+     * During Tab/Shift+Tab: Browser owns focus traversal, chart logic is suspended.
+     * During Arrow/Enter/Space: Chart owns navigation.
      *
      * @param {KeyboardEvent} e - The keyboard event triggered by user input.
      * @returns {boolean} Indicates whether the keydown event was handled.
      */
     const accumulationChartKeyDown: (e: KeyboardEvent) => boolean = (e: KeyboardEvent): boolean => {
-        const chart: Chart & {tabHandled?: boolean } = layoutRef.current as Chart & {tabHandled?: boolean };
+        const chart: Chart & {tabHandled?: boolean; isTabNavigation?: boolean } = layoutRef.current as Chart & {
+            tabHandled?: boolean; isTabNavigation?: boolean };
         let actionKey: string = '';
         if (e.code === 'Tab') {
-            const currId: string = (e.target as Element)?.id as string;
-
-            // Determine if a legend target exists
-            const legendId: string = chart?.chartLegend?.legendID as string;
-            const legendTranslate: HTMLElement | null = document.getElementById(`${legendId}_translate_g`) as HTMLElement;
-            const pageUpEl: HTMLElement | null = document.getElementById(`${legendId}_pageup`) as HTMLElement;
-            const hasLegendTarget: boolean = !!(legendTranslate?.firstElementChild || pageUpEl);
-
-            // When tabbing from a slice
-            if (currId.indexOf('_Point_') > -1) {
-                if (hasLegendTarget) {
-                    // We can move focus within chart to legend: prevent default and focus the legend
-                    e.preventDefault();
-
-                    try {
-                        chart.tooltipRef?.current?.fadeOut?.();
-                        const leaveEvt: MouseEvent = new MouseEvent('mouseleave', { bubbles: true, cancelable: true, view: window });
-                        // Dispatch on the chart container so internal mouse-leave logic runs
-                        parentElement.element.dispatchEvent(leaveEvt);
-                        callChartEventHandlers('mouseLeave', leaveEvt, chart);
-                    } catch {
-                        // no op
-                    }
-
-                    const toFocus: HTMLElement =
-                        (legendTranslate?.firstElementChild as HTMLElement) ?? (pageUpEl as HTMLElement);
-
-                    if (toFocus) {
-                        focusTarget(toFocus);
-                        setNavigationStyle(toFocus);
-                        if (legendTranslate && legendTranslate.firstElementChild?.lastElementChild?.id) {
-                            chart.previousTargetId = (legendTranslate.firstElementChild.lastElementChild as Element).id;
-                        } else {
-                            chart.previousTargetId = toFocus.id;
-                        }
-                    }
-                    chart.tooltipRef?.current?.fadeOut?.();
-                    chart.tabHandled = true;
-                    return false;
-                } else {
-                    try {
-                        chart.tooltipRef?.current?.fadeOut?.();
-                        const leaveEvt: MouseEvent = new MouseEvent('mouseleave', { bubbles: true, cancelable: true, view: window });
-                        parentElement.element.dispatchEvent(leaveEvt);
-                        callChartEventHandlers('mouseLeave', leaveEvt, chart);
-                    } catch {
-                        // no op
-                    }
-                    removeKeyboardNavigationStyle();
-                    chart.previousTargetId = currId;
-                    chart.tabHandled = false;
-                    return false;
-                }
+            try {
+                chart.tooltipRef?.current?.fadeOut?.();
+                const leaveEvt: MouseEvent = new MouseEvent('mouseleave', { bubbles: true, cancelable: true, view: window });
+                parentElement.element.dispatchEvent(leaveEvt);
+                callChartEventHandlers('mouseLeave', leaveEvt, chart);
+            } catch {
+                // no op
             }
+            removeKeyboardNavigationStyle();
+            chart.isTabNavigation = true;
+            return false;
         }
-        if (chart.tooltipModule.enable && ((e.code === 'Tab' && chart.previousTargetId.indexOf('Series') > -1) || e.code === 'Escape')) {
+        if (chart.tooltipModule.enable && e.code === 'Escape') {
             actionKey = 'ESC';
         }
         if (e.code.indexOf('Arrow') > -1) {
@@ -661,9 +672,6 @@ export const LayoutProvider: React.FC = () => {
         }
         if (actionKey !== '') {
             accumulationChartKeyboardNavigations(e, (e.target as HTMLElement).id, actionKey);
-        }
-        if (e.code === 'Tab') {
-            removeKeyboardNavigationStyle();
         }
         return false;
     };
@@ -682,11 +690,13 @@ export const LayoutProvider: React.FC = () => {
             currentPointIndex?: number;
             previousTargetId?: string;
             tabHandled: boolean;
+            isTabNavigation?: boolean;
         } = layoutRef.current as Chart & {
             currentLegendIndex?: number;
             currentPointIndex?: number;
             previousTargetId?: string;
             tabHandled: boolean;
+            isTabNavigation?: boolean;
         };
 
         chart.currentLegendIndex = chart.currentLegendIndex ?? 0;
@@ -711,8 +721,60 @@ export const LayoutProvider: React.FC = () => {
         if (pageUpEl) {
             pageUpEl.setAttribute('class', 'e-pieChart-focused');
         }
-        removeKeyboardNavigationStyle();
+        if (chart.isTabNavigation) {
+            removeKeyboardNavigationStyle();
+            chart.isTabNavigation = false;
+            targetId = activeElement?.id || targetId;
+            chart.previousTargetId = targetId;
+            const isInsideChart: boolean = !!targetId && targetId.indexOf(chart.element.id) > -1;
+            if (isInsideChart) {
+                const targetElement: HTMLElement = document.getElementById(targetId) as HTMLElement;
+                if (targetElement) {
+                    if (targetId.indexOf('_Point_') > -1) {
+                        const groupElement: HTMLElement = targetElement.parentElement as HTMLElement;
+                        for (let i: number = 0; i < groupElement.children.length; i++) {
+                            const child: HTMLElement = groupElement.children[i as number] as HTMLElement;
+                            if (child.id.indexOf('_Point_') > -1) { child.setAttribute('tabindex', '-1'); }
+                        }
+                        targetElement.setAttribute('tabindex', '0');
+                    }
+                    setNavigationStyle(targetElement);
+                    if (targetId.indexOf('_Point_') > -1 || targetId.indexOf('_chart_legend_') > -1) {
+                        let mouseX: number = layoutRef.current.mouseX;
+                        let mouseY: number = layoutRef.current.mouseY;
+                        if (targetId.indexOf('_Point_') > -1) {
+                            const seriesIndex: number = +(targetId.split('_Series_')[1].split('_Point_')[0]);
+                            const pointIndex: number = +(targetId.split('_Series_')[1].replace('_Symbol', '').split('_Point_')[1]);
+                            const pointRegion: Points =
+                                layoutRef.current.visibleSeries?.[seriesIndex as number]?.points?.[pointIndex as number];
+                            if (pointRegion?.symbolLocation) {
+                                mouseX = pointRegion.symbolLocation.x + layoutRef.current.clipRect.x;
+                                mouseY = pointRegion.symbolLocation.y + layoutRef.current.clipRect.y;
+                                layoutRef.current.mouseX = mouseX;
+                                layoutRef.current.mouseY = mouseY;
+                            }
+                        }
+                        const rect: DOMRect = layoutRef.current.element.getBoundingClientRect() as DOMRect;
+                        const mouseEvent: MouseEvent = new MouseEvent('mousemove', {
+                            bubbles: true, cancelable: true, view: window,
+                            clientX: rect.left + mouseX, clientY: rect.top + mouseY
+                        });
+                        let dispatchElement: HTMLElement = targetElement;
+                        if (targetId.indexOf('_chart_legend_') > -1) {
+                            const legendLabel: HTMLElement = targetElement?.lastElementChild as HTMLElement;
+                            if (legendLabel) {
+                                dispatchElement = legendLabel;
+                            }
+                        }
+                        dispatchElement.dispatchEvent(mouseEvent);
+                        callChartEventHandlers('mouseMove', mouseEvent, layoutRef.current, mouseX, mouseY, true);
+                    }
+                }
+            }
+            return false;
+        }
         if (e.code === 'Tab') {
+            removeKeyboardNavigationStyle();
             if (chart.tabHandled) {
                 targetId = activeElement?.id || targetId;
                 chart.tabHandled = false;
@@ -729,8 +791,17 @@ export const LayoutProvider: React.FC = () => {
                     }
                     const groupElement: HTMLElement = document.getElementById(chart.previousTargetId)?.parentElement as HTMLElement;
                     if (groupElement && groupElement.children.length > 0) {
+                        // Find the first point element, skipping hover_border
+                        let firstPointElement: HTMLElement = groupElement.firstElementChild as HTMLElement;
+                        for (let i: number = 0; i < groupElement.children.length; i++) {
+                            const child: HTMLElement = groupElement.children[i as number] as HTMLElement;
+                            if (child.id.indexOf('_Point_') > -1) {
+                                firstPointElement = child;
+                                break;
+                            }
+                        }
                         setTabIndex(groupElement.children[chart.currentPointIndex as number] as HTMLElement,
-                                    groupElement.firstElementChild as HTMLElement);
+                                    firstPointElement);
                     }
                     chart.currentPointIndex = 0;
                 } else if (
@@ -745,23 +816,25 @@ export const LayoutProvider: React.FC = () => {
 
             chart.previousTargetId = targetId;
 
-            if (targetId.indexOf('_chart_legend_g_') > -1) {
-                const labelId: string = (e.target as Element)?.lastElementChild?.id as string;
-                if (labelId) { targetId = labelId; }
-                actionKey = 'Tab'; // only when landing on legend (normalize label id)
-            } else if (targetId.indexOf('_Point_') > -1) {
-                // Make only the current slice tabbable; others not
-                const groupElement: HTMLElement | null = (document.getElementById(targetId) as HTMLElement)?.parentElement as HTMLElement;
-                if (groupElement) {
-                    for (let i: number = 0; i < groupElement.children.length; i++) {
-                        const child: HTMLElement = groupElement.children[i as number] as HTMLElement;
-                        if (child.id.indexOf('_Point_') > -1) {
-                            child.setAttribute('tabindex', child.id === targetId ? '0' : '-1');
+            if (targetId.indexOf('_Point_') > -1) {
+                const seriesIndex: number = +(targetId.split('_Series_')[1].split('_Point_')[0]);
+                const pointIndex: number = +(targetId.split('_Series_')[1].replace('_Symbol', '').split('_Point_')[1]);
+                const point: Points = layoutRef.current.visibleSeries?.[seriesIndex as number]?.points?.[pointIndex as number];
+                if (point?.visible) {
+                    // Make only the current slice tabbable; others not
+                    const groupElement: HTMLElement | null = (document.getElementById(targetId))?.parentElement as HTMLElement;
+                    if (groupElement) {
+                        for (let i: number = 0; i < groupElement.children.length; i++) {
+                            const child: HTMLElement = groupElement.children[i as number] as HTMLElement;
+                            // Only set tabindex on point elements, exclude hover_border
+                            if (child.id.indexOf('_Point_') > -1 && child.id.indexOf('hover_border') === -1) {
+                                child.setAttribute('tabindex', child.id === targetId ? '0' : '-1');
+                            }
                         }
                     }
-                }
-                if ((chart)?.tooltipModule?.enable || layoutRef.current.chartHighlight) {
-                    actionKey = 'Tab'; // only for slice to show tooltip via simulated mousemove
+                    if ((chart)?.tooltipModule?.enable || layoutRef.current.chartHighlight) {
+                        actionKey = 'Tab'; // only for slice to show tooltip via simulated mousemove
+                    }
                 }
             } else {
                 // Focus moved outside chart; ensure tooltip is hidden
@@ -772,11 +845,12 @@ export const LayoutProvider: React.FC = () => {
             const isInsideChart: boolean = !!targetId && targetId.indexOf(chart.element.id) > -1;
             if (isInsideChart) {
                 const targetElement: HTMLElement = document.getElementById(targetId) as HTMLElement;
-                if (targetElement) { setNavigationStyle(targetElement); }
+                setNavigationStyle(targetElement);
             }
         }
         else if (e.code.indexOf('Arrow') > -1) {
             e.preventDefault();
+            removeKeyboardNavigationStyle();
             if (targetId.indexOf('_chart_legend_page') > -1) {
                 (activeElement as Element).removeAttribute('tabindex');
                 const nextId: string = `${legendId}_page${e.code === 'ArrowRight' ? 'up' : 'down'}`;
@@ -792,6 +866,18 @@ export const LayoutProvider: React.FC = () => {
                 const currentLegend: HTMLElement = legendTranslate.children[chart.currentLegendIndex as number] as HTMLElement;
                 focusTarget(currentLegend);
                 setNavigationStyle(currentLegend);
+                const legendLabel: HTMLElement = currentLegend.lastElementChild as HTMLElement;
+                const point: Points = layoutRef.current.visibleSeries?.[0]?.points?.[chart.currentLegendIndex as number];
+                if (legendLabel && point.visible) {
+                    const rect: DOMRect = layoutRef.current.element.getBoundingClientRect() as DOMRect;
+                    const mouseEvent: MouseEvent = new MouseEvent('mousemove', {
+                        bubbles: true, cancelable: true, view: window,
+                        clientX: rect.left + layoutRef.current.mouseX, clientY: rect.top + layoutRef.current.mouseY
+                    });
+                    legendLabel.dispatchEvent(mouseEvent);
+                    callChartEventHandlers('mouseMove', mouseEvent, layoutRef.current, layoutRef.current.mouseX,
+                                           layoutRef.current.mouseY, true);
+                }
                 chart.previousTargetId = targetId = (currentLegend.lastElementChild as Element).id;
                 actionKey = 'ArrowMove';
             }
@@ -809,19 +895,61 @@ export const LayoutProvider: React.FC = () => {
                 chart.currentPointIndex = getActualIndex(chart.currentPointIndex as number, total);
                 const nextPointId: string = `${chart.element.id}_Series_0_Point_${chart.currentPointIndex}`;
                 const pointElement: HTMLElement = document.getElementById(nextPointId) as HTMLElement;
-                if (pointElement) {
+                const nextSeriesIndex: number = +(nextPointId.split('_Series_')[1].split('_Point_')[0]);
+                const nextPointIndex: number = +(nextPointId.split('_Series_')[1].replace('_Symbol', '').split('_Point_')[1]);
+                const nextPoint: Points = layoutRef.current.visibleSeries?.[nextSeriesIndex as number]?.points?.[nextPointIndex as number];
+
+                if (pointElement && nextPoint?.visible) {
                     focusTarget(pointElement);
                     setNavigationStyle(pointElement);
                 }
-                actionKey = ((chart)?.tooltipModule?.enable || layoutRef.current.chartHighlight) ? 'ArrowMove' : '';
+                actionKey = ((chart)?.tooltipModule?.enable || layoutRef.current.chartHighlight) && nextPoint?.visible ? 'ArrowMove' : '';
                 targetId = nextPointId;
             }
         }
         else if ((e.code === 'Enter' || e.code === 'Space') && ((targetId.indexOf('_chart_legend_') > -1) ||
             (targetId.indexOf('_Point_') > -1) || layoutRef.current.chartSelection)) {
+            removeKeyboardNavigationStyle();
             if (targetId.indexOf('_chart_legend_g') > -1) {
+                layoutRef.current.tooltipRef?.current?.fadeOut();
                 const labelId: string = (e.target as Element)?.lastElementChild?.id as string;
+                const legendIndexMatch: RegExpMatchArray | null = targetId.match(/_chart_legend_g_(\d+)/);
+                const legendIndex: number = legendIndexMatch ? parseInt(legendIndexMatch[1], 10) : 0;
                 void (labelId && (targetId = labelId));
+
+                // Find and update point tab indices based on legend click
+                const seriesId: string = `${chart.element.id}_Series_0`;
+                const seriesElement: HTMLElement | null = document.getElementById(seriesId) as HTMLElement;
+
+                if (seriesElement) {
+                    const points: HTMLCollection = seriesElement.children;
+
+                    // Loop through all point elements one by one
+                    for (let i: number = 0; i < points.length; i++) {
+                        const pointElement: HTMLElement = points[i as number] as HTMLElement;
+                        const pointId: string = pointElement?.id || '';
+
+                        // Skip hover_border elements
+                        if (pointId.indexOf('hover_border') > -1) {
+                            continue;
+                        }
+
+                        // Check if this is a point element
+                        if (pointId.indexOf('_Point_') > -1) {
+                            // Extract point index from the point element ID
+                            const pointIndex: number = +(pointId.split('_Point_')[1]);
+                            const point: Points = layoutRef.current.visibleSeries?.[0]?.points?.[pointIndex as number];
+
+                            // Check if this point is visible
+                            if ((point?.visible && legendIndex !== pointIndex) || (!point?.visible && legendIndex === pointIndex)) {
+                                pointElement.setAttribute('tabindex', '0');
+                                break;
+                            } else {
+                                pointElement.setAttribute('tabindex', '-1');
+                            }
+                        }
+                    }
+                }
             }
             actionKey = 'Enter';
         }
@@ -873,18 +1001,13 @@ export const LayoutProvider: React.FC = () => {
                             callChartEventHandlers(
                                 'mouseMove', mouseEvent, layoutRef.current, layoutRef.current.mouseX, layoutRef.current.mouseY, isKeyboardNav
                             );
-
-                            if (layoutRef.current.chartHighlight) {
-                                const tartgetElement: SVGGElement = seriesRef.current as SVGGElement;
-                                const chartHighlight: PieBaseSelection = layoutRef.current?.chartHighlight as PieBaseSelection;
-                                if (chartHighlight && chart) {
-                                    highlightChart(
-                                        chart, chartHighlight, tartgetElement, legendRef, seriesRef, layoutRef.current?.chartSelection &&
-                                    (layoutRef.current?.chartSelection as PieBaseSelection).
-                                        chartSelectedDataIndexes?.length as number > 0
-                                    );
-                                }
-                            }
+                            const tartgetElement: SVGGElement = seriesRef.current as SVGGElement;
+                            const chartHighlight: PieBaseSelection = layoutRef.current?.chartHighlight as PieBaseSelection;
+                            highlightChart(
+                                chart, chartHighlight, tartgetElement, legendRef, seriesRef, layoutRef.current?.chartSelection &&
+                            (layoutRef.current?.chartSelection as PieBaseSelection).
+                                chartSelectedDataIndexes?.length as number > 0
+                            );
                         }
                     }
                 }
@@ -954,18 +1077,20 @@ export const LayoutProvider: React.FC = () => {
         render &&
         <LayoutContext.Provider value={{
             layoutRef, phase, availableSize, triggerRemeasure, reportMeasured, disableAnimation
-            , setDisableAnimation, isSeriesAnimated, setSeriesAnimated, seriesRef, legendRef, setLayoutValue
+            , setDisableAnimation, isSeriesAnimated, setSeriesAnimated, seriesRef, legendRef, setLayoutValue, isNoData
         }}>
             <div
                 id={`${parentElement?.element?.id}_Secondary_Element`}
             >
+                {htmlAnnotationElement}
+                <NoDataTemplateRenderer />
                 {chartTooltip.template && chartTooltip.enable && (
                     <div id={`${parentElement?.element?.id}_tooltip`}>
                         <PieChartTooltipRenderer {...chartTooltip} />
                     </div>
                 )}
             </div>
-            <svg id={layoutRef.current.element?.id + '_svg'} width={availableSize.width} height={availableSize.height}>
+            <svg id={layoutRef.current.element?.id + '_svg'} width={availableSize.width} height={availableSize.height} >
                 <ChartRenderer {...chartProps}></ChartRenderer>
                 {chartTitle.text &&
                     <ChartTitleRenderer ref={titleRef} {...chartTitle}></ChartTitleRenderer>
@@ -982,6 +1107,9 @@ export const LayoutProvider: React.FC = () => {
                 }
                 {centerLabel.label?.length && centerLabel.label?.length > 0 &&
                     <CenterLabelRenderer {...centerLabel}></CenterLabelRenderer>
+                }
+                {pieChartAnnotation.length > 0 &&
+                    <PieChartAnnotationRenderer {...pieChartAnnotation} />
                 }
                 {!chartTooltip.template && chartTooltip.enable &&
                     <PieChartTooltipRenderer {...chartTooltip} />
@@ -1082,4 +1210,5 @@ export interface LayoutContextType {
      * Optional reference to the chart legend component.
      */
     legendRef: React.RefObject<SVGGElement | null>;
+    isNoData: boolean;
 }

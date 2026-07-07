@@ -1,6 +1,6 @@
 import { ChartMarkerProps } from '../../base/interfaces';
 import { DoubleRangeType, PointRenderingEvent, Points, Rect, RenderOptions, SeriesProperties } from '../../chart-area/chart-interfaces';
-import { useVisiblePoints } from '../../utils/helper';
+import { calculateVisiblePoints } from '../../utils/helper';
 import { BarSeriesType, ColumnBase, ColumnBaseReturnType } from './ColumnBase';
 import { MarkerRenderer } from './MarkerRenderer';
 import { handleRectAnimation } from './SeriesAnimation';
@@ -18,10 +18,9 @@ const BarSeries: BarSeriesType = {
      * Renders the bar series with optional markers.
      *
      * @param {SeriesProperties} series - Series configuration and data points
-     * @param {boolean} _isInverted - Chart inversion state (currently unused)
      * @returns {RenderOptions[]|Object} Array of render options or object containing options and marker properties
      */
-    render: (series: SeriesProperties, _isInverted: boolean ):
+    render: (series: SeriesProperties):
     RenderOptions[] | { options: RenderOptions[]; marker: ChartMarkerProps } => {
         // Validate series and required properties
         if (!series || !series.points || !Array.isArray(series.points)) {
@@ -53,7 +52,7 @@ const BarSeries: BarSeriesType = {
         }
 
         for (const pointBar of validPoints) {
-            const result: RenderOptions | undefined = BarSeries.renderPoint(
+            const result: RenderOptions | RenderOptions[] | undefined = BarSeries.renderPoint(
                 series,
                 pointBar,
                 BarSeries.sideBySideInfo[series.index],
@@ -61,13 +60,16 @@ const BarSeries: BarSeriesType = {
             );
 
             // Only add valid render options
-            if (result && typeof result === 'object') {
+            if (result && Array.isArray(result)) {
+                options.push(...result);
+            }
+            else if (result) {
                 options.push(result);
             }
 
         }
 
-        series.visiblePoints = useVisiblePoints(series);
+        series.visiblePoints = calculateVisiblePoints(series);
         const marker: ChartMarkerProps | null = series.marker?.visible ? MarkerRenderer.render(series) as Object : null;
         return marker ? { options, marker } : options;
     },
@@ -82,7 +84,7 @@ const BarSeries: BarSeriesType = {
      * @returns {RenderOptions} Render options for the point or undefined if point is not visible or rendering is cancelled
      */
     renderPoint: (series: SeriesProperties, pointBar: Points, sideBySideInfo: DoubleRangeType
-        , origin: number): RenderOptions | undefined => {
+        , origin: number): RenderOptions | RenderOptions[] | undefined => {
         // Early exit for invalid parameters
         if (!series || !pointBar || !sideBySideInfo) {
             return undefined;
@@ -147,6 +149,10 @@ const BarSeries: BarSeriesType = {
             rect.y = rect.y - yPositionAdjustment;
         }
 
+        if (rect.height <= 0) {
+            return undefined;
+        }
+
         // Early exit if event triggering method is not available
         if (!columnBaseInstance.triggerEvent || typeof columnBaseInstance.triggerEvent !== 'function') {
             return undefined;
@@ -180,7 +186,10 @@ const BarSeries: BarSeriesType = {
         const seriesIndex: number = series.index ?? 0;
         const pointIndex: number = pointBar.index ?? 0;
         const name: string = `${chartId}_Series_${seriesIndex}_Point_${pointIndex}`;
-
+        if (series.columnFacet === 'Cylinder')
+        {
+            return columnBaseInstance.drawCylinder(series, pointBar, rect, argsData, name);
+        }
         return columnBaseInstance.drawRectangle(series, pointBar, rect, argsData, name);
     },
 

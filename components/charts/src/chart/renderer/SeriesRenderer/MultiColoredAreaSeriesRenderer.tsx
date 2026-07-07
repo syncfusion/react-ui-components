@@ -467,6 +467,7 @@ export function getBorderDirection(direction: string): string {
  *
  * @param {SeriesProperties} series - Series whose visible points will be inspected.
  * @returns {{ minX: number, maxX: number }} The computed X-bounds in pixels.
+ * @private
  */
 export function getSeriesXBounds(series: SeriesProperties): { minX: number; maxX: number } {
     const isInverted: boolean = series.chart?.requireInvertedAxis;

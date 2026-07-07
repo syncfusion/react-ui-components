@@ -253,8 +253,12 @@ forwardRef<SVGGElement, PieChartLegendProps>((props: PieChartLegendProps, ref: R
         if (legendUpdateInfo && legendUpdateInfo.id !== (layoutRef.current as Chart)?.element.id) { return; }
         const chart: Chart = layoutRef.current as Chart;
         const legend: BaseLegend = layoutRef.current.chartLegend as BaseLegend;
+        // Reset stale legend collections
+        legend.legendCollections = [];
         const previousLegendBounds: Rect | undefined = legend.legendBounds as Rect;
         getLegendOptions(legend, chart.visibleSeries, chart);
+        // Sync legend clip rect with current chart layout
+        legend.legendClipRect = extend({}, chart.clipRect, {}) as Rect;
         calculateLegendBound(legend, legend.legendClipRect as Rect, chart.availableSize, chart, previousLegendBounds, true);
         renderLegend(legend.legendBounds as Rect, chart, legend);
         dispatch({ type: 'TRIGGER_UPDATE' });
@@ -444,8 +448,8 @@ const LegendTitle: React.FC<LegendTitleProps> = ({
     return (
         <text
             id={`${legend.legendID}_title`}
-            x={(legend.legendTitleLoction as Required<PieChartLocationProps>).x}
-            y={(legend.legendTitleLoction as Required<PieChartLocationProps>).y}
+            x={(legend.legendTitleLocation as Required<PieChartLocationProps>).x}
+            y={(legend.legendTitleLocation as Required<PieChartLocationProps>).y}
             fill={props.titleStyle?.color || chartTheme.legendTitleFont.color}
             fontSize={props.titleStyle?.fontSize || chartTheme.legendTitleFont.fontSize}
             fontStyle={props.titleStyle?.fontStyle || chartTheme.legendTitleFont.fontStyle}
@@ -460,7 +464,7 @@ const LegendTitle: React.FC<LegendTitleProps> = ({
                 ) : (
                     <tspan
                         key={index}
-                        x={(legend.legendTitleLoction as Required<PieChartLocationProps>).x}
+                        x={(legend.legendTitleLocation as Required<PieChartLocationProps>).x}
                         dy="1.2em"
                     >
                         {line}

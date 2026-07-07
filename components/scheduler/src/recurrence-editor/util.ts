@@ -26,10 +26,8 @@ export function getDefaultRule(freq: FreqType, date: Date): string {
         return `FREQ=WEEKLY;INTERVAL=1;BYDAY=${dayCode};`;
     }
     case 'MONTHLY': {
-        const dayCode: string = getByDayFromDate(date);
-        const pos: number = getBySetPosFromDate(date);
-        const posStr: string = pos === -1 ? '-1' : String(pos);
-        return `FREQ=MONTHLY;INTERVAL=1;BYDAY=${dayCode};BYSETPOS=${posStr};`;
+        const monthDay: number = date.getDate();
+        return `FREQ=MONTHLY;INTERVAL=1;BYMONTHDAY=${monthDay};`;
     }
     case 'YEARLY': {
         const month: number = date.getMonth() + 1;

@@ -3,6 +3,7 @@ import { DateService } from '../services/DateService';
 import { useSchedulerPropsContext } from '../context/scheduler-context';
 import { ProcessedEventsData } from '../types/internal-interface';
 import { EventModel, SchedulerMoreEventsClickEvent } from '../types/scheduler-types';
+import { ResourceLevel } from '../services/ResourceGroupingService';
 
 /**
  * Hook that provides handler for "more events" click to open popup with events for a date.
@@ -12,19 +13,19 @@ import { EventModel, SchedulerMoreEventsClickEvent } from '../types/scheduler-ty
  * @private
  */
 export function useMoreIndicator(
-    getAllEventsForDate: (dateKey: string) => ProcessedEventsData[]
-): { handleMoreClick: (e: MouseEvent<HTMLElement>, date: Date) => void } {
+    getAllEventsForDate: (dateKey: string, resourceLeaf?: ResourceLevel) => ProcessedEventsData[]
+): { handleMoreClick: (e: MouseEvent<HTMLElement>, date: Date, resource?: ResourceLevel) => void } {
     const { onMoreEventsClick, morePopupRef } = useSchedulerPropsContext();
 
-    const handleMoreClick: (e: MouseEvent<HTMLElement>, date: Date) => void =
-    useCallback((e: MouseEvent<HTMLElement>, date: Date): void => {
+    const handleMoreClick: (e: MouseEvent<HTMLElement>, date: Date, resource?: ResourceLevel) => void =
+    useCallback((e: MouseEvent<HTMLElement>, date: Date, resource?: ResourceLevel): void => {
         if (e && typeof e.stopPropagation === 'function') {
             e.stopPropagation();
         }
 
         if (date && e.target) {
             const dateKey: string = DateService.generateDateKey(date);
-            const allEvents: ProcessedEventsData[] = getAllEventsForDate(dateKey);
+            const allEvents: ProcessedEventsData[] = getAllEventsForDate(dateKey, resource);
             const eventModels: EventModel[] = allEvents.map((eventData: ProcessedEventsData) => eventData.event);
             const moreEventsArgs: SchedulerMoreEventsClickEvent = {
                 cancel: false,

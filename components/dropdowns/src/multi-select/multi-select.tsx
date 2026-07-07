@@ -1,15 +1,29 @@
-import * as React from 'react';
-import { useCallback, useEffect, useId, useImperativeHandle, useMemo } from 'react';
-import { IDropdown, Dropdown } from '../common/drop-down';
-import { preRender } from '@syncfusion/react-base';
-import { MultiSelectProps, IMultiSelect, DisplayMode } from './types';
+import { forwardRef, ForwardRefExoticComponent, InputHTMLAttributes, memo, Ref, RefAttributes, RefObject, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
+import { IDropdown, Dropdown } from '../common/dropdown';
+import { preRender, useStableId } from '@syncfusion/react-base';
+import { DisplayMode, MultiSelectProps } from './types';
 import { ChangeEvent, T } from '../drop-down-list/types';
+import { DropdownInput, DropdownClearButton, DropdownIcon, DropdownMenu, DropdownHeader, DropdownListContent, DropdownNoRecords, DropdownError, DropdownFooter, DropdownChips, DropdownSelectAll, DropdownCustomValue, DropdownPrefix, DropdownSuffix } from '../common/components';
+import { CSS_CLASSES } from '../common/constants';
 
-type IMultiSelectProps = MultiSelectProps & Omit<React.InputHTMLAttributes<HTMLSpanElement>, keyof MultiSelectProps>;
+type IMultiSelectProps = MultiSelectProps & Omit<InputHTMLAttributes<HTMLSpanElement>, keyof MultiSelectProps>;
 
 /**
- * MultiSelect lets users select multiple options from a list. Supports controlled and uncontrolled usage,
- * local or remote data sources, filtering, custom values, and tag/delimiter display modes.
+ * Imperative API for MultiSelect component
+ */
+export interface IMultiSelect extends MultiSelectProps {
+    /**
+     * Reference to the input element
+     *
+     * @private
+     */
+    element?: HTMLInputElement | null;
+}
+
+/**
+ * The MultiSelect component provides an input with an integrated dropdown popup for selecting multiple options from a list.
+ * It supports controlled and uncontrolled usage, local or remote data sources, filtering, custom value creation,
+ * tag/delimiter display modes, checkbox selection, select all functionality, and virtualization for large datasets.
  *
  * ```typescript
  * import { MultiSelect } from "@syncfusion/react-dropdowns";
@@ -31,10 +45,10 @@ type IMultiSelectProps = MultiSelectProps & Omit<React.InputHTMLAttributes<HTMLS
  * }
  * ```
  */
-export const MultiSelect: React.ForwardRefExoticComponent<IMultiSelectProps & React.RefAttributes<IMultiSelect>> =
-    React.forwardRef<IMultiSelect, IMultiSelectProps>((props: IMultiSelectProps, ref: React.Ref<IMultiSelect>) => {
+export const MultiSelect: ForwardRefExoticComponent<IMultiSelectProps & RefAttributes<IMultiSelect>> =
+    forwardRef<IMultiSelect, IMultiSelectProps>((props: IMultiSelectProps, ref: Ref<IMultiSelect>) => {
         const {
-            id = `multiselect_${useId()}`,
+            id,
             dataSource = [],
             fields,
             value,
@@ -81,6 +95,8 @@ export const MultiSelect: React.ForwardRefExoticComponent<IMultiSelectProps & Re
             mode = DisplayMode.Auto,
             delimiterChar = ',',
             resizable,
+            prefix,
+            suffix,
             chipTemplate,
             valueTemplate,
             hideSelectedItem = false,
@@ -88,25 +104,19 @@ export const MultiSelect: React.ForwardRefExoticComponent<IMultiSelectProps & Re
             showSelectAll,
             selectAllText = 'Select All',
             unSelectAllText = 'Unselect All',
-            onSelectAll,
-            onResize,
-            onOpen,
-            onClose,
-            onDataRequest,
-            onDataLoad,
-            onError,
-            onScroll,
+            enableSelectionOrder = false,
             onChange,
-            onFilter,
-            onCustomValueSelect,
-            onChipClick,
-            onChipDelete,
+            helperText,
+            helperTextOnFocus = false,
+            helperTextDirection = 'Left',
             ...restProps
         } = props;
-
-        const baseRef: React.RefObject<IDropdown | null> = React.useRef<IDropdown>(null);
+        const stableId: string = useStableId('sf-multiselect');
+        const multiSelectId: string = id ?? stableId;
+        const baseRef: RefObject<IDropdown | null> = useRef<IDropdown>(null);
 
         const publicAPI: Partial<IMultiSelect> = useMemo(() => ({
+            id: multiSelectId,
             dataSource,
             fields,
             value,
@@ -150,18 +160,29 @@ export const MultiSelect: React.ForwardRefExoticComponent<IMultiSelectProps & Re
             openOnClick,
             maximumSelectionLength,
             customValue,
+            filterable,
+            dropdownIcon,
             resizable,
+            prefix,
+            suffix,
+            chipTemplate,
+            valueTemplate,
             hideSelectedItem,
             addTagOnBlur,
             showSelectAll,
             selectAllText,
-            unSelectAllText
+            unSelectAllText,
+            enableSelectionOrder,
+            helperText,
+            helperTextOnFocus,
+            helperTextDirection
         }), [dataSource, fields, value, defaultValue, placeholder, disabled, readOnly, labelMode, size, variant, className, required,
-            inputProps, clearButton, loading, popupSettings, open, defaultOpen, query, sortOrder, allowObjectBinding,
+            inputProps, clearButton, loading, popupSettings, open, defaultOpen, query, sortOrder, allowObjectBinding, multiSelectId,
             itemTemplate, headerTemplate, footerTemplate, groupTemplate, noRecordsTemplate, onErrorTemplate, virtualization, ignoreCase,
             ignoreAccent, filterType, debounceDelay, valid, validationMessage, validityStyles, skipDisabledItems, delimiterChar,
             mode, checkbox, closeOnSelect, openOnClick, maximumSelectionLength, customValue, resizable, hideSelectedItem, showSelectAll,
-            selectAllText, unSelectAllText]);
+            selectAllText, unSelectAllText, enableSelectionOrder, prefix, suffix, chipTemplate, helperText, helperTextOnFocus,
+            filterable, helperTextDirection, addTagOnBlur, valueTemplate, dropdownIcon]);
 
         useImperativeHandle(ref, () => ({
             ...publicAPI,
@@ -182,8 +203,9 @@ export const MultiSelect: React.ForwardRefExoticComponent<IMultiSelectProps & Re
         return (
             <Dropdown
                 {...restProps}
+                {...publicAPI}
                 ref={baseRef}
-                id={id}
+                id={multiSelectId}
                 spanClickable={false}
                 componentClassName='sf-multiselect'
                 inputClassName='sf-multiselect-input'
@@ -191,74 +213,29 @@ export const MultiSelect: React.ForwardRefExoticComponent<IMultiSelectProps & Re
                 ariaLabel='multiselect'
                 multiSelectable
                 forceFilterOnOpen={filterable}
-                dataSource={dataSource}
-                clearButton={clearButton}
-                fields={fields}
-                value={value}
-                defaultValue={defaultValue}
-                placeholder={placeholder}
-                disabled={disabled}
-                readOnly={readOnly}
-                labelMode={labelMode}
-                size={size}
-                variant={variant}
-                className={className}
                 dropdownIcon={dropdownIcon === true ? undefined : dropdownIcon}
-                popupSettings={popupSettings}
-                open={open}
-                defaultOpen={defaultOpen}
-                query={query}
-                sortOrder={sortOrder}
-                allowObjectBinding={allowObjectBinding}
-                itemTemplate={itemTemplate}
-                headerTemplate={headerTemplate}
-                footerTemplate={footerTemplate}
-                groupTemplate={groupTemplate}
-                noRecordsTemplate={noRecordsTemplate}
-                onErrorTemplate={onErrorTemplate}
-                virtualization={virtualization}
-                ignoreCase={ignoreCase}
-                ignoreAccent={ignoreAccent}
-                filterable={filterable}
-                filterType={filterType}
-                debounceDelay={debounceDelay}
-                valid={valid}
-                validationMessage={validationMessage}
-                validityStyles={validityStyles}
-                skipDisabledItems={skipDisabledItems}
-                inputProps={inputProps}
-                loading={loading}
-                required={required}
-                mode={mode}
-                delimiterChar={delimiterChar}
-                checkbox={checkbox}
-                closeOnSelect={closeOnSelect}
-                openOnClick={openOnClick}
-                maximumSelectionLength={maximumSelectionLength}
-                customValue={customValue}
-                resizable={resizable}
-                chipTemplate={chipTemplate}
-                hideSelectedItem={hideSelectedItem}
-                multiSelectValueTemplate={valueTemplate}
-                addTagOnBlur={addTagOnBlur}
-                showSelectAll={showSelectAll}
-                selectAllText={selectAllText}
-                unSelectAllText={unSelectAllText}
-                onSelectAll={onSelectAll}
-                onOpen={onOpen}
-                onClose={onClose}
-                onDataRequest={onDataRequest}
-                onDataLoad={onDataLoad}
-                onError={onError}
-                onScroll={onScroll}
-                onFilter={onFilter}
                 onChange={onChangeHandler}
-                onResize={onResize}
-                onCustomValueSelect={onCustomValueSelect}
-                onChipClick={onChipClick}
-                onChipDelete={onChipDelete}
-            />
+                multiSelectValueTemplate={valueTemplate}
+            >
+                <DropdownPrefix />
+                <DropdownChips />
+                <DropdownInput />
+                <DropdownSuffix />
+                <span className={CSS_CLASSES.ICONS_WRAPPER}>
+                    <DropdownClearButton />
+                    <DropdownIcon />
+                </span>
+                <DropdownMenu>
+                    <DropdownSelectAll />
+                    <DropdownCustomValue />
+                    <DropdownHeader />
+                    <DropdownListContent />
+                    <DropdownNoRecords />
+                    <DropdownError />
+                    <DropdownFooter />
+                </DropdownMenu>
+            </Dropdown>
         );
     });
 
-export default React.memo(MultiSelect);
+export default memo(MultiSelect);

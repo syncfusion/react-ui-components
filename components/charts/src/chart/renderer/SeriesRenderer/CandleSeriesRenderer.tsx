@@ -2,7 +2,7 @@ import * as React from 'react';
 import { ChartBorderProps, ChartMarkerProps, ChartSeriesProps } from '../../base/interfaces';
 import { DoubleRangeType, PointRenderingEvent, Points, Rect, RenderOptions, SeriesProperties } from '../../chart-area/chart-interfaces';
 import { ColumnBase, ColumnBaseReturnType, FinacialSeriesType } from './ColumnBase';
-import { applyPointRenderCallback, useVisiblePoints } from '../../utils/helper';
+import { applyPointRenderCallback, calculateVisiblePoints } from '../../utils/helper';
 import { handleRectAnimation } from './SeriesAnimation';
 import MarkerRenderer from './MarkerRenderer';
 
@@ -201,10 +201,9 @@ function createCandleSeriesRenderer(): FinacialSeriesType {
          * Renders the candle series.
          *
          * @param {SeriesProperties} series - The series to be rendered.
-         * @param {boolean} _isInverted - Specifies whether the chart is inverted.
          * @returns {Object} Returns the final series with assigned data point properties.
          */
-        render: (series: SeriesProperties, _isInverted: boolean):
+        render: (series: SeriesProperties):
         RenderOptions[] | { options: RenderOptions[]; marker: ChartMarkerProps } => {
             sideBySideInfo[series.index] = candleBaseInstance.getSideBySideInfo(series);
             const borderWidth: number = Math.max(((series.border as ChartSeriesProps).width as number), 1);
@@ -219,7 +218,7 @@ function createCandleSeriesRenderer(): FinacialSeriesType {
                 }
             }
 
-            series.visiblePoints = useVisiblePoints(series);
+            series.visiblePoints = calculateVisiblePoints(series);
             const marker: ChartMarkerProps | null = series.marker?.visible ? MarkerRenderer.render(series) as ChartMarkerProps : null;
             return marker ? { options, marker } : options;
         },

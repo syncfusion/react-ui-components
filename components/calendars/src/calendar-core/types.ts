@@ -1,7 +1,9 @@
 import { CalendarView } from '../calendar/types';
 
 /**
- * Specifies the calendar types.
+ * - `'gregorian'`: Specifies the Gregorian calendar format.
+ * - `'islamic'`: Specifies the Islamic (Hijri) calendar format.
+ *
  */
 export type CalendarType = 'gregorian' | 'islamic';
 
@@ -187,6 +189,27 @@ export interface CalendarSystem {
      * @returns The day of the month (1-31).
      */
     getDay(date: Date): number;
+
+    /**
+     * Creates a Date object from the given date and time components.
+     *
+     * @param year The full year (e.g., 2026).
+     * @param month The month index (0-11, where 0 = January and 11 = December).
+     * @param day The day of the month (1-31).
+     * @param hour The hour of the day (0-23). Optional.
+     * @param minute The minute of the hour (0-59). Optional.
+     * @param second The second of the minute (0-59). Optional.
+     * @returns A Date object representing the specified date and time.
+     */
+    toDate(year: number, month: number, day: number, hour?: number, minute?: number, second?: number): Date;
+
+    /**
+     * Returns the number of days in the given calendar-system month/year.
+     *
+     * @param year  Calendar-system year.
+     * @param month Zero-based calendar-system month (0-11).
+     */
+    getDaysInMonth(year: number, month: number): number;
 
     /**
      * Determines whether two dates are in the same calendar month and year.

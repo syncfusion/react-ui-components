@@ -1,7 +1,7 @@
 
-import { AxisModel, ChartTrendlineModel, MarginModel, SeriesProperties } from '../chart-area/chart-interfaces';
+import { AxisModel, ChartIndicatorSettings, ChartTrendlineModel, MarginModel, SeriesProperties } from '../chart-area/chart-interfaces';
 import { ChartAxisLabelProps, ChartAxisTitleProps } from '../chart-axis/base';
-import { ChartBorderProps, ChartAreaProps, ChartLegendProps, ChartStackLabelsProps, ChartTitleProps, Column, MajorGridLines, MajorTickLines, MinorGridLines, MinorTickLines, Row, ChartTooltipProps, ChartZoomSettingsProps, ChartStripLineProps, ChartAccessibilityProps, ChartCrosshairProps, ChartCrosshairTooltipProps, ChartSelectionProps, ChartHighlightProps, ChartAnnotationProps } from './interfaces';
+import { ChartBorderProps, ChartAreaProps, ChartLegendProps, ChartStackLabelsProps, ChartTitleProps, Column, MajorGridLines, MajorTickLines, MinorGridLines, MinorTickLines, Row, ChartTooltipProps, ChartZoomSettingsProps, ChartStripLineProps, ChartAccessibilityProps, ChartCrosshairProps, ChartCrosshairTooltipProps, ChartSelectionProps, ChartHighlightProps, ChartAnnotationProps, ChartScrollbarProps, ChartRangeColorProps, ChartMultiLevelLabelProps  } from './interfaces';
 
 // Define default stripline settings to avoid duplication
 const defaultStripLineSettings: ChartStripLineProps = {
@@ -41,6 +41,23 @@ const defaultStripLineSettings: ChartStripLineProps = {
     }
 };
 
+const defaultScrollBarSettings: ChartScrollbarProps  = {
+    enable: true,
+    trackColor: '#E0E0E0',
+    thumbRadius: 6,
+    trackRadius: 6,
+    thumbColor: '#9E9E9E',
+    thickness: 14,
+    position: 'PlaceNextToAxisLine',
+    enableZoom: false,
+    resizeCircle: {
+        circleColor: '#E6E6E6',
+        borderColor: '#9E9E9E',
+        borderWidth: 1,
+        arrowColor: '#6E6E6E'
+    }
+};
+
 interface ChartConfig {
     chart: {
         border: ChartBorderProps;
@@ -74,6 +91,10 @@ interface ChartConfig {
     ChartSelection: ChartSelectionProps;
     ChartHighlight: ChartHighlightProps;
     ChartTrendline: ChartTrendlineModel;
+    ChartIndicators: ChartIndicatorSettings;
+    ChartScrollBar: ChartScrollbarProps;
+    ChartRangeColor: ChartRangeColorProps;
+    MultiLevelLabels: ChartMultiLevelLabelProps[];
 }
 
 export const defaultChartConfigs: ChartConfig = {
@@ -192,7 +213,12 @@ export const defaultChartConfigs: ChartConfig = {
         enableWrap: false,
         enableTrim: false,
         maxLabelWidth: 34,
-        edgeLabelPlacement: 'Shift'
+        edgeLabelPlacement: 'Shift',
+        border: {
+            width: 0,
+            color: '',
+            dashArray: ''
+        }
     },
     TitleStyle: {
         color: '',
@@ -213,6 +239,8 @@ export const defaultChartConfigs: ChartConfig = {
         rowIndex: 0,
         columnIndex: 0,
         valueType: 'Double',
+        coefficient: 100,
+        startAngle: 0,
         opposedPosition: false,
         indexed: false,
         visible: true,
@@ -280,7 +308,12 @@ export const defaultChartConfigs: ChartConfig = {
             enableWrap: false,
             enableTrim: false,
             maxLabelWidth: 34,
-            edgeLabelPlacement: 'Shift'
+            edgeLabelPlacement: 'Shift',
+            border: {
+                width: 0,
+                color: '',
+                dashArray: ''
+            }
         },
         titleStyle: {
             color: '',
@@ -334,7 +367,32 @@ export const defaultChartConfigs: ChartConfig = {
         intervalType: 'Auto',
         skeleton: '',
         skeletonType: 'DateTime',
-        stripLines: [{ ...defaultStripLineSettings }]
+        stripLines: [{ ...defaultStripLineSettings }],
+        scrollbarSettings: {...defaultScrollBarSettings},
+        scrollbarThickness: 14,
+        multiLevelLabels: [{
+            alignment: 'Center',
+            overflow: 'Wrap',
+            textStyle: {
+                fontStyle: 'Normal',
+                fontSize: '',
+                fontWeight: 'Normal',
+                color: '',
+                fontFamily: '',
+                opacity: 1
+            },
+            border: {
+                width: 0,
+                color: '',
+                dashArray: ''
+            },
+            categories: [{
+                text: '',
+                start: '',
+                end: '',
+                maximumTextWidth: undefined
+            }]
+        }]
     },
     PrimaryYAxis: {
         name: 'primaryYAxis',
@@ -342,6 +400,8 @@ export const defaultChartConfigs: ChartConfig = {
         rowIndex: 0,
         columnIndex: 0,
         valueType: 'Double',
+        coefficient: 100,
+        startAngle: 0,
         opposedPosition: false,
         indexed: false,
         visible: true,
@@ -377,7 +437,12 @@ export const defaultChartConfigs: ChartConfig = {
             enableWrap: false,
             enableTrim: false,
             maxLabelWidth: 34,
-            edgeLabelPlacement: 'Shift'
+            edgeLabelPlacement: 'Shift',
+            border: {
+                width: 0,
+                color: '',
+                dashArray: ''
+            }
         },
         titleStyle: {
             color: '',
@@ -422,13 +487,40 @@ export const defaultChartConfigs: ChartConfig = {
             color: '',
             dashArray: ''
         },
-        stripLines: [{ ...defaultStripLineSettings }]
+        stripLines: [{ ...defaultStripLineSettings }],
+        scrollbarSettings: {...defaultScrollBarSettings},
+        scrollbarThickness: 14,
+        multiLevelLabels: [{
+            alignment: 'Center',
+            overflow: 'Wrap',
+            textStyle: {
+                fontStyle: 'Normal',
+                fontSize: '',
+                fontWeight: 'Normal',
+                color: '',
+                fontFamily: '',
+                opacity: 1
+            },
+            border: {
+                width: 0,
+                color: '',
+                dashArray: ''
+            },
+            categories: [{
+                text: '',
+                start: '',
+                end: '',
+                maximumTextWidth: undefined
+            }]
+        }]
     },
     SecondaryAxis: {
         span: 1,
         rowIndex: 0,
         columnIndex: 0,
         valueType: 'Double',
+        coefficient: 100,
+        startAngle: 0,
         opposedPosition: false,
         indexed: false,
         visible: true,
@@ -496,7 +588,12 @@ export const defaultChartConfigs: ChartConfig = {
             enableWrap: false,
             enableTrim: false,
             maxLabelWidth: 34,
-            edgeLabelPlacement: 'Shift'
+            edgeLabelPlacement: 'Shift',
+            border: {
+                width: 0,
+                color: '',
+                dashArray: ''
+            }
         },
         titleStyle: {
             color: '',
@@ -547,7 +644,32 @@ export const defaultChartConfigs: ChartConfig = {
             color: '',
             dashArray: ''
         },
-        stripLines: [{ ...defaultStripLineSettings }]
+        stripLines: [{ ...defaultStripLineSettings }],
+        scrollbarSettings: {...defaultScrollBarSettings},
+        scrollbarThickness: 14,
+        multiLevelLabels: [{
+            alignment: 'Center',
+            overflow: 'Wrap',
+            textStyle: {
+                fontStyle: 'Normal',
+                fontSize: '',
+                fontWeight: 'Normal',
+                color: '',
+                fontFamily: '',
+                opacity: 1
+            },
+            border: {
+                width: 0,
+                color: '',
+                dashArray: ''
+            },
+            categories: [{
+                text: '',
+                start: '',
+                end: '',
+                maximumTextWidth: undefined
+            }]
+        }]
     },
     ChartSeries: {
         type: 'Line',
@@ -558,6 +680,7 @@ export const defaultChartConfigs: ChartConfig = {
         opacity: 1,
         dashArray: '',
         width: 2,
+        isClosedPath: true,
         marker: {
             visible: false,
             width: 7,
@@ -593,8 +716,8 @@ export const defaultChartConfigs: ChartConfig = {
                 },
                 font: {
                     fontStyle: 'Normal',
-                    fontSize: '12px',
-                    fontWeight: 'Normal',
+                    fontSize: '',
+                    fontWeight: '',
                     color: '',
                     fontFamily: '',
                     opacity: 1
@@ -667,6 +790,7 @@ export const defaultChartConfigs: ChartConfig = {
         low: '',
         open: '',
         close: '',
+        volume: '',
         waterfallSettings: {
             negativeColor: '#C64E4A',
             positiveColor: '',
@@ -689,6 +813,33 @@ export const defaultChartConfigs: ChartConfig = {
             normalCurveOpacity: 1,
             normalCurveWidth: 2,
             normalCurveDashArray: ''
+        },
+        boxAndWhiskerSettings: {
+            boxPlotMode: 'Normal',
+            showOutliers: true,
+            showMean: true,
+            whiskerStyle: {
+                stroke: '',
+                width: 1,
+                dashArray: '',
+                capLength: 0.5
+            }
+        },
+        seriesLabel: {
+            visible: false,
+            text: '',
+            font: {
+                color: '',
+                fontFamily: '',
+                fontSize: '14px',
+                fontStyle: 'Normal',
+                fontWeight: 'Normal',
+                opacity: 1
+            },
+            background: 'transparent',
+            border: { color: '', width: 0 },
+            opacity: 1,
+            showOverlapText: false
         },
         paretoOptions: {
             fill: '',
@@ -738,6 +889,22 @@ export const defaultChartConfigs: ChartConfig = {
                 }
             },
             showAxis: true
+        },
+        lastValueLabel: {
+            enable: false,
+            background: '',
+            border: { color: '#D3D3D3', width: 1, dashArray: '' },
+            font: {
+                fontSize: '12px',
+                fontFamily: 'Roboto',
+                fontWeight: 'Normal',
+                fontStyle: 'Normal',
+                opacity: 1,
+                color: ''
+            },
+            lineStyle: { width: 1, color: '', dashArray: '' },
+            rx: 5,
+            ry: 5
         }
     },
     ChartStackLabels: {
@@ -819,16 +986,18 @@ export const defaultChartConfigs: ChartConfig = {
         inversed: false,
         reverse: false,
         fixedWidth: false,
-        accessibility: { tabIndex: 0, focusable: true }
+        accessibility: { tabIndex: 0, focusable: true },
+        mode: 'Series'
     },
     ChartZoom: {
         selectionZoom: false,
         pan: false,
         mode: 'XY',
-        toolbar: { visible: false, items: ['ZoomIn', 'ZoomOut', 'Pan', 'Reset'] },
+        toolbar: { visible: false, items: ['ZoomIn', 'ZoomOut', 'Pan', 'Reset'], position: { hAlign: 'Right', vAlign: 'Top', x: 0, y: 0 } },
         accessibility: {},
         mouseWheelZoom: false,
-        pinchZoom: false
+        pinchZoom: false,
+        enableScrollbar: false
     },
     ChartSelection: {
         mode: 'None',
@@ -950,5 +1119,67 @@ export const defaultChartConfigs: ChartConfig = {
             tabIndex: 0,
             role: ''
         }
-    }
+    },
+    ChartIndicators: {
+        type: 'Sma',
+        period: 14,
+        kPeriod: 14,
+        dPeriod: 3,
+        overBought: 80,
+        overSold: 20,
+        standardDeviation: 2,
+        slowPeriod: 12,
+        fastPeriod: 26,
+        showZones: true,
+        macdLine: { type: 'Line', color: '#ff9933', width: 2, length: '', dashArray: '' },
+        macdType: 'Both',
+        macdPositiveColor: '#2ecd71',
+        macdNegativeColor: '#e74c3d',
+        bandColor: 'rgba(211,211,211,0.25)',
+        upperLine: { type: 'Line', color: '#ffb735', width: 1, length: '', dashArray: '' },
+        lowerLine: { type: 'Line', color: '#f2ec2f', width: 1, length: '', dashArray: '' },
+        periodLine: { type: 'Line', color: '#f2ec2f', width: 1, length: '', dashArray: '' },
+        accessibility: { ariaLabel: '', focusable: true, tabIndex: 0, role: '' },
+        seriesName: '',
+        visible: true,
+        xAxisName: null,
+        yAxisName: null,
+        animation: { enable: true, duration: 1000, delay: 0 },
+        fill:  '#606eff',
+        width: 1,
+        dashArray: '',
+        clipRectElement: {} as Element,
+        index: 0,
+        field: 'Close'
+    },
+    ChartScrollBar: {...defaultScrollBarSettings},
+    ChartRangeColor: {
+        start: 0,
+        end: 0,
+        fill: '',
+        label: ''
+    },
+    MultiLevelLabels: [{
+        alignment: 'Center',
+        overflow: 'Wrap',
+        textStyle: {
+            fontStyle: 'Normal',
+            fontSize: '',
+            fontWeight: 'Normal',
+            color: '',
+            fontFamily: '',
+            opacity: 1
+        },
+        border: {
+            width: 0,
+            color: '',
+            dashArray: ''
+        },
+        categories: [{
+            text: '',
+            start: '',
+            end: '',
+            maximumTextWidth: undefined
+        }]
+    }]
 };

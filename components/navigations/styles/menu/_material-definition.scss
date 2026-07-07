@@ -1,0 +1,33 @@
+@use '../../../base/styles/themes/variables' as *;
+
+$menu-bar-padding: $spacing-8 $spacing-16 !default;
+$menu-bar-gap: $spacing-4 !default;
+$menu-max-width: 100% !default;
+$menu-content-color: rgb($content-text-color) !default;
+$menu-bg-color: transparent !default;
+$menu-hover-content-color: rgb($content-text-color) !default;
+$menu-hover-icon-color: rgb($icon-color) !default;
+$menu-active-content-color: rgb($content-text-color) !default;
+$menu-active-icon-color: rgb($icon-color) !default;
+$menu-focus-content-color: rgb($content-text-color) !default;
+$menu-focus-icon-color: rgb($icon-color) !default;
+$menu-focus-box-shadow: none !default;
+
+$menu-item-gap: $spacing-8 !default;
+$menu-item-radius: calc(var(--sf-radius) * 2) !default;
+$menu-item-padding: $spacing-10 $spacing-16 !default;
+$menu-item-content-line-height: $line-height-sm !default;
+$menu-item-content-font-size: $font-size-sm !default;
+
+$menu-flyout-min-width: calc(var(--sf-spacing) * 7.85) !default;
+$menu-flyout-max-height: min(calc(var(--sf-spacing) * 22.5), 70vh) !default;
+
+$menu-vertical-padding: $spacing-8 !default;
+$menu-vertical-min-width: calc(var(--sf-spacing) * 18.75) !default;
+
+$menu-chevron-right-angle: 0deg !default;
+$menu-chevron-down-angle: 90deg !default;
+$menu-submenu-icon-font-size: $font-size-xl !default;
+
+$menu-separator-padding: $spacing-4 !default;
+$menu-separator-bg: linear-gradient(rgb($border-light), rgb($border-light)) center / $spacing-1 100% no-repeat;

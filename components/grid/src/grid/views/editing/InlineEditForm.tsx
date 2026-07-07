@@ -1,4 +1,4 @@
-import { memo, useRef, useEffect, useCallback, forwardRef, useMemo, useState, useImperativeHandle, CSSProperties, JSX, RefAttributes, ReactElement, RefObject } from 'react';
+import { memo, useRef, useEffect, useCallback, forwardRef, useMemo, useState, useImperativeHandle, CSSProperties, JSX, RefObject, RefAttributes, ForwardRefExoticComponent } from 'react';
 import { Form, FormField, FormState, FormValueType, IFormValidator } from '@syncfusion/react-inputs';
 import { EditCell, ValidationTooltips } from '../index';
 import { EditCellRef, InlineEditFormProps, InlineEditFormRef, UseEditResult } from '../../types/edit.interfaces';
@@ -12,6 +12,144 @@ import { Checkbox } from '@syncfusion/react-buttons';
 import { CommandColumnBase } from '../../components/CommandColumn';
 import { useFormValidationRules } from '../../hooks';
 
+// CSS class name constants to avoid hardcoded strings
+const CELL: string = 'sf-cell';
+const GRID_EDIT_CELL: string = 'sf-grid-edit-cell';
+const EDIT_DISABLED: string = 'sf-edit-disabled';
+const LAST_ROW: string = 'sf-last-row';
+const LAST_CELL: string = 'sf-last-cell';
+const DISPLAY_NONE: string = 'sf-display-none';
+const GRID_COMMAND_CELL: string = 'sf-grid-command-cell';
+const GRID_CHECKSELECT: string = 'sf-grid-checkselect';
+const GRID_CONTENT_ROW: string = 'sf-grid-content-row';
+const GRID_ADD_ROW: string = 'sf-grid-add-row';
+const GRID_EDIT_ROW: string = 'sf-grid-edit-row';
+const EDIT_TEMPLATE_CONTAINER: string = 'sf-edit-template-container';
+const GRID_EDIT_FORM: string = 'sf-grid-edit-form';
+const GRID_EDIT_TABLE: string = 'sf-grid-edit-table';
+
+/**
+ * Initializes internal data for edit/add operations with default values.
+ *
+ * @private
+ * @template T - Data row type
+ * @param {boolean} isAddOperation - Indicates whether this is an add or edit operation
+ * @param {T} editData - Existing data object for edit operations
+ * @param {ColumnProps<T>[]} columns - Array of column definitions containing default values
+ * @returns {T} Initialized data object with default values applied
+ */
+const internalDataFn: <T>(isAddOperation: boolean, editData: T, columns: ColumnProps<T>[]) => T =
+    <T, >(isAddOperation: boolean, editData: T, columns: ColumnProps<T>[]): T => {
+        if (isAddOperation && !(editData && Object.keys(editData).length)) {
+            const addData: T = {} as T;
+            columns.forEach((column: ColumnProps<T>) => {
+                if (column.field && column.defaultValue !== undefined) {
+                    if (column.type === 'string') {
+                        addData[column.field] = typeof column.defaultValue === 'string'
+                            ? column.defaultValue
+                            : String(column.defaultValue);
+                    } else {
+                        addData[column.field] = column.defaultValue;
+                    }
+                }
+            });
+            return addData;
+        } else {
+            return editData ? { ...editData } : {} as T;
+        }
+    };
+
+/**
+ * Updates internal form data and notifies parent of field changes on user input.
+ * Handles value formatting and complex nested field updates.
+ *
+ * @private
+ * @template T - Data row type
+ * @param {ColumnProps<T>} column - Column configuration containing field information
+ * @param {ValueType} value - New field value from user input
+ * @param {IValueFormatter} formatter - Formatter service for converting view values to data values
+ * @param {T} internalData - Current internal form data object
+ * @param {Function} setInternalData - State setter for updating internal data
+ * @param {FormState} formState - Current form validation state
+ * @param {Function} stableOnFieldChange - Stable callback reference to notify field changes
+ * @returns {void}
+ */
+const handleFieldChangeFn: <T>(column: ColumnProps<T>, value: ValueType, formatter: IValueFormatter, internalData: T,
+    setInternalData: (value: React.SetStateAction<T>) => void, formState: FormState,
+    stableOnFieldChange: (field: string, value: ValueType | null) => void) => void =
+    <T, >(column: ColumnProps<T>, value: ValueType, formatter: IValueFormatter, internalData: T,
+        setInternalData: (value: React.SetStateAction<T>) => void, formState: FormState,
+        stableOnFieldChange: (field: string, value: ValueType | null) => void) => {
+        let formattedValue: ValueType = (column?.type === 'date' || column?.type === 'datetime' || column?.type === 'number') && typeof value === 'string' ?
+            (formatter.fromView(value, (column as IColumnBase<T>)?.parseFn, column?.type)) : value;
+        if ((column?.type === 'number' && isNaN(formattedValue as number)) ||
+            ((column?.type === 'date' || column?.type === 'datetime') && isUndefined(formattedValue as string))) {
+            formattedValue = '';
+        }
+        const topLevelKey: string = column.field.split('.')[0];
+        const copiedComplexData: Object = column.field.includes('.') && typeof internalData[topLevelKey as string] === 'object'
+            ? {
+                ...internalData,
+                [topLevelKey]: JSON.parse(JSON.stringify(internalData[topLevelKey as string]))
+            }
+            : { ...internalData };
+        const editedData: T = DataUtil.setValue(column.field, formattedValue, copiedComplexData) as T;
+        setInternalData({ ...editedData });
+        if (!isNullOrUndefined(internalData[topLevelKey as string]) && typeof internalData[topLevelKey as string] === 'object'
+            && !(internalData[topLevelKey as string] instanceof Date)) {
+            formState?.onChange?.(topLevelKey, {
+                value: {
+                    ...editedData[topLevelKey as string],
+                    [column.field.split('.')[1]]: value
+                } as FormValueType
+            });
+        } else {
+            formState?.onChange?.(column.field, { value: value as FormValueType });
+        }
+        stableOnFieldChange?.(column.field, formattedValue);
+    };
+
+/**
+ * Validates field on blur and updates internal data for consistency.
+ * Triggers FormValidator field validation based on operation type and form state.
+ *
+ * @private
+ * @template T - Data row type
+ * @param {ColumnProps<T>} column - Column configuration containing field information
+ * @param {ValueType | Record<string, unknown>} value - Field value to validate
+ * @param {IValueFormatter} formatter - Formatter service for converting view values to data values
+ * @param {T} internalData - Current internal form data object
+ * @param {Function} setInternalData - State setter for updating internal data
+ * @param {boolean} isAddOperation - Indicates whether this is an add or edit operation
+ * @param {UseEditResult<T>} editModule - Edit module containing edit settings and state
+ * @param {FormState} formState - Current form validation state
+ * @param {RefObject<IFormValidator>} formRef - Reference to FormValidator component
+ * @returns {void}
+ */
+const handleFieldBlurFn: <T>(column: ColumnProps<T>, value: ValueType | Record<string, unknown>, formatter: IValueFormatter,
+    internalData: T, setInternalData: (value: React.SetStateAction<T>) => void, isAddOperation: boolean, editModule: UseEditResult<T>,
+    formState: FormState, formRef: RefObject<IFormValidator>) => void =
+    <T, >(column: ColumnProps<T>, value: ValueType | Record<string, unknown>, formatter: IValueFormatter,
+        internalData: T, setInternalData: (value: React.SetStateAction<T>) => void, isAddOperation: boolean, editModule: UseEditResult<T>,
+        formState: FormState, formRef: RefObject<IFormValidator>) => {
+        value = (column?.type === 'date' || column?.type === 'number') && typeof value === 'string' ?
+            (formatter.fromView(value, (column as IColumnBase<T>)?.parseFn, column?.type)) : value;
+        const topLevelKey: string = column.field.split('.')[0];
+        const copiedComplexData: Object = column.field.includes('.') && typeof internalData[topLevelKey as string] === 'object'
+            ? {
+                ...internalData,
+                [topLevelKey]: JSON.parse(JSON.stringify(internalData[topLevelKey as string]))
+            }
+            : { ...internalData };
+        const editedData: T = DataUtil.setValue(column.field, value, copiedComplexData) as T;
+        setInternalData({ ...editedData });
+        if (!(isAddOperation && editModule.isShowAddNewRowActive) ||
+            (isAddOperation && formState && formState.errors && Object.keys(formState.errors).length > 0)) {
+            formState?.onBlur?.(column.field);
+            formRef.current?.validateField?.(column.field);
+        }
+    };
+
 /**
  * InlineEditForm component that prevents unnecessary re-renders during typing
  *
@@ -19,8 +157,8 @@ import { useFormValidationRules } from '../../hooks';
  * @param ref - Forward ref for imperative methods
  * @returns Memoized EditForm component
  */
-export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<InlineEditFormRef<T>>) => ReactElement =
-    memo(forwardRef<InlineEditFormRef, InlineEditFormProps>(<T, >({
+export const InlineEditForm: ForwardRefExoticComponent<InlineEditFormProps<unknown> & RefAttributes<InlineEditFormRef<unknown>>> =
+    memo(forwardRef(<T, >({
         editData,
         validationErrors,
         onFieldChange,
@@ -55,8 +193,8 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
         const editCellRefs: React.RefObject<{ [field in keyof T]?: EditCellRef }> = useRef<{ [field in keyof T]?: EditCellRef }>({});
         const { rowHeight, id, getVisibleColumns, serviceLocator, editModule, contentPanelRef, contentTableRef,
             height, scrollModule, contentScrollRef } = useGridComputedProvider<T>();
-        const { colElements: ColElements, cssClass, focusModule, commandColumnModule, offsetX, virtualSettings, columnOffsets } =
-            useGridMutableProvider<T>();
+        const { colElements: ColElements, cssClass, focusModule, commandColumnModule, offsetX, virtualSettings, columnOffsets,
+            totalRecordsCount } = useGridMutableProvider<T>();
         const { commandEdit, commandEditInlineFormRef } = commandColumnModule;
         const formatter: IValueFormatter = serviceLocator?.getService<IValueFormatter>('valueFormatter');
         const localization: IL10n = serviceLocator?.getService<IL10n>('localization');
@@ -88,6 +226,10 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
                 isNewSessionRef.current = false;
             }
         });
+
+        useEffect(() => {
+            isNewSessionRef.current = true;
+        }, [editRowIndex]);
 
         /**
          * Store edit cell ref
@@ -150,7 +292,7 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
                         focusModule.removeFocusTabIndex();
                         focusModule.setGridFocus(true);
                         if (firstEditableColumn?.getCommandItems) {
-                            const commandItems: HTMLElement[] = focusModule.getCommandItems(rowRef.current.querySelector('.sf-grid-command-cell'));
+                            const commandItems: HTMLElement[] = focusModule.getCommandItems(rowRef.current.querySelector(`.${GRID_COMMAND_CELL}`));
                             (last ? commandItems[commandItems.length - 1] : commandItems[0]).focus();
                         } else {
                             editCellRefs?.current?.[firstEditableColumn?.field]?.focus?.();
@@ -179,6 +321,14 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
                 { ...commandEditInlineFormRef?.current?.[rowUid as string]?.current?.formState } :
                 {...editModule?.getCurrentFormState()}) : null);
         const isSubmitValidationScrollRequired: RefObject<boolean> = useRef<boolean>(false);
+
+        /**
+         * Memoized onFocus callback to prevent re-renders in renderEditCells loop.
+         * Created after formState to ensure proper dependency management.
+         */
+        const handleCellFocus: (field: string) => void = useCallback((field: string) => {
+            formState?.onFocus?.(field);
+        }, [formState]);
 
         /**
          * Validate the form using FormValidator component
@@ -298,7 +448,7 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
                 if (isAddOperation) {
                     // For add operations, include primary key fields (they're enabled)
                     editableColumns = columns.filter((col: ColumnProps<T>) =>
-                        (col.allowEdit !== false || col.getCommandItems) &&
+                        (col.allowEdit !== false || col.getCommandItems) && col.visible &&
                         (col.field || col.getCommandItems)
                     );
                 } else {
@@ -355,14 +505,14 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
          * For add operations, primary key fields should be focused first
          * For edit operations, skip primary key fields (they're disabled)
          */
-        const renderEditCells: React.JSX.Element[] = useMemo(() => {
+        const renderEditCells: React.JSX.Element[] | null = useMemo(() => {
             if (!formState) { return null; }
 
             const startVirtualIndex: number = scrollModule?.virtualColumnInfo.startIndex;
             const endVirtualIndex: number = scrollModule?.virtualColumnInfo.endIndex;
             const visibleColumns: ColumnProps[] = getVisibleColumns();
             const finalColumns: ColumnProps[] = virtualSettings.enableColumn ?
-                (scrollModule?.virtualColumnInfo?.columns?.length ? scrollModule?.virtualColumnInfo?.columns :
+                (scrollModule?.virtualColumnInfo?.columns?.length && totalRecordsCount ? scrollModule?.virtualColumnInfo?.columns :
                     (visibleColumns.length ? visibleColumns : columns).slice(startVirtualIndex, endVirtualIndex)) : columns;
             const renderedCells: React.JSX.Element[] = finalColumns.map((column: ColumnProps<T>, index: number) => {
                 // For add operations, primary key fields should be editable
@@ -380,9 +530,12 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
 
                 if (column.type === 'checkbox') {
                     return (
-                        <td className={'sf-cell ' + alignClass}>
+                        <td
+                            key={`edit-cell-${column.field || index}`}
+                            className={`${CELL} ${alignClass}`}
+                        >
                             <Checkbox
-                                className="sf-grid-checkselect"
+                                className={GRID_CHECKSELECT}
                                 aria-label={localization?.getConstant('SelectRow')}
                                 disabled={true}
                             />
@@ -394,8 +547,7 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
                     return column.visible ? (
                         <td
                             key={`edit-cell-${column.field || index}`}
-                            className={'sf-cell sf-grid-edit-cell sf-edit-disabled' + (isAddOperation && isLastRow ? ' sf-last-row' : '') +
-                                (!isAddOperation && isLastRow ? ' sf-last-cell' : '') + (commandColumn ? ' sf-grid-command-cell' : '') + (!!column?.displayAsCheckBox && column?.edit?.type === EditType.CheckBox ? ` ${alignClass}` : '')}
+                            className={`${CELL} ${GRID_EDIT_CELL} ${EDIT_DISABLED}${isAddOperation && isLastRow ? ` ${LAST_ROW}` : ''}${!isAddOperation && isLastRow ? ` ${LAST_CELL}` : ''}${commandColumn ? ` ${GRID_COMMAND_CELL}` : ''}${!!column?.displayAsCheckBox && column?.edit?.type === EditType.CheckBox ? ` ${alignClass}` : ''}`}
                             data-mappinguid={column.uid}
                             role='gridcell'
                             aria-colindex={index + 1}
@@ -408,7 +560,7 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
                                 <CommandColumnBase row={rowObject} column={column} />
                                 :
                                 <FormField name={column.field}>
-                                    <EditCell<T>
+                                    <EditCell
                                         ref={(cellRef: EditCellRef | null) => storeEditCellRef(column.field, cellRef)}
                                         column={{ ...column, allowEdit: false }}
                                         value={getObject(column.field, formState?.values) ?? formState?.values?.[column.field]}
@@ -421,9 +573,7 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
                                             column, value as ValueType | Record<string, unknown>, formatter,
                                             internalData, setInternalData, isAddOperation, editModule, formState, formRef)}
                                         disabled={disabled}
-                                        onFocus={() => {
-                                            formState?.onFocus?.(column.field);
-                                        }}
+                                        onFocus={() => handleCellFocus(column.field)}
                                         isAdd={isAddOperation}
                                         formState={formState}
                                         rowObject={rowObject}
@@ -434,7 +584,7 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
                     ) : (
                         <td
                             key={`edit-cell-${column.field}`}
-                            className='sf-cell sf-display-none'
+                            className={`${CELL} ${DISPLAY_NONE}`}
                         ></td>
                     );
                 }
@@ -442,8 +592,7 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
                 return column.visible ? (
                     <td
                         key={`edit-cell-${column.field}`}
-                        className={'sf-cell sf-grid-edit-cell' + (isAddOperation && isLastRow ? ' sf-last-row' : '') +
-                            (!isAddOperation && isLastRow ? ' sf-last-cell' : '') + (!!column?.displayAsCheckBox && column?.edit?.type === EditType.CheckBox ? ` ${alignClass}` : '')}
+                        className={`${CELL} ${GRID_EDIT_CELL}${isAddOperation && isLastRow ? ` ${LAST_ROW}` : ''}${!isAddOperation && isLastRow ? ` ${LAST_CELL}` : ''}${!!column?.displayAsCheckBox && column?.edit?.type === EditType.CheckBox ? ` ${alignClass}` : ''}`}
                         data-mappinguid={column.uid}
                         role='gridcell'
                         aria-colindex={index + 1}
@@ -467,9 +616,7 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
                                     column, value as ValueType | Record<string, unknown>, formatter,
                                     internalData, setInternalData, isAddOperation, editModule, formState, formRef)}
                                 disabled={disabled}
-                                onFocus={() => {
-                                    formState?.onFocus?.(column.field);
-                                }}
+                                onFocus={() => handleCellFocus(column.field)}
                                 isAdd={isAddOperation}
                                 formState={formState}
                                 rowObject={rowObject}
@@ -479,7 +626,7 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
                 ) : (
                     <td
                         key={`edit-cell-${column.field}`}
-                        className='sf-cell sf-display-none'
+                        className={`${CELL} ${DISPLAY_NONE}`}
                     ></td>
                 );
             });
@@ -488,7 +635,7 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
             // This ensures validation runs on all fields with validation rules, even if they're not visible
             const hiddenValidationFields: React.JSX.Element[] = [];
             if (virtualSettings.enableColumn && validationNonRenderedColumn.size > 0) {
-                Array.from(validationNonRenderedColumn.entries()).forEach(([field, _column]: [string, ColumnProps<T>]) => {
+                Array.from(validationNonRenderedColumn.entries()).forEach(([field]: [string, ColumnProps<T>]) => {
                     hiddenValidationFields.push(
                         <FormField key={`hidden-validation-${field}`} name={field}>
                             <></>
@@ -499,13 +646,13 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
 
             return [...renderedCells, ...hiddenValidationFields];
         }, [columns, internalData, validationErrors, isAddOperation, disabled, handleFieldChange, offsetX,
-            handleFieldBlur, handleEnter, handleEscape, storeEditCellRef, formState, virtualSettings
+            handleFieldBlur, handleEnter, handleEscape, storeEditCellRef, formState, virtualSettings, handleCellFocus
         ]);
 
         // Render custom edit template if provided
         if (CustomTemplate) {
             return (
-                <tr className={`sf-grid-content-row ${isAddOperation ? 'sf-grid-add-row' : 'sf-grid-edit-row'}`}>
+                <tr className={`${GRID_CONTENT_ROW} ${isAddOperation ? GRID_ADD_ROW : GRID_EDIT_ROW}`}>
                     <td colSpan={getVisibleColumns?.().length} >
                         <Form
                             ref={formRef}
@@ -514,12 +661,12 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
                             validateOnChange={!(isAddOperation && editModule?.isShowAddNewRowActive) || (isAddOperation &&
                             formState && formState.errors && Object.keys(formState.errors).length > 0)}
                             onFormStateChange={setFormState}
-                            className={'sf-grid-edit-form' + (cssClass !== '' ? ' ' + cssClass : '')}
+                            className={`${GRID_EDIT_FORM}${cssClass !== '' ? ` ${cssClass}` : ''}`}
                             id={`grid-edit-form-${editRowIndex}`}
                             aria-label={`${isAddOperation ? 'Add' : 'Edit'} Record Form`}
                             role='form'
                         >
-                            <div className='sf-edit-template-container'>
+                            <div className={EDIT_TEMPLATE_CONTAINER}>
                                 <CustomTemplate
                                     data={internalData as T}
                                     columns={columns}
@@ -620,8 +767,8 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
             focusTimeoutRef.current = setTimeout(() => {
                 const activeElement: HTMLElement | null = document.activeElement as HTMLElement;
                 const isAlreadyFocusedInEdit: boolean | Element = activeElement && (
-                    activeElement.closest('.sf-grid-edit-row') ||
-                    activeElement.closest('.sf-grid-add-row')
+                    activeElement.closest(`.${GRID_EDIT_ROW}`) ||
+                    activeElement.closest(`.${GRID_ADD_ROW}`)
                 );
 
                 // Always auto-focus for new edit sessions, regardless of current focus
@@ -674,7 +821,7 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
         return rowUid ? (
             <tr
                 ref={rowRef}
-                className={'sf-grid-content-row ' + (rowUid.includes('grid-add-row') ? 'sf-grid-add-row' : 'sf-grid-edit-row')}
+                className={`${GRID_CONTENT_ROW} ${rowUid.includes('grid-add-row') ? GRID_ADD_ROW : GRID_EDIT_ROW}`}
                 aria-rowindex={editRowIndex + 1}
                 data-uid={rowUid}
                 style={{ height: `${rowObject?.height ?? rowHeight}px` }}
@@ -689,16 +836,16 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
                         onFormStateChange={(args: FormState) => {
                             setFormState(args);
                         }}
-                        className={'sf-grid-edit-form' + (cssClass !== '' ? ' ' + cssClass : '')}
+                        className={`${GRID_EDIT_FORM}${cssClass !== '' ? ` ${cssClass}` : ''}`}
                         id={`grid-edit-form-${editRowIndex}`}
                         aria-label={`${isAddOperation ? 'Add' : 'Edit'} Record Form`}
                         role='form'
                     >
                         <table
-                            className='sf-grid-edit-table'
+                            className={GRID_EDIT_TABLE}
                             cellSpacing='0.25'
                             role='grid'
-                            style={{ borderCollapse: 'separate', borderSpacing: '0.25px', width: '100%' }}
+                            style={{ borderCollapse: 'separate', borderSpacing: '0.25px', width: '100%', tableLayout: 'fixed' }}
                         >
                             {colGroupContent}
                             <tbody role='rowgroup'>
@@ -720,144 +867,10 @@ export const InlineEditForm: <T>(props: InlineEditFormProps<T> & RefAttributes<I
         ) : (
             <></>
         );
-    })) as <T>(props: InlineEditFormProps<T> & RefAttributes<InlineEditFormRef<T>>) => ReactElement;
+    })) as unknown as React.ForwardRefExoticComponent<InlineEditFormProps & React.RefAttributes<InlineEditFormRef>>;
 
 (InlineEditForm as React.ForwardRefExoticComponent<InlineEditFormProps & React.RefAttributes<InlineEditFormRef>>).displayName = 'InlineEditForm';
 
-/**
- * Initializes internal data for edit/add operations with default values.
- * For add operations, creates empty object with only explicitly defined defaultValues; for edit operations, copies all existing data.
- *
- * @private
- * @param {boolean} isAddOperation - Flag indicating if this is an add operation (true) or edit operation (false)
- * @param {T} editData - The data to initialize with; for edit operations, this is the existing row data
- * @param {ColumnProps<T>[]} columns - Array of column definitions to extract default values from
- * @returns {T} Initialized data object with appropriate values for the operation type
- */
-export const internalDataFn: <T>(isAddOperation: boolean, editData: T, columns: ColumnProps<T>[]) => T =
-    <T, >(isAddOperation: boolean, editData: T, columns: ColumnProps<T>[]): T => {
-        // For add operations, start with truly empty data
-        if (isAddOperation && !(editData && Object.keys(editData).length)) {
-            const addData: T = {} as T;
-            columns.forEach((column: ColumnProps<T>) => {
-                if (column.field && column.defaultValue !== undefined) {
-                    // Apply defaultValue only when explicitly set
-                    if (column.type === 'string') {
-                        addData[column.field] = typeof column.defaultValue === 'string'
-                            ? column.defaultValue
-                            : String(column.defaultValue);
-                    } else {
-                        addData[column.field] = column.defaultValue;
-                    }
-                }
-                // Don't set any value if no defaultValue is specified
-            });
-            return addData;
-        } else {
-            // For edit operations, use all existing data
-            return editData ? { ...editData } : {} as T;
-        }
-    };
 
-/**
- * Updates internal form data and notifies parent of field changes on user input.
- * Formats values based on column type and updates both internal state and FormValidator state for real-time validation.
- *
- * @private
- * @param {ColumnProps<T>} column - The column definition for the field being changed
- * @param {ValueType} value - The new value entered by the user
- * @param {IValueFormatter} formatter - Formatter service for type conversion
- * @param {T} internalData - Current internal form data state
- * @param {Function} setInternalData - State setter function for internal data
- * @param {FormState} formState - Current FormValidator state
- * @param {Function} stableOnFieldChange - Stable callback to notify parent of field changes
- * @returns {void}
- */
-export const handleFieldChangeFn: <T>(column: ColumnProps<T>, value: ValueType, formatter: IValueFormatter, internalData: T,
-    setInternalData: (value: React.SetStateAction<T>) => void, formState: FormState,
-    stableOnFieldChange: (field: string, value: ValueType | null) => void) => void =
-    <T, >(column: ColumnProps<T>, value: ValueType, formatter: IValueFormatter, internalData: T,
-        setInternalData: (value: React.SetStateAction<T>) => void, formState: FormState,
-        stableOnFieldChange: (field: string, value: ValueType | null) => void) => {
-        let formattedValue: ValueType = (column?.type === 'date' || column?.type === 'datetime' || column?.type === 'number') && typeof value === 'string' ?
-            (formatter.fromView(value, (column as IColumnBase<T>)?.parseFn, column?.type)) : value;
-        if ((column?.type === 'number' && isNaN(formattedValue as number)) ||
-            ((column?.type === 'date' || column?.type === 'datetime') && isUndefined(formattedValue as string))) {
-            formattedValue = '';
-        }
-        // Update internal data immediately for UI responsiveness
-        const topLevelKey: string = column.field.split('.')[0];
-        const copiedComplexData: Object = column.field.includes('.') && typeof internalData[topLevelKey as string] === 'object'
-            ? {
-                ...internalData,
-                [topLevelKey]: JSON.parse(JSON.stringify(internalData[topLevelKey as string]))
-            }
-            : { ...internalData };
-
-        const editedData: T = DataUtil.setValue(column.field, formattedValue, copiedComplexData) as T;
-        setInternalData({ ...editedData });
-
-        // Update FormValidator state
-        if (!isNullOrUndefined(internalData[topLevelKey as string]) && typeof internalData[topLevelKey as string] === 'object'
-            && !(internalData[topLevelKey as string] instanceof Date)) {
-            formState?.onChange?.(topLevelKey, {
-                value: {
-                    ...editedData[topLevelKey as string],
-                    [column.field.split('.')[1]]: value
-                } as FormValueType
-            });
-        } else {
-            formState?.onChange?.(column.field, { value: value as FormValueType });
-        }
-        // Notify parent for validation but don't expose data until save
-        stableOnFieldChange?.(column.field, formattedValue);
-    };
-
-/**
- * Validates field on blur and updates internal data for consistency.
- * Triggers FormValidator validation to display immediate feedback for validation errors.
- *
- * @private
- * @param {ColumnProps<T>} column - The column definition for the field losing focus
- * @param {ValueType | Record<string, unknown>} value - The current value of the field
- * @param {IValueFormatter} formatter - Formatter service for type conversion
- * @param {T} internalData - Current internal form data state
- * @param {Function} setInternalData - State setter function for internal data
- * @param {boolean} isAddOperation - Flag indicating if this is an add operation
- * @param {UseEditResult<T>} editModule - Edit module providing edit state and functions
- * @param {FormState} formState - Current FormValidator state
- * @param {RefObject<IFormValidator>} formRef - Reference to FormValidator component
- * @returns {void}
- */
-export const handleFieldBlurFn: <T>(column: ColumnProps<T>, value: ValueType | Record<string, unknown>, formatter: IValueFormatter,
-    internalData: T, setInternalData: (value: React.SetStateAction<T>) => void, isAddOperation: boolean, editModule: UseEditResult<T>,
-    formState: FormState, formRef: RefObject<IFormValidator>) => void =
-    <T, >(column: ColumnProps<T>, value: ValueType | Record<string, unknown>, formatter: IValueFormatter,
-        internalData: T, setInternalData: (value: React.SetStateAction<T>) => void, isAddOperation: boolean, editModule: UseEditResult<T>,
-        formState: FormState, formRef: RefObject<IFormValidator>) => {
-        value = (column?.type === 'date' || column?.type === 'number') && typeof value === 'string' ?
-            (formatter.fromView(value, (column as IColumnBase<T>)?.parseFn, column?.type)) : value;
-        // Update internal data on blur (consistency check)
-        const topLevelKey: string = column.field.split('.')[0];
-        const copiedComplexData: Object = column.field.includes('.') && typeof internalData[topLevelKey as string] === 'object'
-            ? {
-                ...internalData,
-                [topLevelKey]: JSON.parse(JSON.stringify(internalData[topLevelKey as string]))
-            }
-            : { ...internalData };
-
-        const editedData: T = DataUtil.setValue(column.field, value, copiedComplexData) as T;
-        setInternalData({ ...editedData });
-
-        if (!(isAddOperation && editModule.isShowAddNewRowActive) ||
-            (isAddOperation && formState && formState.errors && Object.keys(formState.errors).length > 0)) {
-            // Always trigger FormValidator blur validation
-            // This is essential for proper validation behavior
-            formState?.onBlur?.(column.field);
-
-            // Also trigger manual validation for immediate feedback
-            // This ensures validation errors are displayed immediately on blur
-            formRef.current?.validateField?.(column.field);
-        }
-
-    };
+// Re-export functions for backward compatibility and external use
+export { internalDataFn, handleFieldChangeFn, handleFieldBlurFn };

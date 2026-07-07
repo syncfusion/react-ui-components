@@ -1,5 +1,6 @@
-import * as React from 'react';
-import { forwardRef, useEffect, useCallback, useRef, useImperativeHandle, FormEvent, Ref, FormHTMLAttributes, createContext } from 'react';
+import { forwardRef, useEffect, useCallback, useRef, useImperativeHandle, FormEvent, Ref, FormHTMLAttributes, createContext, ReactNode,
+    Context, Provider, SyntheticEvent, ForwardRefExoticComponent, RefAttributes, RefObject, useMemo, FC, useContext
+} from 'react';
 import {IL10n, L10n, preRender, useProviderContext} from '@syncfusion/react-base';
 
 const VALIDATION_REGEX: { [key: string]: RegExp } = {
@@ -15,14 +16,14 @@ const VALIDATION_REGEX: { [key: string]: RegExp } = {
 /**
  * Specifies the possible value types for form fields.
  */
-export type FormValueType = string | number | boolean | Date | File | FileList | string[] | number[] | React.ReactNode | null | undefined;
+export type FormValueType = string | number | boolean | Date | File | FileList | string[] | number[] | ReactNode | null | undefined;
 
 interface FormContextProps {
     registerField?: (fieldName: string, rules?: FieldValidationRules) => void;
 }
 
-const FormContext: React.Context<FormContextProps | null> = createContext<FormContextProps | null>(null);
-const FormProvider: React.Provider<FormContextProps | null> = FormContext.Provider;
+const FormContext: Context<FormContextProps | null> = createContext<FormContextProps | null>(null);
+const FormProvider: Provider<FormContextProps | null> = FormContext.Provider;
 
 /**
  * Defines the structure for a validation rule in the form system.
@@ -359,7 +360,7 @@ export interface FormState {
      * @param event - The synthetic event from the form submission.
      * @event onSubmit
      */
-    onSubmit(event: React.SyntheticEvent): void;
+    onSubmit(event: SyntheticEvent): void;
 }
 
 /**
@@ -489,7 +490,7 @@ type FormComponentProps = FormProps & Omit<FormHTMLAttributes<HTMLFormElement>, 
  * </Form>
  * ```
  */
-export const Form: React.ForwardRefExoticComponent<FormComponentProps & React.RefAttributes<IFormValidator>> =
+export const Form: ForwardRefExoticComponent<FormComponentProps & RefAttributes<IFormValidator>> =
 forwardRef<IFormValidator, FormComponentProps>((props: FormComponentProps, ref: Ref<IFormValidator>) => {
     const {
         rules,
@@ -502,9 +503,9 @@ forwardRef<IFormValidator, FormComponentProps>((props: FormComponentProps, ref: 
         className = '',
         ...otherProps
     } = props;
-    const formRef: React.RefObject<HTMLFormElement | null> = useRef<HTMLFormElement>(null);
+    const formRef: RefObject<HTMLFormElement | null> = useRef<HTMLFormElement>(null);
     const { locale, dir } = useProviderContext();
-    const stateRef: React.RefObject<FormData> = useRef<FormData>({
+    const stateRef: RefObject<FormData> = useRef<FormData>({
         values: { ...initialValues },
         errors: {},
         touched: {},
@@ -625,10 +626,10 @@ forwardRef<IFormValidator, FormComponentProps>((props: FormComponentProps, ref: 
         };
         notifyStateChange();
     }, [notifyStateChange]);
-    const rulesRef: React.RefObject<ValidationRules> = useRef<ValidationRules>(rules);
-    const fieldLevelRulesRef: React.RefObject<ValidationRules> = useRef<ValidationRules>({});
-    const formStateRef: React.RefObject<FormState | null> = useRef<FormState>(null);
-    const l10nRef: React.RefObject<IL10n | null> = useRef<IL10n>(null);
+    const rulesRef: RefObject<ValidationRules> = useRef<ValidationRules>(rules);
+    const fieldLevelRulesRef: RefObject<ValidationRules> = useRef<ValidationRules>({});
+    const formStateRef: RefObject<FormState | null> = useRef<FormState>(null);
+    const l10nRef: RefObject<IL10n | null> = useRef<IL10n>(null);
     const defaultErrorMessages: { [rule: string]: string } = {
         required: 'This field is required.',
         email: 'Please enter a valid email address.',
@@ -648,7 +649,7 @@ forwardRef<IFormValidator, FormComponentProps>((props: FormComponentProps, ref: 
         tel: 'Please enter a valid phone number.',
         equalTo: 'Please enter the same value again.'
     };
-    const registeredFields: React.RefObject<Record<string, boolean>> = useRef<Record<string, boolean>>({});
+    const registeredFields: RefObject<Record<string, boolean>> = useRef<Record<string, boolean>>({});
     const registerField: (fieldName: string, rules?: FieldValidationRules) => void =
         (fieldName: string, rules?: FieldValidationRules) => {
             registeredFields.current[fieldName as string] = true;
@@ -769,7 +770,9 @@ forwardRef<IFormValidator, FormComponentProps>((props: FormComponentProps, ref: 
         (fieldName: string, value: FormValueType): string | null => {
             const fieldRules: FieldValidationRules | undefined = getMergedRulesForField(fieldName);
             if (!fieldRules || !registeredFields.current[fieldName as string]) {return null; }
-            const isValueEmpty: boolean = value === undefined || value === null || value.toString().trim() === '';
+            const isValueEmpty: boolean = value === undefined || value === null || value === false ||
+                (typeof FileList !== 'undefined' && value instanceof FileList && value.length === 0) ||
+                (typeof value === 'string' ? value.trim() === '' : String(value).trim() === '');
             const isRequired: boolean = fieldRules.required != null &&  fieldRules.required[0] !== false;
             if (isValueEmpty && !isRequired) {
                 return null;
@@ -801,7 +804,7 @@ forwardRef<IFormValidator, FormComponentProps>((props: FormComponentProps, ref: 
                         }
                     }
 
-                    if (ruleName !== 'required' && (value === '' || value === null || value === undefined)) {
+                    if (ruleName !== 'required' && isValueEmpty) {
                         continue;
                     }
 
@@ -889,7 +892,7 @@ forwardRef<IFormValidator, FormComponentProps>((props: FormComponentProps, ref: 
 
         for (const field of fields) {
             const error: string | null = validateFieldValue(field, stateRef.current.values[field as string]);
-            if (!stateRef.current.values[field as string]) {
+            if (typeof stateRef.current.values[field as string] === 'undefined') {
                 setFieldValue(field, stateRef.current.values[field as string]);
             }
             if (error) {
@@ -929,8 +932,8 @@ forwardRef<IFormValidator, FormComponentProps>((props: FormComponentProps, ref: 
         return Object.keys(formErrors).length === 0;
     };
 
-    const handleSubmit: (event: FormEvent<HTMLFormElement> | React.SyntheticEvent) => void =
-        (event: FormEvent<HTMLFormElement> | React.SyntheticEvent): void => {
+    const handleSubmit: (event: FormEvent<HTMLFormElement> | SyntheticEvent) => void =
+        (event: FormEvent<HTMLFormElement> | SyntheticEvent): void => {
             event?.preventDefault();
             const isValid: boolean = validate();
             touchAllFields();
@@ -1002,7 +1005,7 @@ forwardRef<IFormValidator, FormComponentProps>((props: FormComponentProps, ref: 
         notifyStateChange();
         return !error;
     };
-    const publicAPI: Partial<IFormValidator> = React.useMemo(() => ({
+    const publicAPI: Partial<IFormValidator> = useMemo(() => ({
         rules,
         initialValues,
         validateOnChange
@@ -1016,7 +1019,7 @@ forwardRef<IFormValidator, FormComponentProps>((props: FormComponentProps, ref: 
         element: formRef.current as HTMLFormElement
     }), [publicAPI]);
 
-    const formClassName: string = React.useMemo(() => {
+    const formClassName: string = useMemo(() => {
         return [
             'sf-control sf-form-validator',
             dir === 'rtl' ? 'sf-rtl' : '',
@@ -1063,7 +1066,7 @@ export interface FormFieldProps {
     /**
      * Specifies the children content for the form field. Children should include the actual form control elements like inputs, textarea, etc.
      */
-    children: React.ReactNode;
+    children: ReactNode;
 
     /**
      * Specifies field-level validation rules that apply only to this specific field. These rules override any form-level rules
@@ -1107,20 +1110,20 @@ export interface FormFieldProps {
  * ```
  *
  * @param {IFormFieldProps} props - Specifies the form field configuration properties
- * @returns {React.ReactNode} - Returns the children with access to form validation context
+ * @returns {ReactNode} - Returns the children with access to form validation context
  */
-export const FormField: React.FC<FormFieldProps> = (props: FormFieldProps): React.ReactNode => {
+export const FormField: FC<FormFieldProps> = (props: FormFieldProps): ReactNode => {
     const { name, children, rules } = props;
     if (!name) {
         return null;
     }
 
-    const formContext: FormContextProps | null = React.useContext(FormContext);
+    const formContext: FormContextProps | null = useContext(FormContext);
     if (!formContext) {
         return null;
     }
 
-    React.useEffect(() => {
+    useEffect(() => {
         formContext?.registerField?.(name, rules);
     }, [name, rules, formContext]);
 

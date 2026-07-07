@@ -4,24 +4,28 @@ import {
     useEffect, JSX,
     useMemo
 } from 'react';
-import { TimelineDayIcon, CloseIcon, LocationIcon, PageColumnsIcon, RepeatIcon } from '@syncfusion/react-icons';
+import { TimelineDayIcon, CloseIcon, LocationIcon, PageColumnsIcon, RepeatIcon, TimeZoneIcon, PeopleIcon } from '@syncfusion/react-icons';
 import { Button, Color, IButton, Variant } from '@syncfusion/react-buttons';
 import { TextBoxChangeEvent, TextBox, ITextBox } from '@syncfusion/react-inputs';
 import { Popup, CollisionType, ActionOnScrollType } from '@syncfusion/react-popups';
 import { CSS_CLASSES } from '../../common/constants';
 import { DateService } from '../../services/DateService';
-import { SchedulerCellClickEvent, EventModel, SchedulerCellDetails } from '../../types/scheduler-types';
-import { Browser, IL10n, Size, useProviderContext } from '@syncfusion/react-base';
+import { SchedulerCellClickEvent, EventModel, SchedulerCellDetails, SchedulerResource } from '../../types/scheduler-types';
+import { Browser, IL10n, isNullOrUndefined, Size, useProviderContext } from '@syncfusion/react-base';
 import { usePopup } from '../../hooks/useQuickInfoPopup';
 import { useSchedulerLocalization } from '../../common/locale';
 import { useOutsideClick } from '../../hooks/useScheduler';
 import { EventService } from '../../services/EventService';
 import { useSchedulerPropsContext } from '../../context/scheduler-context';
 import { createPortal } from 'react-dom';
-import { clearAndSelectAppointment } from '../../utils/actions';
+import { clearAndSelectAppointment, findIndexInData } from '../../utils/actions';
 import { CrudAction, AlertAction } from '../../types/enums';
 import { getRecurrenceSummary } from '../../../recurrence-editor';
 import { useRecurrenceEditorLocalization } from '../../../recurrence-editor/locale';
+import { useSchedulerPopupContext } from '../../context/scheduler-popup-state-context';
+import { useSetResourceValues } from '../../hooks/useResourceGrouping';
+import { useResourceGroupingContext } from '../../context/resource-grouping-context';
+import { ResourceLevel } from '../../services/ResourceGroupingService';
 
 /**
  * Shared utility function to render close button for popups
@@ -208,7 +212,8 @@ forwardRef<IQuickInfoPopup, QuickInfoPopupProps>((props: QuickInfoPopupProps,  r
     const { onClose, onEditEvent, onMoreDetails } = props;
 
     const { schedulerRef, eventSettings, showQuickInfoPopup, showDeleteAlert, showRecurrenceAlert, view, readOnly,
-        timeFormat, quickInfo } = useSchedulerPropsContext();
+        timeFormat, quickInfo, resources } = useSchedulerPropsContext();
+    const { leafResources, isGroupingEnabled } = useResourceGroupingContext();
     const [cellData, setCellData] = useState<SchedulerCellClickEvent>({} as SchedulerCellClickEvent);
     const [eventData, setEventData] = useState<EventModel>({} as EventModel);
     const [formData, setFormData] = useState<EventModel>({} as EventModel);
@@ -236,6 +241,8 @@ forwardRef<IQuickInfoPopup, QuickInfoPopupProps>((props: QuickInfoPopupProps,  r
     const { getString: getSchedulerString } = useSchedulerLocalization(locale || 'en-US');
     const { getString: getRecurrenceString } = useRecurrenceEditorLocalization(locale || 'en-US');
     const localeObj: IL10n = useMemo(() => ({ getConstant: (key: string) => getRecurrenceString(key) } as IL10n), [getRecurrenceString]);
+    const { morePopupHide } = useSchedulerPopupContext();
+    const setResourceValuesFunc: (groupIndex: number) => Record<string, any> = useSetResourceValues();
 
     useEffect(() => {
         if (shouldFocus) {
@@ -279,7 +286,7 @@ forwardRef<IQuickInfoPopup, QuickInfoPopupProps>((props: QuickInfoPopupProps,  r
 
     const onOpen: () => void = (): void => {
         setPopupPosition(
-            view?.toLowerCase() === 'day'
+            ['day', 'agenda'].includes(view?.toLowerCase() ?? '')
                 ? { X: 'center', Y: 'center' }
                 : { X: 'right', Y: 'top' }
         );
@@ -336,15 +343,17 @@ forwardRef<IQuickInfoPopup, QuickInfoPopupProps>((props: QuickInfoPopupProps,  r
      * @returns {void}
      */
     const handleSave: () => void = useCallback((): void => {
+        const extractedResourceValues: Record<string, string | number | (string | number)[]> = setResourceValuesFunc(cellData?.groupIndex);
         const updatedData: EventModel = {
             ...formData,
             [eventSettings.fields.id]: EventService.generateEventGuid(),
-            [eventSettings.fields.subject]: formData[eventSettings.fields.subject] || getSchedulerString('newEvent')
+            [eventSettings.fields.subject]: formData[eventSettings.fields.subject] || getSchedulerString('newEvent'),
+            ...extractedResourceValues
         };
         schedulerRef?.current?.addEvent?.(updatedData);
         handleClose();
         closeAllPopups();
-    }, [formData, handleClose]);
+    }, [formData, cellData?.groupIndex, handleClose]);
 
     /**
      * Handles the edit action for event popups
@@ -354,6 +363,7 @@ forwardRef<IQuickInfoPopup, QuickInfoPopupProps>((props: QuickInfoPopupProps,  r
     const handleEdit: () => void = useCallback((): void => {
         onEditEvent(eventData);
         handleClose();
+        morePopupHide();
     }, [eventData, handleClose, onEditEvent]);
 
     const handleMoreDetails: () => void = useCallback((): void => {
@@ -373,9 +383,7 @@ forwardRef<IQuickInfoPopup, QuickInfoPopupProps>((props: QuickInfoPopupProps,  r
     const openDeleteConfirmation: () => void = useCallback((): void => {
         const handleRecurrenceDelete: (selectOption: string) => void = (selectOption: string): void => {
             if (popupType === 'event' && eventData) {
-                const action: CrudAction = selectOption === 'EditOccurrence' ?
-                    'DeleteOccurrence' : 'DeleteSeries';
-                schedulerRef?.current?.deleteEvent?.(eventData, action);
+                schedulerRef?.current?.deleteEvent?.(eventData, selectOption as CrudAction);
             }
             handleClose();
             closeAllPopups();
@@ -407,6 +415,75 @@ forwardRef<IQuickInfoPopup, QuickInfoPopupProps>((props: QuickInfoPopupProps,  r
                 e.preventDefault();
                 callback();
             }
+        };
+
+    const getResourceText: (args: SchedulerCellClickEvent | EventModel) => string =
+        (args: SchedulerCellClickEvent | EventModel): string => {
+            const isDataSourceEmpty: boolean = resources.some((res: SchedulerResource) => {
+                const ds: Record<string, any> = res?.dataSource as Record<string, any>;
+                return Array.isArray(ds) ? ds.length === 0 : !ds;
+            });
+            if (isDataSourceEmpty) { return null; }
+
+            let resourceValue: string = '';
+            if (!isGroupingEnabled) {
+                const resourceCollection: SchedulerResource = resources.slice(-1)[0];
+                const resourceData: Record<string, number>[] = resourceCollection?.dataSource as Record<string, number>[];
+                if (popupType === 'event') {
+                    const eventData: EventModel = args as EventModel;
+                    for (const data of resourceData) {
+                        const resourceId: string | number | (string | number)[] =
+                            eventData[resourceCollection?.field] as string | number | (string | number)[];
+                        if (resourceId instanceof Array) {
+                            if (resourceId.indexOf(data[resourceCollection.idField]) > -1) {
+                                const id: string | number | (string | number)[] =
+                                    resourceId[resourceId.indexOf(data[resourceCollection?.idField])];
+                                const resource: Record<string, number> = resourceData.filter((e: Record<string, number>) =>
+                                    e[resourceCollection.idField] === id)[0];
+                                resourceValue += (resourceValue === '') ? resource[resourceCollection?.textField] :
+                                    ', ' + resource[resourceCollection?.textField];
+                            }
+                        } else if (data[resourceCollection?.idField] === resourceId) {
+                            resourceValue = data[resourceCollection?.textField].toString();
+                        }
+                    }
+                } else {
+                    resourceValue = resourceData?.[0][resourceCollection?.textField]?.toString();
+                }
+            } else {
+                if (popupType === 'event') {
+                    const eventData: EventModel = args as EventModel;
+                    let resourceData: string | number | (string | number)[];
+                    let lastResource: SchedulerResource;
+                    for (let i: number = resources?.length - 1; i >= 0; i--) {
+                        resourceData = eventData[resources[parseInt(i.toString(), 10)].field] as string[];
+                        if (!isNullOrUndefined(resourceData)) {
+                            lastResource = resources[parseInt(i.toString(), 10)];
+                            break;
+                        }
+                    }
+                    if (!Array.isArray(resourceData)) {
+                        resourceData = [resourceData];
+                    }
+                    const resNames: string[] = [];
+                    const lastResourceData: Record<string, any>[] = lastResource?.dataSource as Record<string, any>[];
+                    resourceData.forEach((value: string | number) => {
+                        let text: string;
+                        const i: number = findIndexInData(lastResourceData, lastResource?.idField, value);
+                        if (i > -1) {
+                            text = lastResourceData[parseInt(i.toString(), 10)][lastResource?.textField] as string;
+                        }
+                        if (text) { resNames.push(text); }
+                    });
+                    resourceValue = resNames.join(', ');
+                } else {
+                    const argsData: SchedulerCellClickEvent = args as SchedulerCellClickEvent;
+                    const groupIndex: number = !isNullOrUndefined(argsData?.groupIndex) ? argsData.groupIndex : 0;
+                    const resourceDetails: ResourceLevel = leafResources[parseInt(groupIndex.toString(), 10)];
+                    resourceValue = resourceDetails?.resourceData[resourceDetails.resource.textField] as string;
+                }
+            }
+            return resourceValue;
         };
 
     const cellDataProps: SchedulerCellDetails = {
@@ -456,6 +533,14 @@ forwardRef<IQuickInfoPopup, QuickInfoPopupProps>((props: QuickInfoPopupProps,  r
                                     new Date(cellData.endTime),
                                     locale,
                                     timeFormat)}
+                            </span>
+                        </div>
+                    )}
+                    {resources && resources.length > 0 && isGroupingEnabled && (
+                        <div className={`${CSS_CLASSES.POPUP_RESOURCE_DETAILS} ${CSS_CLASSES.DISPLAY_FLEX}`}>
+                            <PeopleIcon />
+                            <span className={CSS_CLASSES.POPUP_RESOURCE}>
+                                {getResourceText(cellData)}
                             </span>
                         </div>
                     )}
@@ -532,6 +617,18 @@ forwardRef<IQuickInfoPopup, QuickInfoPopupProps>((props: QuickInfoPopupProps,  r
                         </div>
                     )}
 
+                    {!eventData.isAllDay && eventData.startTimezone && eventData.endTimezone && (
+                        <div className={`${CSS_CLASSES.TIMEZONE} ${CSS_CLASSES.DISPLAY_FLEX}`}>
+                            <TimeZoneIcon/>
+                            <span className={CSS_CLASSES.POPUP_TIMEZONE_DETAILS}>
+                                {eventData.startTimezone && eventData.endTimezone && eventData.startTimezone !== eventData.endTimezone
+                                    ? `${eventData.startTimezone} → ${eventData.endTimezone}`
+                                    : eventData.startTimezone || eventData.endTimezone
+                                }
+                            </span>
+                        </div>
+                    )}
+
                     {eventData.location && (
                         <div className={`${CSS_CLASSES.LOCATION} ${CSS_CLASSES.DISPLAY_FLEX}`}>
                             <LocationIcon />
@@ -543,6 +640,15 @@ forwardRef<IQuickInfoPopup, QuickInfoPopupProps>((props: QuickInfoPopupProps,  r
                         <div className={`${CSS_CLASSES.DESCRIPTION} ${CSS_CLASSES.DISPLAY_FLEX}`}>
                             <PageColumnsIcon />
                             <span className={CSS_CLASSES.POPUP_DESCRIPTION_TEXT}>{eventData.description}</span>
+                        </div>
+                    )}
+
+                    {resources && resources.length > 0 && (
+                        <div className={`${CSS_CLASSES.POPUP_RESOURCE_DETAILS} ${CSS_CLASSES.DISPLAY_FLEX}`}>
+                            <PeopleIcon />
+                            <span className={CSS_CLASSES.POPUP_RESOURCE}>
+                                {getResourceText(eventData)}
+                            </span>
                         </div>
                     )}
                 </div>

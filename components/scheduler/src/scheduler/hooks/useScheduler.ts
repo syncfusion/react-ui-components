@@ -1,7 +1,7 @@
 import { useState, useEffect, ReactNode, useCallback, useMemo, useRef, RefObject } from 'react';
 import { SchedulerProps, ViewSpecificProps, SchedulerViewChangeEvent, SchedulerDateChangeEvent } from '../types/scheduler-types';
 import { ViewsInfo, ActiveViewProps } from '../types/internal-interface';
-import { defaultSchedulerProps } from '../utils/default-props';
+import { defaultSchedulerProps, defaultAgendaViewProps } from '../utils/default-props';
 import { mergeSchedulerProps } from '../utils/merge-utils';
 import { useProviderContext } from '@syncfusion/react-base';
 import { ViewService } from '../services/ViewService';
@@ -155,6 +155,7 @@ export const useScheduler: (props: UseSchedulerProps) => UseSchedulerResult = (p
     const [renderDates, setRenderDates] = useState<Date[]>([]);
     const [showCalendar, setShowCalendar] = useState<boolean>(false);
     const [calendarView, setCalendarView] = useState<CalendarView>(CalendarView.Month);
+    let currentSelectedDate: Date;
 
     useEffect(() => {
         if (isSelectedDateControlled) {
@@ -241,6 +242,7 @@ export const useScheduler: (props: UseSchedulerProps) => UseSchedulerResult = (p
     const handleSelectedDateChange: (date: Date) => void = (date: Date): void => {
         if (!isSelectedDateControlled) {
             setInternalSelectedDate(date);
+            currentSelectedDate = date;
         }
         if (onSelectedDateChange) {
             const dateChangeEvent: SchedulerDateChangeEvent = {
@@ -277,6 +279,8 @@ export const useScheduler: (props: UseSchedulerProps) => UseSchedulerResult = (p
             selectedDate: internalSelectedDate,
             view: internalCurrentView,
             eventSettings: props.eventSettings,
+            resources: props.resources,
+            group: props.group,
             timeScale: props.timeScale,
             workHours: props.workHours,
             startHour: props.startHour,
@@ -293,6 +297,7 @@ export const useScheduler: (props: UseSchedulerProps) => UseSchedulerResult = (p
             readOnly: props.readOnly,
             cell: props.cell,
             dateHeader: props.dateHeader,
+            resourceHeader: props.resourceHeader,
             headerIndent: props.headerIndent,
             quickInfo: props.quickInfo,
             editor: props.editor,
@@ -300,7 +305,7 @@ export const useScheduler: (props: UseSchedulerProps) => UseSchedulerResult = (p
             showQuickInfoPopup: props.showQuickInfoPopup,
             header: props.header,
             keyboardNavigation: props.keyboardNavigation,
-            onDataRequest: props.onDataRequest,
+            onDataBind: props.onDataBind,
             onSelectedDateChange: (event: SchedulerDateChangeEvent) => handleSelectedDateChange(event.value),
             onViewChange: (event: SchedulerViewChangeEvent) => handleCurrentViewChange(event.value),
             onCellClick: props.onCellClick,
@@ -318,8 +323,11 @@ export const useScheduler: (props: UseSchedulerProps) => UseSchedulerResult = (p
             onDrag: props.onDrag,
             onDragStop: props.onDragStop,
             onMoreEventsClick: props.onMoreEventsClick,
+            onDataRequest: props.onDataRequest,
             enableRecurrenceValidation: props.enableRecurrenceValidation,
-            weekRule: props.weekRule
+            weekRule: props.weekRule,
+            timezone: props.timezone,
+            timezoneDataSource: props.timezoneDataSource
         };
     };
 
@@ -354,6 +362,8 @@ export const useScheduler: (props: UseSchedulerProps) => UseSchedulerResult = (p
             selectedDate: DateService.setValidDate(rootProps.selectedDate),
             view: rootProps.view,
             eventSettings: rootProps.eventSettings,
+            resources: rootProps.resources,
+            group: rootProps.group,
             workHours: rootProps.workHours,
             showTimeIndicator: rootProps.showTimeIndicator,
             rowAutoHeight: rootProps.rowAutoHeight,
@@ -362,6 +372,7 @@ export const useScheduler: (props: UseSchedulerProps) => UseSchedulerResult = (p
             header: rootProps.header,
             showQuickInfoPopup: rootProps.showQuickInfoPopup,
             displayDate: DateService.setValidDate(viewProps.displayDate),
+            useDisplayDate: viewProps.displayDate && internalSelectedDate.getTime() === validatedSelectedDate.getTime(),
             numberOfWeeks: viewProps.numberOfWeeks,
             weekDay: viewProps.weekDay,
             showTrailingAndLeadingDates: viewProps.showTrailingAndLeadingDates,
@@ -370,6 +381,7 @@ export const useScheduler: (props: UseSchedulerProps) => UseSchedulerResult = (p
             displayName: viewProps.displayName ?? viewComponent.displayName,
             maxEventsPerRow: viewProps.maxEventsPerRow,
             dateHeader: viewProps.dateHeader ?? rootProps.dateHeader,
+            resourceHeader: viewProps.resourceHeader ?? rootProps.resourceHeader,
             headerIndent: viewProps.headerIndent ?? rootProps.headerIndent,
             cell: viewProps.cell ?? rootProps.cell,
             timeScale: viewProps.timeScale ?? rootProps.timeScale,
@@ -382,10 +394,13 @@ export const useScheduler: (props: UseSchedulerProps) => UseSchedulerResult = (p
             timeFormat: viewProps.timeFormat ?? rootProps.timeFormat,
             showWeekNumber: viewProps.showWeekNumber ?? rootProps.showWeekNumber,
             eventOverlap: viewProps.eventOverlap ?? rootProps.eventOverlap,
+            hideEmptyAgendaDays: viewProps.hideEmptyAgendaDays ?? defaultAgendaViewProps.hideEmptyAgendaDays,
+            agendaDaysCount: viewProps.agendaDaysCount ?? defaultAgendaViewProps.agendaDaysCount,
+            noEventsTemplate: viewProps.noEventsTemplate,
             quickInfo: viewProps.quickInfo ?? rootProps.quickInfo,
             editor: viewProps.editor ?? rootProps.editor,
             onEditorSubmit: rootProps.onEditorSubmit,
-            onDataRequest: rootProps.onDataRequest,
+            onDataBind: rootProps.onDataBind,
             onSelectedDateChange: rootProps.onSelectedDateChange,
             onViewChange: rootProps.onViewChange,
             onCellClick: rootProps.onCellClick,
@@ -404,10 +419,13 @@ export const useScheduler: (props: UseSchedulerProps) => UseSchedulerResult = (p
             onDrag: rootProps.onDrag,
             onDragStop: rootProps.onDragStop,
             onMoreEventsClick: rootProps.onMoreEventsClick,
+            onDataRequest: rootProps.onDataRequest,
             enableRecurrenceValidation: rootProps.enableRecurrenceValidation,
             handleCurrentViewChange,
             getAvailableViews,
-            weekRule: rootProps.weekRule
+            weekRule: rootProps.weekRule,
+            timezone: rootProps.timezone,
+            timezoneDataSource: props.timezoneDataSource
         };
         if (mergedProps.startHour !== '00:00' || mergedProps.endHour !== '24:00') {
             mergedProps.startHourTuple = [Number(mergedProps.startHour?.split(':')[0]), Number(mergedProps.startHour?.split(':')[1])];
@@ -472,11 +490,16 @@ export const useScheduler: (props: UseSchedulerProps) => UseSchedulerResult = (p
         if (!viewComponent) { return; }
 
         const navOptions: NavigationOptions  = {
-            currentDate: internalSelectedDate,
+            currentDate: currentSelectedDate || internalSelectedDate,
             viewType: viewComponent.viewType,
             interval: viewComponent.interval,
             showWeekend: activeViewProps.showWeekend,
-            workDays: activeViewProps.workDays
+            workDays: activeViewProps.workDays,
+            agendaDaysCount: activeViewProps.agendaDaysCount,
+            numberOfWeeks: activeViewProps.numberOfWeeks,
+            firstDayOfWeek: activeViewProps.firstDayOfWeek,
+            displayDate: activeViewProps.displayDate,
+            renderDates: renderDates
         };
         const newDate: Date = flow === 'next'
             ? NavigationService.navigateToNext(navOptions)
@@ -485,16 +508,16 @@ export const useScheduler: (props: UseSchedulerProps) => UseSchedulerResult = (p
         handleSelectedDateChange(newDate);
     };
 
-    const handleNextClick: () => void = (): void => {
+    const handleNextClick: () => void = useCallback((): void => {
         handleNavigation('next');
-    };
+    }, [handleNavigation]);
 
-    const handlePreviousClick: () => void = (): void => {
+    const handlePreviousClick: () => void = useCallback((): void => {
         handleNavigation('previous');
-    };
+    }, [handleNavigation]);
 
     const handleTodayClick: () => void = (): void => {
-        const today: Date = NavigationService.navigateToToday();
+        const today: Date = NavigationService.navigateToToday(activeViewProps.timezone);
         handleSelectedDateChange(today);
     };
 
@@ -577,8 +600,7 @@ export const useOutsideClick: (
     useEffect(() => {
         const handleOutsideClick: (e: MouseEvent) => void = (e: MouseEvent): void => {
             if (isOpen && elementRef.current && !elementRef.current.contains(e.target as Node) &&
-                !(e.target as HTMLElement)?.closest(`.${CSS_CLASSES.POPUP}`) &&
-                !(e.target as HTMLElement)?.closest(`.${CSS_CLASSES.DATEPICKER_BUTTON}`)) {
+                !(e.target as HTMLElement)?.closest(`.${CSS_CLASSES.POPUP}`)) {
                 onOutsideClick();
             }
         };

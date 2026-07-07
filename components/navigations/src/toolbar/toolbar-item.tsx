@@ -5,31 +5,46 @@ import {
 
 const CLS_ITEM: string = 'sf-toolbar-item';
 
-export interface IToolbarItem {
-    /**
-     * Toolbar item element.
-     *
-     * @default null
-     */
-    element?: HTMLElement | null;
-}
-
-type IToolbarItemProps = IToolbarItem & HTMLAttributes<HTMLDivElement>;
-
 /**
  * The ToolbarItem component allows for the rendering of individual items within a Toolbar.
  *
  * ```typescript
  * <Toolbar>
- *   <ToolbarItem id='saveButton' className='action-button' style={{ backgroundColor: '#f0f0f0' }}>
- *     <button type="button">Save</button>
- *   </ToolbarItem>
+ *   <ToolbarItem className='action-button' style={{ backgroundColor: '#f0f0f0' }}><Button>Cut</Button></ToolbarItem>
  * </Toolbar>
  * ```
  */
-export const ToolbarItem: ForwardRefExoticComponent<IToolbarItemProps & RefAttributes<IToolbarItem>> = memo(forwardRef<
-IToolbarItem, IToolbarItemProps
->((props: IToolbarItemProps, ref: Ref<IToolbarItem>) => {
+export interface ToolbarItemProps {
+    /**
+     * Specifies an optional CSS class to apply to the toolbar item.
+     * This is useful for reusing styling in a custom template.
+     *
+     * @default -
+     */
+    className?: string;
+
+    /**
+     * Toolbar item element.
+     *
+     * @private
+     * @default -
+     */
+    element?: HTMLElement | null;
+
+    /**
+     * Specifies the content of the toolbar item.
+     * Can be text or any valid React node.
+     *
+     * @default -
+     */
+    children?: React.ReactNode;
+}
+
+type IToolbarItemProps = ToolbarItemProps & HTMLAttributes<HTMLDivElement>;
+
+export const ToolbarItem: ForwardRefExoticComponent<IToolbarItemProps & RefAttributes<IToolbarItemProps>> = memo(forwardRef<
+IToolbarItemProps, IToolbarItemProps
+>((props: IToolbarItemProps, ref: Ref<ToolbarItemProps>) => {
     const {
         className = '',
         children,

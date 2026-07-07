@@ -1,10 +1,11 @@
 import { DataManager, Query } from '@syncfusion/react-data';
-import { PieEmptyPointMode, GroupModes, PieLegendShape, PieLabelPosition, ConnectorType, LegendAlignment, PieSelectionMode, PieSelectionPattern } from './enum';
-import { HorizontalAlignment } from '@syncfusion/react-base';
+import { PieEmptyPointMode, GroupModes, PieLegendShape, PieLabelPosition, LegendAlignment, PieSelectionMode, PieSelectionPattern } from './enum';
+import { HorizontalAlignment, VerticalAlignment } from '@syncfusion/react-base';
 import { TextOverflow, Theme, TitlePosition, FadeOutMode, LegendPosition } from '../../common/enum';
-import { FocusOutlineProps } from '../../common/interfaces';
+import { ConnectorProps, FocusOutlineProps } from '../../common/interfaces';
 import { Animation } from '../../common/interfaces';
 import * as React from 'react';
+import { AnnotationCoordinateUnit } from '../../common/annotation';
 
 /**
  * Defines the configuration options for the PieChart component.
@@ -39,7 +40,7 @@ export interface PieChartComponentProps {
     /**
      * Provides accessibility options for the pie chart container element.
      *
-     * @default { ariaLabel: null, focusable: true, role: null, tabIndex: 0 }
+     * @default { ariaLabel: '', focusable: true, role: '', tabIndex: 0 }
      */
     accessibility?: PieChartAccessibilityProps;
 
@@ -68,7 +69,7 @@ export interface PieChartComponentProps {
     /**
      * Sets the background color of the chart. Accepts valid CSS color strings such as hex or rgba values.
      *
-     * @default transparent
+     * @default 'transparent'
      */
     background?: string;
 
@@ -78,8 +79,12 @@ export interface PieChartComponentProps {
      * Available options:
      * - `Material`: Applies the Material light theme.
      * - `MaterialDark`: Applies the Material dark theme.
+     * - `Tailwind`: Applies the Tailwind light theme.
+     * - `TailwindDark`: Applies the Tailwind dark theme.
+     * - `Bootstrap`: Applies the Bootstrap light theme.
+     * - `BootstrapDark`: Applies the Bootstrap dark theme.
      *
-     * @default Material
+     * @default 'Material'
      */
     theme?: Theme;
 
@@ -120,7 +125,7 @@ export interface PieChartComponentProps {
 
     /**
      * Triggered after a legend item is clicked.
-     * Provides details about the clicked legend item, including its associated series and data points
+     * Provides details about the clicked legend item, including its associated series and data points.
      *
      * @event onLegendClick
      */
@@ -135,7 +140,7 @@ export interface PieChartComponentProps {
     onMouseMove?: (event: PieChartMouseEvent) => void;
 
     /**
-     * Optional function to customize the point of the series.
+     * Triggered when the mouse enters a chart element.
      *
      * @event onMouseEnter
      */
@@ -145,7 +150,7 @@ export interface PieChartComponentProps {
      * Triggered when the mouse leaves the chart.
      * Provides information about the mouse event, including the target element and pointer coordinates relative to the chart.
      *
-     * @event onClick
+     * @event onMouseMove
      */
     onMouseLeave?: (event: PieChartMouseEvent) => void;
 
@@ -172,6 +177,16 @@ export interface PieChartComponentProps {
      * @event onResize
      */
     onResize?: (event: PieResizeEvent) => void;
+
+    /**
+     * Specifies a template to display when the chart has no data.
+     *
+     * This template is rendered when all series data sources are empty.
+     * It supports both HTML string content and React functional templates.
+     *
+     * @default null
+     */
+    noDataTemplate?: string | Function;
 
 }
 
@@ -255,7 +270,7 @@ export interface PieChartAccessibilityProps {
      * Provides a descriptive label for the chart to assist screen readers.
      * This value is automatically mapped to the `aria-label` attribute in the DOM.
      *
-     * @default null
+     * @default ''
      */
     ariaLabel?: string;
 
@@ -263,7 +278,7 @@ export interface PieChartAccessibilityProps {
      * Specifies the ARIA role of the chart element. Helps assistive technologies understand the semantic purpose of the chart (e.g., "img", "figure", "application").
      * If not set, the default role will be inferred based on the element type.
      *
-     * @default null
+     * @default ''
      */
     role?: string;
 
@@ -421,7 +436,7 @@ export interface PieChartSeriesProps {
      * - `Value`: Groups points based on their y-value.
      * - `Point`: Groups points based on their index.
      *
-     * @default Value
+     * @default 'Value'
      */
     groupMode?: GroupModes;
 
@@ -498,7 +513,7 @@ export interface PieChartSeriesProps {
     /**
      * Provides accessibility options for the pie chart series elements.
      *
-     * @default { ariaLabel: null, focusable: true, role: null, tabIndex: 0 }
+     * @default { ariaLabel: '', role: 'img', focusable: true, tabIndex: 0 }
      */
     accessibility?: PieChartAccessibilityProps;
 
@@ -594,7 +609,7 @@ export interface PieChartDataLabelProps {
      * * Outside - Places the data label outside the data point, typically used to avoid overlap.
      * * Inside - Places the data label inside the data point, useful for displaying labels within the point.
      *
-     * @default Inside
+     * @default 'Inside'
      */
     position?: PieLabelPosition;
 
@@ -638,7 +653,7 @@ export interface PieChartDataLabelProps {
     /**
      * Customizes the appearance of the data label text with options for font size, color, style, weight, and family.
      *
-     * @default { fontStyle: 'Normal', fontSize: '12px', fontWeight: 'Normal', color: '', fontFamily: '', opacity: 1 }
+     * @default { opacity: 1 }
      */
     font?: PieChartFontProps;
 
@@ -646,7 +661,7 @@ export interface PieChartDataLabelProps {
      * Options to customize the connector line in the series.
      * By default, the connector length for the Pie series is set to '4%'. For other series, it is set to `null`.
      *
-     * @default { width:1, type: 'Curve', color:'', dashArray:'', length:'' }
+     * @default { width: 1, type: 'Curve', color: '', dashArray: '', length: '' }
      */
     connectorStyle?: ConnectorProps;
 
@@ -693,51 +708,6 @@ export interface PieChartDataLabelProps {
 export type PieDataLabelContentFunction = (data: PieChartDataLabelFormatterProps) => string;
 
 /**
- * Represents configuration options for connector lines in the chart.
- */
-export interface ConnectorProps {
-
-    /**
-     * Specifies the type of connector line used in the chart.
-     * The available options are:
-     * - `Curve`: Renders a smooth curved connector line.
-     * - `Line`: Renders a straight connector line.
-     *
-     * @default Curve
-     */
-    type?: ConnectorType;
-
-    /**
-     * Specifies the color of the connector line.
-     * Accepts any valid CSS color string (e.g., hex, rgba).
-     *
-     * @default ''
-     */
-    color?: string;
-
-    /**
-     * Specifies the width of the connector line in pixels.
-     *
-     * @default 1
-     */
-    width?: number;
-
-    /**
-     * Specifies the length of the connector line in pixels.
-     *
-     * @default 4%
-     */
-    length?: string;
-
-    /**
-     * Specifies the dash pattern of the connector line.
-     *
-     * @default ''
-     */
-    dashArray?: string;
-}
-
-/**
  * Defines configuration options for the chart's title, including styling, positioning, and accessibility features.
  *
  * @public
@@ -768,7 +738,7 @@ export interface PieChartTitleProps {
      * - `Center`: Aligns the text to the center.
      * - `Right`: Aligns the text to the right.
      *
-     * @default Center
+     * @default 'Center'
      */
     align?: HorizontalAlignment;
 
@@ -780,7 +750,7 @@ export interface PieChartTitleProps {
      * - `Trim`: Trims the overflowed text.
      * - `None`: Displays the text even if it overlaps other elements.
      *
-     * @default Wrap
+     * @default 'Wrap'
      */
     textOverflow?: TextOverflow;
 
@@ -794,7 +764,7 @@ export interface PieChartTitleProps {
      * - `Right`: Displays the title to the right of the chart.
      * - `Custom`: Allows manual positioning using `x` and `y` coordinates.
      *
-     * @default Top
+     * @default 'Top'
      */
     position?: TitlePosition;
 
@@ -806,7 +776,7 @@ export interface PieChartTitleProps {
     x?: number;
 
     /**
-     * Y-coordinate for positioning the chart title.Only applicable when `position` is set to `Custom`.
+     * Y-coordinate for positioning the chart title. Only applicable when `position` is set to `Custom`.
      *
      * @default 0
      */
@@ -816,21 +786,21 @@ export interface PieChartTitleProps {
      * The background color of the chart title area.
      * Accepts any valid CSS color value.
      *
-     * @default transparent
+     * @default 'transparent'
      */
     background?: string;
 
     /**
      * Defines the border styling for the chart title area.
      *
-     * @default { color: '', width: 1, dashArray: '' }
+     * @default { color: 'transparent', width: 0, dashArray: '', cornerRadius: 0.8 }
      */
     border?: PieChartTitleBorderProps;
 
     /**
      * Provides customization options to enhance accessibility for the chart title.
      *
-     * @default { ariaLabel: null, focusable: true, role: null, tabIndex: 0 }
+     * @default { ariaLabel: '', role: 'img', focusable: true, tabIndex: 0 }
      */
     accessibility?: PieChartAccessibilityProps;
 }
@@ -916,12 +886,12 @@ export interface PieChartMarginProps {
 export interface PieChartSizeProps {
 
     /**
-     * Defines the height of the element in pixels.
+     * Defines the width of the element in pixels.
      */
     width: number;
 
     /**
-     * Defines the width of the element in pixels.
+     * Defines the height of the element in pixels.
      */
     height: number;
 }
@@ -936,7 +906,7 @@ export interface PieChartFontProps {
     /**
      * Specifies the font style of the text (e.g., 'Normal', 'Italic').
      *
-     * @default Normal
+     * @default 'Normal'
      */
     fontStyle?: string;
 
@@ -950,7 +920,7 @@ export interface PieChartFontProps {
     /**
      * Specifies the font weight (thickness) of the text (e.g., 'Normal', 'Bold', '400').
      *
-     * @default Normal
+     * @default 'Normal'
      */
     fontWeight?: string;
 
@@ -1024,7 +994,7 @@ export interface PieChartLegendProps {
      * * `Right` - Positions the legend to the right with vertical item layout.
      * * `Custom` - Positions according to the coordinates specified in the `location` property.
      *
-     * @default Auto
+     * @default 'Auto'
      */
     position?: LegendPosition;
 
@@ -1059,14 +1029,14 @@ export interface PieChartLegendProps {
      * If an invalid alignment is provided for the current layout direction,
      * the legend defaults to `Center` alignment.
      *
-     * @default Center
+     * @default 'Center'
      */
     align?: LegendAlignment;
 
     /**
      * Customizes the appearance of text in legend items.
      *
-     * @default { fontStyle: 'Normal', fontSize: '12px', fontWeight: 'Normal', color: '', fontFamily: '' }
+     * @default { opacity: 1 }
      */
     textStyle?: PieChartFontProps;
 
@@ -1118,7 +1088,7 @@ export interface PieChartLegendProps {
      * Sets the background color for the legend area.
      * Can use any valid CSS color format including hex, rgb, or named colors.
      *
-     * @default transparent
+     * @default 'transparent'
      */
     background?: string;
 
@@ -1149,7 +1119,7 @@ export interface PieChartLegendProps {
     /**
      * Customizes the appearance of the legend title text.
      *
-     * @default { fontStyle: 'Normal', fontSize: '12px', fontWeight: 'Normal', color: '', fontFamily: '' }
+     * @default { opacity: 1 }
      */
     titleStyle?: PieChartFontProps;
 
@@ -1161,7 +1131,7 @@ export interface PieChartLegendProps {
      * - `Center`: Aligns the title to the center.
      * - `Right`: Aligns the title to the right.
      *
-     * @default Center
+     * @default 'Center'
      */
     titleAlign?: HorizontalAlignment;
 
@@ -1173,7 +1143,7 @@ export interface PieChartLegendProps {
      * - `Trim`: Trims the overflowed title.
      * - `None`: Displays the title even if it overlaps other elements.
      *
-     * @default Wrap
+     * @default 'Wrap'
      */
     titleOverflow?: TextOverflow;
 
@@ -1257,7 +1227,7 @@ export interface PieChartLegendProps {
      * - 'Star'
      * - 'Image'
      *
-     * @default SeriesType
+     * @default 'SeriesType'
      */
     shape?: PieLegendShape;
 }
@@ -1358,7 +1328,7 @@ export interface PieEmptyPointSettings {
     /**
      * Sets the fill color for empty points in the series.
      *
-     * @default null
+     * @default ''
      */
     fill?: string;
 
@@ -1376,7 +1346,7 @@ export interface PieEmptyPointSettings {
      * * `Drop` - Ignores empty points during rendering.
      * * `Average` - Replaces empty points with the average of the previous and next points.
      *
-     * @default Drop
+     * @default 'Drop'
      */
     mode?: PieEmptyPointMode;
 }
@@ -1440,7 +1410,7 @@ export interface PieChartCenterLabelTextProps extends PieChartFontProps {
      * - 'Center': Aligns the text to the center.
      * - 'Far': Aligns the text to the right.
      *
-     * @default Center
+     * @default 'Center'
      */
     textAlignment?: HorizontalAlignment;
 }
@@ -1623,7 +1593,7 @@ export interface PieChartTooltipProps {
     /**
      * Defines customization options for the tooltip border, including color, width, and dash pattern.
      *
-     * @default { color: '', width: 1, dashArray: '' }
+     * @default { color: 'transparent', width: 0, dashArray: '' }
      */
     border?: PieChartBorderProps;
 
@@ -1634,7 +1604,7 @@ export interface PieChartTooltipProps {
      * - `Click`: The tooltip is removed when the user clicks on the chart.
      * - `Move`: The tooltip fades out after a short delay when the pointer moves away.
      *
-     * @default Move
+     * @default 'Move'
      */
     fadeOutMode?: FadeOutMode;
 
@@ -1662,23 +1632,10 @@ export interface PieChartTooltipProps {
     template?: ((props: PieChartTooltipTemplateProps) => React.ReactNode);
 
     /**
-     * Enables or disables the tooltip follow pointer
-     * behavior.
-     *
-     * When set to `true`, the tooltip moves along 
-     * with the mouse pointer, providing dynamic
-     * positioning and better visibility during
-     * interaction.
+     * Determines whether the tooltip should follow the pointer movement.
      *
-     * If a fixed tooltip position is configured using
-     * `tooltip.location.x` and `tooltip.location.y`, the fixed
-     * positioning takes priority over `followPointer`. In this case,
-     * even if `followPointer` is enabled, the tooltip will remain
-     * at the specified fixed coordinates and will not move along
-     * with the cursor.
-     *
-     * @default true
-     */
+     * @default true
+     */
     followPointer?: boolean;
 
 }
@@ -1734,32 +1691,32 @@ export interface PieChartHighlightProps {
      */
     fill?: string;
 
-
     /**
      * Defines the visual pattern applied to highlighted slices in pie or donut.
      *
      * The available options are:
      * * 'None': No highlight. pattern is applied.
-     * * 'Chessboard': Applies a chessboard pattern as the highlight. effect.
-     * * 'Dots': Applies a dot pattern as the highlight. effect.
-     * * 'DiagonalForward': Applies a forward diagonal line pattern as the highlight. effect.
-     * * 'Crosshatch': Applies a crosshatch pattern as the highlight. effect.
-     * * 'Pacman': Applies a Pacman pattern as the highlight. effect.
-     * * 'DiagonalBackward': Applies a backward diagonal line pattern as the highlight. effect.
-     * * 'Grid': Applies a grid pattern as the highlight. effect.
-     * * 'Turquoise': Applies a turquoise pattern as the highlight. effect.
-     * * 'Star': Applies a star pattern as the highlight. effect.
-     * * 'Triangle': Applies a triangle pattern as the highlight. effect.
-     * * 'Circle': Applies a circle pattern as the highlight. effect.
-     * * 'Tile': Applies a tile pattern as the highlight. effect.
-     * * 'HorizontalDash': Applies a horizontal dash pattern as the highlight. effect.
-     * * 'VerticalDash': Applies a vertical dash pattern as the highlight. effect.
-     * * 'Rectangle': Applies a rectangle pattern as the highlight. effect.
-     * * 'Box': Applies a box pattern as the highlight. effect.
-     * * 'HorizontalStripe': Applies a horizontal stripe pattern as the highlight. effect.
-     * * 'Bubble': Applies a bubble pattern as the highlight. effect.
+     * * 'Chessboard': Applies a chessboard pattern as the highlight effect.
+     * * 'Dots': Applies a dot pattern as the highlight effect.
+     * * 'DiagonalForward': Applies a forward diagonal line pattern as the highlight effect.
+     * * 'Crosshatch': Applies a crosshatch pattern as the highlight effect.
+     * * 'Pacman': Applies a Pacman pattern as the highlight effect.
+     * * 'DiagonalBackward': Applies a backward diagonal line pattern as the highlight effect.
+     * * 'Grid': Applies a grid pattern as the highlight effect.
+     * * 'Turquoise': Applies a turquoise pattern as the highlight effect.
+     * * 'Star': Applies a star pattern as the highlight effect.
+     * * 'Triangle': Applies a triangle pattern as the highlight effect.
+     * * 'Circle': Applies a circle pattern as the highlight effect.
+     * * 'Tile': Applies a tile pattern as the highlight effect.
+     * * 'HorizontalDash': Applies a horizontal dash pattern as the highlight effect.
+     * * 'VerticalDash': Applies a vertical dash pattern as the highlight effect.
+     * * 'Rectangle': Applies a rectangle pattern as the highlight effect.
+     * * 'Box': Applies a box pattern as the highlight effect.
+     * * 'HorizontalStripe': Applies a horizontal stripe pattern as the highlight effect.
+     * * 'VerticalStripe': Applies a vertical stripe pattern as the highlight effect.
+     * * 'Bubble': Applies a bubble pattern as the highlight effect.
      *
-     * @default None
+     * @default 'None'
      */
     pattern?: PieSelectionPattern;
 }
@@ -1776,7 +1733,7 @@ export interface PieChartSelectionProps {
      * - 'None': Disables selection.
      * - 'Point': Allows selection of individual slices.
      *
-     * @default None
+     * @default 'None'
      */
     mode?: PieSelectionMode;
 
@@ -1797,7 +1754,7 @@ export interface PieChartSelectionProps {
     selectedDataIndexes?: PieChartDataIndexProps[];
 
     /**
-     * Specifies the visual pattern applied to selected data points
+     * Specifies the visual pattern applied to selected data points.
      * The available options are:
      * * 'None': No selection pattern is applied.
      * * 'Chessboard': Applies a chessboard pattern as the selection effect.
@@ -1817,9 +1774,10 @@ export interface PieChartSelectionProps {
      * * 'Rectangle': Applies a rectangle pattern as the selection effect.
      * * 'Box': Applies a box pattern as the selection effect.
      * * 'HorizontalStripe': Applies a horizontal stripe pattern as the selection effect.
+     * * 'VerticalStripe': Applies a vertical stripe pattern as the selection effect.
      * * 'Bubble': Applies a bubble pattern as the selection effect.
      *
-     * @default None
+     * @default 'None'
      */
     pattern?: PieSelectionPattern;
 }
@@ -1838,3 +1796,69 @@ export interface PieChartDataIndexProps {
     pointIndex?: number;
 }
 
+/**
+ * Represents an annotation element displayed on the pie chart.
+ */
+export interface PieChartAnnotationProps {
+
+    /**
+     * X position of the annotation.
+     * - When coordinateUnit is 'Pixel', specify offset in pixels.
+     * - When coordinateUnit is 'Point', specify the axis value.
+     *
+     * @default null
+     */
+    x?: string | Date | number;
+
+    /**
+     * Y position of the annotation.
+     * - When coordinateUnit is 'Pixel', specify offset in pixels.
+     * - When coordinateUnit is 'Point', specify the axis value.
+     *
+     * @default null
+     */
+    y?: string | number;
+
+    /**
+     * Content of the annotation. Accepts HTML string, plain text, or DOM element ID.
+     *
+     * @default ''
+     */
+    content?: string;
+
+    /**
+     * Horizontal alignment relative to the X-position.
+     * Available Options:
+     * - `Right`: Aligns the annotation to the right of its anchor/target.
+     * - `Center`: Centers the annotation horizontally on its anchor/target.
+     * - `Left`: Aligns the annotation to the left of its anchor/target.
+     *
+     * @default 'Center'
+     */
+    hAlign?: HorizontalAlignment;
+
+    /**
+     * Defines whether position values are axis-based ('Point') or pixel-based ('Pixel').
+     *
+     * @default 'Point'
+     */
+    coordinateUnit?: AnnotationCoordinateUnit;
+
+    /**
+     * Vertical alignment relative to the Y-position.
+     * Available options:
+     * - `Top`: Aligns the annotation above its anchor/target.
+     * - `Center`: Vertically centers the annotation on its anchor/target.
+     * - `Bottom`: Aligns the annotation below its anchor/target.
+     *
+     * @default 'Center'
+     */
+    vAlign?: VerticalAlignment;
+
+    /**
+     * Enhances accessibility for annotation elements to ensure compatibility with assistive technologies, such as screen readers and keyboard navigation.
+     *
+     * @default { ariaLabel: '', role: 'img', focusable: false, tabIndex: 0 }
+     */
+    accessibility?: PieChartAccessibilityProps;
+}

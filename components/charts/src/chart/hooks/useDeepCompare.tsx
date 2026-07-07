@@ -1,6 +1,6 @@
 import { useRef } from 'react';
-import { ChartBorderProps, ChartDataLabelProps, ChartSeriesProps } from '../base/interfaces';
-import { ChartTrendlineModel } from '../chart-area/chart-interfaces';
+import { ChartBorderProps, ChartDataLabelProps, ChartLastValueLabelProps, ChartSeriesProps } from '../base/interfaces';
+import { ChartTrendlineModel, SeriesProperties } from '../chart-area/chart-interfaces';
 
 /**
  * Type definition for comparable values that can be deeply compared
@@ -13,6 +13,7 @@ type ComparableValue =
     | undefined
     | Date
     | ChartBorderProps
+    | ChartLastValueLabelProps
     | ComparableValue[]
     | { [key: string]: ComparableValue };
 
@@ -63,8 +64,9 @@ export function isEqual(objOne: ComparableValue, objTwo: ComparableValue): boole
 
 /**
  * A hook that uses deep comparison to memoize a value
- * Constrains the generic type to extend ComparableValue for type safety
+ * Constrains the generic type to extend ComparableValue for type safety.
  *
+ * @template T
  * @param {T} value - The value to memoize
  * @returns {T} The memoized value
  * @private
@@ -135,6 +137,20 @@ export function useStableDataLabelProps(series: ChartSeriesProps[]): ComparableV
 }
 
 /**
+ * Custom hook for efficiently tracking series label property changes
+ * Replaces direct seriesList dependency for series label properties in dependency arrays
+ *
+ * @param {SeriesProperties[]} series - List of chart series properties
+ * @returns {ComparableValue[]} Stable reference that only changes when series label properties change
+ * @private
+ */
+export function useStableSeriesLabelProps(series: SeriesProperties[]): ComparableValue[] {
+    return useDeepCompare(
+        series.map((series: SeriesProperties) => series.seriesLabel as ComparableValue)
+    );
+}
+
+/**
  * Custom hook for efficiently tracking general series property changes
  * Replaces JSON.stringify for series properties in dependency arrays
  *
@@ -146,5 +162,16 @@ export function useStableSeriesProps(processedSeriesData: ChartSeriesProps[]): C
     return useDeepCompare(processedSeriesData as ComparableValue);
 }
 
-
-
+/**
+ * Custom hook for efficiently tracking last value label property changes
+ * Replaces JSON.stringify for last value label properties in dependency arrays
+ *
+ * @param {SeriesProperties[]} series - List of chart series properties
+ * @returns {ComparableValue[]} Array of last value label properties that only changes when they change
+ * @private
+ */
+export function useStableLastValueLabelProps(series: SeriesProperties[]): ComparableValue[] {
+    return useDeepCompare(
+        series.map((s: SeriesProperties) => s.lastValueLabel as ChartLastValueLabelProps | undefined)
+    );
+}

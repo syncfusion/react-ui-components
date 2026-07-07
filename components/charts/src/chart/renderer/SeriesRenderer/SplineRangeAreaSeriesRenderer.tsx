@@ -52,7 +52,6 @@ export function splinePath(points: ChartLocationProps[]): string {
 }
 
 /**
- * @private
  * Interpolates between two spline polylines based on a progress value and returns
  * the corresponding smooth spline path string.
  *
@@ -60,6 +59,7 @@ export function splinePath(points: ChartLocationProps[]): string {
  * @param {ChartLocationProps[]} endPoints - The array of ending polyline points, each containing x and y coordinates.
  * @param {number} progress - The interpolation progress between 0 (start) and 1 (end).
  * @returns {string} The generated SVG path string representing the interpolated spline.
+ * @private
  */
 export function interpolateSplinePolylinePath(
     startPoints: ChartLocationProps[],
@@ -90,7 +90,6 @@ export function interpolateSplinePolylinePath(
 }
 
 /**
- * @private
  * Interpolates between two spline range-area SVG path strings based on a progress value
  * and returns the interpolated path for smooth range transitions.
  *
@@ -98,6 +97,7 @@ export function interpolateSplinePolylinePath(
  * @param {string} endD - The ending SVG path data string representing the target spline range area.
  * @param {number} progress - The interpolation progress between 0 (start) and 1 (end).
  * @returns {string} The generated interpolated SVG path string for the spline range area.
+ * @private
  */
 export function interpolateSplineRangeAreaPath(startD: string, endD: string, progress: number): string {
     if (!startD || !endD) {return endD || startD || ''; }
@@ -142,7 +142,6 @@ export function interpolateSplineRangeAreaPath(startD: string, endD: string, pro
 }
 
 /**
- * @private
  * Interpolates between two spline range-border SVG path strings based on a progress value
  * and returns a smooth interpolated border path.
  *
@@ -150,6 +149,7 @@ export function interpolateSplineRangeAreaPath(startD: string, endD: string, pro
  * @param {string} endD - The ending SVG path data string representing the target spline border.
  * @param {number} progress - The interpolation progress value between 0 (start) and 1 (end).
  * @returns {string} The interpolated SVG path string representing the range border transition.
+ * @private
  */
 export function interpolateSplineRangeBorderPath(startD: string, endD: string, progress: number): string {
     if (!startD || !endD) {return endD || startD || ''; }
@@ -188,13 +188,12 @@ export function interpolateSplineRangeBorderPath(startD: string, endD: string, p
 }
 
 /**
- * @private
  * Calculates the bounding box (minimum and maximum X/Y coordinates)
  * for the given SVG path string.
  *
  * @param {string} pathD - The SVG path data string to parse and measure.
- * @returns {{minX: number, maxX: number, minY: number, maxY: number}}
- * An object containing the minimum and maximum X and Y coordinates.
+ * @returns {{minX: number, maxX: number, minY: number, maxY: number}} - An object containing the minimum and maximum X and Y coordinates.
+ * @private
  */
 export function getPathBounds(pathD: string): { minX: number; maxX: number; minY: number; maxY: number } {
     const commands: PathCommand[]
@@ -225,11 +224,10 @@ export function getPathBounds(pathD: string): { minX: number; maxX: number; minY
  *
  * @param {string} finalPath - The complete SVG path data string to process.
  * @param {boolean} isBorder - Specifies whether the path represents a border segment.
- * @param {boolean} _isInverted - Indicates whether the chart orientation is inverted.
  * @returns {string} The generated initial SVG path string.
  * @private
  */
-export function generateInitialPath(finalPath: string, isBorder: boolean, _isInverted: boolean): string {
+export function generateInitialPath(finalPath: string, isBorder: boolean): string {
     if (!finalPath) {return ''; }
     const commands : PathCommand[] = parsePathCommands(finalPath);
     if (commands.length === 0) {return ''; }
@@ -348,7 +346,7 @@ const SplineRangeAreaSeriesRenderer: RangeAreaSeriesRendererType = {
                     }
                 }
                 // Fallback to path morphing if clip-path is not applicable
-                const initialPath: string = generateInitialPath(pathD, isBorder, currentSeries.chart?.requireInvertedAxis ?? false);
+                const initialPath: string = generateInitialPath(pathD, isBorder);
                 const interpolatedD: string = isBorder
                     ? interpolateSplineRangeBorderPath(initialPath, pathD, animationProgress)
                     : interpolateSplineRangeAreaPath(initialPath, pathD, animationProgress);

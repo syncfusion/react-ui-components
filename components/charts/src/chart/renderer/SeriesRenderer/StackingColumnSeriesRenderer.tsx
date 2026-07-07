@@ -1,6 +1,6 @@
 import { ChartMarkerProps } from '../../base/interfaces';
 import { DoubleRangeType, PointRenderingEvent, Points, Rect, RenderOptions, SeriesProperties } from '../../chart-area/chart-interfaces';
-import { StackValuesType, useVisiblePoints } from '../../utils/helper';
+import { StackValuesType, calculateVisiblePoints } from '../../utils/helper';
 import { ColumnBase, ColumnBaseReturnType } from './ColumnBase';
 import MarkerRenderer from './MarkerRenderer';
 import { handleRectAnimation } from './SeriesAnimation';
@@ -63,12 +63,11 @@ function createStackingColumnSeriesRenderer(): StackingColumnSeriesRendererType 
         /**
          * Renders the complete stacking column series
          *
-         * @param {SeriesProperties} series - The series data and configuration
-         * @param {boolean} _isInverted - Whether the chart is inverted (currently unused)
+         * @param {SeriesProperties} series - The series data and configuration.
          * @returns {Object} Array of render options or object with options and marker data
          *
          */
-        render(series: SeriesProperties, _isInverted: boolean ):
+        render(series: SeriesProperties ):
         RenderOptions[] | { options: RenderOptions[]; marker: ChartMarkerProps } {
             series.isRectSeries = true;
             this.sideBySideInfo[series.index] = columnBaseInstance.getSideBySideInfo(series);
@@ -78,7 +77,7 @@ function createStackingColumnSeriesRenderer(): StackingColumnSeriesRendererType 
             for (const point of series.points) {
                 options.push(this.renderPoint(series, point, this.sideBySideInfo[series.index], stackedValue) as RenderOptions);
             }
-            series.visiblePoints = useVisiblePoints(series);
+            series.visiblePoints = calculateVisiblePoints(series);
             const marker: ChartMarkerProps | null = series.marker?.visible ? MarkerRenderer.render(series) as Object : null;
             return marker ? { options, marker } : options;
         },
@@ -138,6 +137,10 @@ function createStackingColumnSeriesRenderer(): StackingColumnSeriesRendererType 
                 (series.chart.iSTransPosed ? rect.x : rect.x - (((series.columnWidthInPixel / 2) * Number(series.rectCount)) -
                     (series.columnWidthInPixel * (typeof series.position === 'number' ? series.position : 0)))) : rect.x;
 
+            if (rect.width <= 0) {
+                return undefined;
+            }
+
             const argsData: PointRenderingEvent = columnBaseInstance.triggerEvent(
                 series,
                 point,
@@ -160,24 +163,6 @@ function createStackingColumnSeriesRenderer(): StackingColumnSeriesRendererType 
             return option;
         },
 
-        /**
-         * Handles animation for stacking column series points
-         *
-         * @param {RenderOptions} pathOptions - The render options for the animated element
-         * @param {number} index - The series index
-         * @param {object} animationState - Animation state containing references and progress
-         * @param {boolean} enableAnimation - Whether animation is enabled
-         * @param {SeriesProperties} currentSeries - The current series being animated
-         * @param {Points | undefined} currentPoint - The current point being animated (optional)
-         * @param {number} pointIndex - Index of the current point
-         * @returns {object} Animation properties including stroke dash array/offset and animated transforms
-         * @returns {string} returns.strokeDasharray - CSS stroke dash array value
-         * @returns {number} returns.strokeDashoffset - CSS stroke dash offset value
-         * @returns {string | undefined} returns.interpolatedD - Interpolated path data (unused for rectangles)
-         * @returns {string | undefined} returns.animatedDirection - Animated direction transform
-         * @returns {string | undefined} returns.animatedTransform - Animated transform properties
-         *
-         */
         doAnimation(
             pathOptions: RenderOptions,
             index: number,

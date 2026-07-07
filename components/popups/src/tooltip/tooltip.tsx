@@ -1,11 +1,10 @@
-import * as React from 'react';
-import { useRef, useCallback, useEffect, useLayoutEffect, useState, useImperativeHandle, forwardRef, RefObject, HTMLAttributes } from 'react';
+import { useRef, useCallback, useEffect, useLayoutEffect, useState, useImperativeHandle, forwardRef, RefObject, HTMLAttributes, useMemo, createRef, CSSProperties, memo, ReactNode, ForwardRefExoticComponent, RefAttributes, Ref, isValidElement } from 'react';
 import { TapEventArgs, Touch, ITouch, Browser, Animation as AnimationInstance, animationMode, TouchEventArgs, MouseEventArgs } from '@syncfusion/react-base';
 import { isNullOrUndefined, getUniqueID, formatUnit } from '@syncfusion/react-base';
 import { attributes, closest, preRender, SvgIcon } from '@syncfusion/react-base';
-import { IPopup, Popup, PopupAnimationOptions } from '../popup/popup';
+import { ActionOnScrollType, IPopup, Popup, PopupAnimationOptions } from '../popup/popup';
 import { OffsetPosition, calculatePosition } from '../common/position';
-import { isCollide, fit } from '../common/collision';
+import { isCollide, fit, getElementReact } from '../common/collision';
 import { createPortal } from 'react-dom';
 
 const TOUCHEND_HIDE_DELAY: number = 1500;
@@ -157,21 +156,21 @@ export interface TooltipProps {
      *
      * @default -
      */
-    content?: React.ReactNode | Function;
+    content?: ReactNode | Function;
 
     /**
      * Specifies the container element in which the Tooltip's pop-up will be appended.
      *
      * @default 'body'
      */
-    container?: React.RefObject<HTMLElement>;
+    container?: RefObject<HTMLElement>;
 
     /**
      * Specifies the target where the Tooltip needs to be displayed.
      *
      * @default -
      */
-    target?: React.RefObject<HTMLElement>;
+    target?: RefObject<HTMLElement>;
 
     /**
      * Specifies the position of the Tooltip element with respect to the target element.
@@ -350,8 +349,8 @@ type TooltipComponentProps = TooltipProps & Omit<HTMLAttributes<HTMLDivElement>,
  * </Tooltip>
  * ```
  */
-export const Tooltip: React.ForwardRefExoticComponent<TooltipComponentProps & React.RefAttributes<ITooltip>> =
-forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref<ITooltip>) => {
+export const Tooltip: ForwardRefExoticComponent<TooltipComponentProps & RefAttributes<ITooltip>> =
+forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: Ref<ITooltip>) => {
     const {
         width = 'auto',
         height = 'auto',
@@ -393,33 +392,33 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
     const [elePos, setElePos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
     const [eventProps, setEventProps] = useState<{ [key: string]: object }>({});
     const [arrowInnerTipStyle, setArrowInnerTipStyle] = useState({ top: '', left: '' });
-    const [TooltipStyle, setTooltipStyle] = useState<React.HTMLAttributes<HTMLDivElement>>({style});
+    const [TooltipStyle, setTooltipStyle] = useState<HTMLAttributes<HTMLDivElement>>({style});
 
-    const tooltipEle: React.RefObject<IPopup | null> = useRef<IPopup>(null);
-    const timers: React.RefObject<{ show: NodeJS.Timeout | null; hide: NodeJS.Timeout | null; autoClose: NodeJS.Timeout | null; }> =
+    const tooltipEle: RefObject<IPopup | null> = useRef<IPopup>(null);
+    const timers: RefObject<{ show: NodeJS.Timeout | null; hide: NodeJS.Timeout | null; autoClose: NodeJS.Timeout | null; }> =
     useRef<{ show: NodeJS.Timeout | null; hide: NodeJS.Timeout | null; autoClose: NodeJS.Timeout | null; }>
     ({ show: null, hide: null, autoClose: null });
-    const tooltipPosition: React.RefObject<{ x: string; y: string; }> = useRef<{ x: string; y: string }>({ x: 'Center', y: 'Top' });
-    const touchModule: React.RefObject<ITouch | null> = useRef<ITouch>(null);
-    const mouseEventsRef: React.RefObject<{ event: (MouseEvent & TouchEvent) | null; target: HTMLElement | null; }> = useRef<{
+    const tooltipPosition: RefObject<{ x: string; y: string; }> = useRef<{ x: string; y: string }>({ x: 'Center', y: 'Top' });
+    const touchModule: RefObject<ITouch | null> = useRef<ITouch>(null);
+    const mouseEventsRef: RefObject<{ event: (MouseEvent & TouchEvent) | null; target: HTMLElement | null; }> = useRef<{
         event: MouseEvent & TouchEvent | null, target: HTMLElement | null }>({ event: null, target: null });
-    const isBodyContainer: React.RefObject<boolean> = useRef<boolean>(true);
-    const targetRef: React.RefObject<HTMLElement | null> = useRef<HTMLElement>(null);
-    const rootElemRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
-    const arrowElementRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
-    const stickyElementRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
-    const originalData: React.RefObject<{ event: Event | null; showAnimation: TooltipAnimationProps | null;
+    const isBodyContainer: RefObject<boolean> = useRef<boolean>(true);
+    const targetRef: RefObject<HTMLElement | null> = useRef<HTMLElement>(null);
+    const rootElemRef: RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
+    const arrowElementRef: RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
+    const stickyElementRef: RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
+    const originalData: RefObject<{ event: Event | null; showAnimation: TooltipAnimationProps | null;
         hideAnimation: TooltipAnimationProps | null; hideEvent: Event | null; hideTarget: HTMLElement | null;
         showTarget: HTMLElement | null; }> = useRef({ event: null, showAnimation: null, hideAnimation: null, hideEvent: null,
         hideTarget: null, showTarget: null });
-    const containerElement: React.RefObject<HTMLElement | null>  = useRef<HTMLElement | null>(typeof document !== 'undefined' ? document.body : null);
-    const initialOpenState: React.RefObject<boolean| undefined> = useRef(open);
-    const scrolled: React.RefObject<boolean> = useRef<boolean>(false);
-    const isPopupOpenedRef: React.RefObject<boolean> = useRef<boolean>(false);
+    const containerElement: RefObject<HTMLElement | null>  = useRef<HTMLElement | null>(typeof document !== 'undefined' ? document.body : null);
+    const initialOpenState: RefObject<boolean| undefined> = useRef(open);
+    const scrolled: RefObject<boolean> = useRef<boolean>(false);
+    const isPopupOpenedRef: RefObject<boolean> = useRef<boolean>(false);
     if (Browser.isDevice) {
         touchModule.current = Touch(rootElemRef as RefObject<HTMLElement>);
     }
-    const propsRef: Partial<ITooltip> = {
+    const propsRef: Partial<ITooltip> = useMemo(() => ({
         width: 'auto',
         height: 'auto',
         position: 'TopCenter' as Position,
@@ -441,7 +440,8 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
         content,
         container,
         open
-    };
+    }), [width, height, position, offsetX, offsetY, arrow, windowCollision, arrowPosition,
+        opensOn, followCursor, sticky, animation, openDelay, closeDelay, target, content, container, open]);
 
     useEffect(() => {
         formatPosition();
@@ -577,11 +577,10 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
         formatPosition();
     }, [propsRef]);
 
-    const formatPosition: () => void = () => {
+    const formatPosition: () => void = useCallback(() => {
         if (!position) { return; }
         let posX: string | null = null;
         let posY: string | null = null;
-
         if (position.indexOf('Top') === 0 || position.indexOf('Bottom') === 0) {
             [posY, posX] = position.split(/(?=[A-Z])/);
         } else {
@@ -589,7 +588,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
         }
         tooltipPosition.current.x = posX;
         tooltipPosition.current.y = posY;
-    };
+    }, [position]);
 
     const setTipClass: (position: Position) => string | undefined = useCallback((position: Position) => {
         let newTipClass: string;
@@ -692,17 +691,17 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
         }
     };
 
-    const openPopupHandler: () => void = () => {
+    const openPopupHandler: () => void = useCallback(() => {
         isPopupOpenedRef.current = true;
         if (!followCursor) {
             reposition(targetRef.current as HTMLElement);
         }
-    };
+    }, [followCursor, reposition]);
 
     const closePopupHandler: () => void = () => {
         isPopupOpenedRef.current = false;
         clear();
-        const currentTooltipEle: RefObject<HTMLElement> = React.createRef<HTMLElement>() as RefObject<HTMLElement>;
+        const currentTooltipEle: RefObject<HTMLElement> = createRef<HTMLElement>() as RefObject<HTMLElement>;
         currentTooltipEle.current = tooltipEle.current?.element as HTMLElement;
         if (currentTooltipEle.current) {
             AnimationInstance.stop(currentTooltipEle.current);
@@ -859,15 +858,15 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
         arrowElementRef.current.style.left = leftValue as string;
     };
 
-    const renderContent: () => React.ReactNode = (): React.ReactNode => {
+    const renderContent: () => ReactNode = (): ReactNode => {
         if (targetRef.current && !isNullOrUndefined(targetRef.current.getAttribute('title'))) {
             targetRef.current.setAttribute('data-content', targetRef.current.getAttribute('title') as string);
             targetRef.current.removeAttribute('title');
         }
-        if (React.isValidElement(content)) {
+        if (isValidElement(content)) {
             return content;
         }
-        let tooltipContent: string | React.ReactNode = '';
+        let tooltipContent: string | ReactNode = '';
         if (typeof content === 'function') {
             tooltipContent = content();
         } else if (targetRef?.current?.getAttribute('data-content')) {
@@ -966,6 +965,15 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
             }
         }
         if (isNullOrUndefined(target) || (tooltipEle.current && target === targetRef.current && !followCursor)) { return; }
+        if (sticky && open !== undefined && onFilterTarget && isPopupOpenedRef.current && tooltipEle.current?.element && target
+            && target !== targetRef.current) {
+            restoreElement(targetRef.current as HTMLElement);
+            targetRef.current = target;
+            setOpenTarget(target);
+            tooltipBeforeRender(targetRef.current as HTMLElement);
+            tooltipAfterRender(targetRef.current as HTMLElement, e as Event, animation.open as TooltipAnimationProps);
+            return;
+        }
         if (tooltipEle.current && tooltipEle.current.element?.getAttribute('sf-animation-id')) {
             const delay: number = closeDelay + (animation?.close?.delay ? animation.close.delay : 0) +
             (animation?.close?.duration ? animation.close.duration : 0);
@@ -1019,7 +1027,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
         if (isNullOrUndefined(tooltipEle.current)) {
             const ctrlId: string = rootElemRef.current?.getAttribute('id') ?
                 getUniqueID(rootElemRef.current?.getAttribute('id') as string) : getUniqueID('tooltip');
-            setTooltipStyle((prevStyle: React.HTMLAttributes<HTMLDivElement> | undefined) => ({
+            setTooltipStyle((prevStyle: HTMLAttributes<HTMLDivElement> | undefined) => ({
                 ...prevStyle,
                 id: ctrlId + '_content'
             }));
@@ -1027,7 +1035,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
             if (target) {
                 adjustArrow(target, position, tooltipPosition.current.x as string, tooltipPosition.current.y as string);
                 addDescribedBy(target, TooltipStyle?.id as string);
-                const currentTooltipEle: RefObject<HTMLElement> = React.createRef<HTMLElement>() as RefObject<HTMLElement>;
+                const currentTooltipEle: RefObject<HTMLElement> = createRef<HTMLElement>() as RefObject<HTMLElement>;
                 currentTooltipEle.current = tooltipEle.current?.element as HTMLElement;
                 AnimationInstance.stop(currentTooltipEle.current);
                 reposition(target);
@@ -1059,7 +1067,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
             }
             renderPopup(target);
             adjustArrow(target, position, tooltipPosition.current.x as string, tooltipPosition.current.y as string);
-            const currentTooltipEle: RefObject<HTMLElement> = React.createRef<HTMLElement>() as RefObject<HTMLElement>;
+            const currentTooltipEle: RefObject<HTMLElement> = createRef<HTMLElement>() as RefObject<HTMLElement>;
             currentTooltipEle.current = tooltipEle.current?.element as HTMLElement;
             AnimationInstance.stop(currentTooltipEle.current);
             reposition(target);
@@ -1116,7 +1124,16 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
             horizontal: tooltipPosition.current.x as string,
             vertical: tooltipPosition.current.y as string
         };
-        const collideTarget: RefObject<HTMLDivElement> = checkCollideTarget() as RefObject<HTMLDivElement>;
+        const collideTarget: RefObject<HTMLElement> | null = checkCollideTarget();
+        const collideTargetElement: HTMLElement | undefined = collideTarget?.current;
+        if (container && collideTargetElement && collideTargetElement !== document.documentElement &&
+            collideTargetElement !== document.body) {
+            const collideTargetRect: DOMRect | null = getElementReact(collideTargetElement);
+            if (collideTargetRect) {
+                x += collideTargetRect.left;
+                y += collideTargetRect.top;
+            }
+        }
         const affectedPos: string[] = isCollide(
             tooltipEle.current?.element as HTMLElement,
             collideTarget ? collideTarget.current : null, sticky &&  position.indexOf('Right') >= 0 ? (stickyElementRef.current as HTMLElement).offsetWidth + x : x , y );
@@ -1142,22 +1159,8 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
     const collisionFlipFit: (target: HTMLElement, x: number, y: number) => OffsetPosition =
     (target: HTMLElement, x: number, y: number): OffsetPosition => {
         const elePos: ElementPosition = checkCollision(x, y);
-        let newPos: Position = elePos.position;
-        if (tooltipPosition.current.y !== elePos.vertical) {
-            newPos = ((position?.indexOf('Bottom') === 0 || position?.indexOf('Top') === 0) ?
-                elePos.vertical + tooltipPosition.current.x : tooltipPosition.current.x + elePos.vertical) as Position;
-        }
-        if (tooltipPosition.current.x !== elePos.horizontal) {
-            if (newPos.indexOf('Left') === 0) {
-                elePos.vertical = (newPos === 'LeftTop' || newPos === 'LeftCenter') ? 'Top' : 'Bottom';
-                newPos = (elePos.vertical + 'Left') as Position;
-            }
-            if (newPos.indexOf('Right') === 0) {
-                elePos.vertical = (newPos === 'RightTop' || newPos === 'RightCenter') ? 'Top' : 'Bottom';
-                newPos = (elePos.vertical + 'Right') as Position;
-            }
-            elePos.horizontal = tooltipPosition.current.x as string;
-        }
+        const isVerticalPrimary: boolean = position?.indexOf('Top') === 0 || position?.indexOf('Bottom') === 0;
+        const newPos: Position = (isVerticalPrimary ? `${elePos.vertical}${elePos.horizontal}` : `${elePos.horizontal}${elePos.vertical}`) as Position;
         const elePosVertical: string = elePos.vertical;
         const elePosHorizontal: string = elePos.horizontal;
         if (elePos.position !== newPos) {
@@ -1179,10 +1182,9 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
             adjustArrow(target, newPos, elePosHorizontal, elePosVertical);
         }
         const eleOffset: OffsetPosition = { left: elePos.left, top: elePos.top };
-        const collideTarget: RefObject<HTMLDivElement>  = checkCollideTarget() as RefObject<HTMLDivElement>;
-        const updatedPosition: OffsetPosition = isBodyContainer.current ?
-            fit(tooltipEle.current?.element as HTMLElement, collideTarget ? collideTarget.current : null,
-                { X: true, Y: windowCollision }, eleOffset) as OffsetPosition : eleOffset;
+        const collideTarget: RefObject<HTMLElement> | null = checkCollideTarget();
+        const updatedPosition: OffsetPosition = isBodyContainer.current ? fit(tooltipEle.current?.element as HTMLElement, collideTarget ?
+            collideTarget.current : null, { X: true, Y: windowCollision }, eleOffset) as OffsetPosition : eleOffset;
         if (arrow && arrowElementRef.current != null && (newPos.indexOf('Bottom') === 0 || newPos.indexOf('Top') === 0)) {
             let arrowLeft: number = parseInt(arrowElementRef.current.style.left, 10) - (updatedPosition.left - elePos.left);
             if (arrowLeft < 0) {
@@ -1190,7 +1192,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
             } else if ((arrowLeft + arrowElementRef.current.offsetWidth) > (tooltipEle.current?.element as HTMLDivElement).clientWidth) {
                 arrowLeft = (tooltipEle.current?.element as HTMLDivElement).clientWidth - arrowElementRef.current.offsetWidth;
             }
-            arrowElementRef.current.style.left = arrowLeft.toString() + 'px';
+            arrowElementRef.current.style.left = `${arrowLeft}px`;
         }
         eleOffset.left = updatedPosition.left;
         eleOffset.top = updatedPosition.top;
@@ -1203,8 +1205,17 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
       (positionString.indexOf(newPos.split(/(?=[A-Z])/)[0]) !== -1)) ? (2 * offsetType) : 0;
     };
 
-    const checkCollideTarget: () => React.RefObject<HTMLDivElement> | null = (): React.RefObject<HTMLDivElement> | null => {
-        return !windowCollision && target?.current ? rootElemRef as RefObject<HTMLDivElement>  : null;
+    const checkCollideTarget: () => RefObject<HTMLElement> | null = (): RefObject<HTMLElement> | null => {
+        if (windowCollision) {
+            return null;
+        }
+        if (!isBodyContainer.current && containerElement.current) {
+            return containerElement as RefObject<HTMLElement>;
+        }
+        if (target?.current) {
+            return rootElemRef as RefObject<HTMLElement>;
+        }
+        return null;
     };
 
     const hideTooltip: (hideAnimation: TooltipAnimationProps, e?: Event, targetElement?: HTMLElement) => void =
@@ -1233,7 +1244,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
             }
             originalData.current = { ...originalData.current, hideEvent: e as Event, hideAnimation: hideAnimation, hideTarget: target };
             if (tooltipEle.current && tooltipEle.current.element?.getAttribute('sf-animate')) {
-                const currentTooltipEle: RefObject<HTMLElement> = React.createRef<HTMLElement>() as RefObject<HTMLElement>;
+                const currentTooltipEle: RefObject<HTMLElement> = createRef<HTMLElement>() as RefObject<HTMLElement>;
                 currentTooltipEle.current = tooltipEle.current?.element as HTMLElement;
                 AnimationInstance.stop(currentTooltipEle.current, {
                     end: () => {
@@ -1381,7 +1392,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
         if (tooltipEle.current) {
             (tooltipEle.current.element as HTMLElement).style.display = 'block';
         }
-        const currentTooltipEle: RefObject<HTMLElement> = React.createRef<HTMLElement>() as RefObject<HTMLElement>;
+        const currentTooltipEle: RefObject<HTMLElement> = createRef<HTMLElement>() as RefObject<HTMLElement>;
         currentTooltipEle.current = tooltipEle.current?.element as HTMLElement;
         AnimationInstance.stop(currentTooltipEle.current);
         adjustArrow(event.target as HTMLElement, position,
@@ -1400,7 +1411,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
             elePos.left = eventPageX + colPos.left - offsetX;
             elePos.top = eventPageY + colPos.top - offsetY;
         }
-        const popupStyle: React.CSSProperties = {
+        const popupStyle: CSSProperties = {
             position: 'absolute',
             left: elePos.left + 'px',
             top:  elePos.top + 'px',
@@ -1410,7 +1421,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
             display: 'block'
         };
         setElePos(elePos);
-        setTooltipStyle((prevStyle: React.HTMLAttributes<HTMLDivElement> | undefined) => ({
+        setTooltipStyle((prevStyle: HTMLAttributes<HTMLDivElement> | undefined) => ({
             ...prevStyle,
             style: {
                 ...(prevStyle?.style || {}),
@@ -1558,7 +1569,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
         hideTooltip(animation.close as TooltipAnimationProps);
     };
 
-    const arrowIcon: string = React.useMemo(() => {
+    const arrowIcon: string = useMemo(() => {
         switch (tipClass) {
         case TIP_TOP:
             return TIP_TOP_ICON;
@@ -1571,7 +1582,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
         }
     }, [tipClass]);
 
-    const renderTooltipContent: () => React.ReactNode = () => (
+    const renderTooltipContent: () => ReactNode = () => (
         <Popup
             ref={tooltipEle}
             open={isPopupOpen}
@@ -1582,6 +1593,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
             targetRef={targetRef as RefObject<HTMLElement>}
             position={{ X: elePos.left, Y: elePos.top }}
             viewPortElementRef={containerElement.current ? containerElement as RefObject<HTMLElement> : undefined}
+            actionOnScroll={ActionOnScrollType.None}
             width={formatUnit(width)}
             height={formatUnit(height)}
             onOpen={openPopupHandler as () => void}
@@ -1594,7 +1606,20 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
             {...TooltipStyle}
             {...restProps}
         >
-            <div className={CONTENT}>{renderContent()}</div>
+            <div className={CONTENT}>
+                {renderContent()}
+                {sticky && (
+                    <div
+                        ref={stickyElementRef}
+                        className={`${CLOSE}`}
+                        role="button"
+                        aria-label="Close Tooltip"
+                        onClick={() => { closeTooltip(); }}
+                    >
+                        <SvgIcon d={CLOSE_ICON}></SvgIcon>
+                    </div>
+                )}
+            </div>
             {arrow && (
                 <div ref={arrowElementRef} className={`${ARROW_TIP} ${ARROW_TIP}-${tipClass} sf-pos-absolute sf-overflow-hidden ${
                     tipClass === TIP_LEFT || tipClass === TIP_RIGHT ? 'sf-tooltip-arrow-x' : 'sf-tooltip-arrow-y' }`}>
@@ -1602,17 +1627,6 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
                     <div className={`${ARROW_TIP_INNER}-${tipClass} sf-pos-absolute`} style={arrowInnerTipStyle}>
                         <SvgIcon d={arrowIcon}></SvgIcon>
                     </div>
-                </div>
-            )}
-            {sticky && (
-                <div
-                    ref={stickyElementRef}
-                    className={`${CLOSE}`}
-                    role="button"
-                    aria-label="Close Tooltip"
-                    onClick={() => { closeTooltip(); }}
-                >
-                    <SvgIcon d={CLOSE_ICON}></SvgIcon>
                 </div>
             )}
         </Popup>
@@ -1629,4 +1643,4 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: React.Ref
     );
 });
 
-export default React.memo(Tooltip);
+export default memo(Tooltip);

@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, forwardRef, useImperativeHandle, createContext, useContext, useRef, useId } from 'react';
-import { IAnimation, preRender, SvgIcon, useProviderContext } from '@syncfusion/react-base';
+import { useState, useEffect, useCallback, forwardRef, useImperativeHandle, createContext, useContext, useRef, ReactNode, type KeyboardEvent, type MouseEvent, InputHTMLAttributes, ForwardRefExoticComponent, RefAttributes, ForwardedRef, RefObject, Context, FC } from 'react';
+import { IAnimation, IL10n, L10n, preRender, SvgIcon, useProviderContext, useStableId } from '@syncfusion/react-base';
 import { AnimationOptions, Animation, Severity } from '@syncfusion/react-base';
 
 /**
@@ -135,7 +135,7 @@ export interface ToastProps {
      *
      * @default -
      */
-    title?: React.ReactNode;
+    title?: ReactNode;
 
     /**
      * Specifies the icon displayed alongside the Toast content.
@@ -144,7 +144,7 @@ export interface ToastProps {
      *
      * @default -
      */
-    icon?: React.ReactNode;
+    icon?: ReactNode;
 
     /**
      * Specifies the stacking order of items in a collection or notification system.
@@ -201,7 +201,7 @@ export interface ToastProps {
     /**
      * Specifies the position of the Toast on the screen.
      *
-     * @default { xAxis: PositionX.Right, yAxis: PositionY.Bottom }
+     * @default { xAxis: PositionX.Left, yAxis: PositionY.Top }
      */
     position?: PositionAxis;
 
@@ -210,7 +210,7 @@ export interface ToastProps {
      *
      * @default -
      */
-    actions?: React.ReactNode;
+    actions?: ReactNode;
 
     /**
      * Specifies the target element to render the Toast.
@@ -241,7 +241,7 @@ export interface ToastProps {
      * @event onClick
      * @default null
      */
-    onClick?: (event: React.MouseEvent) => void;
+    onClick?: (event: MouseEvent) => void;
 
     /**
      * Specifies the animations that should happen when Toast opens and closes.
@@ -284,7 +284,7 @@ export interface ToastProps {
      *
      * @default -
      */
-    content?: React.ReactNode;
+    content?: ReactNode;
 }
 
 /**
@@ -297,7 +297,7 @@ export interface IToast extends ToastProps{
      * @param content - The content to be displayed in the Toast.
      * @returns The id of the newly created Toast.
      */
-    show(content: React.ReactNode): string;
+    show(content: ReactNode): string;
 
     /**
      * Hides a specific Toast or the oldest one if no id is provided.
@@ -308,7 +308,7 @@ export interface IToast extends ToastProps{
 }
 let toastCounter: number = 0;
 
-type IToastProps = ToastProps & Omit<React.InputHTMLAttributes<HTMLDivElement>, keyof ToastProps>;
+type IToastProps = ToastProps & Omit<InputHTMLAttributes<HTMLDivElement>, keyof ToastProps>;
 
 /**
  * Toast component for displaying temporary notifications to users.
@@ -323,13 +323,13 @@ type IToastProps = ToastProps & Omit<React.InputHTMLAttributes<HTMLDivElement>, 
  * <Toast content="Operation completed successfully" open={true} position={{ xAxis: 'Right', yAxis: 'Bottom' }} />
  *```
  */
-export const Toast: React.ForwardRefExoticComponent<IToastProps & React.RefAttributes<IToast>> =
- forwardRef<IToast, IToastProps>((props: IToastProps, ref: React.ForwardedRef<IToast>) => {
+export const Toast: ForwardRefExoticComponent<IToastProps & RefAttributes<IToast>> =
+ forwardRef<IToast, IToastProps>((props: IToastProps, ref: ForwardedRef<IToast>) => {
      const {
          width = 'auto',
          height = 'auto',
          open = false,
-         id = `toast_${useId()}`,
+         id,
          title,
          icon,
          className = '',
@@ -361,12 +361,15 @@ export const Toast: React.ForwardRefExoticComponent<IToastProps & React.RefAttri
          children,
          extendedTimeout = 1000
      } = props;
-     const [toasts, setToasts] = useState<Array<{ id: string; content: React.ReactNode }>>([]);
-     const toastRef: React.RefObject<HTMLDivElement | null> = useRef < HTMLDivElement > (null);
-     const initialOpenState: React.RefObject<boolean> = useRef(open);
+     const {locale} = useProviderContext();
+     const toastId: string = id ?? useStableId('sf-toast');
+     const [toasts, setToasts] = useState<Array<{ id: string; content: ReactNode }>>([]);
+     const toastRef: RefObject<HTMLDivElement | null> = useRef < HTMLDivElement > (null);
+     const initialOpenState: RefObject<boolean> = useRef(open);
      const [interactionToasts, setInteractionToasts] = useState<Record<string, boolean>>({});
      const { dir } = useProviderContext();
      const closeIcon: string = 'M10.5858 12.0001L2.58575 4.00003L3.99997 2.58582L12 10.5858L20 2.58582L21.4142 4.00003L13.4142 12.0001L21.4142 20L20 21.4142L12 13.4143L4.00003 21.4142L2.58581 20L10.5858 12.0001Z';
+
      const publicAPI: Partial<IToastProps> = {
          open,
          animation,
@@ -376,6 +379,8 @@ export const Toast: React.ForwardRefExoticComponent<IToastProps & React.RefAttri
 
      useImperativeHandle(ref, () => ({
          ...publicAPI as IToast,
+         show,
+         hide,
          element: toastRef.current
      }));
 
@@ -395,15 +400,15 @@ export const Toast: React.ForwardRefExoticComponent<IToastProps & React.RefAttri
          preRender('toast');
      }, []);
 
-     const show: (content: React.ReactNode) => string = useCallback((content: React.ReactNode) => {
+     const show: (content: ReactNode) => string = useCallback((content: ReactNode) => {
          const toastId: string = `toast-${++toastCounter}`;
          if (animation.show) {
              const showAnimation: AnimationOptions = {...animation.show};
              showAnimation.begin = () => {
-                 setToasts((prevToasts: Array<{ id: string; content: React.ReactNode }>) => {
+                 setToasts((prevToasts: Array<{ id: string; content: ReactNode }>) => {
                      const newToast: {
                          id: string;
-                         content: React.ReactNode;
+                         content: ReactNode;
                      } = { id: toastId, content };
                      return newestOnTop ? [newToast, ...prevToasts] : [...prevToasts, newToast];
                  });
@@ -442,9 +447,9 @@ export const Toast: React.ForwardRefExoticComponent<IToastProps & React.RefAttri
                  let duration: number = animation.hide?.duration ? animation.hide.duration - 30 : 0;
                  duration = duration > 0 ? duration : 0;
                  setTimeout(() => {
-                     setToasts((prevToasts: Array<{ id: string; content: React.ReactNode }>) => {
+                     setToasts((prevToasts: Array<{ id: string; content: ReactNode }>) => {
                          if (toastId) {
-                             return prevToasts.filter((toast: { id: string; content: React.ReactNode }) => toast.id !== toastId);
+                             return prevToasts.filter((toast: { id: string; content: ReactNode }) => toast.id !== toastId);
                          } else {
                              return prevToasts.slice(1);
                          }
@@ -472,10 +477,16 @@ export const Toast: React.ForwardRefExoticComponent<IToastProps & React.RefAttri
          }
      }, [onClose]);
 
-     useImperativeHandle(ref, () => ({ show, hide }));
+     const handleCloseKey: (e: KeyboardEvent<HTMLDivElement>, toastId: string) => void =
+     useCallback((e: KeyboardEvent<HTMLDivElement>, toastId: string) => {
+         if (e.key === 'Enter' || e.key === ' ') {
+             e.preventDefault();
+             hide(toastId);
+         }
+     }, [hide]);
 
-     const handleClick: (e: React.MouseEvent<HTMLDivElement>, toastId: string) => void =
-     useCallback((e: React.MouseEvent<HTMLDivElement>, toastId: string) => {
+     const handleClick: (e: MouseEvent<HTMLDivElement>, toastId: string) => void =
+     useCallback((e: MouseEvent<HTMLDivElement>, toastId: string) => {
          onClick?.(e);
          setInteractionToasts((prev: Record<string, boolean>) => ({ ...prev, [toastId]: true }));
          if (timeout !== 0 && extendedTimeout > 0) {
@@ -487,30 +498,33 @@ export const Toast: React.ForwardRefExoticComponent<IToastProps & React.RefAttri
      }, [onClick, closeButton, hide]);
      const containerPosition: string = `sf-toast-${position?.yAxis?.toLowerCase()}-${position?.xAxis?.toLowerCase()}`;
      const progressAnimationDelayMs: number = Math.max(0, animation?.show?.duration ?? 0);
+     const l10n: IL10n = L10n('toast', {
+         close: 'Close'
+     }, locale);
+     const close: string = l10n.getConstant('close');
      return (
          <div
              ref={toastRef}
-             id={id}
+             id={toastId}
              className={`sf-control sf-toast sf-lib sf-toast-container ${containerPosition} ${(severity && severity !== 'Normal') ? severity === 'Error' ? 'sf-toast-danger' : `sf-toast-${severity.toLowerCase()}` : ''} ${className} ${(dir === 'rtl') ? 'sf-rtl' : ''}`}
              style={{
                  position: target !== 'body' ? 'absolute' : 'fixed',
                  zIndex: target !== 'body' ? 1000000001 : 1004
              }}
          >
-             {toasts.map(({ id, content }: { id: string; content: React.ReactNode }) => (
+             {toasts.map(({ id, content }: { id: string; content: ReactNode }) => (
                  <div
                      key={id}
                      id={id}
                      className={`sf-toast ${className || ''} ${(severity && severity !== 'Normal') ? severity === 'Error' ? 'sf-toast-danger' : `sf-toast-${severity.toLowerCase()}` : ''} ${icon ? 'sf-toast-header-icon' : ''}`}
                      role="alert"
                      style={{ width, height }}
-                     onClick={(e: React.MouseEvent<HTMLDivElement, MouseEvent>
-                     ) => handleClick(e, id)}
+                     onClick={(e: MouseEvent<HTMLDivElement>) => handleClick(e, id)}
                  >
                      {icon && <div className={'sf-toast-icon sf-icon'}>{icon}</div>}
                      <div className="sf-toast-message">
-                         {title && <div className="sf-toast-title sf-ellipsis">{title}</div>}
-                         <div className="sf-toast-content sf-ellipsis">{content}</div>
+                         {title && <div className="sf-toast-title">{title}</div>}
+                         <div className="sf-toast-content">{content}</div>
                          {actions && (
                              <div className="sf-toast-actions">
                                  {actions}
@@ -518,7 +532,13 @@ export const Toast: React.ForwardRefExoticComponent<IToastProps & React.RefAttri
                          )}
                      </div>
                      {closeButton && (
-                         <div className="sf-toast-close-icon sf-icon"><SvgIcon d={closeIcon}></SvgIcon></div>
+                         <div className="sf-toast-close-icon sf-icon"
+                             aria-label={close}
+                             tabIndex={0}
+                             onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => handleCloseKey(e, id)}
+                         >
+                             <SvgIcon d={closeIcon}></SvgIcon>
+                         </div>
                      )}
                      {progressBar && (
                          <div className="sf-toast-progress">
@@ -538,16 +558,16 @@ export const Toast: React.ForwardRefExoticComponent<IToastProps & React.RefAttri
  });
 
 interface ToastContextType {
-    show: (content: React.ReactNode, options?: Record<string, unknown>) => string;
+    show: (content: ReactNode, options?: Record<string, unknown>) => string;
     hide: (toastId?: string) => void;
 }
 
-const ToastContext: React.Context<ToastContextType | null> = createContext<ToastContextType | null>(null);
+const ToastContext: Context<ToastContextType | null> = createContext<ToastContextType | null>(null);
 
 export let globalToastRef: IToast | null = null;
 
-export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }: { children: React.ReactNode }) => {
-    const toastRef: React.RefObject<IToast | null> = useRef<IToast>(null);
+export const ToastProvider: FC<{ children: ReactNode }> = ({ children }: { children: ReactNode }) => {
+    const toastRef: RefObject<IToast | null> = useRef<IToast>(null);
     const [toastProps, setToastProps] = useState({});
     const info: string = 'M12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3ZM1 12C1 5.92487 5.92487 1 12 1C18.0751 1 23 5.92487 23 12C23 18.0751 18.0751 23 12 23C5.92487 23 1 18.0751 1 12ZM13 11V17H11V11H13ZM13 9V7H11V9H13Z';
     const success: string = 'M3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12ZM12 1C5.92487 1 1 5.92487 1 12C1 18.0751 5.92487 23 12 23C18.0751 23 23 18.0751 23 12C23 5.92487 18.0751 1 12 1ZM10.5 16.4142L17.9142 9L16.5 7.58578L10.5 13.5858L7.50003 10.5858L6.08582 12L10.5 16.4142Z';
@@ -561,17 +581,17 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         };
     }, []);
 
-    const show: (content: React.ReactNode, options?: ToastProps) => string = (content: React.ReactNode, options: ToastProps = {}) => {
+    const show: (content: ReactNode, options?: ToastProps) => string = (content: ReactNode, options: ToastProps = {}) => {
         const {
             severity = Severity.Info,
             timeout = 5000,
             extendedTimeout = 1000,
-            position = { xAxis: 'Right', yAxis: 'Top' },
+            position = { xAxis: 'Left', yAxis: 'Top' },
             closeButton = true,
             title
         }: ToastProps = options;
 
-        let icon: React.ReactNode;
+        let icon: ReactNode;
         let className: string;
 
         switch (severity) {
@@ -645,14 +665,14 @@ export const useToast: () => ToastContextType | undefined = () => {
  */
 export const ToastUtility: {
     setGlobalToastRef: (ref: IToast | null) => void;
-    show: (content: React.ReactNode, options?: ToastProps) => string | undefined;
+    show: (content: ReactNode, options?: ToastProps) => string | undefined;
     hide: (toastId?: string) => void;
 } = {
     setGlobalToastRef: (ref: IToast | null) => {
         globalToastRef = ref;
     },
 
-    show: (content: React.ReactNode) => {
+    show: (content: ReactNode) => {
         return globalToastRef ? globalToastRef.show(content) : '';
     },
 

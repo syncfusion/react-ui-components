@@ -72,11 +72,12 @@
     border-top: $grid-border-0 none $grid-border-color;
   }
 
-  .sf-grid-edit-row .sf-cell {
+  .sf-grid-edit-row .sf-cell,
+  .sf-grid-detail-cell {
     border-top: $grid-border-width $grid-border-style;
   }
 
-  .sf-grid .sf-toolbar {
+  .sf-grid .sf-toolbar, .sf-grid .sf-group-drop-area:not(.sf-group-drag-clone-hover) {
     border-top: $grid-toolbar-border $grid-border-color;
   }
 
@@ -95,7 +96,7 @@
     padding: $grid-header-padding-top $grid-header-padding $grid-header-padding-bottom;
     position: relative;
     text-align: left;
-    letter-spacing: $grid-letter-spacing;
+    letter-spacing: $grid-header-letter-spacing;
     user-select: none;
     border-top: $grid-border-0 none;
 
@@ -116,9 +117,26 @@
     font-size: $grid-content-text-size;
     width: auto;
     letter-spacing: $grid-letter-spacing;
+    user-select: none;
 
     &.sf-last-cell {
       border-bottom-width: $grid-border-1;
+    }
+
+    &.sf-cell-range-top {
+      border-top: 1px solid $grid-cell-range-selection-border-color;
+    }
+
+    &.sf-cell-range-bottom {
+      border-bottom: 1px solid $grid-cell-range-selection-border-color;
+    }
+
+    &.sf-cell-range-left {
+      border-left: 1px solid $grid-cell-range-selection-border-color;
+    }
+
+    &.sf-cell-range-right {
+      border-right: 1px solid $grid-cell-range-selection-border-color;
     }
   }
 
@@ -187,7 +205,8 @@
     @include border-and-font(solid, $grid-border-1 $grid-border-0 $grid-border-0, $grid-summary-cell-font-size, $grid-header-font-weight);
     @include grid-line-height-padding-styles($grid-summary-cell-line-height, $grid-content-padding $grid-content-right-padding);
     height: auto;
-    letter-spacing: $grid-letter-spacing;
+    letter-spacing: $grid-header-letter-spacing;
+    user-select: none;
   }
 
   .sf-grid:not(.sf-rtl) {
@@ -216,7 +235,7 @@
     align-items: center;
     justify-content: inherit;
     overflow: hidden;
-    margin: $grid-spacing--12;
+    margin: $grid-cell-inner-margin;
   }
 
   .sf-grid-header-cell {
@@ -302,6 +321,13 @@
     }
   }
 
+  .sf-spanned-grid.sf-both-lines:not(.sf-rtl),
+  .sf-spanned-grid.sf-vertical-lines:not(.sf-rtl) {
+    .sf-grid-content-row .sf-cell:first-child:not(.row-first-cell) {
+      border-left-width: $grid-border-1;
+    }
+  }
+
   .sf-filter-row .sf-cell {
     @include grid-border-style-weight($grid-border-style, $grid-filter-cell-both-border-width);
     border-collapse: collapse;
@@ -343,7 +369,7 @@
     }
 
     .sf-input-group:not(.sf-filterbar-dropdown) {
-      width: calc(100% - 50px) !important;
+      width: $grid-filterbar-operator-input-width !important;
       margin-right: $grid-spacing-10;
     }
 
@@ -374,7 +400,7 @@
 
   .sf-grid-edit-row {
     padding: $grid-spacing-0;
-    .sf-cell {
+    .sf-cell:not(.sf-display-none) {
       @include grid-top-bottom-padding($grid-edit-cell-padding, $grid-edit-top-cell-padding);
     }
   }
@@ -392,15 +418,32 @@
         border-left-width: $grid-border-0;
       }
     }
+    &.sf-spanned-grid {
+      &.sf-both-lines .sf-grid-content-row,
+      &.sf-vertical-lines .sf-grid-content-row,
+      .sf-grid-header-row,
+      .sf-filter-row {
+        .sf-cell:last-child:not(.row-last-cell) {
+          border-left-width: $grid-border-1;
+        }
+      }
+    }
     .sf-virtual-vertical-scrollbar {
       left: 0;
       right: auto;
     }
   }
 
+  .sf-grid-command-cell.sf-cell:not(.sf-display-none) {
+    padding: $grid-command-cell-padding;
+  }
   .sf-grid-command-items {
     display: inline-flex;
     gap: 8px;
+
+    .sf-btn.sf-icon-btn {
+      border-radius: $grid-command-item-border-radius;
+    }
   }
 
   .sf-grid-popup-edit .sf-grid-edit-table {
@@ -444,14 +487,14 @@
 }
 
 .sf-row-min-height:not(.sf-wrap) {
-  .sf-grid-content-row .sf-cell:not(.sf-templatecell),
-  .sf-grid-content-row .sf-cell:has(> .fixed-height-wrapper) {
+  .sf-grid-content-row.sf-grid-row-height .sf-cell:not(.sf-templatecell),
+  .sf-grid-content-row.sf-grid-row-height .sf-cell:has(> .fixed-height-wrapper) {
     line-height: 0;
     @include grid-top-bottom-padding($grid-spacing-0, $grid-spacing-0);
   }
 
-  .sf-grid-summary-row .sf-cell:not(.sf-templatecell),
-  .sf-grid-summary-row .sf-cell:has(> .fixed-height-wrapper) {
+  .sf-grid-summary-row.sf-grid-row-height .sf-cell:not(.sf-templatecell),
+  .sf-grid-summary-row.sf-grid-row-height .sf-cell:has(> .fixed-height-wrapper) {
     @include grid-line-height-padding-styles($grid-line-height-xs, $grid-spacing-0 $grid-spacing-8);
   }
 
@@ -464,10 +507,10 @@
   position: absolute;
 
   .sf-excel-contextmenu-wrapper ul {
-    padding: $grid-spacing-4 $grid-spacing-0;
+    padding: $grid-excel-contextmenu-wrapper-padding;
     position: static;
     display: block;
-    margin: $grid-spacing-0;
+    margin: $grid-excel-contextmenu-wrapper-margin;
     list-style-image: none;
     list-style-position: outside;
     list-style-type: none;
@@ -475,10 +518,7 @@
 
   .sf-excel-contextmenu-wrapper ul {
     .sf-menu-item {
-      height: 36px;
-      line-height: 36px;
-      padding-left: $grid-spacing-16;
-      padding-right: $grid-spacing-16;
+      padding: $grid-excel-contextmenu-menu-item-padding;
     }
 
     .sf-menu-item.sf-disabled {
@@ -499,9 +539,7 @@
   }
 
   .sf-dlg-content {
-    padding-left: $grid-spacing-0;
-    padding-right: $grid-spacing-0;
-    padding-bottom: $grid-spacing-0;
+    padding: $grid-excel-filter-dlg-content-padding;
     font-size: $grid-font-size;
     font-weight: $grid-header-font-normal;
     overflow-y: hidden;
@@ -512,12 +550,9 @@
   }
 
   .sf-virtual-scroll-container {
+    margin-top: $grid-excel-filter-virtual-container-margin-top;
     border-bottom-width: $grid-spacing-1;
     border-bottom-style: solid;
-  }
-  
-  .sf-checkbox-content {
-    margin-top: $grid-spacing-4;
   }
 
   .sf-search-clear.sf-search-icon {
@@ -532,10 +567,19 @@
   }
 
   .sf-filter-checkbox {
-    height: 40px !important;
-    padding-left: $grid-spacing-10;
-    padding-bottom: $grid-spacing-5;
-    padding-top: $grid-spacing-5;
+    padding: $grid-checkbox-filtertext-padding;
+    margin-bottom: $grid-checkbox-filtertext-margin-bottom;
+
+    .sf-checkbox-label {
+      overflow: hidden;
+      padding: $grid-filter-checkbox-padding;
+    }
+
+    .sf-checkbox-label .sf-label {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
   }
 
   .sf-virtual-checkbox {
@@ -544,18 +588,11 @@
 
   .sf-checkbox-filtertext {
     word-break: normal;
-    padding-top: $grid-spacing-5;
-  }
-
-  .sf-grid-excel-filter-type,
-  .sf-search-container,
-  .sf-grid-excel-filter-container {
-    padding: $spacing-8 20px;
   }
 
   .sf-search-container,
   .sf-grid-excel-filter-container {
-    padding-bottom: $grid-spacing-0;
+    padding: $grid-checkbox-filter-search-container-padding;
   }
 
   .sf-search-container:not(.sf-checkbox-filter),
@@ -565,8 +602,10 @@
   }
 
   .sf-grid-excel-filter-type {
+    padding: $grid-excel-filter-type-padding;
+
     .sf-excel-top-separator {
-      margin-top: $grid-spacing-10;
+      margin-top: $grid-excel-filter-type-top-separator;
     }
 
     .sf-excel-left-separator {
@@ -576,12 +615,12 @@
 
   .sf-excel-top-separator {
     .sf-btn.sf-control {
+      font-size: $grid-excel-filter-separator-btn-font-size;
       font-size: 14px;
     }
   }
 
   .sf-grid-excel-filter-container {
-    margin: $grid-spacing-4 $grid-spacing-0;
     .sf-excel-top-separator {
       margin-top: $grid-spacing-12;
     }
@@ -610,4 +649,116 @@
 
 .sf-excel-empty-checkbox {
   text-align: center;
+}
+
+.sf-column-chooser-dialog {
+  .sf-dlg-header,
+  .sf-checkbox-label .sf-label {
+    font-size: $grid-font-size;
+  }
+  .sf-columnchooser-empty {
+    padding: $grid-spacing-16;
+    text-align: center;
+  }
+  .sf-columnchooser-content {
+    height: 200px;
+    min-height: 200px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .sf-columnchooser-selectall,
+  .sf-columnchooser-listitem {
+    padding: $grid-columnchooser-listitem-padding;
+    margin-bottom: $grid-columnchooser-listitem-margin-bottom;
+  }
+  .sf-columnchooser-search-icon {
+    margin: $grid-columnchooser-search-icon-margin;
+  }
+  .sf-columnchooser-search {
+    margin-bottom: $grid-spacing-16;
+  }
+  .sf-columnchooser-main {
+    display: flex;
+    flex-direction: column;
+  }
+  .sf-dlg-content {
+    padding: $grid-columnchooser-dlg-content-padding;
+  }
+}
+
+.sf-disableuserselect {
+  -webkit-user-select: none;
+     -moz-user-select: none;
+      -ms-user-select: none;
+          user-select: none;
+}
+
+.sf-cell-editing {
+  padding-inline: $grid-spacing-10;
+  .sf-checkbox-wrapper {
+    justify-content: center;
+  }
+}
+
+.sf-grid-checkbox-hidden {
+    visibility: hidden;
+}
+
+.sf-group-drop-area {
+  display: flex;
+  height: $grid-group-drop-area-height;
+  padding: $grid-spacing-8 $grid-spacing-12;
+  overflow: hidden;
+  align-items: center;
+}
+
+.sf-group-drag-clone-hover {
+  border-width: $grid-border-width;
+  border-style: dashed;
+}
+
+.sf-group-drop-hint {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.sf-group-chip-container,
+.sf-group-chip-template {
+  display: inline-flex;
+  gap: $spacing-6;
+  align-items: center;
+}
+
+.sf-groupable-header-clone,
+.sf-groupable-header-clone:hover {
+  z-index: 1000;
+}
+
+.sf-groupable-header-clone.sf-cursor-not-allowed,
+.sf-groupable-header-clone.sf-cursor-not-allowed:hover {
+  cursor: not-allowed;
+}
+
+.sf-grid-sort-container.sf-ascending-descending {
+  display: inline-grid;
+}
+
+.sf-grid-groupcaptioncell {
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: $spacing-10;
+}
+
+.sf-detail-toggle-icon {
+  margin-right: $spacing-10;
+}
+
+.sf-group-togglebtn, .sf-detail-toggle-icon {
+  border: none;
+  cursor: pointer;
+  padding: $spacing-4;
+  border-radius: $radius-full;
 }

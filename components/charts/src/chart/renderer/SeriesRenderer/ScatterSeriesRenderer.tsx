@@ -141,16 +141,6 @@ const ScatterSeriesRenderer: ScatterSeriesType = {
         };
     },
 
-    /**
-     * Renders scatters in each point.
-     *
-     * @param {Points} point - Respective data points.
-     * @param {SeriesProperties} series - Indicates the current series.
-     * @param {ChartMarkerShape} markerShape - Represents the shape of markers.
-     * @param {Object} scatterBorder - Border properties of scatter points.
-     * @param {boolean} isInverted - Indicates whether the chart is inverted or not.
-     * @returns {MarkerOptions} Returns the data points with finally assigned marker properties.
-     */
     renderPoint: (
         point: Points,
         series: SeriesProperties,
@@ -266,12 +256,6 @@ const ScatterSeriesRenderer: ScatterSeriesType = {
         };
     },
 
-    /**
-     * Animates the scatter points from zero to its size.
-     *
-     * @param {SeriesProperties} series - Series which should be animated.
-     * @returns {Function} Returns the animated points.
-     */
     doPointAnimation: (series: SeriesProperties) => {
         const duration: number = series.animation?.duration as number;
         const delay: number = series.animation?.delay as number;

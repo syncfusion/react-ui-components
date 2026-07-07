@@ -2,7 +2,9 @@ import { FC, ReactNode, RefObject, useCallback, useRef, useEffect, useState } fr
 import { useMonthRows } from '../hooks/useMonthRows';
 import { MonthCells } from './month-cells';
 import { useSchedulerPropsContext } from '../context/scheduler-context';
+import { useResourceGroupingContext } from '../context/resource-grouping-context';
 import { CSS_CLASSES } from '../common/constants';
+import { ResourceMonthWeekRow } from './resource-month-week-row';
 
 export const MonthRow: FC = () => {
     const {
@@ -10,7 +12,7 @@ export const MonthRow: FC = () => {
         numberOfWeeks,
         rowAutoHeight
     } = useSchedulerPropsContext();
-
+    const { isGroupingEnabled } = useResourceGroupingContext();
     const {
         weekNumbers,
         weeksToRender,
@@ -75,15 +77,28 @@ export const MonthRow: FC = () => {
                 style={contentTableStyle}
             >
                 <div className={CSS_CLASSES.DAY_CLONE_CONTAINER}></div>
-                {weeksToRender.map((weekRenderDates: Date[], rowIndex: number): ReactNode => (
-                    <MonthCells
-                        key={`week-${rowIndex}`}
-                        weekRenderDates={weekRenderDates}
-                        hideOtherMonths={hideOtherMonths}
-                        rowIndex={rowIndex}
-                        onHeightCalculated={handleHeightCalculated}
-                    />
-                ))}
+                {weeksToRender.map((weekRenderDates: Date[], rowIndex: number): ReactNode => {
+                    if (isGroupingEnabled) {
+                        return (
+                            <ResourceMonthWeekRow
+                                key={`grouped-week-${rowIndex}`}
+                                weekRenderDates={weekRenderDates}
+                                rowIndex={rowIndex}
+                                onHeightCalculated={handleHeightCalculated}
+                            />
+                        );
+                    } else {
+                        return (
+                            <MonthCells
+                                key={`week-${rowIndex}`}
+                                weekRenderDates={weekRenderDates}
+                                hideOtherMonths={hideOtherMonths}
+                                rowIndex={rowIndex}
+                                onHeightCalculated={handleHeightCalculated}
+                            />
+                        );
+                    }
+                })}
             </div>
         </>
     );

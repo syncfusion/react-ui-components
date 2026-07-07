@@ -39,6 +39,9 @@ export class ViewService {
                 case 'MonthView':
                     viewType = 'Month';
                     break;
+                case 'AgendaView':
+                    viewType = 'Agenda';
+                    break;
                 default:
                     break;
                 }

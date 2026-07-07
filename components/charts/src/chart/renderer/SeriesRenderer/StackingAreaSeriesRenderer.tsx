@@ -1,5 +1,5 @@
 import { ChartLocationProps, ChartMarkerProps } from '../../base/interfaces';
-import { StackingAreaSeriesAnimateState, StackingAreaSeriesRendererType, PathCommand, Points, RenderOptions, SeriesProperties } from '../../chart-area/chart-interfaces';
+import { StackingAreaSeriesAnimateState, StackingSeriesRendererType, PathCommand, Points, RenderOptions, SeriesProperties } from '../../chart-area/chart-interfaces';
 import { applyPointRenderCallback, getPoint } from '../../utils/helper';
 import { parsePathCommands } from './AreaSeriesRenderer';
 import { LineBase, LineBaseReturnType } from './LineBase';
@@ -11,7 +11,7 @@ const lineBaseInstance: LineBaseReturnType = LineBase;
 /**
  * Type for stacked values, assuming optional arrays.
  */
-interface StackValuesType {
+export interface StackValuesType {
     startValues?: number[];
     endValues?: number[];
 }
@@ -400,7 +400,7 @@ export function interpolateStackingBorderPath(
  * handle animations for initial rendering and data updates, and integrate with markers.
  * Adapted from EJ2 StackingAreaSeries logic for cumulative stacking.
  */
-export const StackingAreaSeriesRenderer: StackingAreaSeriesRendererType = {
+export const StackingAreaSeriesRenderer: StackingSeriesRendererType = {
 
     doAnimation: (
         pathOptions: RenderOptions,

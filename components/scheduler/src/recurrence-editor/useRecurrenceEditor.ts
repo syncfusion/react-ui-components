@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useReducer } from 'react';
+import { useCallback, useMemo, useReducer, useState } from 'react';
 import {
     FreqType,
     DayWeekType,
@@ -54,6 +54,8 @@ export interface RecurrenceEditorResult extends RecurrenceState {
     buildRecurrenceRule: () => string;
     updateMaxDate: (monthName: string) => void;
     handlers: RecurrenceHandlers;
+    alertDialogOpen: boolean;
+    setAlertDialogOpen: (open: boolean) => void;
 }
 
 type RecurrenceFieldKey = keyof RecurrenceState;
@@ -86,6 +88,8 @@ const recurrenceReducer: (
             : [...state.weekDays, action.code];
         return { ...state, weekDays: next };
     }
+    default:
+        return state;
     }
 };
 
@@ -107,7 +111,7 @@ const recurrenceReducer: (
  * localized data sources, helpers to build RRULE strings and UI handlers.
  *
  * @example
- * const editor = useRecurrenceEditor('FREQ=WEEKLY;BYDAY=MO,WE;', new Date(), ['WEEKLY','MONTHLY'], ['Count','Until'], 1);
+ * const editor = useRecurrenceEditor('FREQ=WEEKLY;BYDAY=MO,WE;', new Date(), ['WEEKLY','MONTHLY'], ['Count','Until'], 1, 'Alert', 'Until date cannot be earlier than start date');
  * // use editor.handlers.onFreqChange as the dropdown change handler
  */
 export function useRecurrenceEditor(
@@ -116,6 +120,7 @@ export function useRecurrenceEditor(
     const locale: string = useProviderContext()?.locale ?? 'en-US';
     const calendarMode: string = 'gregorian';
     const { getString } = useRecurrenceEditorLocalization(locale);
+    const [alertDialogOpen, setAlertDialogOpen] = useState<boolean>(false);
     const startingDate: Date = useMemo((): Date => {
         return startDate ? new Date(startDate) : new Date();
     }, [startDate]);
@@ -293,7 +298,7 @@ export function useRecurrenceEditor(
 
     const getYearMonthRuleData: (month?: number) => string = useCallback(
         (month?: number): string => {
-            return !isNullOrUndefined(month) && `BYMONTH=${month};`;
+            return !isNullOrUndefined(month) ? `BYMONTH=${month};` : '';
         },
         [monthDataSource]
     );
@@ -305,10 +310,13 @@ export function useRecurrenceEditor(
         []
     );
 
-    const getUntilData: (until: Date, startTime?: Date) => string = useCallback(
-        (until: Date, startTime?: Date): string => {
-            const untilStr: string | undefined = formatUntil(until, startTime);
-            return untilStr && `UNTIL=${untilStr};`;
+    const getUntilData: (until?: Date, startTime?: Date) => string = useCallback(
+        (until?: Date, startTime?: Date): string => {
+            if (!until || isNaN(until.getTime())) {
+                return '';
+            }
+            const untilStr: string | undefined = typeof formatUntil === 'function' ? formatUntil(until, startTime) : undefined;
+            return untilStr ? `UNTIL=${untilStr};` : '';
         },
         [formatUntil]
     );
@@ -318,6 +326,21 @@ export function useRecurrenceEditor(
             return `COUNT=${count};`;
         },
         []
+    );
+
+    const handleUntilDateChange: (value: Date) => void = useCallback(
+        (value: Date): void => {
+            const selected: Date = new Date(value);
+            const start: Date = new Date(startingDate);
+            const selectedDay: number = new Date(selected.getFullYear(), selected.getMonth(), selected.getDate()).getTime();
+            const startDay: number = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
+            if (selectedDay < startDay) {
+                setAlertDialogOpen(true);
+                return;
+            }
+            setField('until', value);
+        },
+        [startingDate, setAlertDialogOpen, setField]
     );
 
     const buildRuleParts: {
@@ -459,14 +482,14 @@ export function useRecurrenceEditor(
             },
             onUntilChange: (e?: DatePickerChangeEvent): void => {
                 if (e?.value) {
-                    setField('until', e.value);
+                    handleUntilDateChange(e.value);
                 }
             },
             onToggleSelectedWeekDay: (code: string): void => {
                 dispatch({ type: 'toggleWeekDay', code });
             }
         }),
-        [setField, updateMaxDate, dispatch]
+        [setField, updateMaxDate, dispatch, handleUntilDateChange]
     );
 
     return {
@@ -492,6 +515,8 @@ export function useRecurrenceEditor(
         generateRule,
         buildRecurrenceRule,
         updateMaxDate,
-        handlers
+        handlers,
+        alertDialogOpen,
+        setAlertDialogOpen
     };
 }

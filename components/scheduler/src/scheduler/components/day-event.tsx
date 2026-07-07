@@ -66,9 +66,11 @@ export const DayEvent: FC<DayEventProps> = (props: DayEventProps) => {
     const renderBlockEventContent: () => ReactNode = useCallback(() => {
         const { subject } = processedEvent;
         return (
-            <div className={CSS_CLASSES.APPOINTMENT_DETAILS}>
-                <div className={`${CSS_CLASSES.SUBJECT}`}>
-                    {subject || getString('addTitle')}
+            <div className={`${CSS_CLASSES.INNER_APPOINTMENT}`}>
+                <div className={CSS_CLASSES.APPOINTMENT_DETAILS}>
+                    <div className={`${CSS_CLASSES.SUBJECT}`}>
+                        {subject || getString('addTitle')}
+                    </div>
                 </div>
             </div>
         );
@@ -78,7 +80,7 @@ export const DayEvent: FC<DayEventProps> = (props: DayEventProps) => {
         if (isBlockedEvent) {
             return renderBlockEventContent();
         }
-        return getSharedEventContent(props);
+        return getSharedEventContent();
     }, [isBlockedEvent, renderBlockEventContent, getSharedEventContent]);
 
     // Combined style with event specific and position styles
@@ -91,11 +93,13 @@ export const DayEvent: FC<DayEventProps> = (props: DayEventProps) => {
     const commonProps: HTMLAttributes<HTMLDivElement> & {
         'data-id': string | number;
         'data-guid': string;
+        'data-group-index': number;
         'aria-label': string;
     } = {
         'data-id': processedEvent.id,
         'aria-label': EventService.getAriaLabel(processedEvent),
         'data-guid': eventInfo.event.guid,
+        'data-group-index': eventInfo.groupIndex,
         role: 'button' as const,
         tabIndex: 0,
         onClick: handleClick,

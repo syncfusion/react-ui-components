@@ -3,7 +3,12 @@ import {
     Action, DataChangeRequestEvent, DataRequestEvent,
     payload,
     MutableGridBase, PendingState,
-    ScrollMode
+    ScrollMode,
+    AggregateType,
+    UseAggregateSelectionResult,
+    SortDirection,
+    ActionType,
+    GroupSettings
 } from '../types';
 import { SortDescriptor } from '../types/sort.interfaces';
 import { GridActionEvent, IGrid } from '../types/grid.interfaces';
@@ -16,18 +21,31 @@ import { extend, isNullOrUndefined} from '@syncfusion/react-base';
 import { AdaptorOptions, DataManager, Predicate, Query, DataResult, Deferred, UrlAdaptor } from '@syncfusion/react-data';
 import { getPredicate } from '../utils';
 
+// Constants for query operations
+const QUERY_FUNCTION_KEY: string = 'fn';
+const QUERY_SKIP_OPERATION: string = 'onSkip';
+const QUERY_PAGE_OPERATION: string = 'onPage';
+const REQUEST_TYPE_DELETE: string = 'Delete';
+const REQUEST_TYPE_SAVE: string = 'save';
+const REQUEST_TYPE_UPDATE: string = 'update';
+const REQUEST_TYPE_FILTER_CHOICE: string = 'filterChoiceRequest';
+const DATA_REQUEST_EVENT_NAME: string = 'onDataRequest';
+
 /**
  * Custom hook to manage data operations for the grid
  *
  * @param {Object} [gridInstance] Grid instance reference
  * @param {Object} [gridAction] Grid action object (for dispatching actions)
  * @param {RefObject<PendingState>} [dataState] - Data state object properties
+ * @param {Map<string, string>} [groupCaptionAggregateType] - Map of aggregate fields and types for group captions
  * @returns {UseDataResult} Object containing APIs for data operations
  * @private
  */
 export const useData: <T>(gridInstance?: Partial<IGrid<T>> & Partial<MutableGridSetter<T>>, gridAction?: Object,
-    dataState?: RefObject<PendingState>) => UseDataResult<T> = <T>(
-    gridInstance?: Partial<IGrid<T>> & Partial<MutableGridSetter<T>>, gridAction?: Object, dataState?: RefObject<PendingState>
+    dataState?: RefObject<PendingState>, groupCaptionAggregateType?: Map<string, string | AggregateType[] | string[]>,
+    groupCaptionAggregateQuery?: Query) => UseDataResult<T> = <T>(
+    gridInstance?: Partial<IGrid<T>> & Partial<MutableGridSetter<T>>, gridAction?: Object, dataState?: RefObject<PendingState>,
+    groupCaptionAggregateType?: Map<string, AggregateType[] | string[]>
 ): UseDataResult<T> => {
     const grid: Partial<IGrid<T>> & Partial<MutableGridSetter<T>> & Partial<MutableGridBase<T>> = gridInstance;
     const dataManager: DataManager | DataResult = useMemo(() => {
@@ -60,30 +78,45 @@ export const useData: <T>(gridInstance?: Partial<IGrid<T>> & Partial<MutableGrid
         filterQuery(query);
         searchQuery(query);
         aggregateQuery(query);
+        groupQuery(query);
         pageQuery(query);
         return query;
-    }, [grid]);
+    }, [grid, gridAction]);
 
     const sortQuery: (query: Query) => Query = useCallback((query: Query): Query => {
-        if ((grid?.sortSettings?.enabled && grid.sortSettings?.columns?.length)) {
-            const columns: SortDescriptor[] = grid.sortSettings?.columns;
+        if ((grid?.sortSettings?.enabled && grid.sortSettings?.columns?.length) ||
+            (grid?.groupSettings?.enabled && grid.groupSettings?.columns?.length && grid.groupSettings?.autoSort)) {
+            const columns: SortDescriptor[] = grid.sortSettings?.columns ?? [];
+            const sortGrp: SortDescriptor[] = [];
             for (let i: number = columns.length - 1; i > -1; i--) {
                 const col: ColumnProps<T> = (grid.columns as ColumnProps<T>[]).find((c: ColumnProps<T>) =>
                     c.field === columns[parseInt(i.toString(), 10)].field);
-                col.sortDirection = columns[parseInt(i.toString(), 10)].direction;
-                let fn: Function | string = columns[parseInt(i.toString(), 10)].direction;
-                if (col.sortComparer) {
-                    fn = !isRemote() ? (col.sortComparer as Function).bind(col) : columns[parseInt(i.toString(), 10)].direction;
+                if (col) {
+                    col.sortDirection = columns[parseInt(i.toString(), 10)]?.direction;
+                    let fn: Function | string = columns[parseInt(i.toString(), 10)].direction;
+                    if (col.sortComparer) {
+                        fn = !isRemote() ? (col.sortComparer as Function).bind(col) : columns[parseInt(i.toString(), 10)].direction;
+                    }
+                    if (!grid.groupSettings?.enabled ||
+                        grid.groupSettings.columns?.indexOf(columns[parseInt(i.toString(), 10)].field) === -1) {
+                        if (col.sortComparer) {
+                            query.sortByForeignKey(col.field, fn, undefined, columns[parseInt(i.toString(), 10)].direction.toLowerCase());
+                        } else {
+                            query.sortBy(col.field, fn);
+                        }
+                    } else {
+                        sortGrp.push({ direction: <SortDirection>fn, field: col.field });
+                    }
                 }
-                if (col.sortComparer) {
-                    query.sortByForeignKey(col.field, fn, undefined, columns[parseInt(i.toString(), 10)].direction.toLowerCase());
-                } else {
-                    query.sortBy(col.field, fn);
+            }
+            for (let i: number = 0; i < sortGrp.length; i++) {
+                if (typeof sortGrp[parseInt(i.toString(), 10)].direction === 'string') {
+                    query = query.sortBy(sortGrp[parseInt(i.toString(), 10)].field, sortGrp[parseInt(i.toString(), 10)].direction);
                 }
             }
         }
         return query;
-    }, [grid?.sortSettings, grid?.sortSettings?.enabled]);
+    }, [grid?.sortSettings, grid?.sortSettings?.enabled, grid?.groupSettings?.columns, grid?.groupSettings?.enabled]);
 
     const grabColumnByFieldFromAllCols: (field: string) => ColumnProps<T> = (field: string): ColumnProps<T> => {
         let column: ColumnProps<T>;
@@ -119,7 +152,7 @@ export const useData: <T>(gridInstance?: Partial<IGrid<T>> & Partial<MutableGrid
                 defaultFltrCols[parseInt(i.toString(), 10)].uid = defaultFltrCols[parseInt(i.toString(), 10)].uid ||
                     columnFromField?.uid;
             }
-            const excelPredicate: Predicate = getPredicate(defaultFltrCols);
+            const excelPredicate: Predicate = getPredicate(defaultFltrCols, undefined, isRemote() && (dataManager instanceof DataManager) ? ((dataManager as DataManager).adaptor as { getModuleName?: Function })?.getModuleName?.() ?? 'UrlAdaptor' : undefined);
             for (const prop of Object.keys(excelPredicate)) {
                 predicateList.push(<Predicate>excelPredicate[`${prop}`]);
             }
@@ -158,23 +191,64 @@ export const useData: <T>(gridInstance?: Partial<IGrid<T>> & Partial<MutableGrid
 
     const aggregateQuery: (query: Query) => Query = useCallback((query: Query): Query => {
         const rows: AggregateRowProps[] = grid?.aggregates;
+        const aggregateSelection: UseAggregateSelectionResult = grid?.aggregateSelection;
         for (let i: number = 0; rows && i < rows.length; i++) {
             const row: AggregateRowProps = rows[parseInt(i.toString(), 10)];
-            for (let j: number = 0; j < row.columns.length; j++) {
+            for (let j: number = 0; j < row.columns.length &&
+                !groupCaptionAggregateType?.has(row?.columns?.[parseInt(j.toString(), 10)]?.field); j++) {
                 const cols: AggregateColumnProps<T> = row.columns[parseInt(j.toString(), 10)];
-                const types: string[] = cols.type instanceof Array ? cols.type : [cols.type];
-                for (let k: number = 0; k < types.length; k++) {
-                    query.aggregate(types[parseInt(k.toString(), 10)].toLowerCase(), cols.field);
+                const userSelectedAggregate: AggregateType = aggregateSelection?.getAggregate(i, cols.field);
+                if (userSelectedAggregate) {
+                    query.aggregate(userSelectedAggregate.toLowerCase(), cols.field);
+                } else {
+                    const types: string[] = cols.type instanceof Array ? cols.type : [cols.type];
+                    for (let k: number = 0; k < types.length; k++) {
+                        query.aggregate(types[parseInt(k.toString(), 10)].toLowerCase(), cols.field);
+                    }
                 }
             }
         }
+        groupCaptionAggregateType.forEach((value: string[], key: string) => {
+            value.forEach((aggType: string) => {
+                query.aggregate(aggType.toLowerCase(), key);
+            });
+        });
         return query;
-    }, [grid?.aggregates]);
+    }, [grid?.aggregates, grid?.aggregateSelection]);
+
+    /**
+     * Apply grouping to the query if groupSettings.enabled and columns are specified
+     * Applies group() operation to Query for each group column defined in groupSettings
+     */
+    const groupQuery: (query: Query) => Query = useCallback((query: Query): Query => {
+        const groupSettings: GroupSettings = grid?.groupSettings as GroupSettings;
+        if (groupSettings?.enabled && groupSettings?.columns?.length > 0) {
+            for (let i: number = 0; i < groupSettings.columns.length; i++) {
+                const groupField: string = groupSettings.columns[parseInt(i.toString(), 10)];
+                query.group(groupField);
+            }
+        }
+        return query;
+    }, [grid?.groupSettings]);
 
     const pageQuery: (query: Query) => Query = useCallback((query: Query): Query => {
-        const fName: string = 'fn';
-        if (grid.pageSettings?.enabled || grid.scrollMode === ScrollMode.Virtual) {
-            const currentPageVal: number = Math.max(1, grid?.currentPage);
+        const currentPageVal: number = Math.max(1, grid?.currentPage);
+        const isInfiniteTopPrevent: boolean = (gridAction as GridActionEvent).requestType === ActionType.Filtering ||
+            (gridAction as GridActionEvent).requestType === ActionType.ClearFiltering ||
+            (gridAction as GridActionEvent).requestType === ActionType.Searching ||
+            (gridAction as GridActionEvent).requestType === ActionType.Sorting ||
+            (gridAction as GridActionEvent).requestType === ActionType.ClearSorting;
+        if (grid.scrollMode === ScrollMode.Infinite && ((((currentPageVal - 1) * grid.pageSettings.pageSize >=
+            grid.totalRecordsCount) || isInfiniteTopPrevent) && grid.pageSettings.pageSizeControlledBy === 'server')) {
+            if (query.queries.length) {
+                for (let i: number = 0; i < query.queries.length; i++) {
+                    if (query.queries[parseInt(i.toString(), 10)][`${QUERY_FUNCTION_KEY}`] === QUERY_SKIP_OPERATION) {
+                        query.queries.splice(i, 1);
+                    }
+                }
+            }
+            query.skip((currentPageVal - 1) * grid.pageSettings.pageSize);
+        } else if (grid.pageSettings?.enabled || grid.scrollMode === ScrollMode.Virtual || grid.scrollMode === ScrollMode.Infinite) {
             if (grid.pageSettings.pageCount <= 0) {
                 grid.pageSettings.pageCount = 8;
             }
@@ -183,7 +257,7 @@ export const useData: <T>(gridInstance?: Partial<IGrid<T>> & Partial<MutableGrid
             }
             if (query.queries.length) {
                 for (let i: number = 0; i < query.queries.length; i++) {
-                    if (query.queries[parseInt(i.toString(), 10)][`${fName}`] === 'onPage') {
+                    if (query.queries[parseInt(i.toString(), 10)][`${QUERY_FUNCTION_KEY}`] === QUERY_PAGE_OPERATION) {
                         query.queries.splice(i, 1);
                     }
                 }
@@ -191,7 +265,7 @@ export const useData: <T>(gridInstance?: Partial<IGrid<T>> & Partial<MutableGrid
             query.page(currentPageVal, grid.pageSettings.pageSize);
         }
         return query;
-    }, [grid.pageSettings, grid?.currentPage, grid.pageSettings?.enabled, grid.scrollMode]);
+    }, [grid.pageSettings, grid?.currentPage, grid.pageSettings?.enabled, grid.scrollMode, gridAction]);
 
     const getSearchColumnFieldNames: () => string[] = (): string[] => {
         const colFieldNames: string[] = [];
@@ -208,7 +282,12 @@ export const useData: <T>(gridInstance?: Partial<IGrid<T>> & Partial<MutableGrid
         query?: Query) => Promise<Object> = useCallback(async (args: { requestType?: string; data?: T; index?: number,
         payload?: payload } = { requestType: '' }, query?: Query
     ): Promise<Object> => {
-        const currentQuery: Query = query || generateQuery().requiresCount();
+        // For Infinite mode with Unknown/Estimated, skip $count to prevent server errors
+        const shouldRequireCount: boolean = !(grid.virtualizationSettings?.scrollMode === ScrollMode.Infinite);
+
+        const currentQuery: Query = query || (
+            shouldRequireCount ? generateQuery().requiresCount() : generateQuery()
+        );
         const primaryKeys: string[] = grid.getPrimaryKeyFieldNames();
         const key: string = primaryKeys.length > 0 ? primaryKeys[0] : 'id';
 
@@ -217,7 +296,7 @@ export const useData: <T>(gridInstance?: Partial<IGrid<T>> & Partial<MutableGrid
             return def.promise;
         } else {
             switch (args.requestType) {
-            case 'Delete': {
+            case REQUEST_TYPE_DELETE: {
                 if (Array.isArray(args.data)) {
                     // Multiple deletions
                     const changes: { addedRecords: T[]; deletedRecords: T[]; changedRecords: T[] } = {
@@ -234,12 +313,12 @@ export const useData: <T>(gridInstance?: Partial<IGrid<T>> & Partial<MutableGrid
                 }
             }
 
-            case 'save': {
+            case REQUEST_TYPE_SAVE: {
                 const index: number = isNullOrUndefined(args.index) ? 0 : args.index;
                 return (dataManager as DataManager).insert(args.data, currentQuery.fromTable, currentQuery, index) as Promise<Object>;
             }
 
-            case 'update': {
+            case REQUEST_TYPE_UPDATE: {
                 return (dataManager as DataManager).update(key, args.data, currentQuery.fromTable, currentQuery) as Promise<Object>;
             }
 
@@ -271,8 +350,8 @@ export const useData: <T>(gridInstance?: Partial<IGrid<T>> & Partial<MutableGrid
             const requestType: Action = (gridAction as GridActionEvent).requestType;
             if (requestType !== undefined || args.requestType !== undefined) {
                 const state: DataRequestEvent = getStateEventArgument(query);
-                state.name = 'onDataRequest';
-                if (args.requestType === 'save' || args.requestType === 'Delete') {
+                state.name = DATA_REQUEST_EVENT_NAME;
+                if (args.requestType === REQUEST_TYPE_SAVE || args.requestType === REQUEST_TYPE_DELETE) {
                     const argsRef: {
                         requestType?: string; data?: T; rowData?: T; index?: number;
                         cancel?: boolean; previousData?: Object; type?: string; rows?: Element[];
@@ -301,13 +380,18 @@ export const useData: <T>(gridInstance?: Partial<IGrid<T>> & Partial<MutableGrid
                         grid.onDataRequest?.(state);
                     }).catch(() => void 0);
                 } else {
-                    state.action = gridAction;
-                    dataState.current = { resolver: def.resolve };
+                    if (args.requestType === REQUEST_TYPE_FILTER_CHOICE) {
+                        state.requestType = args.requestType;
+                        state.dataSource = def.resolve;
+                    } else {
+                        state.action = gridAction;
+                        dataState.current = { resolver: def.resolve };
+                    }
                     grid.onDataRequest?.(state);
                 }
             }
             return def;
         }, [gridAction, grid, dataManager]);
 
-    return { generateQuery, dataManager, isRemote, getData, dataState };
+    return { generateQuery, dataManager, isRemote, getData, dataState, getStateEventArgument };
 };

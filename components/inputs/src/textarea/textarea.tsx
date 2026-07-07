@@ -1,14 +1,16 @@
-import * as React from 'react';
-import { forwardRef, ReactNode, Ref, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, useId, useLayoutEffect } from 'react';
-import { CLASS_NAMES, inputBaseProps, LabelMode, renderClearButton, renderFloatLabelElement } from '../common/inputbase';
-import { preRender, useProviderContext, Variant, Size } from '@syncfusion/react-base';
+import { forwardRef, ReactNode, Ref, useCallback, useEffect, useImperativeHandle, useRef, useState, useLayoutEffect,
+    InputHTMLAttributes, ForwardRefExoticComponent, RefAttributes, RefObject, useMemo, type ChangeEvent, type FocusEvent
+} from 'react';
+import { CLASS_NAMES, inputBaseProps, LabelMode, renderClearButton, renderFloatLabelElement, renderAdornmentElement } from '../common/inputbase';
+import { preRender, useProviderContext, Variant, Size, useStableId } from '@syncfusion/react-base';
+import { HelperText } from '../common/helper-text';
 export { LabelMode, Variant, Size };
 
 export interface TextAreaChangeEvent {
     /**
      * Specifies the initial event object received from the textarea element.
      */
-    event?: React.ChangeEvent<HTMLTextAreaElement>;
+    event?: ChangeEvent<HTMLTextAreaElement>;
 
     /**
      * Specifies the current value of the TextArea.
@@ -158,7 +160,7 @@ export interface ITextArea extends TextAreaProps {
     element?: HTMLTextAreaElement | null;
 }
 
-type ITextAreaProps = TextAreaProps & Omit<React.InputHTMLAttributes<HTMLTextAreaElement>, keyof TextAreaProps>;
+type ITextAreaProps = TextAreaProps & Omit<InputHTMLAttributes<HTMLTextAreaElement>, keyof TextAreaProps>;
 
 /**
  * TextArea component that provides a multi-line text input field with enhanced functionality.
@@ -170,7 +172,7 @@ type ITextAreaProps = TextAreaProps & Omit<React.InputHTMLAttributes<HTMLTextAre
  * <TextArea defaultValue="Initial text" placeholder="Enter text" rows={5} cols={40} />
  * ```
  */
-export const TextArea: React.ForwardRefExoticComponent<ITextAreaProps & React.RefAttributes<ITextArea>> =
+export const TextArea: ForwardRefExoticComponent<ITextAreaProps & RefAttributes<ITextArea>> =
 forwardRef<ITextArea, ITextAreaProps>((props: ITextAreaProps, ref: Ref<ITextArea>) => {
     const {
         readOnly = false,
@@ -187,11 +189,17 @@ forwardRef<ITextArea, ITextAreaProps>((props: ITextAreaProps, ref: Ref<ITextArea
         clearButton = false,
         autoResize = false,
         className = '',
+        id,
         size = Size.Medium,
         variant,
         onChange,
         onBlur,
         onFocus,
+        prefix,
+        suffix,
+        helperText,
+        helperTextOnFocus = false,
+        helperTextDirection = 'Left',
         ...rest
     } = props;
 
@@ -202,16 +210,14 @@ forwardRef<ITextArea, ITextAreaProps>((props: ITextAreaProps, ref: Ref<ITextArea
     );
 
     const displayValue: string | undefined = isControlled ? value : uncontrolledValue;
-
-    const textareaId: string = `textArea_${useId()}`;
-
     const [isFocused, setIsFocused] = useState(false);
-    const id: string = useMemo(() => rest.id || textareaId, [rest.id]);
-    const elementRef: React.RefObject<HTMLTextAreaElement | null> = useRef<HTMLTextAreaElement>(null);
-    const autoResizeFrameIdRef: React.RefObject<number | null> = useRef<number | null>(null);
-    const resizeObserverInstanceRef: React.RefObject<ResizeObserver | null> =
+    const generatedId: string = useStableId('sf-textarea');
+    const textareaId: string = id ?? generatedId;
+    const elementRef: RefObject<HTMLTextAreaElement | null> = useRef<HTMLTextAreaElement>(null);
+    const autoResizeFrameIdRef: RefObject<number | null> = useRef<number | null>(null);
+    const resizeObserverInstanceRef: RefObject<ResizeObserver | null> =
     useRef<ResizeObserver | null>(null);
-    const lastObservedInlineSizeRef: React.RefObject<number | null> =
+    const lastObservedInlineSizeRef: RefObject<number | null> =
     useRef<number | null>(null);
     const { locale, dir } = useProviderContext();
 
@@ -220,7 +226,10 @@ forwardRef<ITextArea, ITextAreaProps>((props: ITextAreaProps, ref: Ref<ITextArea
         labelMode,
         disabled,
         readOnly,
-        resizeMode
+        resizeMode,
+        helperText,
+        helperTextOnFocus,
+        helperTextDirection
     };
 
     useEffect(() => {
@@ -233,29 +242,30 @@ forwardRef<ITextArea, ITextAreaProps>((props: ITextAreaProps, ref: Ref<ITextArea
         }
     }, [isControlled, value]);
 
-    const getContainerClassNames: () => string = () => {
-        return classNames(
-            CLASS_NAMES.INPUTGROUP,
-            CLASS_NAMES.WRAPPER,
-            labelMode !== 'Never' ? CLASS_NAMES.FLOATINPUT : '',
-            MULTILINE,
-            className,
-            (dir === 'rtl') ? CLASS_NAMES.RTL : '',
-            disabled ? CLASS_NAMES.DISABLE : '',
-            isFocused ? CLASS_NAMES.TEXTBOX_FOCUS : '',
-            ((displayValue) !== '') ? CLASS_NAMES.VALIDINPUT : '',
-            variant && variant.toLowerCase() !== 'standard'  ? variant.toLowerCase() === 'outlined' ? 'sf-outline' : `sf-${variant.toLowerCase()}` : '',
-            AUTOWIDTH,
-            size && size.toLowerCase() !== 'small' ? `sf-${size.toLowerCase()}` : '',
-            'sf-control'
-        );
-    };
-
     const classNames: (...classes: string[]) => string = (...classes: string[]) => {
         return classes.filter(Boolean).join(' ');
     };
 
-    const containerClassNames: string = getContainerClassNames();
+    const containerClassNames: string = useMemo(() => classNames(
+        CLASS_NAMES.INPUTGROUP,
+        CLASS_NAMES.WRAPPER,
+        labelMode !== 'Never' ? CLASS_NAMES.FLOATINPUT : '',
+        MULTILINE,
+        className,
+        dir === 'rtl' ? CLASS_NAMES.RTL : '',
+        disabled ? CLASS_NAMES.DISABLE : '',
+        readOnly ? CLASS_NAMES.READONLY : '',
+        isFocused ? CLASS_NAMES.TEXTBOX_FOCUS : '',
+        displayValue !== '' ? CLASS_NAMES.VALIDINPUT : '',
+        variant && variant.toLowerCase() !== 'standard'
+            ? variant.toLowerCase() === 'outlined' ? 'sf-outline' : `sf-${variant.toLowerCase()}`
+            : '',
+        AUTOWIDTH,
+        size && size.toLowerCase() !== 'small' ? `sf-${size.toLowerCase()}` : '',
+        prefix ? 'sf-has-prefix' : '',
+        suffix ? 'sf-has-suffix' : '',
+        'sf-control'
+    ), [isFocused, displayValue, disabled, readOnly, labelMode, variant, size, prefix, suffix, dir, className]);
 
     useImperativeHandle(ref, () => ({
         ...publicAPI as ITextArea,
@@ -354,8 +364,8 @@ forwardRef<ITextArea, ITextAreaProps>((props: ITextAreaProps, ref: Ref<ITextArea
         requestAdjustHeight();
     }, [autoResize, displayValue, width, rows, cols]);
 
-    const handleChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => void =
-    useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const handleChange: (event: ChangeEvent<HTMLTextAreaElement>) => void =
+    useCallback((event: ChangeEvent<HTMLTextAreaElement>) => {
         const newValue: string = event.target.value;
         if (!isControlled) {
             setUncontrolledValue(newValue);
@@ -368,16 +378,16 @@ forwardRef<ITextArea, ITextAreaProps>((props: ITextAreaProps, ref: Ref<ITextArea
         }
     }, [isControlled, onChange, uncontrolledValue, value, autoResize, requestAdjustHeight]);
 
-    const handleFocus: (event: React.FocusEvent<HTMLTextAreaElement, Element>) => void =
-    useCallback((event: React.FocusEvent<HTMLTextAreaElement, Element>) => {
+    const handleFocus: (event: FocusEvent<HTMLTextAreaElement, Element>) => void =
+    useCallback((event: FocusEvent<HTMLTextAreaElement, Element>) => {
         setIsFocused(true);
         if (onFocus) {
             onFocus(event);
         }
     }, [onFocus]);
 
-    const handleBlur: (event: React.FocusEvent<HTMLTextAreaElement, Element>) => void =
-    useCallback((event: React.FocusEvent<HTMLTextAreaElement, Element>) => {
+    const handleBlur: (event: FocusEvent<HTMLTextAreaElement, Element>) => void =
+    useCallback((event: FocusEvent<HTMLTextAreaElement, Element>) => {
         setIsFocused(false);
         if (onBlur) {
             onBlur(event);
@@ -406,42 +416,52 @@ forwardRef<ITextArea, ITextAreaProps>((props: ITextAreaProps, ref: Ref<ITextArea
     };
 
     return (
-        <div className={containerClassNames} >
-            <textarea
-                ref={elementRef}
-                id={id}
-                value={isControlled ? (value) : undefined}
-                defaultValue={!isControlled ? (defaultValue) : undefined}
-                onChange={handleChange}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-                readOnly={readOnly}
-                placeholder={labelMode === 'Never' ? placeholder : undefined}
-                disabled={disabled}
-                maxLength={maxLength}
-                cols={cols ?? undefined}
-                rows={rows ?? undefined}
-                {...rest}
-                style={{
-                    width: width ? (typeof width === 'number' ? `${width}px` : width) : undefined,
-                    resize: resizeMode === 'None' || autoResize ? 'none' : undefined,
-                    overflowY: autoResize ? 'hidden' : undefined
-                }}
-                className={`sf-textarea sf-lib sf-input ${getCurrentResizeClass(resizeMode)}`}
-                aria-labelledby={`label_${id}`}
+        <>
+            <div className={containerClassNames} >
+                {renderAdornmentElement(prefix)}
+                <textarea
+                    ref={elementRef}
+                    id={textareaId}
+                    value={isControlled ? (value) : undefined}
+                    defaultValue={!isControlled ? (defaultValue) : undefined}
+                    onChange={handleChange}
+                    onFocus={handleFocus}
+                    onBlur={handleBlur}
+                    readOnly={readOnly}
+                    placeholder={labelMode === 'Never' ? placeholder : undefined}
+                    disabled={disabled}
+                    maxLength={maxLength}
+                    cols={cols ?? undefined}
+                    rows={rows ?? undefined}
+                    {...rest}
+                    style={{
+                        width: width ? (typeof width === 'number' ? `${width}px` : width) : undefined,
+                        resize: resizeMode === 'None' || autoResize ? 'none' : undefined,
+                        overflowY: autoResize ? 'hidden' : undefined
+                    }}
+                    className={`sf-textarea sf-lib sf-input ${getCurrentResizeClass(resizeMode)}`}
+                    aria-labelledby={`label_${textareaId}`}
+                />
+                {renderFloatLabelElement(
+                    labelMode,
+                    isFocused || (displayValue) !== '',
+                    (displayValue as string),
+                    placeholder,
+                    textareaId
+                )}
+                {clearButton && renderClearButton(
+                    (displayValue && isFocused) ? (displayValue).toString() : '',
+                    clearValue, clearButton, 'textarea', locale
+                )}
+                {renderAdornmentElement(suffix)}
+            </div>
+            <HelperText
+                helperText={helperText}
+                helperTextOnFocus={helperTextOnFocus}
+                isFocused={isFocused}
+                helperTextDirection={helperTextDirection}
             />
-            {renderFloatLabelElement(
-                labelMode,
-                isFocused || (displayValue) !== '',
-                (displayValue as string),
-                placeholder,
-                id
-            )}
-            {clearButton && renderClearButton(
-                (displayValue && isFocused) ? (displayValue).toString() : '',
-                clearValue, clearButton, 'textarea', locale
-            )}
-        </div>
+        </>
     );
 });
 

@@ -1,7 +1,7 @@
 import { useRef, forwardRef, useImperativeHandle, Ref, useEffect, useMemo, ButtonHTMLAttributes } from 'react';
 import { Button, Position, Color, Size, Variant, IButton } from '@syncfusion/react-buttons';
 import { preRender, useProviderContext } from '@syncfusion/react-base';
-import { DropDownButton, IDropDownButton, ButtonSelectEvent, ItemModel } from '../dropdown-button/dropdown-button';
+import { DropDownButton, IDropDownButton, ButtonSelectEvent, ItemModel, PopupSettings } from '../dropdown-button/dropdown-button';
 import * as React from 'react';
 
 /**
@@ -31,15 +31,6 @@ export interface SplitButtonProps {
     items?: ItemModel[];
 
     /**
-     * This property defines the width of the dropdown popup for the Dropdown Button component.
-     * Set the width as a string or number using valid CSS units like `px`, `%`, or `rem`, or as pixels.
-     * The default value of `auto` allows the popup to adjust based on the content length, but a specific width can be provided for more precise control.
-     *
-     * @default auto
-     */
-    popupWidth?: string | number;
-
-    /**
      * Specifies the popup element creation on open.
      *
      * @default false
@@ -47,18 +38,18 @@ export interface SplitButtonProps {
     lazyOpen?: boolean;
 
     /**
-     * Specifies the target element for the Dropdown Button's popup content.
-     *
-     * @default -
-     */
-    target?: React.RefObject<HTMLElement>;
-
-    /**
      * Provides a template for displaying content within the dropdown items.
      *
      * @default -
      */
     itemTemplate?: (item: ItemModel) => React.ReactNode;
+
+    /**
+     * Specifies the popup settings including position, offset, collision handling, animation, and target element configuration.
+     *
+     * @default {}
+     */
+    popupSettings?: PopupSettings;
 
     /**
      * Specifies the color style of the Split Button. Options include 'Primary', 'Secondary', 'Warning', 'Success', 'Error' and 'Info'.
@@ -151,12 +142,11 @@ export const SplitButton: React.ForwardRefExoticComponent<ISplitButtonProps & Re
             icon,
             iconPosition = Position.Left,
             items = [],
-            popupWidth = 'auto',
             disabled = false,
-            target,
             lazyOpen = false,
             children,
             itemTemplate,
+            popupSettings = {},
             color,
             variant,
             size = Size.Medium,
@@ -174,15 +164,14 @@ export const SplitButton: React.ForwardRefExoticComponent<ISplitButtonProps & Re
         const publicAPI: Partial<ISplitButton> = useMemo(() => ({
             iconPosition,
             icon,
-            target,
-            popupWidth,
             items,
             lazyOpen,
             itemTemplate,
+            popupSettings,
             color,
             variant,
             size
-        }), [iconPosition, icon, target, popupWidth, items, lazyOpen, itemTemplate, color, variant, size]);
+        }), [iconPosition, icon, items, lazyOpen, itemTemplate, popupSettings, color, variant, size]);
 
         useEffect(() => {
             preRender('splitButton');
@@ -222,8 +211,6 @@ export const SplitButton: React.ForwardRefExoticComponent<ISplitButtonProps & Re
                 </Button>
                 <DropDownButton
                     ref={dropDownRef}
-                    relateTo={wrapperRef.current as unknown as HTMLElement}
-                    target={target ?? (wrapperRef as unknown as React.RefObject<HTMLElement>)}
                     className={`${className} ${(dir === 'rtl') ? 'sf-rtl' : ''} sf-icon-btn sf-control sf-dropdown-btn sf-btn`}
                     items={items}
                     color={color}
@@ -231,8 +218,10 @@ export const SplitButton: React.ForwardRefExoticComponent<ISplitButtonProps & Re
                     size={size}
                     itemTemplate={itemTemplate}
                     disabled={disabled}
-                    popupWidth={popupWidth}
                     lazyOpen={lazyOpen}
+                    popupSettings={{
+                        ...popupSettings
+                    }}
                     onOpen={onOpen}
                     onClose={onClose}
                     onSelect={onSelect}
@@ -244,4 +233,3 @@ export const SplitButton: React.ForwardRefExoticComponent<ISplitButtonProps & Re
     });
 
 export default SplitButton;
-

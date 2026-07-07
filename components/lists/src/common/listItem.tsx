@@ -1,4 +1,4 @@
-import * as React from 'react';
+import { CSSProperties, ElementType, FC, HTMLAttributes, KeyboardEventHandler, memo, MouseEventHandler, ReactElement, ReactNode, RefAttributes, useCallback, useMemo, type KeyboardEvent, type MouseEvent } from 'react';
 import { useProviderContext, useRippleEffect, isNullOrUndefined } from '@syncfusion/react-base';
 import { useListItem, UseListItemResult } from './useListItem';
 import { ListItemBaseProps } from './listItems';
@@ -12,18 +12,18 @@ const ANCHOR_WRAP_CLASS: string = 'sf-anchor-wrap';
 /**
  * Interface for ListItem component props
  */
-interface ListItemProps extends Omit<React.HTMLAttributes<HTMLLIElement>, 'onClick' | 'onKeyDown'>, ListItemBaseProps {
+interface ListItemProps extends Omit<HTMLAttributes<HTMLLIElement>, 'onClick' | 'onKeyDown'>, ListItemBaseProps {
     item: { [key: string]: Object } | string | number;
     index: number;
     focusedIndex?: number;
-    as?: React.ElementType
-    onItemClick?: (e: React.MouseEvent<HTMLLIElement>, index: number) => void;
+    as?: ElementType
+    onItemClick?: (e: MouseEvent<HTMLLIElement>, index: number) => void;
 }
 
 /**
  * A component that renders a item in a list.
  */
-export const ListItem: React.FC<ListItemProps & React.RefAttributes<HTMLElement>> = React.memo(({
+export const ListItem: FC<ListItemProps & RefAttributes<HTMLElement>> = memo(({
     item,
     fields,
     index,
@@ -37,7 +37,7 @@ export const ListItem: React.FC<ListItemProps & React.RefAttributes<HTMLElement>
     onItemKeyDown,
     getItemProps,
     ...restProps
-}: ListItemProps): React.ReactElement | null => {
+}: ListItemProps): ReactElement | null => {
 
     if (isNullOrUndefined(item)) {
         return null;
@@ -45,43 +45,54 @@ export const ListItem: React.FC<ListItemProps & React.RefAttributes<HTMLElement>
     const { ripple } = useProviderContext();
     const { rippleMouseDown, Ripple } = useRippleEffect(ripple);
 
-    const {className, ...extraProps} = React.useMemo<React.HTMLAttributes<HTMLElement> & React.RefAttributes<HTMLElement>>(() => {
+    const {className, ...extraProps} = useMemo<HTMLAttributes<HTMLElement> & RefAttributes<HTMLElement>>(() => {
         return getItemProps?.({ item, index }) || {};
     }, [getItemProps, item, index]);
 
     const model: UseListItemResult = useListItem(item, fields, index, focusedIndex, itemTemplate, groupTemplate,
                                                  ariaAttributes, parentClass, className);
-    const ParentTag: React.ElementType = as ?? 'li';
+    const ParentTag: ElementType = as ?? 'li';
 
-    const handleClick: React.MouseEventHandler<HTMLLIElement> = React.useCallback((e: React.MouseEvent<HTMLLIElement, MouseEvent>) => {
+    const handleClick: MouseEventHandler<HTMLLIElement> = useCallback((e: MouseEvent<HTMLLIElement>) => {
         onItemClick?.(e, index);
     }, [onItemClick, index]);
 
-    const handleKeyDown: React.KeyboardEventHandler<HTMLLIElement> = React.useCallback((e: React.KeyboardEvent<HTMLLIElement>) => {
+    const handleKeyDown: KeyboardEventHandler<HTMLLIElement> = useCallback((e: KeyboardEvent<HTMLLIElement>) => {
         onItemKeyDown?.(e, index);
     }, [onItemKeyDown, index]);
 
-    const baseProps: React.HTMLAttributes<HTMLElement> = {
+    const combinedStyle: CSSProperties = useMemo(() => {
+        const liPropsStyle: CSSProperties | undefined = model.liProps?.style;
+        const restPropsStyle: CSSProperties | undefined = restProps?.style;
+        const extraPropsStyle: CSSProperties | undefined = extraProps?.style;
+        if (!liPropsStyle && !restPropsStyle && !extraPropsStyle) {
+            return undefined as unknown as CSSProperties;
+        }
+        return { ...(liPropsStyle || {}), ...(restPropsStyle || {}), ...(extraPropsStyle || {}) };
+    }, [model.liProps?.style, restProps?.style, extraProps?.style]);
+
+    const baseProps: HTMLAttributes<HTMLElement> = {
         ...model.liProps,
         ...restProps,
         ...extraProps,
+        style: combinedStyle,
         onClick: handleClick,
         onKeyDown: handleKeyDown,
         onMouseDown: rippleMouseDown
     };
 
-    const TextSpan: () => React.ReactNode = () => (
+    const TextSpan: () => ReactNode = () => (
         <span
             className={TEXT_CLASS}
         >
             {model.displayText}
         </span>
     );
-    const IconImage: () => React.ReactNode = () => (
+    const IconImage: () => ReactNode = () => (
         <>
             {model.hasIcon && (
                 <div className={ICON_CLASS}>
-                    {model.fieldData[String(model.mergedFields.icon)] as React.ReactNode}
+                    {model.fieldData[String(model.mergedFields.icon)] as ReactNode}
                 </div>
             )}
             {model.hasImage && (

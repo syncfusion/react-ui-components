@@ -1,3 +1,4 @@
+import * as React from 'react';
 import { CSS_CLASSES } from '../common/constants';
 import { EventService } from '../services/EventService';
 import { EventModel, SchedulerTooltipOpenEvent, SchedulerTooltipProps as SchedulerTooltipInputProps } from '../types/scheduler-types';
@@ -12,6 +13,7 @@ import { useSchedulerEventsContext } from '../context/scheduler-events-context';
 type SchedulerTooltipProps = SchedulerTooltipInputProps & {
     children: React.ReactNode;
     onTooltipOpen?: (args: SchedulerTooltipOpenEvent) => void;
+    containerRef?: RefObject<HTMLDivElement>;
 };
 
 /**
@@ -25,9 +27,12 @@ export const SchedulerTooltip: React.FC<SchedulerTooltipProps> = ({
     onTooltipOpen,
     content: contentProp,
     arrow,
+    containerRef,
     ...props
 }: SchedulerTooltipProps): React.ReactElement => {
     const [content, setContent] = useState<React.ReactNode>(null);
+    const [currentEventGuid, setCurrentEventGuid] = useState<string | null>(null);
+    const [isTooltipOpen, setIsTooltipOpen] = useState<boolean>(false);
 
     const { locale } = useProviderContext();
     const { getString } = useSchedulerLocalization(locale);
@@ -39,7 +44,17 @@ export const SchedulerTooltip: React.FC<SchedulerTooltipProps> = ({
         eventsDataRef.current = eventsData;
     }, [eventsData]);
 
-    const onFilterTarget: (target: HTMLElement) => HTMLElement | null = (target: HTMLElement): HTMLElement | null  => {
+    useEffect(() => {
+        if (currentEventGuid) {
+            const eventStillExists: boolean = eventsDataRef.current.some((e: EventModel) => e.guid === currentEventGuid);
+            if (!eventStillExists) {
+                setCurrentEventGuid(null);
+                setIsTooltipOpen(false);
+            }
+        }
+    }, [eventsData, currentEventGuid]);
+
+    const onFilterTarget: (target: HTMLElement) => HTMLElement | null = (target: HTMLElement): HTMLElement | null => {
         const appointmentEl: HTMLElement | null = target.closest('.' + CSS_CLASSES.APPOINTMENT) as HTMLElement | null;
         if (!appointmentEl) {
             return null;
@@ -55,6 +70,7 @@ export const SchedulerTooltip: React.FC<SchedulerTooltipProps> = ({
             return null;
         }
 
+        setCurrentEventGuid(guid);
         if (typeof contentProp === 'function') {
             // Invoke user template function with a simple payload
             const templateResult: SchedulerTooltipProps = contentProp({ data: record });
@@ -96,8 +112,17 @@ export const SchedulerTooltip: React.FC<SchedulerTooltipProps> = ({
     }, [getString, timeFormat, locale]);
 
     return (
-        <Tooltip className={CSS_CLASSES.SCHEDULER_TOOLTIP} onFilterTarget={onFilterTarget}
-            arrow={arrow ?? false} content={<>{content}</>} {...props} closeDelay={100}>
+        <Tooltip
+            className={CSS_CLASSES.SCHEDULER_TOOLTIP}
+            open={isTooltipOpen}
+            onOpen={() => setIsTooltipOpen(true)}
+            onClose={() => setIsTooltipOpen(false)}
+            onFilterTarget={onFilterTarget}
+            arrow={arrow ?? false}
+            content={<>{content}</>}
+            container={containerRef}
+            {...props}
+            closeDelay={100}>
             {children}
         </Tooltip>
     );

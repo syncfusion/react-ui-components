@@ -1,8 +1,8 @@
 import { JSX, ReactElement } from 'react';
-import { ChartBorderProps, ChartAreaProps, ChartComponentProps, ChartStackLabelsProps, ChartFontProps, ZoomEndEvent, MajorGridLines, MajorTickLines, ChartMarkerProps, MinorGridLines, MinorTickLines, TitleSettings, ChartTooltipProps, ChartSeriesProps, ChartZoomSettingsProps, ChartAxisProps, ChartStripLineProps, ChartTitleProps, ChartLegendProps, Column, Row, ChartDataLabelProps, ChartLocationProps, CornerRadius, ChartCrosshairProps, ChartCrosshairTooltipProps, ChartSelectionProps, ChartHighlightProps, ChartAnnotationProps, ChartErrorBarProps, ChartTrendlineProps, ChartParetoOptionsProps } from '../base/interfaces';
-import { ChartSeriesType, ChartMarkerShape, IntervalType, LegendShape, Orientation, StripLineSizeUnit, ZIndex, SeriesValueType, TrendlineTypes } from '../base/enum';
+import { ChartBorderProps, ChartAreaProps, ChartComponentProps, ChartStackLabelsProps, ChartFontProps, ZoomEndEvent, MajorGridLines, MajorTickLines, ChartMarkerProps, MinorGridLines, MinorTickLines, TitleSettings, ChartTooltipProps, ChartSeriesProps, ChartZoomSettingsProps, ChartAxisProps, ChartStripLineProps, ChartTitleProps, ChartLegendProps, Column, Row, ChartDataLabelProps, ChartLocationProps, CornerRadius, ChartCrosshairProps, ChartCrosshairTooltipProps, ChartSelectionProps, ChartHighlightProps, ChartAnnotationProps, ChartErrorBarProps, ChartTrendlineProps, ChartParetoOptionsProps, ChartIndicatorProps, ChartScrollbarProps, ChartSeriesLabelProps, ChartLastValueLabelProps, ChartRangeColorProps, ChartMultiLevelLabelCategoryProps } from '../base/interfaces';
+import { ChartSeriesType, ChartMarkerShape, IntervalType, LegendShape, Orientation, StripLineSizeUnit, ZIndex, SeriesValueType, TrendlineTypes, LegendMode } from '../base/enum';
 import { BaseLegend } from '../base/Legend-base';
-import { Animation, TextAnchor } from '../../common';
+import { Animation, TextAnchor, TextOverflow } from '../../common';
 import { DataLabelRendererResults } from '../renderer/SeriesRenderer/DataLabelRender';
 import { IThemeStyle } from '../utils/theme';
 import { ChartAxisLabelProps, ChartAxisTitleProps } from '../chart-axis/base';
@@ -25,6 +25,7 @@ import CandleSeriesRenderer from '../renderer/SeriesRenderer/CandleSeriesRendere
 import HiloSeriesRenderer from '../renderer/SeriesRenderer/HiloSeriesRenderer';
 import HiloOpenCloseSeriesRenderer from '../renderer/SeriesRenderer/HiloOpenCloseRenderer';
 import RangeAreaSeriesRenderer from '../renderer/SeriesRenderer/RangeAreaSeriesRenderer';
+import RangeStepAreaSeriesRenderer from '../renderer/SeriesRenderer/RangeStepAreaSeriesRenderer';
 import StepAreaSeriesRenderer from '../renderer/SeriesRenderer/StepAreaSeriesRenderer';
 import StackingAreaSeriesRenderer from '../renderer/SeriesRenderer/StackingAreaSeriesRenderer';
 import RangeColumnSeriesRenderer from '../renderer/SeriesRenderer/RangeColumnSeriesRenderer';
@@ -32,9 +33,30 @@ import SplineRangeAreaSeriesRenderer from '../renderer/SeriesRenderer/SplineRang
 import MultiColoredLineSeriesRenderer from '../renderer/SeriesRenderer/MultiColoredLineSeriesRenderer';
 import ParetoSeriesRenderer from '../renderer/SeriesRenderer/ParetoSeriesRenderer';
 import { Theme, TitlePosition } from '../../common';
+import PolarLineSeriesRenderer from '../renderer/PolarAndRadarSeriesRender/PolarLineSeriesRenderer';
+import RadarLineSeriesRenderer from '../renderer/PolarAndRadarSeriesRender/RadarLineSeriesRenderer';
+import PolarColumnSeriesRenderer from '../renderer/PolarAndRadarSeriesRender/PolarColumnSeriesRenderer';
+import PolarAreaSeriesRenderer from '../renderer/PolarAndRadarSeriesRender/PolarAreaSeriesRenderer';
+import PolarStackingColumnSeriesRenderer from '../renderer/PolarAndRadarSeriesRender/PolarStackingColumnSeriesRenderer';
+import PolarStackingAreaSeriesRenderer from '../renderer/PolarAndRadarSeriesRender/PolarStackingAreaSeriesRenderer';
+import PolarRangeColumnSeriesRenderer from '../renderer/PolarAndRadarSeriesRender/PolarRangeColumnSeriesRenderer';
+import PolarScatterSeriesRenderer from '../renderer/PolarAndRadarSeriesRender/PolarScatterSeriesRenderer';
+import PolarSplineSeriesRenderer from '../renderer/PolarAndRadarSeriesRender/PolarSplineSeriesRenderer';
+import PolarSplineAreaSeriesRenderer from '../renderer/PolarAndRadarSeriesRender/PolarSplineAreaSeriesRenderer';
+import RadarScatterSeriesRenderer from '../renderer/PolarAndRadarSeriesRender/RadarScatterSeriesRenderer';
+import RadarSplineAreaSeriesRenderer from '../renderer/PolarAndRadarSeriesRender/RadarSplineAreaSeriesRenderer';
+import RadarSplineSeriesRenderer from '../renderer/PolarAndRadarSeriesRender/RadarSplineSeriesRenderer';
+import RadarAreaSeriesRenderer from '../renderer/PolarAndRadarSeriesRender/RadarAreaSeriesRenderer';
+import RadarColumnSeriesRenderer from '../renderer/PolarAndRadarSeriesRender/RadarColumnSeriesRenderer';
+import RadarRangeColumnSeriesRenderer from '../renderer/PolarAndRadarSeriesRender/RadarRangeColumnSeriesRenderer';
+import RadarStackingAreaSeriesRenderer from '../renderer/PolarAndRadarSeriesRender/RadarStackingAreaSeriesRenderer';
+import RadarStackingColumnSeriesRenderer from '../renderer/PolarAndRadarSeriesRender/RadarStackingColumnSeriesRenderer';
 import MultiColoredAreaSeriesRenderer from '../renderer/SeriesRenderer/MultiColoredAreaSeriesRenderer';
 import WaterfallSeriesRenderer from '../renderer/SeriesRenderer/WaterfallSeriesRenderer';
 import HistogramSeriesRenderer from '../renderer/SeriesRenderer/HistogramSeriesRenderer';
+import StackingLineSeriesRenderer from '../renderer/SeriesRenderer/StackingLineSeriesRenderer';
+import BoxAndWhiskerSeriesRenderer from '../renderer/SeriesRenderer/BoxAndWhiskerSeriesRenderer';
+import StackingStepAreaSeriesRenderer from '../renderer/SeriesRenderer/StackingStepAreaSeriesRenderer';
 
 /**
  * Represents a two-dimensional size with width and height.
@@ -72,23 +94,6 @@ export interface ColorValue {
      * Blue component value (0-255)
      */
     b: number
-}
-
-/**
- * Represents the result of a data management operation.
- *
- * @private
- */
-export interface DataManagerResult {
-    /**
-     * The resulting data object
-     */
-    result: Object;
-
-    /**
-     * The count of items in the result
-     */
-    count: number;
 }
 
 /**
@@ -169,6 +174,16 @@ export interface Chart {
      * Collection of rectangles for data labels
      */
     dataLabelCollections: Rect[];
+
+    /**
+     * Collection of rectangles for series labels
+     */
+    seriesLabelCollections: Rect[];
+
+    /**
+     * Collection of rectangles for markers
+     */
+    markerCollections: Rect[];
 
     /**
      * Internationalization object for the chart
@@ -254,6 +269,11 @@ export interface Chart {
      * Settings for zoom functionality
      */
     zoomSettings: ChartZoomSettingsProps;
+
+    /**
+     * Settings for legend functionality
+     */
+    legendSettings: BaseLegend;
 
     /**
      * Threshold value for various operations
@@ -393,9 +413,6 @@ export interface Chart {
     /** All axes used in the chart. */
     axisCollection: AxisModel[];
 
-    /** Enables or disables animation. */
-    enableAnimation?: boolean;
-
     /** Rectangle for the chart area. */
     chartAreaRect: Rect;
 
@@ -491,6 +508,11 @@ export interface Chart {
     trackballRef: React.RefObject<SVGGElement | null>
 
     /**
+     * Reference to the clip rect container for panning functionality in scrollbar.
+     */
+    isScrollbarThumbDrag?: boolean;
+
+    /**
      * Module that handles tooltip creation and management.
      */
     tooltipModule: ChartTooltipProps;
@@ -537,12 +559,64 @@ export interface Chart {
     /** Stores stacked positive Y-values for each X-category. */
     positiveStackedValues: Map<string | number, number[]>;
 
+    /**
+     * The Y-coordinate of the center point used for rendering Polar and Radar charts.
+     */
+    polarCenterY: number;
+
+    /**
+     * The X-coordinate of the center point used for rendering Polar and Radar charts.
+     */
+    polarCenterX: number;
+
+    /**
+     * Specifies the chart area rendering mode.
+     *
+     * - `Cartesian`: Renders the chart using X and Y axes.
+     * - `PolarRadar`: Renders the chart using polar or radar coordinates.
+     */
+    chartAreaType: 'Cartesian' | 'PolarRadar';
+
+    /**
+     * Represents the computed radius used for rendering circular chart types,
+     * such as Polar and Radar charts.
+     */
+    radius: number;
+
     /** Index of the series currently displayed in the tooltip. */
-    toolTipSeriesIndex: number;
+    toolTipSeriesIndex?: number;
+
+    /** Index of the point currently displayed in the tooltip. Used for consistent highlight/selection when tooltip is shown. */
+    toolTipPointIndex: number;
 
     /** Axes used specifically for rendering the Pareto line in the chart. */
     paretoAxes: AxisModel[];
 
+    /**
+     * Collection of technical indicator configurations applied to the chart.
+     *
+     * Each indicator defines calculated series such as SMA, EMA, RSI, etc.
+     */
+    indicators: ChartIndicatorSettings[];
+
+    /**
+     * Collection of range color mapping configurations used to apply
+     * conditional coloring to chart series based on value ranges.
+     */
+    rangeColorModule: ChartRangeColorProps[];
+
+    /**
+     * Defines the legend rendering mode.
+     *
+     * Determines whether legend items are generated based on series,
+     * points, ranges, or gradients.
+     */
+    legendMode: LegendMode;
+
+    /**
+     * Indicates whether a gesture-based interaction is pending completion.
+     */
+    pendingGestureEnd: boolean;
 }
 
 
@@ -1085,6 +1159,11 @@ export interface AxisModel extends ChartAxisProps {
     majorTickLineElement: JSX.Element;
 
     /**
+     * The JSX element representing the line element on the axis.
+     */
+    lineElement: JSX.Element;
+
+    /**
      * The JSX element representing the minor tick lines on the axis
      */
     minorTickLineElement: JSX.Element;
@@ -1113,6 +1192,85 @@ export interface AxisModel extends ChartAxisProps {
      * Options to customize the appearance and behavior of the crosshair tooltip that appears when hovering over the chart.
      */
     crosshairTooltip?: ChartCrosshairTooltipProps;
+
+    /**
+     * Determines the space / thickness supposed to be occupied by scrollbar as axis element.
+     */
+    scrollbarThickness?: number;
+
+    /**
+     * Configures the scrollbar behavior and appearance for the associated axis.
+     *
+     * @default null;
+     */
+    scrollbarSettings?: ChartScrollbarProps;
+
+    /**
+     * Specifies the collection of multi-level label configurations for the axis.
+     */
+    multiLevelLabels?: ChartMultiLevelLabelsProps[];
+
+    /**
+     * Specifies the total height occupied by the axis multi-level labels.
+     *
+     * @default 0
+     */
+    multiLevelLabelHeight?: number;
+}
+
+/**
+ * Defines the configuration options for a single level of multi-level axis labels.
+ *
+ * @private
+ */
+export interface ChartMultiLevelLabelsProps {
+    /**
+     * Defines the position of the multi-level labels.
+     */
+    alignment?: HorizontalAlignment;
+
+    /**
+     * Defines the text overflow behavior for multi-level labels.
+     */
+    overflow?: TextOverflow;
+
+    /**
+     * Options to customize the text styling for multi-level labels.
+     * Includes font family, size, weight, color, and opacity settings.
+     */
+    textStyle?: ChartFontProps;
+
+    /**
+     * The `border` property allows customization of the border for multi-level labels.
+     * It includes options to set the color, width, and dash pattern of the border.
+     */
+    border?: ChartBorderProps;
+
+    /**
+     * Configures multi-level categories for multi-level labels.
+     * Each category defines a range within the axis with a start and end value.
+     */
+    categories?: ChartMultiLevelLabelCategoryProps[];
+
+    /**
+     * Stores the cumulative height offset of previous multi-level label rows for the X-axis.
+     */
+    xAxisPrevHeight?: number[];
+
+    /**
+     * Stores the computed height for each multi-level label level on the X-axis.
+     */
+    xAxisMultiLabelHeight?: number[];
+
+    /**
+     * Stores the cumulative height offset of previous multi-level label rows for the Y-axis.
+     */
+    yAxisPrevHeight?: number[];
+
+    /**
+     * Stores the computed height for each multi-level label level on the Y-axis.
+     */
+    yAxisMultiLabelHeight?: number[];
 }
 
 /**
@@ -1666,6 +1824,49 @@ export interface TextOption {
 }
 
 /**
+ * Describes the geometric hit-test region for a single Polar Column point.
+ * Used exclusively for interaction logic such as tooltip and selection.
+ *
+ * @private
+ */
+export interface PolarColumnHitRegion {
+    /**
+     * The data point associated with this polar column segment.
+     */
+    point: Points;
+
+    /**
+     * Start angle of the column arc in radians (SVG coordinate system).
+     */
+    startAngle: number;
+
+    /**
+     * End angle of the column arc in radians (SVG coordinate system).
+     */
+    endAngle: number;
+
+    /**
+     * Inner radius of the column arc in pixels.
+     */
+    innerRadius: number;
+
+    /**
+     * Outer radius of the column arc in pixels.
+     */
+    outerRadius: number;
+
+    /**
+     * X-coordinate of the polar chart center in plot-area coordinates.
+     */
+    centerX: number;
+
+    /**
+     * Y-coordinate of the polar chart center in plot-area coordinates.
+     */
+    centerY: number;
+}
+
+/**
  * Represents the base configuration for Series.
  *
  * @private
@@ -1785,7 +1986,7 @@ export interface SeriesProperties extends ChartSeriesProps {
     seriesType: string;
 
     /**
-     * Defines series type of chart (e.r., 'XY', 'HighLow', 'highLowOpenClose').
+     * Defines series type of chart (e.g., 'XY', 'HighLow', 'highLowOpenClose').
      */
     seriesValueType: SeriesValueType;
 
@@ -1968,15 +2169,42 @@ export interface SeriesProperties extends ChartSeriesProps {
     histogramValues?: HistogramValues;
 
     /**
+     * Configuration for the last value label displayed for this series.
+     * The label appears on the axis edge for the last visible data point.
+     *
+     * @private
+     */
+    lastValueLabel?: ChartLastValueLabelProps;
+
+    /**
+     * Hit-test regions for Polar Column series used by tooltip and selection.
+     */
+    polarColumnHitRegions?: PolarColumnHitRegion[];
+    /**
      * Options for customizing the Pareto line series, including its appearance and behavior in the chart.
      */
     paretoOptions: ChartParetoOptionsInternalProps;
 
+    clipRectElement: Element;
+
+    indicatorIndex: number;
+
+    /**
+     * Settings for showing series names near each series in plot area.
+     *
+     * @private
+     */
+    seriesLabel?: ChartSeriesLabelProps;
+    rangeColorName: string | undefined;
+
+    isAdvancedColor: boolean;
+    rangeColorPoints: Record<string, Points[]>;
 }
 
 /**
  * Internal data structure that holds precomputed statistical values
  * required for Histogram series rendering.
+ *
  * @private
  */
 export interface HistogramValues {
@@ -2270,6 +2498,11 @@ export interface SeriesModules {
     stackingAreaSeriesModule: typeof StackingAreaSeriesRenderer;
 
     /**
+     * The module representing the stacking step area series type.
+     */
+    stackingStepAreaSeriesModule: typeof StackingStepAreaSeriesRenderer;
+
+    /**
      * The module represents the candle series type.
      */
     candleSeriesModule: typeof CandleSeriesRenderer;
@@ -2288,6 +2521,11 @@ export interface SeriesModules {
      * The module represents the range area series type.
      */
     rangeAreaSeriesModule: typeof RangeAreaSeriesRenderer;
+
+    /**
+     * The module represents the range step area series type.
+     */
+    rangeStepAreaSeriesModule: typeof RangeStepAreaSeriesRenderer;
 
     /**
      * The module represents the range column series type.
@@ -2315,9 +2553,109 @@ export interface SeriesModules {
     histogramSeriesModule: typeof HistogramSeriesRenderer;
 
     /**
+     * The module represents the polar line series type.
+     */
+    polarLineSeriesModule: typeof PolarLineSeriesRenderer;
+
+    /**
+     * The module represents the polar column series type.
+     */
+    polarColumnSeriesModule: typeof PolarColumnSeriesRenderer;
+
+    /**
+     * The module represents the polar area series type.
+     */
+    polarAreaSeriesModule: typeof PolarAreaSeriesRenderer;
+
+    /**
+     * The module represents the polar stacking column series type.
+     */
+    polarStackingColumnSeriesModule: typeof PolarStackingColumnSeriesRenderer;
+
+    /**
+     * The module represents the polar stacking area series type.
+     */
+    polarStackingAreaSeriesModule: typeof PolarStackingAreaSeriesRenderer;
+
+    /**
+     * The module represents the polar range column series type.
+     */
+    polarRangeColumnSeriesModule: typeof PolarRangeColumnSeriesRenderer;
+
+    /**
+     * The module represents the polar scatter series type.
+     */
+    polarScatterSeriesModule: typeof PolarScatterSeriesRenderer;
+
+    /**
+     * The module represents the polar spline series type.
+     */
+    polarSplineSeriesModule: typeof PolarSplineSeriesRenderer;
+
+    /**
+     * The module represents the polar spline area series type.
+     */
+    polarSplineAreaSeriesModule: typeof PolarSplineAreaSeriesRenderer;
+
+    /**
+     * The module represents the radar line series type.
+     */
+    radarLineSeriesModule: typeof RadarLineSeriesRenderer;
+
+    /**
+     * The module represents the radar column series type.
+     */
+    radarColumnSeriesModule: typeof RadarColumnSeriesRenderer;
+
+    /**
+     * The module represents the radar area series type.
+     */
+    radarAreaSeriesModule: typeof RadarAreaSeriesRenderer;
+
+    /**
+     * The module represents the radar stacking column series type.
+     */
+    radarStackingColumnSeriesModule: typeof RadarStackingColumnSeriesRenderer;
+
+    /**
+     * The module represents the radar stacking area series type.
+     */
+    radarStackingAreaSeriesModule: typeof RadarStackingAreaSeriesRenderer;
+
+    /**
+     * The module represents the radar range column series type.
+     */
+    radarRangeColumnSeriesModule: typeof RadarRangeColumnSeriesRenderer;
+
+    /**
+     * The module represents the radar scatter series type.
+     */
+    radarScatterSeriesModule: typeof RadarScatterSeriesRenderer;
+
+    /**
+     * The module represents the radar spline series type.
+     */
+    radarSplineSeriesModule: typeof RadarSplineSeriesRenderer;
+
+    /**
+     * The module represents the radar spline area series type.
+     */
+    radarSplineAreaSeriesModule: typeof RadarSplineAreaSeriesRenderer;
+
+    /**
      * The module represents the pareto series type.
      */
     paretoSeriesModule: typeof ParetoSeriesRenderer;
+
+    /**
+     * The module represents the stackingLine series type.
+     */
+    stackingLineSeriesModule: typeof StackingLineSeriesRenderer;
+
+    /**
+     * The module represents the box and whisker series type.
+     */
+    boxAndWhiskerSeriesModule: typeof BoxAndWhiskerSeriesRenderer;
 }
 
 /**
@@ -2378,150 +2716,49 @@ export interface RenderOptions {
      * Opacity that follows the border of candle bodies.
      */
     strokeOpacity?: number | undefined;
-}
 
-
-
-/**
- * Interface representing the configuration for a clipping rectangle in the chart.
- *
- * @private
- */
-export interface ClipRectModel {
     /**
-     * Specifies the stroke width of the clipping rectangle's border.
+     * Zero-based point index in the parent series.
+     * Used when a single point produces multiple SVG paths
+     * (for example, BoxAndWhisker box/whisker/median/mean paths).
      *
      * @default undefined
      */
-    strokeWidth?: string | number | undefined;
+    pointIndex?: number;
 
     /**
-     * Specifies the stroke color of the clipping rectangle.
+     * Identifies which BoxAndWhisker visual part this render option represents.
+     * Used only for BoxAndWhisker multi-path rendering.
      *
      * @default undefined
      */
-    stroke?: string | undefined;
+    boxPart?: BoxAndWhiskerPart;
 
     /**
-     * Defines the unique identifier for the clipping rectangle element.
+     * Optional ARIA role applied to the rendered SVG path element.
+     *
+     * @default undefined
      */
-    id: string;
+    ariaLabel?: string;
+
 
     /**
-     * Specifies the fill color of the clipping rectangle.
+     * Optional accessible label applied to the rendered SVG path element.
+     * Used for statistical series such as BoxAndWhisker to describe
+     * the semantic meaning of each rendered path.
+     *
+     * @default undefined
      */
-    fill: string;
+    role?: string;
 
     /**
-     * Defines the border settings for the clipping rectangle, including width and color.
+     * Flag indicating this render option is a BoxAndWhisker point wrapper element.
+     * Wrapper elements are not rendered as visible paths but serve as keyboard focus anchors
+     * for the complete per-point collection of paths (box, whiskers, median, mean).
+     *
+     * @default undefined
      */
-    border: {
-        /**
-         * Width of the rectangle border.
-         */
-        width: number;
-        /**
-         * Color of the rectangle border.
-         */
-        color: string;
-    };
-
-    /**
-     * Specifies the opacity of the clipping rectangle.
-     */
-    opacity: number;
-
-    /**
-     * Defines the rectangular region's position and dimensions.
-     */
-    rect: {
-        /**
-         * X-coordinate of the rectangle.
-         */
-        x: number;
-        /**
-         * Y-coordinate of the rectangle.
-         */
-        y: number;
-        /**
-         * Width of the rectangle.
-         */
-        width: number | undefined;
-        /**
-         * Height of the rectangle.
-         */
-        height: number | undefined;
-    };
-
-    /**
-     * Specifies the width of the clipping rectangle.
-     */
-    width: number;
-
-    /**
-     * Specifies the height of the clipping rectangle.
-     */
-    height: number;
-}
-
-/**
- * Interface representing the properties of a series SVG element in the chart.
- *
- * @private
- */
-export interface SeriesElementModel {
-    /**
-     * Specifies the unique identifier of the SVG element.
-     */
-    id: string;
-
-    /**
-     * Defines the transform attribute used to apply translation, rotation, or scaling to the SVG element.
-     */
-    transform: string;
-
-    /**
-     * Specifies the clipping path applied to the SVG element to restrict the rendering region.
-     */
-    clipPath: string;
-
-    /**
-     * Defines the CSS style string applied to the SVG element.
-     */
-    style: string;
-
-    /**
-     * Specifies the ARIA role attribute, indicating the purpose of the SVG element.
-     */
-    role: string;
-
-    /**
-     * Sets the tab index for the element to manage keyboard navigation order.
-     */
-    tabindex: string;
-
-    /**
-     * Defines the ARIA label attribute, providing a textual description for screen readers.
-     */
-    'aria-label': string;
-}
-
-/**
- * Represents a location where a tooltip should be positioned in the chart.
- * May contain null values when position is being calculated or reset.
- *
- * @private
- */
-export interface TooltipLocation {
-    /**
-     * The x-coordinate of the location.
-     */
-    x: number | null;
-
-    /**
-     * The y-coordinate of the location.
-     */
-    y: number | null;
+    isBoxAndWhiskerPointWrapper?: boolean;
 }
 
 /**
@@ -2541,131 +2778,6 @@ export interface LabelLocation {
      */
     y: number;
 }
-
-
-/**
- * Defines the configuration options for rendering chart data labels as SVG elements.
- * Controls styling, positioning, and formatting of the textual representations of data values.
- *
- * @private
- */
-export interface dataLabelRenderOptions {
-    /**
-     * Unique identifier for the data label SVG element.
-     */
-    id: string;
-
-    /**
-     * The x-coordinate position of the data label.
-     */
-    x: number;
-
-    /**
-     * The y-coordinate position of the data label.
-     */
-    y: number;
-
-    /**
-     * The background fill color of the data label.
-     */
-    fill: string;
-
-    /**
-     * The font size of the data label text (e.g., '12px', '0.8em').
-     */
-    'font-size': string;
-
-    /**
-     * The font style of the data label text (e.g., 'normal', 'italic').
-     */
-    'font-style': string;
-
-    /**
-     * The font family used for the data label text (e.g., 'Arial', 'Verdana').
-     */
-    'font-family': string;
-
-    /**
-     * The font weight of the data label text (e.g., 'normal', 'bold').
-     */
-    'font-weight': string;
-
-    /**
-     * The text anchor alignment for the data label (e.g., 'start', 'middle', 'end').
-     */
-    'text-anchor': string;
-
-    /**
-     * Optional rotation angle for the data label in degrees.
-     */
-    labelRotation?: number;
-
-    /**
-     * Optional SVG transform string to apply additional transformations to the data label.
-     */
-    transform?: string;
-
-    /**
-     * Optional opacity level for the data label, from 0 (transparent) to 1 (opaque).
-     */
-    opacity?: number;
-
-    /**
-     * Optional dominant baseline alignment for the text (e.g., 'auto', 'middle', 'hanging').
-     */
-    'dominant-baseline'?: string;
-
-    /**
-     * The width of the stroke for the data label's background shape or border.
-     */
-    strokeWidth: number;
-
-    /**
-     * The color of the stroke for the data label's background shape or border.
-     */
-    stroke: string;
-
-    /**
-     * The dash pattern for the data label's background shape or border (e.g., '3,3' for dashed lines).
-     */
-    dashArray: string;
-
-    /**
-     * The path data attribute defining the shape of the data label's background container.
-     */
-    d: string;
-}
-
-
-/**
- * Represents the result of a text element rendering operation, containing both
- * the path rendering options and positioning information.
- * Used for managing text elements with background shapes or containers in charts.
- *
- * @private
- */
-export interface TextElementResult {
-    /**
-     * The rendering options for the background shape or container of the text element.
-     */
-    renderOptions: RenderOptions;
-
-    /**
-     * The actual text content to be displayed.
-     */
-    text: string;
-
-    /**
-     * The x-coordinate transformation or offset to be applied to the text element.
-     */
-    transX: number;
-
-    /**
-     * The y-coordinate transformation or offset to be applied to the text element.
-     */
-    transY: number;
-}
-
 
 /**
  * Interface representing the style settings for text elements in the chart.
@@ -2698,6 +2810,11 @@ export interface TextStyleModel {
      * The weight of the font (e.g., 'normal', 'bold', 'lighter', or numeric values).
      */
     fontWeight: string;
+
+    /**
+     * Sets the opacity level of the text. A value of 1 means fully opaque, while 0 means fully transparent.
+     */
+    opacity?: number;
 }
 
 /**
@@ -2706,7 +2823,7 @@ export interface TextStyleModel {
  *
  * @private
  */
-export interface dataLabelOptions {
+export interface DataLabelOptions {
     /**
      * The x-coordinate of the label.
      */
@@ -2749,7 +2866,7 @@ export interface dataLabelOptions {
  *
  * @private
  */
-export interface markerOptions {
+export interface MarkerShapeOptions {
     /**
      * The x-coordinate (center) of the marker.
      */
@@ -2994,7 +3111,7 @@ export interface ScatterSeriesType {
 }
 
 /**
- * Represents the type definition and conatines the parameters required for step line series module.
+ * Represents the type definition and contains the parameters required for step line series module.
  *
  * @private
  */
@@ -3200,7 +3317,7 @@ export interface Points {
     /** Specifies the x-value of the point. */
     x: Object;
     /** Specifies the y-value of the point. */
-    y: Object;
+    y: Object | number[];
     /** Indicates whether the point is visible. */
     visible: boolean;
     /** Specifies the text associated with the point. */
@@ -3259,6 +3376,20 @@ export interface Points {
     horizontalError?: number | string;
     /** Specifies the error value of the point. */
     error?: number | string;
+
+    /**
+     * Box & Whisker derived values (filled by the Box & Whisker renderer)
+     */
+    lowerQuartile?: number;   // Q1
+    upperQuartile?: number;   // Q3
+    median?: number;          // 50th percentile
+    average?: number;         // mean used for the "showMean" cross
+    outliers?: number[];      // values outside 1.5 * IQR
+    /** Specifies the volume value of the point. */
+    volume?: Object;
+    /** Specifies the color mapping column for the point. */
+    colorValue?: number;
+
 }
 
 /**
@@ -3431,7 +3562,7 @@ export interface StackingAreaSeriesAnimateState {
  *
  * @private
  */
-export interface StackingAreaSeriesRendererType {
+export interface StackingSeriesRendererType {
     /**
      * Calculates and returns animation properties for stacking area series paths.
      */
@@ -3776,6 +3907,19 @@ export interface ChartProviderChildProps {
      * Updates the annotation configuration.
      */
     setChartAnnotation: (annotation: ChartAnnotationProps[]) => void;
+
+    /**
+     * Technical indicator settings used to compute and render indicator series.
+     */
+    chartIndicators: ChartIndicatorProps[];
+
+    /**
+     * Updates the chart indicator configuration.
+     */
+    setChartIndicator: (indicator: ChartIndicatorProps[]) => void;
+
+    chartRangeColor: ChartRangeColorProps[];
+    setChartRangeColor: (rangeColor: ChartRangeColorProps[]) => void;
 }
 
 /**
@@ -3876,7 +4020,7 @@ export interface DataLabelContentProps {
  * calculated points, visual properties, and metadata.
  *
  * @interface ChartTrendlineModel
- * @extends {ChartTrendlineProps}
+ * @extends ChartTrendlineProps
  *
  * @private
  */
@@ -4022,4 +4166,82 @@ export interface ProcessedParetoOptions {
      * Marker configuration applied to the Pareto (cumulative) line.
      */
     marker?: ChartMarkerProps;
+}
+
+
+/**
+ * Identifies which visual part of a BoxAndWhisker point a RenderOptions object represents.
+ *
+ * @private
+ */
+export type BoxAndWhiskerPart = 'box' | 'whisker' | 'median' | 'mean' | 'wrapper';
+
+/**
+ * Internal model for technical indicators including runtime/calculated properties.
+ *
+ * @private
+ */
+export interface ChartIndicatorSettings extends ChartIndicatorProps {
+    /** Calculated data points for the indicator*/
+    points?: Points[];
+    clipRectElement: Element;
+    /** Reference to the target (render) series or series collection */
+    targetSeries?: SeriesProperties | SeriesProperties[];
+    /** Reference to the source series providing input data */
+    sourceSeries?: SeriesProperties;
+    /** Root SVG/DOM element for indicator rendering */
+    indicatorElement?: Element;
+    /** Id used for defs/gradient linking */
+    gradientId?: string;
+    /**
+     * The position of this series in the chart's series collection.
+     */
+    index: number;
+    /**
+     * Array containing all x-coordinate values in the series.
+     */
+    xData?: number[];
+
+    /**
+     * Array containing all y-coordinate values in the series.
+     * Allows for direct access to y-values for calculations and rendering.
+     */
+    yData?: number[];
+}
+
+/**
+ * Provides event data for rendering axis multi-level labels.
+ *
+ * @private
+ */
+export interface AxisMultiLabelRenderEventArgs {
+    /**
+     * Specifies the axis to which the multi-level label belongs.
+     */
+    axis: AxisModel;
+
+    /**
+     * Specifies the text content of the multi-level label.
+     */
+    text: string;
+
+    /**
+     * Specifies the font style applied to the multi-level label text.
+     */
+    textStyle: TextStyleModel;
+
+    /**
+     * Specifies the horizontal alignment of the multi-level label text.
+     */
+    alignment: HorizontalAlignment;
+
+    /**
+     * Specifies whether the rendering of the multi-level label should be cancelled.
+     */
+    cancel: boolean;
+
+    /**
+     * Specifies the name of the multi-level label render event.
+     */
+    name: string;
 }

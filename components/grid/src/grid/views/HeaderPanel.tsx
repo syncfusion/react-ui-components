@@ -1,7 +1,9 @@
-import { forwardRef, ForwardRefExoticComponent, RefAttributes, useImperativeHandle, useRef, useMemo, memo, CSSProperties, RefObject, JSX, useState, useLayoutEffect } from 'react';
+import { forwardRef, ForwardRefExoticComponent, RefAttributes, useImperativeHandle, useRef, useMemo, memo, CSSProperties, RefObject, JSX, useState, useLayoutEffect, useCallback } from 'react';
 import { HeaderTableBase } from './index';
-import { HeaderPanelRef, HeaderTableRef, IHeaderPanelBase } from '../types';
+import { ColumnProps, HeaderPanelRef, HeaderTableRef, IHeaderPanelBase } from '../types';
 import { useGridComputedProvider, useGridMutableProvider } from '../contexts';
+import { HelperEvent, isNullOrUndefined, SanitizeHtmlHelper, useDraggable, DragEvent } from '@syncfusion/react-base';
+import { Chip, IChip } from '@syncfusion/react-buttons';
 
 // CSS class constants following enterprise naming convention
 const CSS_HEADER_TABLE: string = 'sf-grid-table';
@@ -35,8 +37,8 @@ const HeaderPanelBase: ForwardRefExoticComponent<Partial<IHeaderPanelBase> & Ref
     memo(forwardRef<HeaderPanelRef, Partial<IHeaderPanelBase>>(
         (props: Partial<IHeaderPanelBase>, ref: RefObject<HeaderPanelRef>) => {
             const { panelAttributes, scrollContentAttributes } = props;
-            const { filterSettings, gridLines } = useGridComputedProvider();
-            const { offsetX, totalVirtualColumnWidth, virtualSettings } = useGridMutableProvider();
+            const { filterSettings, gridLines, groupSettings, enableHtmlSanitizer, getColumnByUid } = useGridComputedProvider();
+            const { offsetX, totalVirtualColumnWidth, virtualSettings, groupModule } = useGridMutableProvider();
 
             // Refs for DOM elements and child components
             const headerPanelRef: RefObject<HTMLDivElement> = useRef<HTMLDivElement>(null);
@@ -81,6 +83,65 @@ const HeaderPanelBase: ForwardRefExoticComponent<Partial<IHeaderPanelBase> & Ref
                 setColumnClientWidth(headerTableRef.current?.columnClientWidth);
             }, [offsetX, headerTableRef.current?.columnClientWidth]);
 
+            const [showClone, setShowClone] = useState(false);
+            const cloneHelperRef: RefObject<HTMLElement> = useRef<HTMLElement | null>(null);
+            const [mappingUid, setMappingUid] = useState('');
+            const [dragGroupHeaderColumn, setDragGroupHeaderColumn] = useState<ColumnProps | null>(null);
+            const [dragcloneText, setDragcloneText] = useState('');
+            const helper: (args: HelperEvent) => HTMLElement | null = useCallback((args: HelperEvent): HTMLElement | null => {
+                const target: HTMLElement | null = ((args.sender.target as HTMLElement).closest('.sf-grid-header-cell') as HTMLElement | null)?.closest('.sf-cell');
+                if (!groupSettings?.enabled || isNullOrUndefined(target) || (!isNullOrUndefined(target)
+                    && target.getElementsByClassName('.sf-checkselectall')?.length > 0)) {
+                    return null;
+                }
+                const headercelldiv: HTMLElement | null = target.querySelector('.sf-grid-header-cell');
+                if (!headercelldiv) {
+                    return null;
+                }
+
+                const mappingUidValue: string | null = headercelldiv.getAttribute('data-mappinguid');
+                if (!mappingUidValue) {
+                    return null;
+                }
+                setMappingUid(mappingUidValue);
+                setDragGroupHeaderColumn(getColumnByUid?.(mappingUidValue));
+                const cloneInnerText: string | undefined = (headercelldiv.querySelector('.sf-grid-header-text') as HTMLElement | null)?.innerText;
+                if (!cloneInnerText) {
+                    return cloneHelperRef.current;
+                }
+                setDragcloneText(enableHtmlSanitizer ? SanitizeHtmlHelper.sanitize(cloneInnerText) : cloneInnerText);
+                setShowClone(true);
+                return cloneHelperRef.current;
+            }, [groupSettings?.enabled, enableHtmlSanitizer, getColumnByUid]);
+
+            const drag: (args: DragEvent) => void = useCallback((args: DragEvent): void => {
+                const cloneHelper: HTMLElement | null = cloneHelperRef.current;
+                const groupDropArea: HTMLElement | null = groupModule?.groupDropAreaRef?.current || null;
+
+                if (!cloneHelper || dragGroupHeaderColumn?.allowGroup === false) {
+                    return;
+                }
+
+                if (!args?.target?.closest('.sf-group-drop-area')) {
+                    groupDropArea?.classList.remove('sf-group-drag-clone-hover');
+                    cloneHelper.classList.add('sf-cursor-not-allowed');
+                } else {
+                    groupDropArea?.classList.add('sf-group-drag-clone-hover');
+                    cloneHelper.classList.remove('sf-cursor-not-allowed');
+                }
+            }, [dragGroupHeaderColumn, groupModule]);
+
+            const handleDragStop: (args?: DragEvent) => void = useCallback((args?: DragEvent): void => {
+                setShowClone(false);
+                const target: HTMLElement | null = args?.target?.closest('.sf-group-drop-area');
+                const column: ColumnProps = dragGroupHeaderColumn;
+                if (isNullOrUndefined(column) || column.allowGroup === false || isNullOrUndefined(target)) {
+                    return;
+                }
+                groupModule?.groupDropAreaRef?.current?.classList.remove('sf-group-drag-clone-hover');
+                groupModule?.groupColumn?.([column.field]);
+            }, [dragGroupHeaderColumn, groupModule?.groupColumn]);
+
             /**
              * Memoized header table component to prevent unnecessary re-renders
              */
@@ -92,6 +153,43 @@ const HeaderPanelBase: ForwardRefExoticComponent<Partial<IHeaderPanelBase> & Ref
                     style={DEFAULT_TABLE_STYLE}
                 />
             ), [headerTableFilter]);
+
+            const isGroupDropAreaEnabled: boolean = groupSettings?.enabled && groupSettings.showDropArea;
+
+            // Initial drag load
+            useDraggable(headerPanelRef, {
+                dragTarget: isGroupDropAreaEnabled ? '.sf-grid-header-cell' : undefined,
+                distance: isGroupDropAreaEnabled ? 5 : undefined,
+                helper: isGroupDropAreaEnabled ? helper : undefined,
+                clone: isGroupDropAreaEnabled ? true : undefined,
+                onDrag: isGroupDropAreaEnabled ? drag : undefined,
+                onDragStop: isGroupDropAreaEnabled ? handleDragStop : undefined,
+                isReplaceDragEle: isGroupDropAreaEnabled ? true : undefined
+            });
+
+            /**
+             * Memoized header table component to prevent unnecessary re-renders
+             */
+            const dragClone: JSX.Element = useMemo(() => {
+                if (!groupSettings?.enabled || !groupSettings?.showDropArea || !dragcloneText) {
+                    return null;
+                }
+                const column: ColumnProps = getColumnByUid?.(mappingUid);
+                if (isNullOrUndefined(column)) {
+                    return null;
+                }
+                return (
+                    <Chip
+                        ref={(chipRef: IChip) => {
+                            cloneHelperRef.current = chipRef?.element;
+                        }}
+                        className={'sf-groupable-header-clone' + (column?.allowGroup === false ?
+                            ' sf-cursor-not-allowed' : '')}
+                        data-mappinguid={mappingUid}
+                    >
+                        {dragcloneText}
+                    </Chip>
+                ); }, [mappingUid, dragcloneText]);
 
             return (
                 <div
@@ -114,6 +212,7 @@ const HeaderPanelBase: ForwardRefExoticComponent<Partial<IHeaderPanelBase> & Ref
                             </>
                         )}
                     </div>
+                    {groupSettings?.enabled && groupSettings.showDropArea && showClone && dragClone}
                 </div>
             );
         }

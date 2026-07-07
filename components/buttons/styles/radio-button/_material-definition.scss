@@ -3,6 +3,7 @@
 $radio-btn-border: 2px solid !default;
 $radio-btn-border-radius: $radius-full !default;
 $radio-btn-font-size: $font-size-sm !default;
+$radio-btn-font-weight: $font-weight-normal !default;
 $radio-btn-opacity: $opacity0 !default;
 $radio-btn-small-font-size: $font-size-xs !default;
 $radio-btn-large-font-size: $font-size-base !default;
@@ -31,8 +32,11 @@ $radio-btn-background-color: $transparent !default;
 $radio-btn-border-color: rgba($content-text-color-alt1) !default;
 $radio-btn-checked-border-color: rgba($primary) !default;
 $radio-btn-checked-color: rgba($primary) !default;
+$radio-btn-outer-checked-bg-color: $transparent !default;
+$radio-btn-outer-checked-color: rgba($primary) !default;
 $radio-btn-checked-background-color: $transparent !default;
 $radio-btn-checked-ripple-bgcolor: rgba($primary, .08) !default;
+$radio-btn-disabled-opacity: 1 !default;
 $radio-btn-disabled-border-color: rgba($content-text-color, .38) !default;
 $radio-btn-disabled-background-color: transparent !default;
 $radio-btn-disabled-color: $content-text-color-disabled !default;
@@ -45,42 +49,69 @@ $radio-btn-small-ripple-Width: $spacing-16 !default;
 $radio-btn-small-bottom-padding-top: $spacing-40 !default;
 $radio-btn-bottom-padding-left: $spacing-0 !default;
 $radio-btn-medium-bottom-padding-top: $spacing-48 !default;
-$radio-secondary-color: rgb($content-text-color-alt1, 1) !default;
+$radio-secondary-color-outer: $content-bg-color !default;
+$radio-secondary-color-inner: rgb($content-text-color-alt1, 1) !default;
 $radio-secondary-hover-color: rgb($content-text-color-alt1, 0.1) !default;
-$radio-success-color: rgb($success, 1) !default;
+$radio-success-color-outer: $content-bg-color !default;
+$radio-success-color-inner: rgb($success, 1) !default;
 $radio-success-hover-color: rgb($success, .08) !default;
-$radio-info-color: rgb($info, 1) !default;
+$radio-info-color-outer: $content-bg-color !default;
+$radio-info-color-inner: rgb($info, 1) !default;
 $radio-info-hover-color: rgb($info, .08) !default;
-$radio-warning-color: rgb($warning, 1) !default;
+$radio-warning-color-outer: $content-bg-color !default;
+$radio-warning-color-inner: rgb($warning, 1) !default;
 $radio-warning-hover-color: rgb($warning, .08) !default;
-$radio-danger-color: rgb($error, 1)  !default;
+$radio-danger-color-outer: $transparent !default;
+$radio-danger-color-inner: rgb($error, 1) !default;
 $radio-danger-hover-color: rgb($error, .08) !default;
 $radio-keyboard-focus-box-shadow: $shadow-focus-ring1 !default;
+$radio-pressed-box-shadow: none !default;
+$radio-pressed-border-color: rgba($content-text-color-alt1) !default;
 
 $radio-variants: (
   secondary: (
-    bg: $radio-secondary-color,
+    bg-outer: $radio-secondary-color-outer,
+    bg-inner: $radio-secondary-color-inner,
     hover: $radio-secondary-hover-color,
-    border: $radio-secondary-color
+    border-outer: $radio-secondary-color-inner,
+    border-inner: $radio-secondary-color-inner,
+    focus-box-shadow: $shadow-focus-ring1,
+    pressed-box-shadow: none
   ),
   success: (
-    bg: $radio-success-color,
+    bg-outer: $radio-success-color-outer,
+    bg-inner: $radio-success-color-inner,
     hover: $radio-success-hover-color,
-    border: $radio-success-color
+    border-outer: $radio-success-color-inner,
+    border-inner: $radio-success-color-inner,
+    focus-box-shadow: $shadow-focus-ring1,
+    pressed-box-shadow: none
   ),
   warning: (
-    bg: $radio-warning-color,
+    bg-outer: $radio-warning-color-outer,
+    bg-inner: $radio-warning-color-inner,
     hover: $radio-warning-hover-color,
-    border: $radio-warning-color
+    border-outer: $radio-warning-color-inner,
+    border-inner: $radio-warning-color-inner,
+    focus-box-shadow: $shadow-focus-ring1,
+    pressed-box-shadow: none
   ),
   info: (
-    bg: $radio-info-color,
+    bg-outer: $radio-info-color-outer,
+    bg-inner: $radio-info-color-inner,
     hover: $radio-info-hover-color,
-    border: $radio-info-color
+    border-outer: $radio-info-color-inner,
+    border-inner: $radio-info-color-inner,
+    focus-box-shadow: $shadow-focus-ring1,
+    pressed-box-shadow: none
   ),
   error: (
-    bg: $radio-danger-color,
+    bg-outer: $radio-danger-color-outer,
+    bg-inner: $radio-danger-color-inner,
     hover: $radio-danger-hover-color,
-    border: $radio-danger-color
+    border-outer: $radio-danger-color-inner,
+    border-inner: $radio-danger-color-inner,
+    focus-box-shadow: $shadow-focus-ring1,
+    pressed-box-shadow: none
   )
 );

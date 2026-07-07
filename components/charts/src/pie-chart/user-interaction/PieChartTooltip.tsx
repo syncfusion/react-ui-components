@@ -6,8 +6,8 @@ import { PieChartTooltipProps } from '../base/interfaces';
 /**
  * PieChartTooltip component for configuring and setting the tooltip behavior in the pie chart.
  *
- * @param {PieChartTooltipProps} props - Props used to customize the chart tooltip.
- * @returns {null} This component does not render any visible output.
+ * @param {PieChartTooltipProps} props - Defines tooltip options such as enable, showMarker, fill, location, headerText, format, border, textStyle, animation, and related settings.
+ * @returns {null} It is used only for passing tooltip configuration into the chart through React context.
  */
 export const PieChartTooltip: React.FC<PieChartTooltipProps> = (props: PieChartTooltipProps) => {
     const context: ChartProviderChildProps = useContext(ChartContext);
@@ -17,7 +17,7 @@ export const PieChartTooltip: React.FC<PieChartTooltipProps> = (props: PieChartT
      * whenever relevant props change.
      */
     useEffect(() => {
-        void(context && context.setChartTooltip && context.setChartTooltip({
+        void (context && context.setChartTooltip && context.setChartTooltip({
             ...defaultChartConfigs.ChartTooltip,
             ...props
         }));

@@ -9,10 +9,8 @@ import { PieChartCenterLabelProps, PieChartCenterLabelTextProps, PieChartLabelPr
  * It merges the incoming props with defaults so each label inherits the default text/textStyle
  * from defaultChartConfigs.CenterLabel.label[0], then pushes the merged config to the provider.
  *
- * Note: This component renders nothing; it only updates context state for consumers.
- *
  * @param {PieChartCenterLabelProps} props - Center-label configuration to merge with defaults.
- * @returns {JSX.Element | null} Returns null as nothing is rendered to the DOM.
+ * @returns {null} - It is used only to pass the center label configuration into the pie chart through React context.
  */
 export const PieChartCenterLabel: React.FC<PieChartCenterLabelProps> = (props: PieChartCenterLabelProps) => {
     const context: ChartProviderChildProps = useContext(ChartContext);

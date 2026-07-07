@@ -6,33 +6,36 @@ import { SearchAPI } from '../types/search.interfaces';
 import { ActionType, ScrollMode, VirtualSettings } from '../types';
 
 /**
- * Custom hook to manage Search configuration
+ * Manages search configuration and execution for the Grid component.
+ * Handles search value updates, numeric validation, and pagination integration with virtual scrolling support.
+ * Provides search API with settings state management and search execution method.
  *
  * @private
- * @param {RefObject<GridRef>} gridRef - Reference to the grid component
- * @param {SearchSettings} searchSetting - Reference to the search settings
- * @param {Function} setGridAction - Function to update grid actions
- * @param {Function} setCurrentPage - State Dispatch Function to update grid currentPage
- * @param {Function} virtualSettings - virtualization settings
- * @param {Function} scrollMode - scroll mode setting
- * @returns {SearchAPI} An object containing various sort-related state and API
+ * @param {RefObject<GridRef>} gridRef - Reference to the grid component instance for accessing search configuration and triggering events
+ * @param {SearchSettings} searchSetting - Search configuration including enabled state, fields, value, operator, and case sensitivity
+ * @param {Function} setGridAction - Callback function to dispatch search action events of type SearchEvent for state management
+ * @param {Function} setCurrentPage - State setter function to update pagination when search is applied with virtual scrolling
+ * @param {VirtualSettings} virtualSettings - Virtual scrolling configuration containing row virtualization and cache settings
+ * @param {ScrollMode} scrollMode - Current scroll mode determining virtualization behavior
+ * @returns {SearchAPI} Object containing search method, searchSettings state, and setSearchSetting updater function
  */
 export const useSearch: (gridRef?: RefObject<GridRef>, searchSetting?: SearchSettings,
-    setGridAction?: (action: Object) => void, setCurrentPage?: Dispatch<SetStateAction<number>>, virtualSettings?: VirtualSettings,
+    setGridAction?: (action: SearchEvent) => void, setCurrentPage?: Dispatch<SetStateAction<number>>, virtualSettings?: VirtualSettings,
     scrollMode?: ScrollMode) => SearchAPI = (gridRef?: RefObject<GridRef>, searchSetting?: SearchSettings,
-                                             setGridAction?: (action: Object) => void,
+                                             setGridAction?: (action: SearchEvent) => void,
                                              setCurrentPage?: Dispatch<SetStateAction<number>>, virtualSettings?: VirtualSettings,
                                              scrollMode?: ScrollMode) => {
     const [searchSettings, setSearchSetting] = useState<SearchSettings>(searchSetting);
 
     /**
-     * update searchSettings properties searchModule
+     * Updates search settings state when searchSetting prop changes.
+     * Resets pagination when search is updated with virtual scrolling enabled.
      */
     useEffect(() => {
         setSearchSetting(searchSetting);
-        if (gridRef.current?.contentScrollRef && scrollMode === ScrollMode.Virtual && virtualSettings.enableRow &&
-            virtualSettings.enableCache) {
-            setCurrentPage(1);
+        if (gridRef?.current?.contentScrollRef && scrollMode === ScrollMode.Virtual && virtualSettings?.enableRow &&
+            virtualSettings?.enableCache) {
+            setCurrentPage?.(1);
         }
     }, [searchSetting]);
 
@@ -60,12 +63,14 @@ export const useSearch: (gridRef?: RefObject<GridRef>, searchSetting?: SearchSet
     }, []);
 
     /**
-     * Searches Grid records by given key.
+     * Executes search operation on grid records based on the provided search string.
+     * Validates search input, triggers search events, updates search state, and resets pagination for virtual scrolling.
+     * Checks for unsaved changes before executing search to prevent data loss.
      *
-     * @param  {string} searchString - Defines the key.
+     * @param {string} searchString - Search query string to filter grid records across configured fields
      * @returns {void}
      */
-    const search: (searchString: string) => void = async(searchString: string): Promise<void> => {
+    const search: (searchString: string) => Promise<void> = async (searchString: string): Promise<void> => {
         searchString = isNullOrUndefined(searchString) ? '' : searchString;
         let searchValue: string | number;
         if (gridRef.current?.searchSettings?.enabled === false) { return; }
@@ -94,11 +99,11 @@ export const useSearch: (gridRef?: RefObject<GridRef>, searchSetting?: SearchSet
             setSearchSetting((prevSettings: SearchSettings) => {
                 return { ...prevSettings, key: searchValue as string };
             });
-            args.type = 'actionComplete';
-            setGridAction(args);
-            if (gridRef.current?.contentScrollRef && scrollMode === ScrollMode.Virtual && virtualSettings.enableRow &&
-                virtualSettings.enableCache) {
-                setCurrentPage(1);
+            args.type = ActionType.Searching;
+            setGridAction?.(args);
+            if (gridRef?.current?.contentScrollRef && scrollMode === ScrollMode.Virtual && virtualSettings?.enableRow &&
+                virtualSettings?.enableCache) {
+                setCurrentPage?.(1);
             }
         }
     };

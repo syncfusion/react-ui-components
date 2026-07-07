@@ -13,6 +13,9 @@ import { MoreIndicator } from './more-indicator';
 import { PositioningService } from '../services/PositioningService';
 import ResizeHandlers from './resizeHandlers';
 import { useEventRendering } from '../hooks/useEventRendering';
+import { ResourceLevel } from '../services/ResourceGroupingService';
+import { useResourceGroupingContext } from '../context/resource-grouping-context';
+import { isNullOrUndefined } from '@syncfusion/react-base';
 
 export const TimeSlotEvent: FC = memo(() => {
 
@@ -28,6 +31,7 @@ export const TimeSlotEvent: FC = memo(() => {
 
     const { dayWrappers } = useTimeSlotEvent();
     const { renderDates } = useSchedulerRenderDatesContext();
+    const { leafResources } = useResourceGroupingContext();
     const { getAllEventsForDate, getHiddenEventCount } = useMonthEvents(renderDates, maxEventsPerRow);
     const { handleMoreClick } = useMoreIndicator(getAllEventsForDate);
 
@@ -71,8 +75,11 @@ export const TimeSlotEvent: FC = memo(() => {
                     ? nonBlockEvents.slice(0, maxEventsPerRow)
                     : nonBlockEvents;
                 const date: Date = new Date(dayWrapper.dateTimestamp);
+                const resourceLeaf: ResourceLevel = !isNullOrUndefined(dayWrapper.groupIndex) && leafResources
+                    ? leafResources[dayWrapper.groupIndex]
+                    : undefined;
                 const dateKey: string = DateService.generateDateKey(date);
-                const hiddenCount: number = isTimeScaleDisabled ? getHiddenEventCount(dateKey) : 0;
+                const hiddenCount: number = isTimeScaleDisabled ? getHiddenEventCount(dateKey, resourceLeaf) : 0;
 
                 // Filter to only first segments in render range
                 const firstSegments: ProcessedEventsData[] = visibleNonBlock.filter(
@@ -84,7 +91,12 @@ export const TimeSlotEvent: FC = memo(() => {
                 const eventsToRender: ProcessedEventsData[] = isTimeScaleDisabled ? firstSegments : [...blockEvents, ...firstSegments];
 
                 return (
-                    <div className={CSS_CLASSES.DAY_WRAPPER} key={dayWrapper.key} data-date={dayWrapper.dateTimestamp}>
+                    <div
+                        className={CSS_CLASSES.DAY_WRAPPER}
+                        key={dayWrapper.key}
+                        data-date={dayWrapper.dateTimestamp}
+                        data-group-index={dayWrapper.groupIndex}
+                    >
                         {eventsToRender.map((eventInfo: ProcessedEventsData) => {
                             const { isOverflowTop, isOverflowBottom } =
                                 PositioningService.getOverflowDirection(eventInfo, renderDates, startHourTuple, endHourTuple);
@@ -94,6 +106,7 @@ export const TimeSlotEvent: FC = memo(() => {
                                 'data-id': String(eventInfo.event.id),
                                 'data-guid': eventInfo.event.guid,
                                 'aria-label': EventService.getAriaLabel(eventInfo.event),
+                                'data-group-index': dayWrapper.groupIndex,
                                 tabIndex: 0,
                                 onClick: (e: MouseEvent<HTMLDivElement>) => handleClick(e, eventInfo.event, !!eventInfo.event.isBlock),
                                 onDoubleClick: (e: MouseEvent<HTMLDivElement>) =>
@@ -145,6 +158,7 @@ export const TimeSlotEvent: FC = memo(() => {
                                 count={hiddenCount}
                                 onMoreClick={handleMoreClick}
                                 topPx={dayWrapper.moreIndicatorTopPx}
+                                resource={resourceLeaf}
                             />
                         )}
                     </div>

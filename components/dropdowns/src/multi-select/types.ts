@@ -94,7 +94,7 @@ export interface MultiSelectCommonProps {
     mode?: DisplayMode;
 
     /**
-     *Specifies the character that separates tags in delimiter mode.
+     * Specifies the character that separates tags in delimiter mode.
      *
      * @default ','
      */
@@ -173,6 +173,21 @@ export interface MultiSelectCommonProps {
     showSelectAll?: boolean;
 
     /**
+     * Specifies whether selected items are grouped at the top of the dropdown list
+     * when checkbox selection is enabled.
+     *
+     * @default false
+     */
+    enableSelectionOrder?: boolean;
+
+    /**
+     * Specifies whether group headers display a checkbox allowing users to select or unselect all items within that group.
+     *
+     * @default false
+     */
+    enableGroupedCheckBox?: boolean;
+
+    /**
      * Specifies the event fired when all items are selected or deselected using `SelectAll` option.
      *
      * @event onSelectAll
@@ -216,12 +231,12 @@ export interface MultiSelectProps extends DropDownProps, DropDownFilterIconProps
     /** Specifies whether users can commit custom text values (not in the suggestion list) by pressing Enter.
      * When enabled, free-form input is accepted as a valid selection.
      *
-     *@default false
+     * @default false
      */
     customValue?: boolean;
 
     /**
-     *Specifies a custom template for rendering the selected value in the input element, allowing for customized appearance of the selection.
+     * Specifies a custom template for rendering the selected value in the input element, allowing for customized appearance of the selection.
      *
      * @default -
      */
@@ -242,14 +257,3 @@ export interface MultiSelectProps extends DropDownProps, DropDownFilterIconProps
     onCustomValueSelect?: (value: string) => void;
 }
 
-/**
- * Imperative API for MultiSelect component
- */
-export interface IMultiSelect extends MultiSelectProps {
-    /**
-     * Reference to the input element
-     *
-     * @private
-     */
-    element?: HTMLInputElement | null;
-}

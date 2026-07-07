@@ -1,7 +1,8 @@
-import { forwardRef, HTMLAttributes, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { forwardRef, ForwardRefExoticComponent, HTMLAttributes, ReactNode, Ref, RefAttributes, RefObject, useCallback, useEffect,
+    useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, memo, FC, type MouseEvent, type KeyboardEvent
+} from 'react';
 import { ChipBaseProps, Chip, ChipDeleteEvent, IChip, ChipColor } from '../chip/chip';
-import { isNullOrUndefined, preRender, useProviderContext } from '@syncfusion/react-base';
-import * as React from 'react';
+import { isNullOrUndefined, preRender, useProviderContext, Size } from '@syncfusion/react-base';
 
 /**
  * Selection types for ChipList
@@ -54,6 +55,13 @@ export interface ChipListProps {
     removable?: boolean;
 
     /**
+     * Specifies the size of the chiplist. Options include 'Small', 'Medium' and 'Large'.
+     *
+     * @default Size.Medium
+     */
+    size?: Size;
+
+    /**
      * Triggers when the chip item is removed.
      *
      * @event onDelete
@@ -86,7 +94,7 @@ export interface ChipItemProps extends ChipBaseProps {
      *
      * @default -
      */
-    htmlAttributes?: React.HTMLAttributes<HTMLDivElement>;
+    htmlAttributes?: HTMLAttributes<HTMLDivElement>;
 
     /**
      * Specifies the children to be rendered for the chip item.
@@ -94,7 +102,7 @@ export interface ChipItemProps extends ChipBaseProps {
      *
      * @default -
      */
-    children?: React.ReactNode;
+    children?: ReactNode;
 }
 
 /**
@@ -109,7 +117,7 @@ export interface ChipListSelectEvent {
     /**
      * Specifies the event that triggered the select action.
      */
-    event: React.MouseEvent | React.KeyboardEvent;
+    event: MouseEvent | KeyboardEvent;
 }
 
 /**
@@ -124,7 +132,7 @@ export interface ChipListDeleteEvent {
     /**
      * Specifies the event that triggered the delete action.
      */
-    event: React.MouseEvent | React.KeyboardEvent;
+    event: MouseEvent | KeyboardEvent;
 }
 
 /**
@@ -159,13 +167,13 @@ type ChipListComponentProps = ChipListProps & Omit<HTMLAttributes<HTMLDivElement
  * <ChipList chips={['Apple', 'Banana', 'Cherry']} selection='Multiple' removable={true} />
  * ```
  */
-export const ChipList: React.ForwardRefExoticComponent<ChipListComponentProps & React.RefAttributes<IChipList>> =
-forwardRef<IChipList, ChipListProps>((props: ChipListComponentProps, ref: React.Ref<IChipList>) => {
-    const chipListRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
+export const ChipList: ForwardRefExoticComponent<ChipListComponentProps & RefAttributes<IChipList>> =
+forwardRef<IChipList, ChipListProps>((props: ChipListComponentProps, ref: Ref<IChipList>) => {
+    const chipListRef: RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
     const [chipData, setChipData] = useState<string[] | ChipItemProps[]>([]);
     const [selectedIndexes, setSelectedIndexes] = useState<number[]>([]);
     const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
-    const prevSelectedChipsRef: React.RefObject<number[]> = useRef<number[]>([]);
+    const prevSelectedChipsRef: RefObject<number[]> = useRef<number[]>([]);
     const { dir } = useProviderContext();
 
     const {
@@ -175,6 +183,7 @@ forwardRef<IChipList, ChipListProps>((props: ChipListComponentProps, ref: React.
         selectedChips = [],
         selection = 'None',
         removable = false,
+        size = Size.Medium,
         onClick,
         onDelete,
         onSelect,
@@ -240,7 +249,8 @@ forwardRef<IChipList, ChipListProps>((props: ChipListComponentProps, ref: React.
         disabled,
         selectedChips,
         selection,
-        removable
+        removable,
+        size
     };
 
     refInstance.getSelectedChips = (): string[] | ChipItemProps[] => {
@@ -273,10 +283,10 @@ forwardRef<IChipList, ChipListProps>((props: ChipListComponentProps, ref: React.
         setFocusedIndex(null);
     }, []);
 
-    const handleClick: (e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>, index: number) => void =
-    useCallback((e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>, index: number) => {
+    const handleClick: (e: MouseEvent<HTMLDivElement> | KeyboardEvent<HTMLDivElement>, index: number) => void =
+    useCallback((e: MouseEvent<HTMLDivElement> | KeyboardEvent<HTMLDivElement>, index: number) => {
         if (onClick) {
-            onClick(e as React.MouseEvent<HTMLDivElement>);
+            onClick(e as MouseEvent<HTMLDivElement>);
         }
         if (selection !== 'None') {
             setFocusedIndex(null);
@@ -289,7 +299,7 @@ forwardRef<IChipList, ChipListProps>((props: ChipListComponentProps, ref: React.
                     : [...selectedIndexes, index];
             }
             if (onSelect) {
-                onSelect({event: e as React.MouseEvent<HTMLDivElement>, selectedChipIndexes: newSelectedIndexes});
+                onSelect({event: e as MouseEvent<HTMLDivElement>, selectedChipIndexes: newSelectedIndexes});
             }
             else {
                 setSelectedIndexes(newSelectedIndexes);
@@ -297,13 +307,13 @@ forwardRef<IChipList, ChipListProps>((props: ChipListComponentProps, ref: React.
         }
     }, [onClick, selection, selectedIndexes, onSelect, refInstance]);
 
-    const handleDelete: (e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>, index: number) => void =
-    useCallback((e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>, index: number) => {
+    const handleDelete: (e: MouseEvent<HTMLDivElement> | KeyboardEvent<HTMLDivElement>, index: number) => void =
+    useCallback((e: MouseEvent<HTMLDivElement> | KeyboardEvent<HTMLDivElement>, index: number) => {
         e.stopPropagation();
         if (onDelete) {
             const updatedChips: string[] | ChipItemProps[] =
             chipData.filter((_: string | ChipItemProps, i: number) => i !== index) as string[] | ChipItemProps[];
-            onDelete({event: e as React.MouseEvent<HTMLDivElement>, chips: updatedChips});
+            onDelete({event: e as MouseEvent<HTMLDivElement>, chips: updatedChips});
         } else {
             setChipData((prevChipData: string[] | ChipItemProps[]) =>
                 prevChipData.filter((_: string | ChipItemProps, i: number) =>
@@ -319,8 +329,8 @@ forwardRef<IChipList, ChipListProps>((props: ChipListComponentProps, ref: React.
         }
     }, [onDelete, chipData]);
 
-    const handleKeyDown: (e: React.KeyboardEvent<HTMLDivElement>, index: number, chip: ChipItemProps) => void =
-    useCallback((e: React.KeyboardEvent<HTMLDivElement>, index: number, chip: ChipItemProps) => {
+    const handleKeyDown: (e: KeyboardEvent<HTMLDivElement>, index: number, chip: ChipItemProps) => void =
+    useCallback((e: KeyboardEvent<HTMLDivElement>, index: number, chip: ChipItemProps) => {
         switch (e.key) {
         case 'Enter':
         case ' ':
@@ -337,21 +347,21 @@ forwardRef<IChipList, ChipListProps>((props: ChipListComponentProps, ref: React.
         }
     }, [handleClick, handleDelete, removable]);
 
-    const memoizedOnClick: (index: number) => (e: React.MouseEvent<HTMLDivElement>) => void  = useCallback((index: number) => {
-        return (e: React.MouseEvent<HTMLDivElement>) => handleClick(e, index);
+    const memoizedOnClick: (index: number) => (e: MouseEvent<HTMLDivElement>) => void  = useCallback((index: number) => {
+        return (e: MouseEvent<HTMLDivElement>) => handleClick(e, index);
     }, [handleClick, selectedIndexes]);
 
     const MemoizedOnDelete: (index: number) => (args: ChipDeleteEvent) => void = useCallback((index: number) => {
-        return (args: ChipDeleteEvent) => removable && handleDelete(args.event as React.MouseEvent<HTMLDivElement>, index);
+        return (args: ChipDeleteEvent) => removable && handleDelete(args.event as MouseEvent<HTMLDivElement>, index);
     }, [removable, handleDelete]);
 
     const MemoizedOnFocus: (index: number) => () => void = useCallback((index: number) => {
         return () => handleFocus(index);
     }, [handleFocus]);
 
-    const MemoizedOnKeyDown: (index: number, chip: ChipItemProps) => (e: React.KeyboardEvent<HTMLDivElement>) =>
+    const MemoizedOnKeyDown: (index: number, chip: ChipItemProps) => (e: KeyboardEvent<HTMLDivElement>) =>
     void  = useCallback((index: number, chip: ChipItemProps) => {
-        return (e: React.KeyboardEvent<HTMLDivElement>) => handleKeyDown(e, index, chip);
+        return (e: KeyboardEvent<HTMLDivElement>) => handleKeyDown(e, index, chip);
     }, [handleKeyDown]);
 
     const memoizedChipData: string[] | ChipItemProps[] = useMemo(() => chipData, [chipData]);
@@ -360,85 +370,28 @@ forwardRef<IChipList, ChipListProps>((props: ChipListComponentProps, ref: React.
 
     const memoizedFocusedIndex: number | null = useMemo(() => focusedIndex, [focusedIndex]);
 
-    const renderChip: (chip: string | ChipItemProps , index: number, props: ChipListProps, selectedIndexes: number[],
-        focusedIndex: number | null, memoizedOnClick: (index: number) => (e: React.MouseEvent<HTMLDivElement>) => void,
-        MemoizedOnDelete: (index: number) => (args: ChipDeleteEvent) => void, MemoizedOnFocus: (index: number) => () => void,
-        handleBlur: () => void, MemoizedOnKeyDown: (index: number, chip: ChipItemProps) => (e: React.KeyboardEvent<HTMLDivElement>) => void
-    ) => React.ReactNode = (
-        chip: string | ChipItemProps,
-        index: number,
-        props: ChipListComponentProps,
-        selectedIndexes: number[],
-        focusedIndex: number | null,
-        memoizedOnClick: (index: number) => (e: React.MouseEvent<HTMLDivElement>) => void,
-        MemoizedOnDelete: (index: number) => (args: ChipDeleteEvent) => void,
-        MemoizedOnFocus: (index: number) => () => void,
-        handleBlur: () => void,
-        MemoizedOnKeyDown: (index: number, chip: ChipItemProps) => (e: React.KeyboardEvent<HTMLDivElement>) => void
-    ) => {
-        const chipProps: ChipItemProps = typeof chip === 'object' ? chip : { text: chip.toString() };
-        const { children, className, removable, htmlAttributes, color, ...restChipProps } = chipProps;
-        const isSelected: boolean = selectedIndexes.includes(index);
-        const isFocused: boolean = focusedIndex === index;
-        const isEnabled: boolean = chipProps.disabled !== true && props.disabled !== true;
-        const chipClassNames: string = [
-            'sf-chip',
-            selection === 'Multiple' ? 'sf-selectable' : '',
-            className ? className : props.className,
-            isEnabled ? '' : `sf-disabled sf-chip-${chipProps.color ? 'variant' : 'invariant'}-disabled`,
-            isSelected ? 'sf-active' : '',
-            isFocused ? 'sf-focused' : '',
-            chipProps.avatar ? 'sf-chip-avatar-wrap' :
-                chipProps.leadingIcon ? 'sf-chip-icon-wrap' : '',
-            chipProps.variant === 'Outlined' ? 'sf-outline' : '',
-            chipProps.color ? `sf-${color?.toLowerCase()}` : '',
-            chipProps.avatar || chipProps.leadingIcon || chipProps.leadingIconUrl || selection === 'Multiple' ? 'sf-chip-has-icon' : ''
-        ].filter(Boolean).join(' ');
-        const { onClick, ...otherHtmlAttributes }: React.HTMLAttributes<HTMLDivElement> = htmlAttributes || {};
-        return (
-            <MemoizedChip
+    const renderContent: ReactNode = useMemo(() =>
+        memoizedChipData.map((chip: string | ChipItemProps, index: number) => (
+            <ChipListItem
                 key={index}
-                {...restChipProps}
-                chipColor={color}
-                removable={props.removable ? !isNullOrUndefined(removable) ? removable : true : false}
-                className={chipClassNames}
-                children={children}
-                onClick={memoizedOnClick(index)}
-                onDelete={MemoizedOnDelete(index)}
-                onFocus={MemoizedOnFocus(index)}
-                onBlur={handleBlur}
-                tabIndex={isEnabled ? 0 : -1}
-                role='option'
-                onKeyDown={MemoizedOnKeyDown(index, chipProps)}
-                aria-selected={isSelected ? 'true' : 'false'}
-                aria-disabled={!isEnabled ? 'true' : 'false'}
-                aria-label={chipProps.text}
+                chip={chip}
                 index={index}
-                disabled={!isEnabled}
-                isFocused={isFocused}
-                isSelected={isSelected}
-                {...otherHtmlAttributes}/>
-        );
-    };
+                listProps={props}
+                selection={selection}
+                selectedIndexes={memoizedSelectedIndexes}
+                focusedIndex={memoizedFocusedIndex}
+                onChipClick={memoizedOnClick}
+                onChipDelete={MemoizedOnDelete}
+                onChipFocus={MemoizedOnFocus}
+                onChipBlur={handleBlur}
+                onChipKeyDown={MemoizedOnKeyDown}
+                size={size}
+            />
+        )), [memoizedChipData, props, selection, memoizedSelectedIndexes, memoizedFocusedIndex,
+        memoizedOnClick, MemoizedOnDelete, MemoizedOnFocus, handleBlur, MemoizedOnKeyDown, size]
+    );
 
-    const renderContent: React.ReactNode = useMemo(() =>
-        memoizedChipData.map((chip: string | ChipItemProps, index: number) =>
-            renderChip(
-                chip,
-                index,
-                props,
-                memoizedSelectedIndexes,
-                memoizedFocusedIndex,
-                memoizedOnClick,
-                MemoizedOnDelete,
-                MemoizedOnFocus,
-                handleBlur,
-                MemoizedOnKeyDown
-            )
-        ), [memoizedChipData, props, memoizedSelectedIndexes, memoizedFocusedIndex,
-        memoizedOnClick, MemoizedOnDelete, MemoizedOnFocus, handleBlur, MemoizedOnKeyDown]);
-
-    const classes: string = React.useMemo(() => {
+    const classes: string = useMemo(() => {
         return [
             'sf-control',
             'sf-chip-list',
@@ -464,7 +417,86 @@ forwardRef<IChipList, ChipListProps>((props: ChipListComponentProps, ref: React.
     );
 });
 
-export default React.memo(ChipList);
+export default memo(ChipList);
+
+interface ChipListItemProps {
+    chip: string | ChipItemProps;
+    index: number;
+    listProps: ChipListComponentProps;
+    selection: SelectionType;
+    selectedIndexes: number[];
+    focusedIndex: number | null;
+    onChipClick: (index: number) => (e: MouseEvent<HTMLDivElement>) => void;
+    onChipDelete: (index: number) => (args: ChipDeleteEvent) => void;
+    onChipFocus: (index: number) => () => void;
+    onChipBlur: () => void;
+    onChipKeyDown: (index: number, chip: ChipItemProps) => (e: KeyboardEvent<HTMLDivElement>) => void;
+    size: Size;
+}
+
+const ChipListItem: FC<ChipListItemProps> = memo(({
+    chip,
+    index,
+    listProps,
+    selection,
+    selectedIndexes,
+    focusedIndex,
+    onChipClick,
+    onChipDelete,
+    onChipFocus,
+    onChipBlur,
+    onChipKeyDown,
+    size
+}: ChipListItemProps) => {
+    const chipProps: ChipItemProps = typeof chip === 'object' ? chip : { text: chip.toString() };
+    const { children, className, removable, htmlAttributes, color, size: chipSize, ...restChipProps } = chipProps;
+    const isSelected: boolean = selectedIndexes.includes(index);
+    const isFocused: boolean = focusedIndex === index;
+    const isEnabled: boolean = chipProps.disabled !== true && listProps.disabled !== true;
+
+    const chipClassNames: string = [
+        'sf-chip',
+        selection === 'Multiple' ? 'sf-selectable' : '',
+        className ? className : listProps.className,
+        isEnabled ? '' : `sf-disabled sf-chip-${chipProps.color ? 'variant' : 'invariant'}-disabled`,
+        isSelected ? 'sf-active' : '',
+        isFocused ? 'sf-focused' : '',
+        chipProps.avatar ? 'sf-chip-avatar-wrap' :
+            chipProps.leadingIcon ? 'sf-chip-icon-wrap' : '',
+        chipProps.variant === 'Outlined' ? 'sf-outline' : '',
+        chipProps.color ? `sf-${color?.toLowerCase()}` : '',
+        chipProps.avatar || chipProps.leadingIcon || chipProps.leadingIconUrl || selection === 'Multiple' ? 'sf-chip-has-icon' : '',
+        size ? `sf-chip-${size.toLowerCase()}` : ''
+    ].filter(Boolean).join(' ');
+
+    const { onClick, ...otherHtmlAttributes }: HTMLAttributes<HTMLDivElement> = htmlAttributes || {};
+
+    return (
+        <MemoizedChip
+            {...restChipProps}
+            chipColor={color}
+            removable={listProps.removable ? !isNullOrUndefined(removable) ? removable : true : false}
+            className={chipClassNames}
+            children={children}
+            size={size}
+            onClick={onChipClick(index)}
+            onDelete={onChipDelete(index)}
+            onFocus={onChipFocus(index)}
+            onBlur={onChipBlur}
+            tabIndex={isEnabled ? 0 : -1}
+            role='option'
+            onKeyDown={onChipKeyDown(index, chipProps)}
+            aria-selected={isSelected ? 'true' : 'false'}
+            aria-disabled={!isEnabled ? 'true' : 'false'}
+            aria-label={chipProps.text}
+            index={index}
+            disabled={!isEnabled}
+            isFocused={isFocused}
+            isSelected={isSelected}
+            {...otherHtmlAttributes}
+        />
+    );
+});
 
 interface MemoizedChipProps extends Omit<IChip, 'color'>, HTMLAttributes<HTMLDivElement> {
     index: number;
@@ -472,10 +504,11 @@ interface MemoizedChipProps extends Omit<IChip, 'color'>, HTMLAttributes<HTMLDiv
     isFocused: boolean;
     className?: string;
     chipColor?: ChipColor;
+    size?: Size;
 }
 
-const MemoizedChip: React.FC<MemoizedChipProps> = React.memo(
-    ({ isSelected, isFocused, chipColor, ...props }: MemoizedChipProps) => <Chip {...props} color={chipColor} />,
+const MemoizedChip: FC<MemoizedChipProps> = memo(
+    ({ isSelected, isFocused, chipColor, size, ...props }: MemoizedChipProps) => <Chip {...props} color={chipColor} size={size} />,
     (prevProps: MemoizedChipProps, nextProps: MemoizedChipProps) => {
         return (prevProps.text === nextProps.text &&
             prevProps.value === nextProps.value &&
@@ -489,6 +522,7 @@ const MemoizedChip: React.FC<MemoizedChipProps> = React.memo(
             prevProps.onDelete?.toString === nextProps.onDelete?.toString &&
             prevProps.variant === nextProps.variant &&
             prevProps.chipColor === nextProps.chipColor &&
+            prevProps.size === nextProps.size &&
             prevProps.avatar === nextProps.avatar &&
             prevProps.leadingIcon === nextProps.leadingIcon &&
             prevProps.trailingIcon === nextProps.trailingIcon);

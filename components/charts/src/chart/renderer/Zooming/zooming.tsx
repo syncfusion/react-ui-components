@@ -1,11 +1,12 @@
-import { JSX, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { JSX, useEffect, useLayoutEffect, useState } from 'react';
 import { ChartLocationProps, ChartZoomSettingsProps, ZoomEndEvent, ZoomStartEvent } from '../../base/interfaces';
 import { getRectLocation, minMax, withInBounds } from '../../utils/helper';
-import { registerChartEventHandler, registerZoomRectSetter, useRegisterAxisRender, useRegisterSeriesRender, useRegisterZoomToolkitVisibility } from '../../hooks/useClipRect';
+import { registerChartEventHandler, registerZoomRectSetter, unregisterZoomRectSetter, useRegisterAxisRender, useRegisterSeriesRender, useRegisterZoomToolkitVisibility } from '../../hooks/useClipRect';
 import { useLayout } from '../../layout/LayoutContext';
 import { Browser, extend } from '@syncfusion/react-base';
 import { AxisModel, BaseZoom, Chart, AxisDataProps, ITouches, IZoomAxisRange, Rect, VisibleRangeProps } from '../../chart-area/chart-interfaces';
 import { ZoomMode } from '../../base/enum';
+import { triggerScrollbarRender } from './scrollbarUtils';
 
 let zoom: BaseZoom;
 
@@ -83,7 +84,7 @@ interface ZoomRedrawOptions {
  */
 export const ZoomContent: React.FC<ChartZoomSettingsProps> = (props: ChartZoomSettingsProps) => {
     const { layoutRef, phase, setLayoutValue, reportMeasured } = useLayout();
-    const initialZoomRect: null = useMemo(() => null, []);
+    const initialZoomRect: null = null;
     const [zoomRect, setZoomRect] = useState<JSX.Element | null>(initialZoomRect);
     if (layoutRef.current?.chartZoom) {
         zoom = layoutRef.current.chartZoom as BaseZoom;
@@ -106,7 +107,7 @@ export const ZoomContent: React.FC<ChartZoomSettingsProps> = (props: ChartZoomSe
             (layoutRef.current?.chart as Chart).zoomSettings = props;
         }
     }, [props.selectionZoom, props.accessibility, props.mouseWheelZoom,
-        props.pinchZoom, props.pan,
+        props.pinchZoom, props.pan, props.enableScrollbar,
         props.mode, props.toolbar?.items]);
 
     // In ZoomContent component, replace the existing useEffect with:
@@ -152,14 +153,14 @@ export const ZoomContent: React.FC<ChartZoomSettingsProps> = (props: ChartZoomSe
                 unregisterMouseUp();
                 unregisterMouseWheel();
                 unregisterMouseLeave();
+                unregisterZoomRectSetter();
             };
         }
         return () => { /* empty cleanup function */ };
 
     }, []);
 
-    const shouldRenderZoomRect: boolean | undefined = useMemo(() => phase === 'rendering' &&
-        props.selectionZoom, [phase, props.selectionZoom]);
+    const shouldRenderZoomRect: boolean | undefined = phase === 'rendering' && props.selectionZoom;
 
     return shouldRenderZoomRect ? <>{zoomRect}</> : null;
 };
@@ -590,7 +591,7 @@ function calculateZoomAxesRange(chart: Chart): void {
  * @private
  */
 export function redrawOnZooming(chart: Chart, isRedraw: boolean = true, isMouseUp: boolean = false): void {
-    const zoomCompleteCollection: ZoomEndEvent[] = isMouseUp ? [] : zoom.zoomCompleteEvtCollection;
+    const zoomCompleteCollection: ZoomEndEvent[] = isMouseUp ? [] : (zoom.zoomCompleteEvtCollection ?? []);
 
     if (isRedraw) {
         performZoomRedraw(chart, {
@@ -677,6 +678,7 @@ export function performZoomRedraw(
 
             const triggerSeriesRender: (chartId?: string) => void = useRegisterSeriesRender();
             triggerSeriesRender(chartId);
+            triggerScrollbarRender(chartId);
 
             const setToolkitVisible: () => void = useRegisterZoomToolkitVisibility();
             setToolkitVisible();

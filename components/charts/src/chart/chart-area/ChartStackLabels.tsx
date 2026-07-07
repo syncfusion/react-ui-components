@@ -10,7 +10,7 @@ import { ChartProviderChildProps } from './chart-interfaces';
  * This is a configuration-only component and does not render any visual output.
  *
  * @param {ChartStackLabelsProps} props - Properties used to customize stack label appearance and behavior.
- * @returns {null} This component does not render any visible output.
+ * @returns {null} - It is used only to pass the stack labels configuration to the chart through the React context.
  */
 export const ChartStackLabels: React.FC<ChartStackLabelsProps> = (props: ChartStackLabelsProps) => {
     const context: ChartProviderChildProps = useContext(ChartContext);

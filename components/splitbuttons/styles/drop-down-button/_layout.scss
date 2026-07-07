@@ -8,18 +8,26 @@
       display: none;
     }
 
-    &.sf-drp-btn-sm .sf-caret svg {
-      width: $drop-down-btn-sm-icon-size;
-      height: $drop-down-btn-sm-icon-size;
+    &.sf-drp-btn-sm {
+      gap: $drop-down-btn-sm-gap;
+      .sf-caret svg {
+        width: $drop-down-btn-sm-icon-size;
+        height: $drop-down-btn-sm-icon-size;
+      }
     }
-    &.sf-drp-btn-me .sf-caret svg{
-      width: $drop-down-btn-me-icon-size;
-      height: $drop-down-btn-me-icon-size;
+    &.sf-drp-btn-me {
+      gap: $drop-down-btn-me-gap;
+      .sf-caret svg {
+        width: $drop-down-btn-me-icon-size;
+        height: $drop-down-btn-me-icon-size;
+      }
     }
-
-    &.sf-drp-btn-la .sf-caret svg {
-      width: $drop-down-btn-la-icon-size;
-      height: $drop-down-btn-la-icon-size;
+    &.sf-drp-btn-la {
+      gap: $drop-down-btn-la-gap;
+      .sf-caret svg {
+        width: $drop-down-btn-la-icon-size;
+        height: $drop-down-btn-la-icon-size;
+      }
     }
   }
 
@@ -53,24 +61,29 @@
     }
 
     // Small size dropdown
-    &.sf-drp-btn-sm ul {
-      min-width: $drop-down-btn-sm-min-width;
-      padding: $drop-down-btn-sm-ul-padding;
-      font-size: $drop-down-btn-sm-font-size;
+    &.sf-drp-btn-sm {
+      border-radius: $drop-down-btn-sm-ul-border-radius;
+      ul {
+        min-width: $drop-down-btn-sm-min-width;
+        padding: $drop-down-btn-sm-ul-padding;
+        font-size: $drop-down-btn-sm-font-size;
+        border-radius: $drop-down-btn-sm-ul-border-radius;
 
-      .sf-item {
-        line-height: $drop-down-btn-sm-li-height;
-        padding: $drop-down-btn-sm-li-padding;
+        .sf-item {
+          line-height: $drop-down-btn-sm-li-height;
+          padding: $drop-down-btn-sm-li-padding;
 
-        .sf-menu-icon {
-          margin-inline-end: $drop-down-btn-sm-icon-margin-right;
-          .sf-icon-size{
-            height: $drop-down-btn-sm-menu-icon-size;
-            width: $drop-down-btn-sm-menu-icon-size;
+          .sf-menu-icon {
+            margin-inline-end: $drop-down-btn-sm-icon-margin-right;
+            .sf-icon-size {
+              height: $drop-down-btn-sm-menu-icon-size;
+              width: $drop-down-btn-sm-menu-icon-size;
+            }
           }
         }
       }
     }
+    
 
     // Medium size dropdown
     &.sf-drp-btn-me ul {
@@ -84,7 +97,7 @@
 
         .sf-menu-icon {
           margin-inline-end: $drop-down-btn-me-icon-margin-right;
-          .sf-icon-size{
+          .sf-icon-size {
             height: $drop-down-btn-me-menu-icon-size;
             width: $drop-down-btn-me-menu-icon-size;
           }
@@ -93,20 +106,24 @@
     }
 
     // Large size dropdown
-    &.sf-drp-btn-la ul {
-      min-width: $drop-down-btn-la-min-width;
-      padding: $drop-down-btn-la-ul-padding;
-      font-size: $drop-down-btn-la-font-size;
+    &.sf-drp-btn-la {
+      border-radius: $drop-down-btn-la-ul-border-radius;
+      ul {
+        min-width: $drop-down-btn-la-min-width;
+        padding: $drop-down-btn-la-ul-padding;
+        font-size: $drop-down-btn-la-font-size;
+        border-radius: $drop-down-btn-la-ul-border-radius;
 
-      .sf-item {
-        line-height: $drop-down-btn-la-li-height;
-        padding: $drop-down-btn-la-li-padding;
+        .sf-item {
+          line-height: $drop-down-btn-la-li-height;
+          padding: $drop-down-btn-la-li-padding;
 
-        .sf-menu-icon {
-          margin-inline-end: $drop-down-btn-la-icon-margin-right;
-          .sf-icon-size{
-            height: $drop-down-btn-la-menu-icon-size;
-            width: $drop-down-btn-la-menu-icon-size;
+          .sf-menu-icon {
+            margin-inline-end: $drop-down-btn-la-icon-margin-right;
+            .sf-icon-size {
+              height: $drop-down-btn-la-menu-icon-size;
+              width: $drop-down-btn-la-menu-icon-size;
+            }
           }
         }
       }

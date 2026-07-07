@@ -157,6 +157,16 @@ export interface VirtualizationSettings {
      * @default true
      */
     enableCache?: boolean;
+
+    /**
+     * Specifies the throttle time in milliseconds for scroll events when using virtual or infinite scroll modes.
+     * Throttling scroll events can improve performance by limiting the frequency of data loading and rendering during rapid scrolling.
+     * A lower value results in more responsive updates but may increase the number of server requests and DOM updates.
+     * A higher value reduces the number of updates but may cause a less responsive scrolling experience.
+     *
+     * @default 150
+     */
+    throttleTime?: number;
 }
 
 /**
@@ -209,4 +219,14 @@ export interface VirtualSettings {
      * @default true
      */
     enableCache?: boolean;
+
+    /**
+     * Specifies the throttle time in milliseconds for scroll events when using virtual or infinite scroll modes.
+     * Throttling scroll events can improve performance by limiting the frequency of data loading and rendering during rapid scrolling.
+     * A lower value results in more responsive updates but may increase the number of server requests and DOM updates.
+     * A higher value reduces the number of updates but may cause a less responsive scrolling experience.
+     *
+     * @default 150
+     */
+    throttleTime?: number;
 }

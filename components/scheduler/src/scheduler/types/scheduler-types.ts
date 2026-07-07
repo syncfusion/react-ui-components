@@ -1,5 +1,5 @@
 import { ReactElement, ReactNode } from 'react';
-import { CrudAction, ScrollToMode,  SpannedEventPlacement, WeekRule } from './enums';
+import { CrudAction, ScrollToMode, SpannedEventPlacement, WeekRule } from './enums';
 import { DataManager, Query } from '@syncfusion/react-data';
 import { DialogProps, Position, TooltipAnimationOptions } from '@syncfusion/react-popups';
 import { OverflowMode } from '@syncfusion/react-navigations';
@@ -14,14 +14,6 @@ type SchedulerHTMLAttributes = {
 
 /** @private */
 export interface VerticalViewProps {
-
-    /**
-     * Controls whether multiple events can occupy the same time slot without visual overlap adjustments.
-     * When enabled, overlapping events display side-by-side; when disabled, the scheduler prevents scheduling conflicts.
-     *
-     * @default true
-     */
-    eventOverlap?: boolean;
 
     /**
      * Specifies the start hour displayed in the scheduler view. Times before this hour are hidden from the display.
@@ -162,6 +154,15 @@ export interface SchedulerCommonProps {
      * @default null
      */
     quickInfo?: SchedulerQuickInfoProps;
+
+    /**
+     * Accepts a custom React component to render resource header cells when grouping is enabled.
+     * Replaces the default resource name text with custom content.
+     * Can be configured at both the root scheduler level and individual view level.
+     *
+     * @default null
+     */
+    resourceHeader?: (props: SchedulerResourceHeaderProps) => ReactNode;
 }
 
 /**
@@ -201,6 +202,14 @@ export interface SchedulerProps extends SchedulerCommonProps, VerticalViewProps,
      * @default 'Week'
      */
     defaultView?: string;
+
+    /**
+     * Controls whether multiple events can occupy the same time slot without visual overlap adjustments.
+     * When enabled, overlapping events display side-by-side; when disabled, the scheduler prevents scheduling conflicts.
+     *
+     * @default true
+     */
+    eventOverlap?: boolean;
 
     /**
      * Enables or disables drag-and-drop event repositioning with optional detailed behavior configuration.
@@ -283,6 +292,22 @@ export interface SchedulerProps extends SchedulerCommonProps, VerticalViewProps,
     eventSettings?: EventSettings;
 
     /**
+     * Defines the resource collections and field mappings.
+     * Allows sharing the scheduler across multiple entities (e.g., rooms, employees).
+     *
+     * @default []
+     */
+    resources?: SchedulerResource[];
+
+    /**
+     * Configures the layout grouping of multiple resources.
+     * When provided, resources are organized in the scheduler layout based on names.
+     *
+     *  @default []
+     */
+    group?: SchedulerGroup;
+
+    /**
      * Highlights the standard business hours (default 9 AM to 6 PM) with a distinct color in the scheduler.
      * Can be customized to match your organization's actual working hours.
      *
@@ -292,7 +317,6 @@ export interface SchedulerProps extends SchedulerCommonProps, VerticalViewProps,
     /**
      * Specifies the available options for determining how the first week of the year is calculated.
      * Supported week rule components: FirstDay,FirstFourDayWeek,FirstFullWeek.
-     *
      * @default WeekRule.FirstDay
      */
     weekRule?: WeekRule;
@@ -346,9 +370,17 @@ export interface SchedulerProps extends SchedulerCommonProps, VerticalViewProps,
      * Fired before event data is loaded from the data source or remote server.
      * Useful for preprocessing or validating data before it renders in the scheduler.
      *
+     * @event onDataBind
+     */
+    onDataBind?: (event: SchedulerDataBindEvent) => void;
+
+    /**
+     * Fired before data is requested from the data source.
+     * Use to preprocess, cancel, or attach an async promise.
+     *
      * @event onDataRequest
      */
-    onDataRequest?: (event: SchedulerDataRequestEvent) => void;
+    onDataRequest?: (event: SchedulerDataRequestEvent) => void | Promise<void>;
 
     /**
      * Fired when the user changes the active date in the scheduler.
@@ -480,7 +512,7 @@ export interface SchedulerProps extends SchedulerCommonProps, VerticalViewProps,
 
     /**
      * Specifies the available view components as children to enable specific calendar views.
-     * Supported view components: DayView, WeekView, WorkWeekView, and MonthView.
+     * Supported view components: DayView, WeekView, WorkWeekView, MonthView, and AgendaView.
      *
      * @default null
      * @private
@@ -500,6 +532,26 @@ export interface SchedulerProps extends SchedulerCommonProps, VerticalViewProps,
      * When set, the scheduler automatically scrolls to the defined target after the view has finished rendering.
      */
     scrollToSettings?: SchedulerScrollToProps;
+
+    /**
+     * Assigns a specific IANA timezone used to render and interpret all scheduler dates and events.
+     * When provided, event date-times (for example, UTC timestamps or values with offsets) are displayed
+     * and treated in this timezone so that event times remain consistent across different client systems.
+     * This is recommended for schedulers bound to remote or shared data sources to avoid client-local
+     * timezone shifts affecting displayed times.
+     * Accepts standard IANA timezone identifiers (for example, 'America/New_York').
+     *
+     * @default timezoneData (uses client system timezone)
+     */
+    timezone?: string;
+
+    /**
+     * Optional list of timezones to display in the editor timezone selector.
+     * Each item includes a display text and timezone value (e.g., `[{ text: 'Eastern', value: 'America/New_York' }]`).
+     *
+     * @default timezoneData (timezone dataSource)
+     */
+    timezoneDataSource?: TimezoneFields[];
 }
 
 /**
@@ -566,10 +618,18 @@ export interface SchedulerDragEvent {
 }
 
 /** @private */
-export interface ViewSpecificProps extends VerticalViewProps, MonthViewProps {}
+export interface ViewSpecificProps extends VerticalViewProps, MonthViewProps, AgendaViewProps {}
 
 /** @private */
 export interface CommonViewProps {
+    /**
+     * Controls whether multiple events can occupy the same time slot without visual overlap adjustments.
+     * When enabled, overlapping events display side-by-side; when disabled, the scheduler prevents scheduling conflicts.
+     *
+     * @default true
+     */
+    eventOverlap?: boolean;
+
     /**
      * Multiplies the view's time range by this number (e.g., interval: 2 shows 2 weeks in Week view).
      * Useful for displaying extended periods in a single view.
@@ -681,7 +741,125 @@ export interface MonthViewProps extends SchedulerCommonProps, CommonViewProps {
 }
 
 /**
- * Configures event data binding and field mapping for the scheduler component.
+ * Configures the Agenda View for displaying events in a chronological, date-grouped list format.
+ * Agenda View is read-only and does not support drag-drop or resize interactions; it focuses on event review and navigation.
+ */
+export interface AgendaViewProps extends SchedulerCommonProps, CommonViewProps {
+    /**
+     * Number of days to display in the Agenda View.
+     * Events within this date range are grouped chronologically and displayed as a scrollable list.
+     *
+     * @default 7
+     */
+    agendaDaysCount?: number;
+
+    /**
+     * Hides dates with no scheduled events in applicable views (e.g., Agenda View).
+     * When enabled, empty dates are filtered out to show only dates with events.
+     *
+     * @default true
+     */
+    hideEmptyAgendaDays?: boolean;
+
+    /**
+     * Custom template to display when no events are scheduled in the Agenda View.
+     * Allows users to provide a function that returns a React node for customization of the empty state.
+     *
+     * @default null
+     */
+    noEventsTemplate?: () => React.ReactNode;
+}
+
+/**
+ * Defines a single resource configuration for the scheduler.
+ */
+export interface SchedulerResource {
+    /**
+     * Specifies the unique resource name.
+     */
+    name: string;
+
+    /**
+     * Specifies the field name to bind to the event object.
+     */
+    field: string;
+
+    /**
+     * Specifies the title of the resource field for the editor window.
+     */
+    title: string;
+
+    /**
+     * Specifies whether multiple resources can be selected.
+     *
+     * @default false
+     */
+    multiple?: boolean;
+
+    /**
+     * Specifies the resource dataSource.
+     *
+     * @default []
+     */
+    dataSource?: Record<string, unknown>[] | DataManager;
+
+    /**
+     * Specifies the resource ID field name.
+     */
+    idField: string;
+
+    /**
+     * Specifies the resource text field name.
+     */
+    textField: string;
+
+    /**
+     * Specifies the resource color field name.
+     *
+     * @default null
+     */
+    colorField?: string;
+
+    /**
+     * Specifies the parent group ID field name.
+     *
+     * @default null
+     */
+    groupIDField?: string;
+
+    /**
+     * Specifies the CSS class field name for the resource.
+     *
+     * @default null
+     */
+    cssClassField?: string;
+}
+
+/** Configures grouping settings for multiple resources. */
+export interface SchedulerGroup {
+    /**
+     * Specifies the resource group names in order.
+     *
+     * @default []
+     */
+    resources: string[];
+
+    /**
+     * Specifies whether dates are rendered under each resource.
+     *
+     * @default false
+     */
+    byDate?: boolean;
+
+    /**
+     * Specifies whether child resources are grouped by parent groupID.
+     *
+     * @default true
+     */
+    byGroupID?: boolean;
+}
+
+/** * Configures event data binding and field mapping for the scheduler component.
  * Supports local data arrays, remote data sources via DataManager, and custom field definitions for flexible data integration.
  * Enables customization of data source operations, event visibility controls, and advanced rendering options like event indicators.
  */
@@ -766,6 +944,23 @@ export interface EventSettings {
      * @default null
      */
     query?: Query;
+
+    /**
+     * Enables or disables the "Following Events" option in recurrence edit/delete dialogs.
+     * When enabled, users can choose to edit or delete this and all following occurrences of a recurring event.
+     * When disabled, only "Edit Event" and "Edit Series" options are shown.
+     * The following events feature allows splitting a recurring series at a specific date into two independent series.
+     *
+     * @default false
+     */
+    editFollowingEvents?: boolean;
+
+    /**
+     * Specifies the resource name used to determine which resource level's color will be applied to appointments when scheduler grouping is enabled.
+     *
+     * @default null
+     */
+    resourceColorField?: string;
 }
 
 /**
@@ -959,6 +1154,33 @@ export interface EventFields {
      * @default 'Guid'
      */
     guid?: string;
+
+    /**
+     * Maps the parent following event identifier linking occurrences to a "following events" modified series.
+     * Only set when this occurrence was created via a "Following Events" edit/delete operation.
+     * Used separately from recurrenceID to identify occurrences in the modified (following) branch.
+     *
+     * @default 'FollowingId'
+     */
+    followingId?: string | number;
+
+    /**
+     * Maps the timezone field for the event start time (e.g., 'America/New_York').
+     * Allows custom mapping of timezone metadata for event start times.
+     * Should be omitted for all-day events.
+     *
+     * @default 'StartTimezone'
+     */
+    startTimezone?: string;
+
+    /**
+     * Maps the timezone field for the event end time (e.g., 'America/New_York').
+     * Allows custom mapping of timezone metadata for event end times.
+     * Should be omitted for all-day events.
+     *
+     * @default 'EndTimezone'
+     */
+    endTimezone?: string;
 }
 
 /**
@@ -1041,6 +1263,36 @@ export interface EventModel {
     recurrenceException?: string;
 
     /**
+     * The parent event identifier linking this occurrence to a "following events" modified series.
+     * Only set when this event was created via a "Following Events" edit/delete operation.
+     * Used separately from recurrenceID to identify occurrences in the modified (following) branch.
+     * When present, the event belongs to an independent recurrence series created by splitting at a specific date.
+     */
+    followingId?: string | number;
+
+    /**
+     * The IANA timezone identifier for the event start (for example, 'America/New_York').
+     * When provided, the scheduler treats `startTime` as occurring in that timezone and
+     * converts it to the user's/local timezone for display, sorting, and duration calculations.
+     * Format: IANA TZ database name (e.g. 'Europe/London', 'America/Los_Angeles').
+     * Example: `{ startTime: new Date('2026-05-15T09:00:00'), startTimezone: 'America/New_York' }`
+     *
+     * @default undefined
+     */
+    startTimezone?: string;
+
+    /**
+     * The IANA timezone identifier for the event end (for example, 'America/New_York').
+     * When provided, the scheduler treats `endTime` as occurring in that timezone and
+     * converts it to the user's/local timezone for display, sorting, and duration calculations.
+     * Format: IANA TZ database name (e.g. 'Europe/London', 'America/Los_Angeles').
+     * Example: `{ endTime: new Date('2026-05-15T10:00:00'), endTimezone: 'America/New_York' }`
+     *
+     * @default undefined
+     */
+    endTimezone?: string;
+
+    /**
      * Supports custom properties beyond standard event fields for flexible event data modeling.
      * Allows extending event objects with domain-specific attributes and metadata.
      */
@@ -1096,6 +1348,11 @@ export interface SchedulerCellClickEvent {
      * Allows custom handling of cell clicks without triggering default actions.
      */
     cancel?: boolean;
+
+    /**
+     * Unique index identifying the resource group.
+     */
+    groupIndex?: number;
 }
 
 /**
@@ -1231,6 +1488,24 @@ export interface SchedulerWeekDayProps {
 }
 
 /**
+ * Represents a resource header cell in the scheduler's grouped header row.
+ * Used in custom resource header templates to render custom content for each resource header.
+ */
+export interface SchedulerResourceHeaderProps {
+    /**
+     * The raw resource data object from the resource's `dataSource`.
+     * Contains all fields defined in the resource configuration (e.g., name, color, id).
+     */
+    resourceData: Record<string, any>;
+
+    /**
+     * The resource configuration that this header belongs to.
+     * Provides access to field mappings such as `textField`, `idField`, and `colorField`.
+     */
+    resource: SchedulerResource;
+}
+
+/**
  * Provides granular configuration for the Scheduler event resize behavior.
  * Allows fine-tuned control over how events can be resized, including snapping intervals,
  * directional constraints, and automatic scrolling during resize operations.
@@ -1325,7 +1600,6 @@ export interface EventDragProps {
      * Configures automatic navigation to previous/next date ranges when the user holds
      * the pointer at extreme edges during dragging. Enables seamless dragging across weeks or months.
      *
-     * @private
      */
     navigation?: SchedulerNavigateProps;
 
@@ -1353,7 +1627,6 @@ export interface EventDragProps {
  * When the user holds an event at the edge of the visible time range, the scheduler
  * automatically navigates to the next or previous time period to enable extended dragging.
  *
- * @private
  */
 export interface SchedulerNavigateProps {
     /**
@@ -1448,7 +1721,7 @@ export interface SchedulerDataChangeEvent {
  * Contains raw event records and metadata before field mapping to the scheduler event model.
  * Enables developers to implement custom data processing or pagination logic.
  */
-export interface SchedulerDataRequestEvent {
+export interface SchedulerDataBindEvent {
     /**
      * The raw event records returned by the DataManager after executing the data query.
      * Each object contains source data before field mapping to the scheduler event model.
@@ -1460,6 +1733,34 @@ export interface SchedulerDataRequestEvent {
      * Enables pagination or lazy-loading implementations when working with large datasets.
      */
     count?: number;
+}
+
+/**
+ * Fired before data is requested from the data source.
+ * Provides the requested date range, optional promise, cancel flag, and result.
+ */
+export interface SchedulerDataRequestEvent {
+    /**
+     * The start date of the requested data range.
+     * Useful for server-side filtering or async data fetching.
+     */
+    startDate?: Date;
+
+    /**
+     * The end date of the requested data range.
+     * Useful for server-side filtering or async data fetching.
+     */
+    endDate?: Date;
+
+    /**
+     * Set to true to cancel the data request operation.
+     */
+    cancel?: boolean;
+
+    /**
+     * Raw records returned by the data source (before field mapping).
+     */
+    result?: Record<string, any>;
 }
 
 /**
@@ -1744,6 +2045,12 @@ export interface ViewButtonProps extends BaseToolbarButtonProps {
      * Enables custom handling of view changes.
      */
     onSelect?: (args: ButtonSelectEvent) => void;
+
+    /**
+     * Reference to the scheduler element for positioning the view switcher dropdown/popup correctly.
+     * Used as the viewport element for collision detection and positioning calculations.
+     */
+    viewPortElementRef?: React.RefObject<HTMLElement | HTMLDivElement>;
 }
 
 /**
@@ -2047,4 +2354,14 @@ export interface SchedulerScrollToProps {
      * Specifies the scrolling strategy used to determine the target scroll position.
      */
     mode?: ScrollToMode;
+}
+
+/**
+ * An interface that represents time zone and display text for scheduler.
+ */
+export interface TimezoneFields {
+    /** Assigns the timezone display text. */
+    text: string;
+    /** Assigns the [`IANA`] timezone value. */
+    value: string;
 }

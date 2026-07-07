@@ -1,14 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Query, DataManager, ReturnType } from '@syncfusion/react-data';
-import { extend } from '@syncfusion/react-base';
-import { EventModel, SchedulerDataChangeEvent, SchedulerDataRequestEvent  } from '../types/scheduler-types';
+import { extend, isNullOrUndefined, useProviderContext } from '@syncfusion/react-base';
+import { EventModel, SchedulerDataBindEvent, SchedulerDataChangeEvent, SchedulerDataRequestEvent  } from '../types/scheduler-types';
 import { DateService } from '../services/DateService';
 import { EventService } from '../services/EventService';
+import { Timezone } from '../services/Timezone';
 import { ActiveViewProps } from '../types/internal-interface';
-import { expandRecurringEvents, getRecurrenceMaxId, updateParentRecurrenceEvent } from '../utils/event-base';
+import { expandRecurringEvents, getRecurrenceMaxId, updateParentRecurrenceEvent, getRecurrenceParent } from '../utils/event-base';
+import { makeInternalRecord, makeExternalRecord } from '../utils/record-mapper';
 import { CrudAction } from '../types/enums';
 import { getRecurrenceStringFromDate } from '../../recurrence-editor';
 import { ConfirmationDialogState } from './useConfirmationDialog';
+import { useSchedulerLocalization } from '../common/locale';
+import { deleteFollowingEvents, editFollowingEvents, filterEventsByRecurrenceIdWithParent, getFollowingParent, getFollowingParentEventsAndOccurrences } from '../utils/recurrence-util';
 
 interface CrudArgs extends SchedulerDataChangeEvent {
     promise?: Promise<any>;
@@ -68,9 +72,11 @@ interface UseDataResult {
  * @private
  */
 export const useData: (props: UseDataProps) => UseDataResult = (props: UseDataProps): UseDataResult => {
-    const { activeViewProps, renderDates } = props;
+    const { activeViewProps, renderDates, confirmationDialog } = props;
     const { eventSettings, readOnly, onDataChangeStart, onDataChangeComplete, onError,
-        onDataRequest } = activeViewProps;
+        onDataBind, onDataRequest, eventOverlap, timezone } = activeViewProps;
+    const { locale } = useProviderContext();
+    const { getString } = useSchedulerLocalization(locale || 'en-US');
     const [eventsData, setEventsData] = useState<EventModel[]>();
     const [eventsProcessed, setEventsProcessed] = useState<EventModel[]>();
 
@@ -120,18 +126,56 @@ export const useData: (props: UseDataProps) => UseDataResult = (props: UseDataPr
         return null;
     };
 
+    /**
+     * Helper method to convert all EventModel objects in editParams to external records.
+     * This converts events in addedRecords, changedRecords, and deletedRecords arrays
+     * using the makeExternalRecord utility function.
+     * String or number IDs in deletedRecords are preserved as-is.
+     *
+     * @param {SaveChanges} editParams The edit parameters containing events to convert
+     * @returns {void} This function modifies the editParams object in place
+     */
+    const convertEditParamsRecords: (editParams: SaveChanges) => void =
+    (editParams: SaveChanges): void => {
+        if (editParams.addedRecords && editParams.addedRecords.length > 0) {
+            editParams.addedRecords = editParams.addedRecords.map((record: any) =>
+                typeof record === 'object'
+                    ? makeExternalRecord(record as EventModel, eventSettings.fields)
+                    : record
+            );
+        }
+        if (editParams.changedRecords && editParams.changedRecords.length > 0) {
+            editParams.changedRecords = editParams.changedRecords.map((record: any) =>
+                typeof record === 'object'
+                    ? makeExternalRecord(record as EventModel, eventSettings.fields)
+                    : record
+            );
+        }
+        if (editParams.deletedRecords && editParams.deletedRecords.length > 0) {
+            editParams.deletedRecords = editParams.deletedRecords.map((record: any) =>
+                typeof record === 'object'
+                    ? makeExternalRecord(record as EventModel, eventSettings.fields)
+                    : record
+            );
+        }
+    };
+
     const dataManagerSuccess: (e: ReturnType) => void = (e: ReturnType): void => {
-        const event: SchedulerDataRequestEvent = {
+        const event: SchedulerDataBindEvent = {
             result: e.result,
             count: e.count
         };
-        if (onDataRequest) {
-            onDataRequest(event);
+        if (onDataBind) {
+            onDataBind(event);
         }
         const originalData: Record<string, any>[] = event.result;
         const mappedEvents: EventModel[] = EventService.mapEventData(originalData, eventSettings.fields);
-        const expandedEvents: EventModel[] = expandRecurringEvents(mappedEvents, renderDates, activeViewProps.firstDayOfWeek);
-        setEventsProcessed(mappedEvents);
+        const timeZoneEvents: EventModel[] = EventService.processTimeZone(mappedEvents, timezone);
+        let expandedEvents: EventModel[] = expandRecurringEvents(timeZoneEvents, renderDates, activeViewProps.firstDayOfWeek);
+        if (eventOverlap === false && renderDates && renderDates.length > 0) {
+            expandedEvents = EventService.filterNonOverlappingEvents(expandedEvents, renderDates);
+        }
+        setEventsProcessed(timeZoneEvents);
         setEventsData(expandedEvents);
     };
 
@@ -141,26 +185,65 @@ export const useData: (props: UseDataProps) => UseDataResult = (props: UseDataPr
         }
     };
 
-    const refreshDataManager: () => void = useCallback((): void => {
+    const refreshDataManager: () => void = useCallback(async (): Promise<void> => {
         if (!renderDates || renderDates.length === 0) { return; }
-        const dmQuery: Query = generateQuery(renderDates[0], renderDates[renderDates.length - 1]);
-        const dmResult: Object[] | Promise<Response> = getData(dmQuery);
+        let startDate: Date = renderDates[0];
+        let endDate: Date = renderDates[renderDates.length - 1];
+        if (activeViewProps.timezone) {
+            startDate = Timezone.remove(startDate, activeViewProps.timezone);
+            endDate = Timezone.remove(endDate, activeViewProps.timezone);
+        }
+        const dmQuery: Query = generateQuery(startDate, endDate);
+        const dataRequestEvent: SchedulerDataRequestEvent = {
+            startDate: startDate,
+            endDate: endDate,
+            cancel: false
+        };
+
+        let dmResult: Record<string, any> | Promise<Response> | Promise<Record<string, any>>;
+
+        if (eventSettings?.dataSource instanceof DataManager) {
+            dmResult = getData(dmQuery);
+        } else {
+            if (onDataRequest) {
+                await onDataRequest(dataRequestEvent);
+                if (dataRequestEvent.cancel) {
+                    return;
+                }
+                dmResult = Promise.resolve(dataRequestEvent as Record<string, any>);
+            } else {
+                dmResult = getData(dmQuery);
+            }
+        }
+
         (dmResult as any).then(
             (e: ReturnType) => dataManagerSuccess(e)
         ).catch(
             (e: Error) => dataManagerFailure(e)
         );
-    }, [renderDates, getData, generateQuery]);
+    }, [renderDates, getData, generateQuery, onDataRequest]);
 
-    const updateEventDateTime: (eventData: Record<string, any>) => Record<string, any> =
-    (eventData: Record<string, any>): Record<string, any> => {
-        if (typeof eventData[eventSettings.fields.startTime] === 'string') {
-            eventData[eventSettings.fields.startTime] = DateService.getDateFromString(eventData[eventSettings.fields.startTime]);
+    const updateEventDateTime: (eventData: EventModel) => EventModel =
+    (eventData: EventModel): EventModel => {
+        if (typeof eventData.startTime === 'string') {
+            eventData.startTime = DateService.getDateFromString(eventData.startTime as unknown as string);
         }
-        if (typeof eventData[eventSettings.fields.endTime] === 'string') {
-            eventData[eventSettings.fields.endTime] = DateService.getDateFromString(eventData[eventSettings.fields.endTime]);
+        if (typeof eventData.endTime === 'string') {
+            eventData.endTime = DateService.getDateFromString(eventData.endTime as unknown as string);
         }
         return eventData;
+    };
+
+    const processTimezoneEvent: (eventData: EventModel | Record<string, any>) => EventModel =
+     (eventData: EventModel | Record<string, any>): EventModel => {
+         const internalEvent: EventModel = makeInternalRecord(eventData as Record<string, any>, eventSettings?.fields);
+         const updatedEvent: EventModel = updateEventDateTime(internalEvent);
+         return EventService.processTimeZone([updatedEvent as EventModel], timezone, true)[0];
+     };
+
+    const processTimezoneEventsArray: (events?: EventModel[]) => EventModel[] =
+    (events?: EventModel[]): EventModel[] => {
+        return (events || []).map((e: EventModel) => processTimezoneEvent(e));
     };
 
     const refreshData: (args: CrudArgs) => void = useCallback((args: CrudArgs): void => {
@@ -193,13 +276,13 @@ export const useData: (props: UseDataProps) => UseDataResult = (props: UseDataPr
         const editParams: SaveChanges = { addedRecords: [], changedRecords: [], deletedRecords: [] };
         let promise: Promise<EventModel>;
         if (addArgs.addedRecords instanceof Array) {
-            for (let event of addArgs.addedRecords) {
+            for (let event of addArgs.addedRecords as EventModel[]) {
                 event = updateEventDateTime(event);
-                if (event[eventSettings.fields.recurrenceRule]) {
-                    event[eventSettings.fields.id] = getRecurrenceMaxId(eventsData, eventSettings.fields) + 1;
+                const tzEvent: EventModel = processTimezoneEvent(event);
+                if (tzEvent.recurrenceRule && isNullOrUndefined(tzEvent.id)) {
+                    tzEvent.id = getRecurrenceMaxId(eventsData) + 1;
                 }
-                const eventData: Record<string, EventModel> = <Record<string, EventModel>>extend({}, event, null, true);
-                editParams.addedRecords.push(eventData);
+                editParams.addedRecords.push(makeExternalRecord(tzEvent, eventSettings.fields));
             }
             promise = dataManager.saveChanges(editParams, eventSettings.fields.id, getTable(), generateQuery()) as Promise<EventModel>;
         }
@@ -215,35 +298,61 @@ export const useData: (props: UseDataProps) => UseDataResult = (props: UseDataPr
         useCallback((deleteArgs: SchedulerDataChangeEvent, action?: CrudAction): SaveChanges => {
             const editParams: SaveChanges = { addedRecords: [], changedRecords: [], deletedRecords: [] };
             if (action === 'DeleteOccurrence' || action === 'DeleteSeries') {
-                for (const event of deleteArgs.deletedRecords) {
-                    let clonedEvent: Record<string, any> = <Record<string, any>>extend({}, event, null, true);
-                    if (clonedEvent.recurrenceID || clonedEvent[eventSettings.fields.recurrenceID]) {
+                for (const event of deleteArgs.deletedRecords as EventModel[]) {
+                    const clonedEvent: EventModel = <EventModel>extend({}, event, null, true);
+                    if (clonedEvent.recurrenceID) {
                         if (action === 'DeleteOccurrence') {
-                            if (clonedEvent.recurrenceID !== clonedEvent.id ||
-                                clonedEvent[eventSettings.fields.recurrenceID] !== clonedEvent[eventSettings.fields.id]) {
-                                editParams.deletedRecords.push(clonedEvent);
+                            if (clonedEvent.recurrenceID !== clonedEvent.id) {
+                                editParams.deletedRecords.push(processTimezoneEvent(clonedEvent));
                             } else {
-                                if (clonedEvent.startTime) {
-                                    clonedEvent.recurrenceException = getRecurrenceStringFromDate(clonedEvent.startTime);
-                                } else {
-                                    clonedEvent[eventSettings.fields.recurrenceException] =
-                                        getRecurrenceStringFromDate(clonedEvent[eventSettings.fields.startTime]);
-                                }
-                                clonedEvent = updateParentRecurrenceEvent(clonedEvent, eventSettings.fields, eventsProcessed);
-                                editParams.changedRecords.push(clonedEvent);
+                                clonedEvent.recurrenceException = getRecurrenceStringFromDate(clonedEvent.startTime);
+                                const parentUpdate: EventModel =
+                                    updateParentRecurrenceEvent(clonedEvent, eventSettings.fields, eventsProcessed);
+                                editParams.changedRecords.push(processTimezoneEvent(parentUpdate));
                             }
                         } else if (action === 'DeleteSeries') {
-                            const deleteEvents: EventModel[] = (eventsProcessed || []).filter((e: EventModel) =>
-                                (e.recurrenceID || e.id) === (clonedEvent.recurrenceID || clonedEvent[eventSettings.fields.recurrenceID]));
-                            editParams.deletedRecords.push(...deleteEvents);
+                            const filterResult: { events: EventModel[]; parentEvent?: EventModel } =
+                                filterEventsByRecurrenceIdWithParent(eventsProcessed || [], clonedEvent.recurrenceID);
+                            let parentEvent: EventModel = filterResult.parentEvent;
+                            let deleteEvents: EventModel[] = filterResult.events;
+                            const tzDeleteEvents: EventModel[] = processTimezoneEventsArray(deleteEvents);
+                            editParams.deletedRecords.push(...tzDeleteEvents);
+                            if (parentEvent?.followingId) {
+                                parentEvent = getFollowingParent(parentEvent, eventsProcessed);
+                                deleteEvents = eventsProcessed?.filter((e: EventModel) => (e.recurrenceID || e.id) === parentEvent.id);
+                                const tzDeleteEvents: EventModel[] = processTimezoneEventsArray(deleteEvents);
+                                editParams.deletedRecords.push(...tzDeleteEvents);
+                            } else {
+                                const { followingParentEvents, followingOccurrences } =
+                                    getFollowingParentEventsAndOccurrences(parentEvent, eventsProcessed);
+                                const tzFollowingParentEvents: EventModel[] = processTimezoneEventsArray(followingParentEvents);
+                                const tzFollowingOccurrences: EventModel[] = processTimezoneEventsArray(followingOccurrences);
+                                editParams.deletedRecords.push(...tzFollowingParentEvents, ...tzFollowingOccurrences);
+                            }
                         }
                     } else {
-                        editParams.deletedRecords.push(clonedEvent);
+                        editParams.deletedRecords.push(processTimezoneEvent(clonedEvent));
                     }
                 }
+            } else if (action === 'DeleteFollowingEvents') {
+                for (const event of deleteArgs.deletedRecords) {
+                    const clonedEvent: Record<string, any> = <Record<string, any>>extend({}, event, null, true);
+                    const parentEvent: EventModel = getRecurrenceParent(clonedEvent, eventsProcessed);
+                    const { updatedParent, deletedEvents } =
+                        deleteFollowingEvents(clonedEvent, eventsProcessed, parentEvent);
+                    const tzChangeEvents: EventModel = processTimezoneEvent(updatedParent);
+                    editParams.changedRecords.push(tzChangeEvents);
+                    editParams.deletedRecords.push(...EventService.processTimeZone(deletedEvents));
+                    const { followingParentEvents, followingOccurrences } =
+                        getFollowingParentEventsAndOccurrences(parentEvent, eventsProcessed);
+                    const tzFollowingParentEvents: EventModel[] = processTimezoneEventsArray(followingParentEvents);
+                    const tzFollowingOccurrences: EventModel[] = processTimezoneEventsArray(followingOccurrences);
+                    editParams.deletedRecords.push(...tzFollowingParentEvents, ...tzFollowingOccurrences);
+                }
             } else {
-                editParams.deletedRecords = editParams.deletedRecords.concat(deleteArgs.deletedRecords);
+                editParams.deletedRecords = editParams.deletedRecords.concat(EventService.processTimeZone(deleteArgs.deletedRecords));
             }
+            convertEditParamsRecords(editParams);
             return editParams;
         }, [eventSettings, eventsProcessed]);
 
@@ -266,81 +375,166 @@ export const useData: (props: UseDataProps) => UseDataResult = (props: UseDataPr
             refreshData(crudArgs);
         }, [dataManager, eventSettings, getTable, generateQuery, refreshData]);
 
-    const handleEditOccurrence: (records: Record<string, any>[], editParams: SaveChanges) => void =
-    (records: Record<string, any>[], editParams: SaveChanges): void => {
+    const handleEditOccurrence: (records: EventModel[], editParams: SaveChanges) => void =
+    (records: EventModel[], editParams: SaveChanges): void => {
         for (const event of records) {
-            let clonedEvent: Record<string, any> = <Record<string, any>>extend({}, event, null, true);
-            if (!clonedEvent[eventSettings.fields.recurrenceID]) { continue; }
-            const isOccurrence: boolean = clonedEvent[eventSettings.fields.id] !== clonedEvent[eventSettings.fields.recurrenceID];
-            if (isOccurrence && !clonedEvent[eventSettings.fields.recurrenceRule]) {
+            let clonedEvent: EventModel = <EventModel>extend({}, event, null, true);
+            if (!clonedEvent.recurrenceID) { continue; }
+            const isOccurrence: boolean = clonedEvent.id !== clonedEvent.recurrenceID;
+            if (isOccurrence && !clonedEvent.recurrenceRule) {
                 clonedEvent = updateEventDateTime(clonedEvent);
-                editParams.changedRecords.push(clonedEvent);
+                const tzClonedEvent: EventModel = processTimezoneEvent(clonedEvent);
+                editParams.changedRecords.push(tzClonedEvent);
                 continue;
             }
             clonedEvent = updateEventDateTime(clonedEvent);
             if (!isOccurrence) {
                 const parentEvent: EventModel = updateParentRecurrenceEvent(clonedEvent, eventSettings.fields, eventsProcessed);
-                editParams.changedRecords.push(parentEvent);
-                clonedEvent[eventSettings.fields.id] = getRecurrenceMaxId(eventsData, eventSettings.fields) + 1;
-                editParams.addedRecords.push(updateEventDateTime(clonedEvent));
+                const followingParent: EventModel = getFollowingParent(parentEvent, eventsProcessed);
+                if (followingParent && parentEvent.recurrenceException) {
+                    if (followingParent.recurrenceException) {
+                        const combined: string = `${followingParent.recurrenceException},${parentEvent.recurrenceException}`;
+                        followingParent.recurrenceException = Array.from(new Set(combined.split(','))).join(',');
+                    } else {
+                        followingParent.recurrenceException = parentEvent.recurrenceException;
+                    }
+                }
+                const tzClonedEvent: EventModel = processTimezoneEvent(parentEvent);
+                if (followingParent) {
+                    const tzfollowingParent: EventModel = processTimezoneEvent(followingParent);
+                    editParams.changedRecords.push(tzClonedEvent, tzfollowingParent);
+                } else {
+                    editParams.changedRecords.push(tzClonedEvent);
+                }
+                clonedEvent.id = getRecurrenceMaxId(eventsData) + 1;
+                const tzProcessedEvent: EventModel = processTimezoneEvent(clonedEvent);
+                editParams.addedRecords.push(tzProcessedEvent);
             } else {
-                editParams.changedRecords.push(clonedEvent);
+                const tzClonedEvent: EventModel = processTimezoneEvent(clonedEvent);
+                editParams.changedRecords.push(tzClonedEvent);
             }
         }
     };
 
-    const handleEditSeries: (records: Record<string, any>[], editParams: SaveChanges, action: string) => void =
-    (records: Record<string, any>[], editParams: SaveChanges, action: string): void => {
+    const handleEditSeries: (records: EventModel[], editParams: SaveChanges, action: string) => void =
+    (records: EventModel[], editParams: SaveChanges, action: string): void => {
         for (const event of records) {
-            let clonedEvent: Record<string, any> = <Record<string, any>>extend({}, event, null, true);
-            if (clonedEvent[eventSettings.fields.recurrenceID]) {
-                let parentEvent: EventModel = {};
-                let isSeriesEventChanged: boolean = false;
-                const filteredEvents: EventModel[] = (eventsProcessed || [])?.filter((e: EventModel) => {
-                    if ((e.recurrenceID && e.recurrenceID === clonedEvent[eventSettings.fields.recurrenceID] &&
-                        e.id !== clonedEvent[eventSettings.fields.recurrenceID]) || (!e.recurrenceID && e.recurrenceRule &&
-                            e.id === clonedEvent[eventSettings.fields.recurrenceID] && e.recurrenceException)) {
-                        isSeriesEventChanged = true;
-                    }
-                    if (e.id === clonedEvent[eventSettings.fields.recurrenceID]) {
-                        parentEvent = e;
-                    }
-                    return (e.recurrenceID || e.id) === clonedEvent[eventSettings.fields.recurrenceID];
-                });
-
-                clonedEvent[eventSettings.fields.id] = parentEvent.id;
-                if (!clonedEvent[eventSettings.fields.recurrenceRule] || action === 'EditCurrentSeries') {
-                    clonedEvent[eventSettings.fields.recurrenceRule] = parentEvent.recurrenceRule;
+            const clonedEvent: EventModel = <EventModel>extend({}, event, null, true);
+            if (clonedEvent.recurrenceID) {
+                const filterResult: { events: EventModel[]; parentEvent?: EventModel } =
+                    filterEventsByRecurrenceIdWithParent(eventsProcessed || [], clonedEvent.recurrenceID);
+                let parentEvent: EventModel = filterResult.parentEvent || {};
+                const filteredEvents: EventModel[] = filterResult.events;
+                let isRegularEvent: boolean = true;
+                let filterParent: { events: EventModel[]; parentEvent?: EventModel };
+                if (parentEvent?.followingId) {
+                    isRegularEvent = false;
+                    parentEvent = getFollowingParent(parentEvent, eventsProcessed);
+                    filterParent = filterEventsByRecurrenceIdWithParent(eventsProcessed || [], parentEvent.id, false);
                 }
-                delete clonedEvent[eventSettings.fields.recurrenceID];
 
-                if (isSeriesEventChanged) {
-                    if (action === 'EditSeries') {
-                        delete clonedEvent[eventSettings.fields.recurrenceException];
-                        const deleteEvents: EventModel[] = filteredEvents;
-                        editParams.deletedRecords.push(...deleteEvents);
-                        editParams.addedRecords.push(updateEventDateTime(clonedEvent));
-                    } else if (action === 'EditCurrentSeries') {
-                        editParams.changedRecords.push(updateEventDateTime(clonedEvent));
+                clonedEvent.id = parentEvent?.id ?? clonedEvent.id;
+                delete clonedEvent.recurrenceID;
+                const { followingParentEvents, followingOccurrences } =
+                    getFollowingParentEventsAndOccurrences(parentEvent, eventsProcessed);
+                const tzFollowingParentEvents: EventModel[] = processTimezoneEventsArray(followingParentEvents);
+                const tzFollowingOccurrences: EventModel[] = processTimezoneEventsArray(followingOccurrences);
+                const tzFilterParent: EventModel[] = processTimezoneEventsArray(filterParent?.events);
+                if (action === 'EditCurrentSeries') {
+                    editParams.deletedRecords.push(...tzFollowingParentEvents);
+                } else {
+                    editParams.deletedRecords.push(...tzFollowingParentEvents, ...tzFollowingOccurrences, ...tzFilterParent);
+                }
+                if (action === 'EditSeries' || !clonedEvent.recurrenceRule || (!isRegularEvent && action === 'EditCurrentSeries')) {
+                    delete clonedEvent.recurrenceException;
+                    if (isRegularEvent || (!isRegularEvent && action === 'EditSeries')) {
+                        const tzFiltered: EventModel[] = processTimezoneEventsArray(filteredEvents);
+                        editParams.deletedRecords.push(...tzFiltered);
+                    }
+                    if (isRegularEvent || clonedEvent.id !== parentEvent?.id) {
+                        editParams.addedRecords.push(processTimezoneEvent(clonedEvent));
+                    } else {
+                        clonedEvent.recurrenceException = undefined;
+                        if (action === 'EditCurrentSeries') {
+                            clonedEvent.recurrenceException = parentEvent?.recurrenceException;
+                        }
+                        editParams.changedRecords.push(processTimezoneEvent(clonedEvent));
                     }
                 } else {
-                    clonedEvent = updateEventDateTime(clonedEvent);
-                    editParams.changedRecords.push(clonedEvent);
+                    clonedEvent.recurrenceException = parentEvent?.recurrenceException;
+                    editParams.changedRecords.push(processTimezoneEvent(clonedEvent));
                 }
             }
         }
     };
 
-    const handleDefaultEdit: (records: Record<string, EventModel>[] | Record<string, EventModel>, editParams: SaveChanges) => void =
-    (records: Record<string, EventModel>[] | Record<string, EventModel>, editParams: SaveChanges): void => {
+    const handleFollowingEvents: (records: Record<string, any>[], editParams: SaveChanges, action: string) => void =
+        (records: Record<string, any>[], editParams: SaveChanges, action: string): void => {
+            for (const event of records) {
+                const clonedEvent: Record<string, any> = <Record<string, any>>extend({}, event, null, true);
+                if (clonedEvent.recurrenceID) {
+                    let parentEvent: EventModel = {};
+                    let filteredEvents: EventModel[] = (eventsProcessed || [])?.filter((e: EventModel) => {
+                        if (e.id === clonedEvent.recurrenceID) {
+                            parentEvent = e;
+                        }
+                        return e.recurrenceID === clonedEvent.recurrenceID && e.id !== clonedEvent.recurrenceID &&
+                            (e.startTime.getTime() >= clonedEvent.startTime.getTime());
+                    });
+                    const { updatedParent, originalEvent, changedOccurrence } =
+                        editFollowingEvents(clonedEvent, parentEvent, eventsData);
+                    if (parentEvent.followingId && action === 'EditFollowingEvents') {
+                        updatedParent[eventSettings.fields.recurrenceException] = undefined;
+                        filteredEvents = filteredEvents?.filter((e: EventModel) => e.id !== parentEvent.id);
+                    } else if (!parentEvent.followingId && action === 'EditCurrentFollowingEvents') {
+                        const updatedFilteredEvents: EventModel[] = filteredEvents?.filter((e: EventModel) =>
+                            e.recurrenceID && e.id !== e.recurrenceID
+                        ).map((e: EventModel) => {
+                            const tz: EventModel = processTimezoneEvent(e);
+                            return ({
+                                ...makeExternalRecord(tz, eventSettings.fields),
+                                [eventSettings.fields.id]: e.id,
+                                [eventSettings.fields.recurrenceID]: originalEvent.id,
+                                [eventSettings.fields.recurrenceRule]: originalEvent.recurrenceRule
+                            } as EventModel);
+                        }) || [];
+                        editParams.changedRecords.push(...updatedFilteredEvents);
+                    }
+                    const tzUpdatedParent: EventModel = processTimezoneEvent(updatedParent);
+                    editParams.changedRecords.push(tzUpdatedParent);
+                    if (changedOccurrence) { editParams.deletedRecords.push(processTimezoneEvent(changedOccurrence)); }
+                    const { followingParentEvents, followingOccurrences } =
+                        getFollowingParentEventsAndOccurrences(parentEvent, eventsProcessed);
+                    const tzFollowingParentEvents: EventModel[] = processTimezoneEventsArray(followingParentEvents);
+                    const tzFollowingOccurrences: EventModel[] = processTimezoneEventsArray(followingOccurrences);
+                    editParams.deletedRecords.push(...tzFollowingParentEvents, ...tzFollowingOccurrences);
+                    if (!parentEvent.followingId || updatedParent.followingId) {
+                        const tzOriginalEvent: EventModel = processTimezoneEvent(originalEvent);
+                        editParams.addedRecords.push(tzOriginalEvent);
+                    }
+
+                    if (action === 'EditFollowingEvents') {
+                        delete clonedEvent.recurrenceException;
+                        const tzFiltered: EventModel[] = processTimezoneEventsArray(filteredEvents);
+                        editParams.deletedRecords.push(...tzFiltered);
+                    } else {
+                        clonedEvent.recurrenceException = parentEvent.recurrenceException;
+                    }
+                }
+            }
+        };
+
+    const handleDefaultEdit: (records: EventModel[] | EventModel, editParams: SaveChanges) => void =
+    (records: EventModel[] | EventModel, editParams: SaveChanges): void => {
         if (records instanceof Array) {
             for (let event of records) {
-                event = updateEventDateTime(event);
-                editParams.changedRecords.push(<Record<string, EventModel>>extend({}, event, null, true));
+                event = updateEventDateTime(<EventModel>extend({}, event, null, true));
+                const eventData: EventModel[] = EventService.processTimeZone([event], timezone, true);
+                editParams.changedRecords.push(eventData[0]);
             }
         } else {
-            const event: Record<string, EventModel> = records;
-            editParams.changedRecords.push(event);
+            const eventData: EventModel[] = EventService.processTimeZone([records], timezone);
+            editParams.changedRecords.push(updateEventDateTime(eventData[0]));
         }
     };
 
@@ -361,10 +555,18 @@ export const useData: (props: UseDataProps) => UseDataResult = (props: UseDataPr
                 }
                 break;
 
+            case 'EditFollowingEvents':
+            case 'EditCurrentFollowingEvents':
+                if (saveArgs.changedRecords instanceof Array && saveArgs.changedRecords.length > 0) {
+                    handleFollowingEvents(saveArgs.changedRecords, editParams, action);
+                }
+                break;
+
             default:
                 handleDefaultEdit(saveArgs.changedRecords, editParams);
                 break;
             }
+            convertEditParamsRecords(editParams);
             return editParams;
         }, [eventSettings, eventsData, eventsProcessed, updateEventDateTime]);
 
@@ -390,10 +592,40 @@ export const useData: (props: UseDataProps) => UseDataResult = (props: UseDataPr
     const addEvent: (eventData: Record<string, any> | Record<string, any>[]) => void =
     useCallback(async (eventData: Record<string, any> | Record<string, any>[]) => {
         if (eventSettings.allowAdding && !readOnly) {
-            const addEvents: Record<string, any>[] = (eventData instanceof Array) ? eventData : [eventData];
-            if (addEvents.length === 0) {
+            const rawEvents: Record<string, any>[] = (eventData instanceof Array) ? eventData : [eventData];
+            if (rawEvents.length === 0) {
                 return;
             }
+            let addEvents: EventModel[] = rawEvents.map((e: Record<string, any>) => makeInternalRecord(e, eventSettings?.fields));
+
+            if (eventsData && EventService.isBlockRange(addEvents, eventsData)) {
+                confirmationDialog?.show({
+                    title: getString('alert'),
+                    message: getString('blockAlert'),
+                    confirmText: getString('ok'),
+                    showCancel: false,
+                    onConfirm: () => confirmationDialog?.hide()
+                });
+                return;
+            }
+
+            // Check for event overlap when eventOverlap is enabled
+            if (eventOverlap === false && eventsData) {
+                for (const newEvent of addEvents) {
+                    if (EventService.checkEventOverlap(newEvent, eventsData)) {
+                        confirmationDialog?.show({
+                            title: getString('eventOverlap'),
+                            message: getString('overlapAlert'),
+                            confirmText: getString('ok'),
+                            showCancel: false,
+                            onConfirm: () => confirmationDialog?.hide()
+                        });
+                        return;
+                    }
+                }
+            }
+
+            addEvents = addEvents.map((e: Record<string, any>) => makeExternalRecord(e, eventSettings?.fields));
             const addArgs: SchedulerDataChangeEvent = {
                 cancel: false,
                 addedRecords: addEvents,
@@ -406,6 +638,7 @@ export const useData: (props: UseDataProps) => UseDataResult = (props: UseDataPr
             if (addArgs.cancel) {
                 return;
             }
+            addEvents = addEvents.map((e: Record<string, any>) => makeInternalRecord(e, eventSettings?.fields));
             if (addArgs.promise) {
                 addArgs.promise.then((hasContinue: boolean) => {
                     if (hasContinue) {
@@ -420,15 +653,19 @@ export const useData: (props: UseDataProps) => UseDataResult = (props: UseDataPr
                 processAddEvent(addArgs);
             }
         }
-    }, [eventSettings, readOnly, onDataChangeStart, onError, processAddEvent]);
+    }, [eventSettings, readOnly, onDataChangeStart, onError, processAddEvent, eventOverlap, eventsData, confirmationDialog, getString]);
 
     const deleteEvent: (id: string | number | Record<string, any> | Record<string, any>[], action?: CrudAction) => void =
     useCallback(async (id: string | number | Record<string, any> | Record<string, any>[], action?: CrudAction) => {
         if (eventSettings.allowDeleting && !readOnly) {
-            const deleteEvents: Record<string, any>[] = (id instanceof Array ? id : [id]) as Record<string, EventModel>[];
-            if (deleteEvents.length === 0) {
+            const rawEvents: (string | number | Record<string, any>)[] = (id instanceof Array ? id : [id]);
+            if (rawEvents.length === 0) {
                 return;
             }
+            const deleteEvents: Record<string, any>[] = rawEvents.map(
+                (e: string | number | Record<string, any>) =>
+                    (typeof e === 'object' && e !== null) ? makeInternalRecord(e as Record<string, any>, eventSettings?.fields) : e
+            ) as Record<string, any>[];
             const deleteArgs: SchedulerDataChangeEvent = {
                 cancel: false,
                 addedRecords: [], changedRecords: [], deletedRecords: deleteEvents
@@ -462,10 +699,11 @@ export const useData: (props: UseDataProps) => UseDataResult = (props: UseDataPr
     const saveEvent: (data: Record<string, any> | Record<string, any>[], action?: CrudAction) => void =
     useCallback(async (data: Record<string, any> | Record<string, any>[], action?: CrudAction) => {
         if (eventSettings.allowEditing && !readOnly) {
-            const updateEvents: Record<string, any>[] = (data instanceof Array) ? data : [data];
-            if (updateEvents.length === 0) {
+            const rawEvents: Record<string, any>[] = (data instanceof Array) ? data : [data];
+            if (rawEvents.length === 0) {
                 return;
             }
+            const updateEvents: EventModel[] = rawEvents.map((e: Record<string, any>) => makeInternalRecord(e, eventSettings?.fields));
             const saveArgs: SchedulerDataChangeEvent = {
                 cancel: false,
                 addedRecords: [], changedRecords: updateEvents, deletedRecords: []

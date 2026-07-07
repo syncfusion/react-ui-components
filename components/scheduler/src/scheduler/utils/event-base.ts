@@ -2,18 +2,22 @@ import { getRecurrenceDates } from '../../../recurrence-editor';
 import { extend, isNullOrUndefined } from '@syncfusion/react-base';
 import { EventModel, EventFields } from '../types/scheduler-types';
 import { AlertAction, AlertType, CrudAction } from '../types/enums';
-import { DateService } from '../services/DateService';
+import { DateService, MS_PER_DAY } from '../services/DateService';
+import { EventService } from '../services/EventService';
 import { IScheduler } from '../index';
 import { AlertDialog } from '../types/internal-interface';
+import { makeExternalRecord } from './record-mapper';
 
 /**
  * Expands recurring events into individual event instances within a date range
+ * Handles both original parent events (recurrenceRule + no recurrenceID)
+ * and following parent events (recurrenceRule + followingId + no recurrenceID)
  *
  * @param {EventModel[]} events - The events to process
  * @param {Date[]} dateRange - The date range to expand events for
  * @param {number} firstDayOfWeek - First day of week
  * @private
- * @returns {EventModel[]} - Expanded events including recurring instances
+ * @returns {EventModel[]} - Expanded events including recurring instances with correct parent references
  */
 export function expandRecurringEvents(events: EventModel[], dateRange: Date[], firstDayOfWeek?: number): EventModel[] {
     if (!events || events.length === 0 || !dateRange || dateRange.length === 0) {
@@ -32,11 +36,19 @@ export function expandRecurringEvents(events: EventModel[], dateRange: Date[], f
 }
 
 /**
- * Generates occurrences based on a recurrence pattern
+ * Generates occurrences based on a recurrence pattern.
+ *
+ * The `viewDate` optimisation in `getRecurrenceDates` skips occurrences whose
+ * start time precedes `viewDate`. To avoid missing cross-page occurrences (where
+ * an occurrence starts before `dateRange[0]` but its end time falls within the
+ * current render range), we look back by the event duration before `dateRange[0]`.
+ * This ensures the engine sees the occurrence even when the view has navigated
+ * past its start date.
  *
  * @param {EventModel} event - The base event
- * @param {Date[]} dateRange - Current dates
+ * @param {Date[]} dateRange - Current render dates
  * @param {number} firstDayOfWeek - First day of week
+ * @private
  * @returns {EventModel[]} - Generated occurrences
  */
 function generateRecurrenceEvents(
@@ -44,23 +56,30 @@ function generateRecurrenceEvents(
     dateRange: Date[],
     firstDayOfWeek?: number
 ): EventModel[] {
-    const viewDate: Date = dateRange?.length ? new Date(dateRange[0].getTime()) : new Date(event.startTime.getTime());
+    let effectiveViewDate: Date | null = null;
+    if (dateRange?.length) {
+        const duration: number = (event.endTime as Date).getTime() - (event.startTime as Date).getTime();
+        const lookbackMs: number = Math.ceil(duration / MS_PER_DAY) * MS_PER_DAY;
+        const lookbackDate: Date = new Date(dateRange[0].getTime() - lookbackMs);
+        effectiveViewDate = lookbackDate > (event.startTime as Date) ? lookbackDate : null;
+    }
     const occurrenceDates: number[] = getRecurrenceDates(
         event.startTime as Date,
         event.recurrenceRule as string,
         event.recurrenceException as string,
-        firstDayOfWeek ?? 0, undefined, viewDate
+        firstDayOfWeek ?? 0, undefined, effectiveViewDate
     );
-    const duration: number = event.endTime.getTime() - event.startTime.getTime();
+    const occurrenceDuration: number = event.endTime.getTime() - event.startTime.getTime();
     const occurrenceCollection: EventModel[] = [];
     for (let i: number = 0; i < occurrenceDates.length; i++) {
         const occurrenceDate: number = occurrenceDates[i as number];
         const clonedEvent: EventModel = <EventModel>extend({}, event, null, true);
         clonedEvent.startTime = new Date(occurrenceDate);
-        clonedEvent.endTime = new Date(new Date(occurrenceDate).getTime() + duration);
+        clonedEvent.endTime = new Date(new Date(occurrenceDate).getTime() + occurrenceDuration);
         clonedEvent.recurrenceID = clonedEvent.id;
         clonedEvent.guid = generateGuid();
         delete clonedEvent.recurrenceException;
+        delete clonedEvent.followingId;
         occurrenceCollection.push(clonedEvent);
     }
     return occurrenceCollection;
@@ -69,6 +88,7 @@ function generateRecurrenceEvents(
 /**
  * Generates a unique GUID for each occurrence
  *
+ * @private
  * @returns {string} - Generated GUID in UUID v4 format
  */
 function generateGuid(): string {
@@ -87,7 +107,6 @@ function generateGuid(): string {
  * @param {Date} newEndTime - The new end time for the event
  * @param {EventModel[]} eventsProcessed - The processed events array
  * @param {EventModel[]} eventsData - The original events data
- * @param {EventFields} fields - The event field mapping
  *
  * @private
  * @returns {Object} - Validation result with isValid, shouldAlert, and optional messageKey
@@ -97,29 +116,31 @@ export function editOccurrenceValidation(
     newStartTime: Date,
     newEndTime: Date,
     eventsProcessed: EventModel[],
-    eventsData: EventModel[],
-    fields?: EventFields
+    eventsData: EventModel[]
 ): AlertDialog {
-    if (!original[fields?.recurrenceID || 'recurrenceID'] || !original[fields?.recurrenceRule || 'recurrenceRule']) {
+    if (!original.recurrenceID || !original.recurrenceRule) {
         return { isValid: true, shouldAlert: false, messageKey: AlertType.SameDayAlert };
     }
-    const parentEvent: EventModel | undefined = eventsProcessed.find((e: EventModel) => e.id === original[fields?.recurrenceID || 'recurrenceID']);
+    const parentEvent: EventModel | undefined = getRecurrenceParent(original, eventsProcessed);
     let reccurrenceCollection: EventModel[] = eventsData.filter((e: EventModel) =>
-        e.recurrenceID === parentEvent.id && e.recurrenceRule
+        e.recurrenceID === parentEvent?.id && e.recurrenceRule
     );
     reccurrenceCollection = reccurrenceCollection.sort((a: EventModel, b: EventModel) =>
         a.startTime.getTime() - b.startTime.getTime());
-    const index: number = reccurrenceCollection.findIndex((e: EventModel) => e.guid === original[fields?.guid || 'guid']);
+    const index: number = reccurrenceCollection.findIndex((e: EventModel) => e.guid === original.guid);
     if (index === -1) {
         return { isValid: true, shouldAlert: false };
     }
     const previousEventDate: number = DateService.normalizeDate(reccurrenceCollection[index - 1]?.startTime)?.getTime();
     const nextEventDate: number = DateService.normalizeDate(reccurrenceCollection[index + 1]?.startTime)?.getTime();
     const normalizedNewDate: number = DateService.normalizeDate(newStartTime).getTime();
-    if (index === 0 && normalizedNewDate < nextEventDate) {
+    if (!previousEventDate && !nextEventDate) {
         return { isValid: true, shouldAlert: false };
     }
-    if (index === reccurrenceCollection.length - 1 && normalizedNewDate > previousEventDate) {
+    if (index === 0 && (normalizedNewDate < nextEventDate || !nextEventDate)) {
+        return { isValid: true, shouldAlert: false };
+    }
+    if (index === reccurrenceCollection.length - 1 && (normalizedNewDate > previousEventDate || !previousEventDate)) {
         return { isValid: true, shouldAlert: false };
     }
     if (normalizedNewDate > previousEventDate && normalizedNewDate < nextEventDate) {
@@ -141,34 +162,28 @@ export function editOccurrenceValidation(
  *
  * @param {EventModel} original - The event being dragged
  * @param {EventModel[]} eventsProcessed - The processed events array
- * @param {EventFields} fields - The event field mapping
  * @private
  * @returns {EventModel} - Returns parent event
  */
 export function getRecurrenceParent(
     original: EventModel,
-    eventsProcessed: EventModel[],
-    fields?: EventFields
+    eventsProcessed: EventModel[]
 ): EventModel | undefined {
-    return eventsProcessed?.find((e: EventModel) => e.id === (original.recurrenceID || original[fields.recurrenceID]));
+    return eventsProcessed?.find((e: EventModel) => e.id === original.recurrenceID);
 }
 
 /**
  * Validates whether a recurring event can be dragged to a new start time
  *
  * @param {EventModel[]} eventsData - The processed events array
- * @param {EventFields} fields - The event field mapping
  * @private
  * @returns {EventModel} - Returns parent event
  */
-export function getRecurrenceMaxId(
-    eventsData: EventModel[],
-    fields: EventFields
-): number {
+export function getRecurrenceMaxId(eventsData: EventModel[]): number {
     if (!eventsData || eventsData.length === 0) { return 0; }
     return eventsData.reduce((max: number, event: EventModel) => {
         if (!event) { return max; }
-        const idValue: unknown = event[fields?.id] || event.id;
+        const idValue: unknown = event.id;
         if (isNullOrUndefined(idValue)) { return max; }
         const eventId: number = Number(idValue);
         if (isNaN(eventId)) { return max; }
@@ -185,6 +200,8 @@ export function getRecurrenceMaxId(
  * @param {IScheduler} schedulerRef - Reference to the scheduler
  * @param {EventFields} fields - The event field mapping
  * @param {EventModel[]} eventsData - The events data array
+ * @param {string} timezone - The timezone of the scheduler.
+ * @param {Record<string, any>} [resourceFields] - Optional resource field values to assign to the event
  * @private
  * @returns {EventModel} - The updated event
  */
@@ -194,12 +211,25 @@ export function updateDatasource(
     newEndTime: Date,
     schedulerRef: React.RefObject<IScheduler>,
     fields: EventFields,
-    eventsData: EventModel[]
+    eventsData: EventModel[],
+    timezone?: string,
+    resourceFields?: Record<string, any>
 ): EventModel {
-    const updatedEvent: EventModel = {};
+    const updatedEvent: Record<string, any> = extend({}, makeExternalRecord(original, fields), null, true);
     if (Array.isArray(eventsData) || original || fields) {
         updatedEvent[fields.id] = original.id;
         populateEventFields(updatedEvent, original, newStartTime, newEndTime, fields);
+        const evStartTz: string | undefined = original?.startTimezone || original?.endTimezone;
+        const evEndTz: string | undefined = original?.endTimezone || original?.startTimezone;
+        if (timezone && (evStartTz || evEndTz)) {
+            const convertedStart: Date | undefined = EventService.convertEventTime(newStartTime, timezone, evStartTz);
+            const convertedEnd: Date | undefined = EventService.convertEventTime(newEndTime, timezone, evEndTz);
+            updatedEvent[fields.startTime] = convertedStart ?? updatedEvent[fields.startTime];
+            updatedEvent[fields.endTime] = convertedEnd ?? updatedEvent[fields.endTime];
+        }
+        if (resourceFields && Object.keys(resourceFields).length > 0) {
+            Object.assign(updatedEvent, resourceFields);
+        }
         if (schedulerRef?.current?.saveEvent) {
             schedulerRef.current.saveEvent(updatedEvent, original.recurrenceID ? 'EditOccurrence' : 'Edit');
         }
@@ -209,6 +239,7 @@ export function updateDatasource(
 
 /**
  * Updates the datasource with a modified event, handling recurrence rules
+ * Determines parent (original or following) based on event's recurrenceID or followingId
  *
  * @param {EventModel} original - The original event
  * @param {EventFields} fields - The event field mapping
@@ -221,23 +252,26 @@ export function updateParentRecurrenceEvent(
     fields: EventFields,
     eventsProcessed: EventModel[]
 ): EventModel {
-    const parentEvent: EventModel = getRecurrenceParent(original, eventsProcessed, fields) ?? {};
-    const existingException: string = (parentEvent[fields.recurrenceException] || parentEvent.recurrenceException) ?
-        String(parentEvent[fields.recurrenceException] ?? parentEvent.recurrenceException) : '';
-    const occurrenceException: string = (original.recurrenceException || String(original[fields.recurrenceException] ?? '') || '');
+    const parentEvent: EventModel = getRecurrenceParent(original, eventsProcessed) ?? {};
+    const parentExceptionRaw: unknown = parentEvent[fields.recurrenceException] ?? parentEvent.recurrenceException;
+    const occurrenceExceptionRaw: unknown = original[fields.recurrenceException] ?? original.recurrenceException;
+    const existingException: string = parentExceptionRaw ? String(parentExceptionRaw) : '';
+    const occurrenceException: string = occurrenceExceptionRaw ? String(occurrenceExceptionRaw) : '';
     const exceptions: string[] = [];
     if (existingException?.trim()) { exceptions.push(existingException.trim()); }
     if (occurrenceException?.trim()) { exceptions.push(occurrenceException.trim()); }
     const combinedException: string = exceptions.length > 0 ? exceptions.join(',') : '';
     const parentEventUpdate: EventModel = {
-        [fields.id]: parentEvent[fields.id] || parentEvent.id,
-        [fields.recurrenceException]: combinedException
+        ...parentEvent,
+        id: parentEvent[fields.id] as string || parentEvent.id,
+        recurrenceException: combinedException
     };
     return parentEventUpdate;
 }
 
 /**
  * Populates event fields with updated time and recurrence information
+ * Handles both original parent occurrences (recurrenceID) and following parent occurrences (followingId)
  *
  * @param {EventModel} updatedEvent - The event object to populate
  * @param {EventModel} original - The original event
@@ -262,8 +296,10 @@ export function populateEventFields(
     updatedEvent[fields.recurrenceID] = original.recurrenceID;
     updatedEvent[fields.recurrenceException] = original.recurrenceException;
     updatedEvent[fields.recurrenceRule] = original.recurrenceRule;
+    if (original.followingId) {
+        updatedEvent[fields.followingId] = original.followingId;
+    }
 }
-
 
 /**
  * Handles recurrence deletion based on occurrence or series selection

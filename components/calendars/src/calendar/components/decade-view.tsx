@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { CalendarView } from '../types';
 import { CalendarCellData, CalendarSystem } from '../../calendar-core';
-import { buildCellState, CellState, getSelectedDateFromValue, isDateDisabledByRule } from '../utils';
+import { buildCellState, CellState, getSelectedDateFromValue, isDateDisabledByRule, isCellWithinRange } from '../utils';
 import { CalendarCell, CalendarCellProps } from '../calendar-cell';
 
 export interface DecadeViewProps {
@@ -22,6 +22,11 @@ export interface DecadeViewProps {
     animate?: boolean;
     disablePastDays?: boolean;
     disableFutureDays?: boolean;
+    range?: [Date | null, Date | null];
+    onCellHover?: (date: Date) => void;
+    suppressRangeSelection?: boolean;
+    focusTodayOnOtherMonth?: boolean;
+    isRangePreview?: boolean;
 }
 
 export const DecadeView: React.FC<DecadeViewProps> = ({
@@ -39,16 +44,21 @@ export const DecadeView: React.FC<DecadeViewProps> = ({
     selectedElementRef,
     animate = false,
     disablePastDays = false,
-    disableFutureDays = false
+    disableFutureDays = false,
+    suppressRangeSelection = false,
+    isRangePreview = false,
+    focusTodayOnOtherMonth = false,
+    range,
+    onCellHover
 }: DecadeViewProps): React.JSX.Element => {
-    const curYear: number = currentDate.getFullYear();
+    const curYear: number = calendarSystem.getYear(currentDate);
 
     const selectedDate: Date | null = React.useMemo(() => {
         return getSelectedDateFromValue(currentValue, multiSelect);
     }, [multiSelect, currentValue]);
 
     const matrix: CalendarCellData[][] = React.useMemo(() => {
-        return calendarSystem.getDecadeMatrix(new Date(curYear, 0, 1));
+        return calendarSystem.getDecadeMatrix(currentDate);
     }, [calendarSystem, curYear]);
 
     return (
@@ -58,7 +68,8 @@ export const DecadeView: React.FC<DecadeViewProps> = ({
 
                 row.forEach((cell: CalendarCellData) => {
                     const decadeDate: Date = cell.date;
-                    const label: string = cell.label as string;
+                    const label: string = String(calendarSystem.getYear(decadeDate));
+                    const rangeClass: string = cell.inRange && isCellWithinRange(decadeDate, range, 'year', calendarSystem) ? ' sf-in-range' : '';
 
                     const state: CellState = buildCellState(
                         'decade',
@@ -68,22 +79,25 @@ export const DecadeView: React.FC<DecadeViewProps> = ({
                             maxDate,
                             disabled: false,
                             focusedDate,
-                            selectedDate
+                            selectedDate,
+                            range,
+                            suppressRangeSelection,
+                            isRangePreview,
+                            focusTodayOnOtherMonth
                         },
                         calendarSystem
                     );
 
                     const isDateRuleDisabled: boolean = isDateDisabledByRule(
                         decadeDate, disablePastDays, disableFutureDays, CalendarView.Decade);
-
                     const baseProps: CalendarCellProps = {
                         id: `${decadeDate.valueOf()}`,
                         role: 'gridcell',
-                        className: state.className,
+                        className: (state.className + rangeClass).trim(),
                         isDisabled: !!state.ariaDisabled || isDateRuleDisabled,
                         isOutOfRange: state.isOtherRange,
                         isToday: state.isToday,
-                        isSelected: state.isSelected,
+                        isSelected: suppressRangeSelection ? false : state.isSelected,
                         isFocused: state.isFocused,
                         isWeekend: false,
                         view: currentView,
@@ -95,6 +109,12 @@ export const DecadeView: React.FC<DecadeViewProps> = ({
                             }
                         }
                     };
+
+                    const handleMouseEnter: (() => void) | undefined = onCellHover ? (): void => {
+                        if (!baseProps.isDisabled) {
+                            onCellHover(new Date(decadeDate));
+                        }
+                    } : undefined;
 
                     const setCellRef: (el: HTMLTableCellElement | null) => void = (el: HTMLTableCellElement | null) => {
                         if (state.isFocused && el && focusedElementRef) {
@@ -114,7 +134,12 @@ export const DecadeView: React.FC<DecadeViewProps> = ({
                         custom ? (
                             custom
                         ) : (
-                            <CalendarCell key={baseProps.id} {...baseProps} ref={setCellRef}>
+                            <CalendarCell
+                                key={baseProps.id}
+                                {...baseProps}
+                                ref={setCellRef}
+                                onMouseEnter={handleMouseEnter}
+                            >
                                 <span className="sf-day">{label}</span>
                             </CalendarCell>
                         )

@@ -19,7 +19,7 @@ interface RowsProps {
  * and updates the chart context accordingly.
  *
  * @param {RowsProps} props - Props containing ChartRow children.
- * @returns {null} This component does not render any visible output.
+ * @returns {null} - It is used only to pass the rows configuration to the chart through the React context.
  */
 export const ChartRows: React.FC<RowsProps> = (props: RowsProps) => {
     const context: ChartProviderChildProps = useContext(ChartContext);
@@ -45,7 +45,7 @@ export const ChartRows: React.FC<RowsProps> = (props: RowsProps) => {
  * ChartRow component representing a single row configuration within the chart layout.
  * This component is used as a child of ChartRows and does not render any output directly.
  *
- * @returns {null} This component does not render any visible output.
+ * @returns {null} - It is used only to pass the row configuration to the chart through the React context.
  */
 export const ChartRow: React.FC<Row> = () => {
     return null;

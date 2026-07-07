@@ -1,6 +1,6 @@
 {
   "name": "@syncfusion/react-scheduler",
-  "version": "33.1.44",
+  "version": "34.1.29",
   "description": "A package of React Scheduler component that is used to manage the appointments.",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
@@ -21,16 +21,16 @@
   "module": "./index.js",
   "readme": "README.md",
   "dependencies": {
-    "@syncfusion/react-base": "~33.1.44",
-    "@syncfusion/react-buttons": "~33.1.44",
-    "@syncfusion/react-calendars": "~33.1.44",
-    "@syncfusion/react-data": "~33.1.44",
-    "@syncfusion/react-dropdowns": "~33.1.44",
-    "@syncfusion/react-icons": "~33.1.44",
-    "@syncfusion/react-inputs": "~33.1.44",
-    "@syncfusion/react-navigations": "~33.1.44",
-    "@syncfusion/react-popups": "~33.1.44",
-    "@syncfusion/react-splitbuttons": "~33.1.44"
+    "@syncfusion/react-base": "~34.1.29",
+    "@syncfusion/react-buttons": "~34.1.29",
+    "@syncfusion/react-calendars": "~34.1.29",
+    "@syncfusion/react-data": "~34.1.29",
+    "@syncfusion/react-dropdowns": "~34.1.29",
+    "@syncfusion/react-icons": "~34.1.29",
+    "@syncfusion/react-inputs": "~34.1.29",
+    "@syncfusion/react-navigations": "~34.1.29",
+    "@syncfusion/react-popups": "~34.1.29",
+    "@syncfusion/react-splitbuttons": "~34.1.29"
   },
   "devDependencies": {
     "gulp": "4.0.2",

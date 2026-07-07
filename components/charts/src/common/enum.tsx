@@ -16,11 +16,19 @@ export type TextOverflow =
  * ```props
  * Material :- Renders the chart using the Material theme.
  * MaterialDark :- Renders the chart using the Material dark theme.
+ * Tailwind :- Renders the chart using the Tailwind theme.
+ * TailwindDark :- Renders the chart using the Tailwind dark theme.
+ * Bootstrap :- Renders the chart using the Bootstrap theme.
+ * BootstrapDark :- Renders the chart using the Bootstrap dark theme.
  * ```
  */
 export type Theme =
     'Material' |
-    'MaterialDark';
+    'MaterialDark' |
+    'Tailwind' |
+    'TailwindDark' |
+    'Bootstrap' |
+    'BootstrapDark';
 
 /**
  * Specifies the position of the chart title.
@@ -81,13 +89,13 @@ export type FadeOutMode =
  * * inherit :- Inherits the text alignment from its parent element.
  * ```
  *
- *@private
+ * @private
  */
 export type TextAnchor =
     'start' |
     'middle' |
     'end' |
-    'inherit'
+    'inherit';
 
 /**
  * Specifies the dominant baseline alignment for text rendering.
@@ -103,4 +111,31 @@ export type TextAnchor =
 export type DominantBaseLine =
     'inherit' |
     'auto' |
-    'middle'
+    'middle';
+
+/**
+ * Defines the type of connector lines in an accumulation series. The options are:
+ *
+ * ```props
+ * Line :- Accumulation series connector line type as a straight line.
+ * Curve :- Accumulation series connector line type as a curved line.
+ * ```
+ */
+export type ConnectorType =
+    'Line' |
+    'Curve';
+
+/**
+ * Defines the supported export formats for chart export functionality.
+ * ```props
+ * SVG :- Exports the chart as a scalable vector graphics file.
+ * PNG :- Exports the chart as a portable network graphics image.
+ * JPG :- Exports the chart as a JPEG image.
+ * ```
+ */
+export type ExportType =
+    'SVG' |
+    'PNG' |
+    'JPG' |
+    'PDF' ;
+

@@ -9,13 +9,15 @@ $drop-down-btn-separator-padding: $spacing-8 $spacing-0 !default;
 $drop-down-btn-li-border-width: 1px !default;
 $drop-down-btn-li-border-style: solid !default;
 $drop-down-btn-ul-border-radius: $radius-4 !default;
+$drop-down-btn-sm-ul-border-radius: $radius-4 !default;
+$drop-down-btn-la-ul-border-radius: $radius-4 !default;
 $drop-down-btn-border-color: rgb($border-light) !default;
 $drop-down-btn-color: rgb($content-text-color) !default;
 $drop-down-btn-li-bgcolor: $flyout-bg-color-hover !default;
 $drop-down-btn-ul-bgcolor: $flyout-bg-color !default;
 $drop-down-btn-selected-color: rgb($flyout-text-color-selected) !default;
 $drop-down-btn-li-focus-bgcolor: $flyout-bg-color-focus !default;
-$drop-down-btn-li-selection-bgcolor: $flyout-bg-color-selected !default;
+$drop-down-btn-li-selection-bgcolor: $flyout-bg-color-pressed !default;
 $drop-down-btn-li-selection-font-color: rgb($flyout-text-color-hover) !default;
 $drop-down-btn-menu-icon-color: rgb($icon-color) !default;
 
@@ -28,6 +30,7 @@ $drop-down-btn-sm-icon-margin-right: $spacing-8 !default;
 $drop-down-btn-sm-font-size: $font-size-sm !default;
 $drop-down-btn-sm-icon-size: $font-size-base !default;
 $drop-down-btn-sm-menu-icon-size: $font-size-base !default;
+$drop-down-btn-sm-gap: $spacing-8 !default;
 
 // Medium size variables (default)
 $drop-down-btn-me-li-height: $spacing-40 !default;
@@ -38,6 +41,7 @@ $drop-down-btn-me-icon-margin-right: $spacing-12 !default;
 $drop-down-btn-me-font-size: $font-size-base !default;
 $drop-down-btn-me-icon-size: $font-size-base !default;
 $drop-down-btn-me-menu-icon-size: $font-size-xl !default;
+$drop-down-btn-me-gap: $spacing-8 !default;
 
 // Large size variables
 $drop-down-btn-la-li-height: $spacing-48 !default;
@@ -48,3 +52,4 @@ $drop-down-btn-la-icon-margin-right: $spacing-16 !default;
 $drop-down-btn-la-font-size: $font-size-lg !default;
 $drop-down-btn-la-icon-size: $font-size-xl !default;
 $drop-down-btn-la-menu-icon-size: $font-size-xl !default;
+$drop-down-btn-la-gap: $spacing-8 !default;

@@ -4,6 +4,7 @@ import { DateService } from '../services/DateService';
 import { EventService } from '../services/EventService';
 import { SchedulerEventClickEvent, EventModel, TimeScaleProps, SchedulerScrollToProps } from '../types/scheduler-types';
 import { ScrollToMode } from '../types/enums';
+import { isNullOrUndefined } from '@syncfusion/react-base';
 
 // Ensures only one cell is selected at any time per Scheduler instance.
 export const clearAndSelect: (target: HTMLElement) => void = (target: HTMLElement): void => {
@@ -173,3 +174,59 @@ export const scrollToHour: (hour: string, date: Date | undefined, schedulerEleme
     }
     setScroll(root, targetElement);
 };
+
+export function focusElement(root: HTMLElement, selector: string): void {
+    if (!root) { return; }
+    const element: HTMLElement = root.querySelector<HTMLElement>(selector);
+    element?.focus();
+}
+
+export function getEventIDType(eventsData?: EventModel[]): string {
+    if (eventsData && eventsData.length > 0) {
+        return typeof eventsData[0].id;
+    }
+    return 'string';
+}
+
+export function getEventMaxID(eventsData?: EventModel[], resourceId?: number): string | number {
+    if (!eventsData || eventsData.length === 0) {
+        return EventService.generateEventGuid();
+    }
+    let eventId: string | number;
+    const idType: string = getEventIDType(eventsData);
+
+    if (idType === 'string') {
+        eventId = EventService.generateEventGuid();
+    } else if (idType === 'number') {
+        const numericIds: number[] = eventsData
+            .map((event: EventModel) => event.id as number)
+            .filter((id: number) => typeof id === 'number');
+
+        if (numericIds.length === 0) {
+            eventId = 1;
+        } else {
+            let maxId: number = Math.max(...numericIds);
+            maxId = !isNullOrUndefined(resourceId) ? maxId + resourceId : maxId;
+            eventId = maxId + 1;
+        }
+    } else {
+        eventId = EventService.generateEventGuid();
+    }
+    return eventId;
+}
+
+export function findIndexInData(data: Record<string, any>[], field: string, value: string | number): number {
+    for (let i: number = 0, length: number = data?.length; i < length; i++) {
+        if (data[parseInt(i.toString(), 10)][`${field}`] === value) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+export function getGroupIndexFromElement(element: HTMLElement | null): number | undefined {
+    if (!element) { return undefined; }
+    const groupIndexAttr: string | null = element.getAttribute('data-group-index');
+    const index: number | undefined = !isNullOrUndefined(groupIndexAttr) ? parseInt(groupIndexAttr, 10) : undefined;
+    return Number.isFinite(index) ? index : undefined;
+}

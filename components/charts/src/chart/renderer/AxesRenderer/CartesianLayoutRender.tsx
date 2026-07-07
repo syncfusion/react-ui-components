@@ -13,6 +13,8 @@ import { calculateColumnSize } from './ChartColumnsRender';
 import { AxisModel, Chart, ChartAxisLayout, ColumnProps, PathOptions, Rect, RowProps, ChartSizeProps, TextOption, TextStyleModel, Thickness, VisibleLabel } from '../../chart-area/chart-interfaces';
 import { crossAt, updateCrossValue, axisInside } from './AxisTypeRenderer/CrossAxisHerlper';
 import { DominantBaseLine, TextAnchor } from '../../../common';
+import { addGlobalScrollbarThickness, shouldAllocateScrollbarSpace } from '../Zooming/scrollbarUtils';
+import { drawXAxisBorder, drawYAxisBorder } from './AxisLabelBorderRenderer';
 
 /**
  * Measures and computes the layout of axes within the given chart rectangle.
@@ -48,6 +50,14 @@ export function measureAxis(rect: Rect, chart: Chart): void {
     chartAxisLayout.topSize = 0;
     chartAxisLayout.bottomSize = 0;
     measureRowAxis(chart, chartAxisLayout.initialClipRect);
+    const hasGlobalScrollbar: boolean = chart.axisCollection.some((axis: AxisModel) =>
+        shouldAllocateScrollbarSpace(chart, axis) && chart.zoomSettings.enableScrollbar &&
+        (axis.scrollbarSettings?.position === 'Top' || axis.scrollbarSettings?.position === 'Bottom' ||
+            axis.scrollbarSettings?.position === 'Left' || axis.scrollbarSettings?.position === 'Right')
+    );
+    if (hasGlobalScrollbar) {
+        addGlobalScrollbarThickness(chart, chartAxisLayout);
+    }
     chartAxisLayout.seriesClipRect = subtractThickness(
         chartAxisLayout.seriesClipRect, { left: chartAxisLayout.leftSize, right: chartAxisLayout.rightSize, top: 0, bottom: 0 });
     measureColumnAxis(chart, chartAxisLayout.seriesClipRect);
@@ -174,11 +184,35 @@ function measureDefinition(definition: RowProps | ColumnProps, chart: Chart, siz
         computeSize(axis, definition, chart);
     }
 
+    // Detect whether this definition corresponds to columns (horizontal axes -> Top/Bottom)
+    // or rows (vertical axes -> Left/Right)
+    const isColumnDefinition: boolean = (definition as ColumnProps).computedLeft !== undefined;
+
+    const reserveNearPadding: boolean = definition.axes.some((axis: AxisModel) => {
+        if (!shouldAllocateScrollbarSpace(chart, axis)) { return false; }
+        if (isColumnDefinition) {
+            // near side for columns = Bottom
+            return axis.orientation === 'Horizontal' && axis.scrollbarSettings?.position === 'Bottom';
+        }
+        // near side for rows = Left
+        return axis.orientation === 'Vertical' && axis.scrollbarSettings?.position === 'Left';
+    });
+
+    const reserveFarPadding: boolean = definition.axes.some((axis: AxisModel) => {
+        if (!shouldAllocateScrollbarSpace(chart, axis)) { return false; }
+        if (isColumnDefinition) {
+            // far side for columns = Top
+            return axis.orientation === 'Horizontal' && axis.scrollbarSettings?.position === 'Top';
+        }
+        // far side for rows = Right
+        return axis.orientation === 'Vertical' && axis.scrollbarSettings?.position === 'Right';
+    });
+
     if (definition.farSizes.length > 0) {
-        definition.farSizes[definition.farSizes.length - 1] -= axisPadding;
+        definition.farSizes[definition.farSizes.length - 1] -= (reserveFarPadding ? 0 : axisPadding);
     }
     if (definition.nearSizes.length > 0) {
-        definition.nearSizes[definition.nearSizes.length - 1] -= axisPadding;
+        definition.nearSizes[definition.nearSizes.length - 1] -= (reserveNearPadding ? 0 : axisPadding);
     }
 }
 
@@ -198,6 +232,9 @@ export function computeSize(axis: AxisModel, definition: RowProps | ColumnProps,
     if (axis.visible && axis.internalVisibility) {
         width = findTickSize(axis) + findLabelSize(axis, innerPadding, definition, chart) +
             ((axis.lineStyle?.width as number) * 0.5);
+        if (shouldAllocateScrollbarSpace(chart, axis)) {
+            width += axis.scrollbarThickness as number;
+        }
     }
     if (axis.isAxisOpposedPosition) {
         definition.farSizes.push(width);
@@ -281,11 +318,12 @@ function calculateAxisSize(rect: Rect, chart: Chart): void {
             }
             const ticksHeight: number = axis.majorTickLines.height as number;
             const axisLabelPadding: number = axis.labelStyle.padding as number;
+            const scrollbarThickness: number = axis.scrollbarThickness as number;
             if (axis.isAxisOpposedPosition) {
                 if (axis.labelStyle.position === 'Inside' && axis.orientation === 'Vertical') {
                     if (farCount > 0) {
                         x = rect.x + rect.width + calculateAxisSum(subArray(row.farSizes, farCount))
-                            + axis.maxLabelSize.width + (axis.tickPosition === 'Inside' ? ticksHeight : 0) + axisLabelPadding;
+                            + axis.maxLabelSize.width + (axis.multiLevelLabelHeight as number) + (axis.tickPosition === 'Inside' ? ticksHeight : 0) + axisLabelPadding;
                     }
                     else {
                         x = rect.x + rect.width - calculateAxisSum(subArray(row.insideFarSizes, farCount));
@@ -295,6 +333,7 @@ function calculateAxisSize(rect: Rect, chart: Chart): void {
                     x = rect.x + rect.width + calculateAxisSum(subArray(row.farSizes, farCount));
 
                 }
+                x += (scrollbarThickness > 0 && chart.zoomSettings.enableScrollbar) ? (scrollbarThickness) : 0;
                 axis.rect.x = axis.rect.x >= x ? axis.rect.x : x;
                 farCount++;
             } else {
@@ -310,6 +349,7 @@ function calculateAxisSize(rect: Rect, chart: Chart): void {
                 else {
                     x = rect.x - calculateAxisSum(subArray(row.nearSizes, nearCount));
                 }
+                x -= (scrollbarThickness > 0 && chart.zoomSettings.enableScrollbar) ? scrollbarThickness : 0;
                 axis.rect.x = axis.rect.x <= x ? axis.rect.x : x;
                 nearCount++;
             }
@@ -338,11 +378,12 @@ function calculateAxisSize(rect: Rect, chart: Chart): void {
             }
             const ticksHeight: number = axis.majorTickLines.height as number;
             const axisLabelPadding: number = axis.labelStyle.padding as number;
+            const scrollbarThickness: number = axis.scrollbarThickness as number;
             if (axis.isAxisOpposedPosition) {
                 if (axis.labelStyle.position === 'Inside' && axis.orientation === 'Horizontal') {
                     if (farCount > 0) {
                         y = rect.y - calculateAxisSum(subArray(column.farSizes, farCount)) - axis.maxLabelSize.height
-                            - (axis.tickPosition === 'Inside' ? ticksHeight : 0) - axisLabelPadding;
+                            - (axis.multiLevelLabelHeight as number) - (axis.tickPosition === 'Inside' ? ticksHeight : 0) - axisLabelPadding;
                     }
                     else {
                         y = rect.y + calculateAxisSum(subArray(column.insideFarSizes, farCount));
@@ -351,13 +392,16 @@ function calculateAxisSize(rect: Rect, chart: Chart): void {
                 else {
                     y = rect.y - calculateAxisSum(subArray(column.farSizes, farCount));
                 }
+                const isTopGlobalScrollbarCase: boolean = axis.orientation === 'Horizontal' && axis.isAxisOpposedPosition === true &&
+                    axis.scrollbarSettings?.position === 'Top';
+                y -= (!isTopGlobalScrollbarCase && scrollbarThickness > 0 && chart.zoomSettings.enableScrollbar) ? scrollbarThickness : 0;
                 axis.rect.y = axis.rect.y <= y ? axis.rect.y : y;
                 farCount++;
             } else {
                 if (axis.labelStyle.position === 'Inside' && axis.orientation === 'Horizontal') {
                     if (nearCount > 0) {
                         y = rect.y + rect.height + calculateAxisSum(subArray(column.nearSizes, nearCount)) + axis.maxLabelSize.height
-                            + (axis.tickPosition === 'Inside' ? ticksHeight : 0) + axisLabelPadding;
+                            + (axis.multiLevelLabelHeight as number) + (axis.tickPosition === 'Inside' ? ticksHeight : 0) + axisLabelPadding;
                     }
                     else {
                         y = rect.y + rect.height - calculateAxisSum(subArray(column.insideNearSizes, nearCount));
@@ -366,6 +410,7 @@ function calculateAxisSize(rect: Rect, chart: Chart): void {
                 else {
                     y = rect.y + rect.height + calculateAxisSum(subArray(column.nearSizes, nearCount));
                 }
+                y += (scrollbarThickness > 0 && chart.zoomSettings.enableScrollbar && axis.scrollbarSettings?.position === 'PlaceNextToAxisLine') ? scrollbarThickness : 0;
                 axis.rect.y = axis.rect.y >= y ? axis.rect.y : y;
                 nearCount++;
             }
@@ -582,21 +627,17 @@ export function drawXAxisLabels(axis: AxisModel, index: number, rect: Rect, char
             labelWidth > intervalLength) ? intervalLength : labelWidth;
         labelHeight = elementSize.height / 4;
         pointX -= (isAxisBreakLabel || angle !== 0) ? 0 : (width / 2);
+        if (!(isAxisBreakLabel || angle !== 0)) {
+            const slotStart: number = pointX + (width / 2) - (intervalLength / 2);
+            const slotEnd: number = slotStart + intervalLength;
+            const edgePadding: number = pixel;
+            const alignNudge: number = Math.min(edgePadding - 1, 4);
 
-        // label X value adjustment for label rotation (Start)
-        if (angle !== 0) {
-            if (isAxisBreakLabel) {
-                pointX -= 0;
-            } else {
-                pointX -= (angle === -90 || angle === 270 ? -labelHeight : (angle === 90 || angle === -270) ? labelHeight : 0);
+            if (axis.labelStyle?.align === 'Right') {
+                pointX = slotEnd - width - edgePadding + alignNudge;
+            } else if (axis.labelStyle?.align === 'Left') {
+                pointX = slotStart + edgePadding - alignNudge;
             }
-        }
-        // label X value adjustment for label rotation (End)
-
-        if (axis.labelStyle?.align === 'Right') {
-            pointX = pointX + width - pixel;
-        } else if (axis.labelStyle?.align === 'Left') {
-            pointX = pointX - width + pixel;
         }
 
         const paddingForBreakLabel: number = isAxisBreakLabel ?
@@ -864,18 +905,41 @@ export function drawXAxisLabels(axis: AxisModel, index: number, rect: Rect, char
             </text>
         );
     }
-    const labelElement: JSX.Element = <>
-        <defs>
-            <clipPath id={`${chart.element.id}_Axis_Label_${index}_Clip`}>
-                <rect x={chart.clipRect.x - axis.maxLabelSize.width} y={chart.chartAreaRect.y}
-                    width={chart.chartAreaRect.width + axis.maxLabelSize.width}
-                    height={chart.chartAreaRect.height + axis.maxLabelSize.height} />
-            </clipPath>
-        </defs>
-        <g clipPath={`url(#${chart.element.id}_Axis_Label_${index}_Clip)`} id={chart.element.id + '_Axis_' + index + '_Labels'}>
-            {labelElements}
-        </g>
-    </>;
+
+    const labelBorder: ChartBorderProps = (axis.labelStyle?.border as ChartBorderProps);
+    const borderSvgPath: string = (labelBorder?.width as number) > 0 ? drawXAxisBorder(axis, rect, chart) : '';
+
+    const borderPath: JSX.Element | null =
+        borderSvgPath
+            ? (
+                <path
+                    key={`border_${index}`}
+                    id={`${chart.element.id}_BorderLine_${index}`}
+                    d={borderSvgPath}
+                    fill="Transparent"
+                    stroke={labelBorder.color}
+                    strokeWidth={labelBorder.width}
+                    strokeDasharray={labelBorder.dashArray}
+                    style={{ pointerEvents: 'none' }}
+                />
+            )
+            : null;
+
+    const labelElement: JSX.Element = (
+        <>
+            <defs>
+                <clipPath id={`${chart.element.id}_Axis_Label_${index}_Clip`}>
+                    <rect x={chart.clipRect.x - axis.maxLabelSize.width} y={chart.chartAreaRect.y}
+                        width={chart.chartAreaRect.width + axis.maxLabelSize.width}
+                        height={chart.chartAreaRect.height + axis.maxLabelSize.height} />
+                </clipPath>
+            </defs>
+            <g clipPath={`url(#${chart.element.id}_Axis_Label_${index}_Clip)`} id={chart.element.id + '_Axis_' + index + '_Labels'}>
+                {labelElements}
+            </g>
+            {borderPath}
+        </>
+    );
     axis.labelElement = labelElement;
     if (axis.labelStyle.position === 'Outside') {
         return labelElement;
@@ -1003,10 +1067,13 @@ export function drawYAxisLabels(axis: AxisModel, index: number, rect: Rect, char
     padding += (isVerticalAngle) ? (isLabelInside ? 5 : -5) : 0;
     padding = (isOpposed) ? padding : -padding;
     const scrollBarHeight: number = 0;
-    let textHeight: number; let textPadding: number; let maxLineWidth: number; const pixel: number = 10;
+    let textHeight: number; let textPadding: number;
     const isInverse: boolean = axis.isAxisInverse;
     let previousEnd: number = isInverse ? rect.y : (rect.y + rect.height);
     let labelPadding: number; let intervalLength: number; let labelHeight: number; let yAxisLabelX: number;
+    const leftTextAnchor: 'start' | 'end' = chart.enableRtl ? 'end' : 'start';
+    const rightTextAnchor: 'start' | 'end' = chart.enableRtl ? 'start' : 'end';
+    let alignmentAnchor: 'start' | 'middle' | 'end' = 'middle';
     const isLabelOnAxisLineLeft: boolean = ((!isOpposed && !isLabelInside) || (isOpposed && isLabelInside));
     if (isLabelInside) {
         labelPadding = !isLabelOnAxisLineLeft ? -padding : padding;
@@ -1041,41 +1108,42 @@ export function drawYAxisLabels(axis: AxisModel, index: number, rect: Rect, char
         if (axis.labelStyle.position === 'Inside' && ((i === 0 && !axis.inverted) || (i === len - 1 && axis.inverted))) {
             pointY -= (textPadding - ((chart.requireInvertedAxis && axis.labelStyle.position === 'Inside') ? 0 : (axis.opposedPosition ? -padding : padding)));
         }
-        const gridWidth: number = axis.majorGridLines.width as number;
-        const tickWidth: number = axis.majorTickLines.width as number;
-        if (gridWidth > tickWidth) {
-            maxLineWidth = gridWidth;
-        } else {
-            maxLineWidth = tickWidth;
-        }
 
-        if (axis.labelStyle?.align === 'Right') {
-            pointY = pointY - maxLineWidth - pixel;
-        } else if (axis.labelStyle?.align === 'Left') {
-            pointY = pointY + maxLineWidth + pixel;
-        }
+        const labelRegionWidth: number = angle === 0
+            ? axis.maxLabelSize.width
+            : Math.max(LabelMaxWidth, breakLabelMaxWidth, RotatedWidth);
 
-        // label X value adjustment (Start)
         if (isLabelInside) {
-            yAxisLabelX = labelPadding + ((angle === 0 ? elementSize.width :
-                (isAxisBreakLabel ? breakLabelMaxWidth : LabelMaxWidth)) / 2);
+            yAxisLabelX = labelPadding + (labelRegionWidth / 2);
         } else {
-            yAxisLabelX = labelPadding - ((angle === 0 ? elementSize.width :
-                (isAxisBreakLabel ? breakLabelMaxWidth : RotatedWidth)) / 2);
+            yAxisLabelX = labelPadding - (labelRegionWidth / 2);
         }
-        if (axis.labelStyle.enableWrap && chart.requireInvertedAxis && angle && ((!axis.opposedPosition && axis.labelStyle.position === 'Inside') || (axis.opposedPosition && axis.labelStyle.position === 'Outside'))) {
+
+        if (axis.labelStyle.enableWrap && chart.requireInvertedAxis && angle &&
+            ((!axis.opposedPosition && axis.labelStyle.position === 'Inside') ||
+             (axis.opposedPosition && axis.labelStyle.position === 'Outside'))) {
             yAxisLabelX = axis.opposedPosition ? yAxisLabelX - LabelMaxWidth / 2 : yAxisLabelX + LabelMaxWidth / 2;
         }
+
         pointX = isOpposed ? (rect.x - yAxisLabelX) : (rect.x + yAxisLabelX);
+
+        if (axis.labelStyle?.align === 'Left') {
+            alignmentAnchor = rightTextAnchor;
+        } else if (axis.labelStyle?.align === 'Right') {
+            alignmentAnchor = leftTextAnchor;
+        } else {
+            alignmentAnchor = 'middle';
+        }
+
         if (isVerticalAngle) {
             pointX += (isOpposed) ? 5 : -5;
         }
-        yAxisLabelX = labelPadding;
+
         const options: TextOption = {
             id: `${chart.element.id}${index}_AxisLabel_${i}`,
             x: pointX,
             y: pointY,
-            anchor: 'middle',
+            anchor: alignmentAnchor,
             text: label.text,
             transform: `rotate(${angle},${pointX},${pointY})`,
             labelRotation: angle,
@@ -1150,10 +1218,30 @@ export function drawYAxisLabels(axis: AxisModel, index: number, rect: Rect, char
             </text>
         );
     }
+    const labelBorder: ChartBorderProps = (axis.labelStyle?.border as ChartBorderProps);
+    const borderSvgPath: string = (labelBorder?.width as number) > 0 ? drawYAxisBorder(axis, rect, chart) : '';
+
+    const borderPath: JSX.Element | null =
+        borderSvgPath
+            ? (
+                <path
+                    key={`border_${index}`}
+                    id={`${chart.element.id}_BorderLine_${index}`}
+                    d={borderSvgPath}
+                    fill="Transparent"
+                    stroke={labelBorder.color}
+                    strokeWidth={labelBorder.width}
+                    strokeDasharray={labelBorder.dashArray}
+                    style={{ pointerEvents: 'none' }}
+                />
+            )
+            : null;
+
     const axislabelElement: JSX.Element = <>
         <g id={chart.element.id + '_Axis_' + index + '_Labels'}>
             {labelElements}
         </g>
+        {borderPath}
     </>;
     axis.labelElement = axislabelElement;
     if (axis.labelStyle.position === 'Outside') {
@@ -1498,14 +1586,17 @@ export function drawAxisLine(
     currentAxis: AxisModel,
     chart: Chart
 ): JSX.Element {
+
+    const lineElement: JSX.Element = <path
+        d={axis.axisLineOptions.d}
+        stroke={currentAxis.lineStyle?.color || chart.themeStyle.axisLine}
+        strokeWidth={currentAxis.lineStyle?.width}
+        strokeDasharray={currentAxis.lineStyle?.dashArray || ''}
+        style={{ transition: 'all 0.4s ease' }}
+    />;
+    axis.lineElement = lineElement;
     return (
-        <path
-            d={axis.axisLineOptions.d}
-            stroke={currentAxis.lineStyle?.color || chart.themeStyle.axisLine}
-            strokeWidth={currentAxis.lineStyle?.width}
-            strokeDasharray={currentAxis.lineStyle?.dashArray || ''}
-            style={{ transition: 'all 0.4s ease' }}
-        />
+        <></>
     );
 }
 

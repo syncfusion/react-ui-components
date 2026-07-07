@@ -4,10 +4,10 @@ import { defaultChartConfigs } from '../base/default-properties';
 import { PieChartTitleProps } from '../base/interfaces';
 
 /**
- * PieChartSubtitle component for configuring and setting the subtitle of the chart.
+ * Configures the subtitle for the Pie Chart.
  *
- * @param {PieChartTitleProps} props - Props used to customize the chart subtitle.
- * @returns {null} This component does not render any visible output.
+ * @param {PieChartTitleProps} props - Properties used to customize the chart subtitle, including text, position, and font styling.
+ * @returns {null} - It is used only to pass the subtitle configuration into the pie chart through React context.
  */
 export const PieChartSubtitle: React.FC<PieChartTitleProps> = (props: PieChartTitleProps) => {
     const context: ChartProviderChildProps = useContext(ChartContext);

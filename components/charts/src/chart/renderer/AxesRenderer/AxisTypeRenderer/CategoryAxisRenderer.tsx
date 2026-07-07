@@ -31,7 +31,7 @@ export function calculateCategoryAxis(size: ChartSizeProps, axis: AxisModel, cha
  * Calculates the range and interval for the category axis within a chart.
  * This involves adjusting the axis properties based on the chart size and configuration.
  *
- * @param {Size} size - The dimensions of the chart area, which influence axis calculations.
+ * @param {ChartSizeProps} size - The dimensions of the chart area, which influence axis calculations.
  * @param {AxisModel} axis - The axis model to be calculated, containing data and settings.
  * @param {Chart} chart - The chart instance that includes the axis and other relevant properties.
  * @returns {void} This function modifies axis properties related to range and interval without returning a value.
@@ -52,7 +52,7 @@ function calculateRangeAndInterval(size: ChartSizeProps, axis: AxisModel, chart:
  * Calculates the actual range for the category axis.
  *
  * @param {AxisModel} axis - The axis model containing axis settings.
- * @param {Size} size - The size of the chart area.
+ * @param {ChartSizeProps} size - The size of the chart area.
  * @param {DoubleRange} categoryRange - The calculated range for categories.
  * @returns {void} Does not return a value.
  * @private

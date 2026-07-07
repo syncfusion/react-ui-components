@@ -2,9 +2,12 @@
 @use 'theme-variables' as *;
 
 @include export-module('floating-action-button-theme') {
-  .sf-fab.sf-btn {
-    &:hover:not(:focus), &:active, &.sf-active, &:disabled {
-      box-shadow: $fab-box-shadow;
+  .sf-fab{
+    box-shadow: $fab-box-shadow;
+    .sf-btn {
+      &:hover:not(:focus), &:active, &.sf-active, &:disabled {
+        box-shadow: $fab-box-shadow;
+      }
     }
   }
 }

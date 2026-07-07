@@ -286,38 +286,41 @@ IToolbar, IToolbarProps
         }
     }, [getElementContext, manageFocus, findNextEnabledItem]);
 
-    const handleHorizontalNavigation: (target: HTMLElement, key: string) => void = useCallback((target: HTMLElement, key: string): void => {
-        if (orientation === Orientation.Horizontal) {
-            const isNavButton: boolean = target.classList.contains(CLS_POPUPNAV);
-            const isScrollButton: boolean = target.classList.contains(CLS_TBARSCRLNAV);
+    const handleHorizontalNavigation: (target: HTMLElement, event: KeyboardEvent<HTMLElement>) => void =
+        useCallback((target: HTMLElement, event: KeyboardEvent<HTMLElement>): void => {
+            if (orientation === Orientation.Horizontal && !event.ctrlKey) {
+                const isNavButton: boolean = target.classList.contains(CLS_POPUPNAV);
+                const isScrollButton: boolean = target.classList.contains(CLS_TBARSCRLNAV);
 
-            if (key === 'ArrowRight' && toolbarRef.current === target) {
-                manageFocus(0, true);
-                return;
+                if (event.key === 'ArrowRight' && toolbarRef.current === target) {
+                    manageFocus(0, true);
+                    return;
+                }
+
+                if ((event.key === 'ArrowRight' || event.key === 'ArrowLeft') && !isNavButton && !isScrollButton) {
+                    const direction: NavigationDirection = event.key === 'ArrowRight' ? 'next' : 'previous';
+                    navigateItems(target, direction);
+                }
             }
+        }, [manageFocus, navigateItems, orientation]);
 
-            if ((key === 'ArrowRight' || key === 'ArrowLeft') && !isNavButton && !isScrollButton) {
-                const direction: NavigationDirection = key === 'ArrowRight' ? 'next' : 'previous';
-                navigateItems(target, direction);
+    const handleVerticalNavigation: (target: HTMLElement, event: KeyboardEvent<HTMLElement>) => void =
+        useCallback((target: HTMLElement, event: KeyboardEvent<HTMLElement>): void => {
+            if (event.ctrlKey) { return; }
+            const isVerticalMode: boolean = orientation === Orientation.Vertical;
+            const inPopup: boolean = isInPopup(target);
+            const isPopupNav: boolean = isPopupNavElement(target);
+
+            if (event.key === 'ArrowUp' && !isPopupNav && (isVerticalMode || inPopup)) {
+                navigateItems(target, 'previous');
+            } else if (event.key === 'ArrowDown') {
+                if (isPopupNav && isPopupVisible && focusItemsRef.current.popup.length > 0) {
+                    manageFocus(0, false);
+                } else if (isVerticalMode || inPopup) {
+                    navigateItems(target, 'next');
+                }
             }
-        }
-    }, [manageFocus, navigateItems, orientation]);
-
-    const handleVerticalNavigation: (target: HTMLElement, key: string) => void = useCallback((target: HTMLElement, key: string): void => {
-        const isVerticalMode: boolean = orientation === Orientation.Vertical;
-        const inPopup: boolean = isInPopup(target);
-        const isPopupNav: boolean = isPopupNavElement(target);
-
-        if (key === 'ArrowUp' && !isPopupNav && (isVerticalMode || inPopup)) {
-            navigateItems(target, 'previous');
-        } else if (key === 'ArrowDown') {
-            if (isPopupNav && isPopupVisible && focusItemsRef.current.popup.length > 0) {
-                manageFocus(0, false);
-            } else if (isVerticalMode || inPopup) {
-                navigateItems(target, 'next');
-            }
-        }
-    }, [isInPopup, isPopupNavElement, isPopupVisible, manageFocus, navigateItems, orientation]);
+        }, [isInPopup, isPopupNavElement, isPopupVisible, manageFocus, navigateItems, orientation]);
 
     const handleEdgeNavigation: (target: HTMLElement, key: string) => void = useCallback((target: HTMLElement, key: string): void => {
         const direction: NavigationDirection = key === 'Home' ? 'first' : 'last';
@@ -364,10 +367,10 @@ IToolbar, IToolbarProps
         e.preventDefault();
 
         const keyHandlers: Record<string, () => void> = {
-            ArrowRight: () => handleHorizontalNavigation(target, e.key),
-            ArrowLeft: () => handleHorizontalNavigation(target, e.key),
-            ArrowUp: () => handleVerticalNavigation(target, e.key),
-            ArrowDown: () => handleVerticalNavigation(target, e.key),
+            ArrowRight: () => handleHorizontalNavigation(target, e),
+            ArrowLeft: () => handleHorizontalNavigation(target, e),
+            ArrowUp: () => handleVerticalNavigation(target, e),
+            ArrowDown: () => handleVerticalNavigation(target, e),
             Home: () => handleEdgeNavigation(target, e.key),
             End: () => handleEdgeNavigation(target, e.key),
             Tab: () => handleTabNavigation(target),

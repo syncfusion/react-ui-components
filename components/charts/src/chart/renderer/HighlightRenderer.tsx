@@ -1,5 +1,5 @@
 import { extend, isNullOrUndefined } from '@syncfusion/react-base';
-import { useLayoutEffect, useEffect, RefObject, useContext } from 'react';
+import { useLayoutEffect, useEffect, RefObject, useContext, forwardRef } from 'react';
 import { SelectionPattern } from '../base/enum';
 import { BaseSelection, ChartHighlightProps } from '../base/interfaces';
 import { Chart, SeriesProperties } from '../chart-area/chart-interfaces';
@@ -7,6 +7,7 @@ import { registerChartEventHandler } from '../hooks/useClipRect';
 import { useLayout } from '../layout/LayoutContext';
 import { blurEffect, calculateSelectedElements, ensureSelectionPattern } from './SelectionRenderer';
 import { ChartContext } from '../layout/ChartProvider';
+import { isRangeColorEnabled } from '../utils/helper';
 
 /**
  * The HighlightRenderer component is responsible for rendering the highlight effects on the chart.
@@ -17,8 +18,9 @@ import { ChartContext } from '../layout/ChartProvider';
  * @returns {Element} A JSX fragment that conditionally renders highlight elements.
  * @private
  */
-export const HighlightRenderer: React.FC<ChartHighlightProps> = (props: ChartHighlightProps) => {
-    const { layoutRef, phase, reportMeasured, setLayoutValue, seriesRef, legendRef } = useLayout();
+export const HighlightRenderer: React.FC<ChartHighlightProps & React.RefAttributes<SVGPatternElement>> = forwardRef<SVGPatternElement
+, ChartHighlightProps>((props: ChartHighlightProps, ref: React.ForwardedRef<SVGPatternElement>) => {
+    const { layoutRef, phase, reportMeasured, setLayoutValue, seriesRef, legendRef, highlightRef, selectionRef } = useLayout();
     const { chartLegend, chartTooltip } = useContext(ChartContext);
     let chartHighlight: BaseSelection = layoutRef.current?.chartHighlight as BaseSelection;
     let chart: Chart = layoutRef.current?.chart as Chart;
@@ -61,7 +63,8 @@ export const HighlightRenderer: React.FC<ChartHighlightProps> = (props: ChartHig
             chart = layoutRef.current?.chart as Chart;
             if (chartHighlight && chart) {
                 highlightChart(chart, chartHighlight, e.target as Element, legendRef, seriesRef, layoutRef.current?.chartSelection &&
-                    (layoutRef.current?.chartSelection as BaseSelection).chartSelectedDataIndexes?.length as number > 0);
+                    (layoutRef.current?.chartSelection as BaseSelection)
+                        .chartSelectedDataIndexes?.length as number > 0, highlightRef, selectionRef);
             }
         };
 
@@ -83,19 +86,24 @@ export const HighlightRenderer: React.FC<ChartHighlightProps> = (props: ChartHig
 
             if (chartHighlight.isLegendSelection && chartLegend.toggleVisibility) {
                 resetHighlight(chart, chartHighlight, legendRef, seriesRef);
+                chartHighlight.previousSelectedElements = [];
                 setTimeout(() => {
                     const currentChart: Chart = layoutRef.current?.chart as Chart;
                     const currentHighlight: BaseSelection = layoutRef.current?.chartHighlight as BaseSelection;
                     const hasSelection: boolean =
                         !!layoutRef.current?.chartSelection &&
                         ((layoutRef.current?.chartSelection as BaseSelection).chartSelectedDataIndexes?.length as number) > 0;
+                    // Clear any stale tooltip index before recalculating highlights.
+                    currentChart.toolTipSeriesIndex = undefined;
                     highlightChart(
                         currentChart,
                         currentHighlight,
                         targetElement,
                         legendRef,
                         seriesRef,
-                        hasSelection
+                        hasSelection,
+                        highlightRef,
+                        selectionRef
                     );
                 }, 5);
             }
@@ -149,12 +157,13 @@ export const HighlightRenderer: React.FC<ChartHighlightProps> = (props: ChartHig
                         props.fill ? props.fill : chart.visibleSeries[i as number].interior,
                         i,
                         chart.visibleSeries[i as number].opacity as number,
-                        'Highlight'
+                        'Highlight',
+                        ref
                     );
                 })}
         </>
     );
-};
+});
 
 /**
  * Retrieves and initializes the highlight options for the chart.
@@ -221,12 +230,25 @@ function resetHighlight(
  * @param {RefObject<SVGGElement | null>} legendRef - A reference to the chart's legend element.
  * @param {RefObject<SVGGElement | null>} seriesRef - A reference to the chart's series element.
  * @param {boolean} [isSelected] - An optional boolean indicating if any data points are already selected.
+ * @param {RefObject<SVGPatternElement | null>} [highlightRef] - Reference to the SVG pattern used for highlighting.
+ * @param {RefObject<SVGPatternElement | null>} [selectionRef] - Reference to the SVG pattern used for selection.
  * @returns {void}
  * @private
  */
-export function highlightChart(chart: Chart, chartHighlight: BaseSelection, target: Element, legendRef: RefObject<SVGGElement | null>,
-                               seriesRef: RefObject<SVGGElement | null>, isSelected?: boolean): void {
+export function highlightChart(chart: Chart, chartHighlight: BaseSelection, target: Element, legendRef: RefObject<SVGGElement | null>
+    , seriesRef: RefObject<SVGGElement | null>, isSelected?: boolean, highlightRef?: RefObject<SVGPatternElement | null>
+    , selectionRef?: RefObject<SVGPatternElement | null>): void {
+
+    for (const series of chart.visibleSeries) {
+        if (series.category === 'Indicator') {
+            return;
+        }
+    }
+
     if (chartHighlight.mode !== 'None' || chartHighlight.isLegendHighlight || chartHighlight.isTooltipHighlight) {
+        if (chartHighlight.isLegendHighlight && isRangeColorEnabled(chart) && (target as HTMLElement).getAttribute('fill') === '#D3D3D3') {
+            return;
+        }
         if (!isNullOrUndefined(target)) {
             if ((target).hasAttribute('data-highlighted') || (target).hasAttribute('data-selected')) {
                 return;
@@ -237,7 +259,8 @@ export function highlightChart(chart: Chart, chartHighlight: BaseSelection, targ
                     selectedElement.removeAttribute('data-highlighted');
                 });
             }
-            calculateSelectedElements(chart, chartHighlight, legendRef, seriesRef, target as HTMLElement, false, isSelected);
+            calculateSelectedElements(chart, chartHighlight, legendRef, seriesRef, target as HTMLElement, false
+                , isSelected, highlightRef, selectionRef);
         }
         return;
     }

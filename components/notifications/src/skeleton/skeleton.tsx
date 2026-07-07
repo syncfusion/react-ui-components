@@ -1,5 +1,5 @@
-import { useMemo, useEffect, forwardRef, useImperativeHandle, useRef, useId } from 'react';
-import { formatUnit, preRender, useProviderContext } from '@syncfusion/react-base';
+import { useMemo, useEffect, forwardRef, useImperativeHandle, useRef, ForwardRefExoticComponent, RefAttributes, Ref, InputHTMLAttributes, RefObject } from 'react';
+import { formatUnit, preRender, useProviderContext, useStableId } from '@syncfusion/react-base';
 
 /**
  * Defines the available variant types for skeleton loading placeholders.
@@ -115,7 +115,7 @@ export interface ISkeleton extends SkeletonProps {
     element?: HTMLDivElement | null;
 }
 
-type ISkeletonProps = SkeletonProps & Omit<React.InputHTMLAttributes<HTMLDivElement>, keyof SkeletonProps>;
+type ISkeletonProps = SkeletonProps & Omit<InputHTMLAttributes<HTMLDivElement>, keyof SkeletonProps>;
 
 /**
  * Skeleton component for displaying loading placeholders while content is being fetched.
@@ -130,17 +130,18 @@ type ISkeletonProps = SkeletonProps & Omit<React.InputHTMLAttributes<HTMLDivElem
  * <Skeleton variant={Variants.Circle} width={50} height={50} animation={AnimationType.Wave} />
  * ```
  */
-export const Skeleton: React.ForwardRefExoticComponent<ISkeletonProps & React.RefAttributes<ISkeleton>> =
- forwardRef<ISkeleton, ISkeletonProps>((props: ISkeletonProps, ref: React.Ref<ISkeleton>) => {
+export const Skeleton: ForwardRefExoticComponent<ISkeletonProps & RefAttributes<ISkeleton>> =
+ forwardRef<ISkeleton, ISkeletonProps>((props: ISkeletonProps, ref: Ref<ISkeleton>) => {
      const {
          width = 'auto',
          height = 'auto',
          variant = Variants.Text,
          animation = AnimationType.Wave,
          label = 'Loading...',
-         className = ''
+         className = '',
+         id
      } = props;
-     const id: string = `sf-skeleton_${useId()}`;
+     const skeletonId: string = id ?? useStableId('sf-skeleton');
      const { dir } = useProviderContext();
      const getShapeClass: (variant: Variants) => string = (variant: Variants): string => {
          switch (variant) {
@@ -182,7 +183,7 @@ export const Skeleton: React.ForwardRefExoticComponent<ISkeletonProps & React.Re
 
      //To expose a controlled API/handle instead of a raw DOM node.
      // To keep the public ref stable and typed (ISkeleton) while you manage an internal elementRef to the div.
-     const elementRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
+     const elementRef: RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
 
      const publicAPI: Partial<ISkeleton> = {
          width,
@@ -203,7 +204,7 @@ export const Skeleton: React.ForwardRefExoticComponent<ISkeletonProps & React.Re
 
      return (
          <div
-             id={id}
+             id={skeletonId}
              className={classNames}
              style={style}
              role="alert"

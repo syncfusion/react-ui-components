@@ -112,7 +112,7 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
                 // Create a single marker for this series
                 if (seriesMarker?.highlightable) {
                     const baseRadius: number = (seriesMarker?.width || 8) + 3;
-                    const isMultiMarker: boolean = (series.type === 'RangeArea' || series.type === 'RangeColumn' || series.type === 'SplineRangeArea' );
+                    const isMultiMarker: boolean = (series.type === 'RangeArea' || series.type === 'RangeStepArea' || series.type === 'RangeColumn' || series.type === 'PolarRangeColumn' || series.type === 'RadarRangeColumn' || series.type === 'SplineRangeArea' );
                     const markerCount: number = isMultiMarker ? 2 : 1;
 
                     for (let i: number = 0; i < markerCount; i++) {
@@ -434,6 +434,8 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
 
         /**
          * Finds the closest point in a series to the current mouse position
+         * For polar/radar series, finds the closest point based on visual distance.
+         * For regular series, finds the closest point based on X-axis value.
          *
          * @param {Chart} chart - The chart object
          * @param {SeriesProperties} series - The series to check
@@ -443,25 +445,58 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
         function getClosestPoint(chart: Chart, series: SeriesProperties, xvalues?: number[]):
         { point: Points, series: SeriesProperties } | null {
 
-            const rect: Rect = series.clipRect!;
-            let value: number = 0;
+            const rect: Rect = series.clipRect as Rect;
 
-            // Determine value based on axis inversion and mouse position
-            if (chart.mouseX <= rect.x + rect.width && chart.mouseX >= rect.x) {
-                value = chart.requireInvertedAxis ?
-                    getValueYByPoint(chart.mouseY - rect.y, rect.height, series.xAxis) :
-                    getValueXByPoint(chart.mouseX - rect.x, rect.width, series.xAxis);
+            const isPolarRadar: boolean = chart.chartAreaType === 'PolarRadar';
+
+            if (isPolarRadar) {
+                let closestPointData: { point: Points, series: SeriesProperties } | null = null;
+                let closestDistance: number = Infinity;
+
+                if (series.visiblePoints) {
+                    for (const point of series.visiblePoints) {
+                        if (!point.visible || !point.symbolLocations || point.symbolLocations.length === 0) {
+                            continue;
+                        }
+
+                        // Calculate absolute coordinates from relative symbolLocations
+                        const absoluteX: number = rect.x + point.symbolLocations[0].x;
+                        const absoluteY: number = rect.y + point.symbolLocations[0].y;
+
+                        // Calculate distance to mouse cursor
+                        const dx: number = absoluteX - chart.mouseX;
+                        const dy: number = absoluteY - chart.mouseY;
+                        const distance: number = Math.sqrt(dx * dx + dy * dy);
+
+                        if (distance < closestDistance) {
+                            closestDistance = distance;
+                            closestPointData = { point, series };
+                        }
+                    }
+                }
+
+                return closestPointData;
+            } else {
+
+                let value: number = 0;
+
+                // Determine value based on axis inversion and mouse position
+                if (chart.mouseX <= rect.x + rect.width && chart.mouseX >= rect.x) {
+                    value = chart.requireInvertedAxis ?
+                        getValueYByPoint(chart.mouseY - rect.y, rect.height, series.xAxis) :
+                        getValueXByPoint(chart.mouseX - rect.x, rect.width, series.xAxis);
+                }
+
+                // Find closest X value
+                const closest: number | null = getClosestXValue(series, value, xvalues);
+
+                // Find the point with this X value
+                const point: Points | undefined = closest !== null ?
+                    series.visiblePoints?.find((p: Points) => p.xValue === closest && p.visible) : undefined;
+
+                // Return the point and series only if a point is found
+                return point ? { point, series } : null;
             }
-
-            // Find closest X value
-            const closest: number | null = getClosestXValue(series, value, xvalues);
-
-            // Find the point with this X value
-            const point: Points | undefined = closest !== null ?
-                series.visiblePoints?.find((p: Points) => p.xValue === closest && p.visible) : undefined;
-
-            // Return the point and series only if a point is found
-            return point ? { point, series } : null;
         }
 
         /**
@@ -701,10 +736,10 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
                             const markerRadius: number = Number.isFinite(rawRadius) ? Math.max(0, rawRadius) : 0;
                             const updatedMarker: TrackballMarker = {
                                 ...marker,
-                                size: (result.series!.type === 'Bubble' ? size : marker.size),
+                                size: (result.series?.type === 'Bubble' ? size : marker.size),
                                 shape: markerShape,
-                                x: location.x + (result.series!.clipRect?.x || 0),
-                                y: location.y + (result.series!.clipRect?.y || 0),
+                                x: location.x + (result.series?.clipRect?.x || 0),
+                                y: location.y + (result.series?.clipRect?.y || 0),
                                 visible: true,
                                 currentPointIndex: point.index || 0,
                                 fill: series.marker?.filled === false
@@ -870,6 +905,7 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
                             r={radius + 4}
                             fill="transparent"
                             stroke={marker.markerShadow}
+                            clipPath={`url(#${chart.element.id}_Trackball_ChartSeriesClipRect_${marker.seriesIndex})`}
                             strokeWidth={marker.border.width + 4}
                             opacity={opacity}
                             className={`trackball-shadow-${marker.seriesIndex}-${marker.symbolIndex}`}
@@ -882,6 +918,7 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
                             r={radius}
                             fill={isBubbleSeries ? 'transparent' : marker.fill}
                             stroke={marker.stroke}
+                            clipPath={`url(#${chart.element.id}_Trackball_ChartSeriesClipRect_${marker.seriesIndex})`}
                             strokeWidth={marker.border.width}
                             opacity={opacity}
                             className={`trackball-marker-${marker.seriesIndex}-${marker.symbolIndex}`}
@@ -968,6 +1005,7 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
                             d={shadowPath.d}
                             fill="transparent"
                             stroke={marker.markerShadow}
+                            clipPath={`url(#${chart.element.id}_Trackball_ChartSeriesClipRect_${marker.seriesIndex})`}
                             strokeWidth={marker.border.width + 6}
                             opacity={opacity}
                             className={`trackball-shadow-${marker.seriesIndex}-${marker.symbolIndex}`}
@@ -979,6 +1017,7 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
                             d={options.d}
                             fill={marker.fill}
                             stroke={marker.stroke}
+                            clipPath={`url(#${chart.element.id}_Trackball_ChartSeriesClipRect_${marker.seriesIndex})`}
                             strokeWidth={marker.border.width}
                             opacity={opacity}
                             className={`trackball-marker-${marker.seriesIndex}-${marker.symbolIndex}`}
@@ -989,6 +1028,27 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
         }
         return (
             <g id="trackballGroup" ref={ref}>
+                <defs>
+                    {((layoutRef.current.chart as Chart)?.visibleSeries || []).map((series: SeriesProperties
+                        , seriesIndex: number): JSX.Element | null => {
+                        if (!series || !series.clipRect) { return null; }
+                        const chart: Chart = layoutRef.current.chart as Chart;
+                        const clipRect: Rect = series.clipRect;
+                        const TRACKBALL_MARGIN: number = series.type === 'Bubble' ? 0 : 30;
+                        const expandedX: number = clipRect.x - TRACKBALL_MARGIN;
+                        const expandedY: number = clipRect.y - TRACKBALL_MARGIN;
+                        const expandedWidth: number = clipRect.width + (TRACKBALL_MARGIN * 2);
+                        const expandedHeight: number = clipRect.height + (TRACKBALL_MARGIN * 2);
+
+                        const trackId: string = `${chart.element.id}_Trackball_ChartSeriesClipRect_${seriesIndex}`;
+                        return (
+                            <clipPath id={trackId} key={trackId} clipPathUnits="userSpaceOnUse">
+                                <rect x={expandedX} y={expandedY} width={expandedWidth} height={expandedHeight} />
+                            </clipPath>
+                        );
+                    })}
+                </defs>
+
                 {trackballMarkers.map((marker: TrackballMarker, i: number) => (
                     <Fragment key={`trackball-${i}`}>
                         {renderAnimatedMarker(marker)}

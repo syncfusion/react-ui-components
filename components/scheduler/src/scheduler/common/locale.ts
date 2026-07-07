@@ -20,8 +20,9 @@ export const DEFAULT_LOCALE_STRINGS: Record<string, string> = {
     allDay: 'All day',
     day: 'Day',
     week: 'Week',
-    workweek: 'WorkWeek',
+    workweek: 'Work week',
     month: 'Month',
+    agenda: 'Agenda',
     more: 'more',
     expandAllDaySection: 'Expand all-day section',
     collapseAllDaySection: 'Collapse all-day section',
@@ -36,6 +37,10 @@ export const DEFAULT_LOCALE_STRINGS: Record<string, string> = {
     endDate: 'End date',
     startTime: 'Start time',
     endTime: 'End time',
+    startTimezone: 'Start timezone',
+    endTimezone: 'End timezone',
+    searchTimezone: 'Search timezone',
+    timezone: 'Timezone',
     eventOverlap: 'Event Overlap',
     overlapAlert: 'Events cannot be scheduled during the chosen time as it overlaps with another event.',
     blockAlert: 'Events cannot be scheduled within the blocked time range.',
@@ -45,6 +50,12 @@ export const DEFAULT_LOCALE_STRINGS: Record<string, string> = {
     invalidTimeValue: 'The entered time value is invalid.',
     invalidDateRange: 'The selected end date occurs before the start date.',
     repeat: 'Repeat',
+    never: 'Never',
+    daily: 'Daily',
+    weekly: 'Weekly',
+    monthly: 'Monthly',
+    yearly: 'Yearly',
+    custom: 'Custom',
     customRecurrence: 'Custom recurrence',
     seriesChangeAlert: 'Do you want to cancel the changes made to specific ' +
         'instances of this series and match it to the whole series again?',
@@ -57,7 +68,10 @@ export const DEFAULT_LOCALE_STRINGS: Record<string, string> = {
     editThisEvent: 'Edit Event',
     editEntireSeries: 'Entire Series',
     yes: 'Yes',
-    no: 'No'
+    no: 'No',
+    followingEvents: 'Following Events',
+    eventsFor: 'Events for',
+    noEvents: 'No events'
 };
 
 /**

@@ -9,7 +9,7 @@ import { ChartProviderChildProps } from '../chart-area/chart-interfaces';
  * This component doesn't render any UI elements but manages legend configuration through context.
  *
  * @param {ChartLegendProps} props - Legend configuration properties.
- * @returns {null} This component doesn't render any elements.
+ * @returns {null} - It is used only to pass the legend configuration to the chart through the React context.
  */
 export const ChartLegend: React.FC<ChartLegendProps> = (props: ChartLegendProps) => {
     const context: ChartProviderChildProps = React.useContext(ChartContext);
@@ -24,7 +24,7 @@ export const ChartLegend: React.FC<ChartLegendProps> = (props: ChartLegendProps)
         props.margin, props.containerPadding, props.shapePadding, props.background, props.opacity,
         props.toggleVisibility, props.title, props.titleStyle,
         props.maxTitleWidth, props.maxLabelWidth, props.enablePages,
-        props.inversed, props.reverse, props.fixedWidth, props.accessibility, props.titleAlign
+        props.inversed, props.reverse, props.fixedWidth, props.accessibility, props.titleAlign, props.mode
     ]);
 
     // Only update context when legendConfig changes

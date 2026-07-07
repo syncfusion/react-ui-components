@@ -1,7 +1,8 @@
+import * as React from 'react';
 import { forwardRef, useEffect, useLayoutEffect, useRef, useMemo, useReducer } from 'react';
 import { useLayout } from '../../layout/LayoutContext';
-import { ChartLegendProps, ChartFontProps, ChartLocationProps, ChartAccessibilityProps } from '../../base/interfaces';
-import { BaseLegend, LegendOptions, RectOption } from '../../base/Legend-base';
+import { ChartLegendProps, ChartFontProps, ChartLocationProps, ChartAccessibilityProps, ChartRangeColorProps } from '../../base/interfaces';
+import { BaseLegend, LegendOptions, RectOption, GradientStopOption } from '../../base/Legend-base';
 import {
     getLegendOptions,
     calculateLegendBound,
@@ -12,12 +13,13 @@ import {
     LegendClick
 } from './CommonLegend';
 import { IThemeStyle } from '../../utils/theme';
-import { getTextAnchor } from '../../utils/helper';
+import { extractRangeColorSignature, getTextAnchor } from '../../utils/helper';
 import { registerChartEventHandler, useLegendShapeRenderVersion } from '../../hooks/useClipRect';
 import { Chart, ChartTrendlineModel, PathOptions, Rect, SeriesProperties, TextOption } from '../../chart-area/chart-interfaces';
-import { LegendShape } from '../../base/enum';
+import { LegendMode, LegendShape } from '../../base/enum';
 import { HorizontalAlignment } from '@syncfusion/react-base';
 import { TextAnchor } from '../../../common';
+import { ChartContext } from '../../layout/ChartProvider';
 
 // Define reducer state and action types
 type LegendState = {
@@ -64,6 +66,10 @@ export const ChartLegendRenderer: React.FC<ChartLegendProps> = (props: ChartLege
         triggerUpdate: 0
     });
 
+    const { chartRangeColor } = React.useContext(ChartContext);
+    const rangeColorSignature: ChartRangeColorProps[] = useMemo(() => {
+        return extractRangeColorSignature(chartRangeColor);
+    }, [chartRangeColor]);
     // Memoize dependencies to prevent unnecessary re-renders
     const propsToWatch: {
         visible: boolean;
@@ -84,6 +90,7 @@ export const ChartLegendRenderer: React.FC<ChartLegendProps> = (props: ChartLege
         containerPadding: object;
         maxTitleWidth: number;
         textStyle: ChartFontProps;
+        mode: LegendMode;
     } = useMemo(() => ({
         visible: props.visible || false,
         width: props.width || '',
@@ -102,7 +109,8 @@ export const ChartLegendRenderer: React.FC<ChartLegendProps> = (props: ChartLege
         margin: props.margin || {},
         containerPadding: props.containerPadding || {},
         maxTitleWidth: props.maxTitleWidth || 0,
-        textStyle: props.textStyle || {}
+        textStyle: props.textStyle || {},
+        mode: props.mode || 'Series'
     }), [
         props.visible,
         props.width,
@@ -121,7 +129,8 @@ export const ChartLegendRenderer: React.FC<ChartLegendProps> = (props: ChartLege
         props.margin,
         props.containerPadding,
         props.maxTitleWidth,
-        props.textStyle
+        props.textStyle,
+        props.mode
     ]);
 
     // Handle shape property changes
@@ -170,6 +179,7 @@ export const ChartLegendRenderer: React.FC<ChartLegendProps> = (props: ChartLege
                     chart,
                     layoutRef.current.chartLegend as BaseLegend
                 );
+                chart.legendSettings = layoutRef.current.chartLegend as BaseLegend;
             }
             reportMeasured('ChartLegend');
         }
@@ -179,7 +189,7 @@ export const ChartLegendRenderer: React.FC<ChartLegendProps> = (props: ChartLege
         if (phase !== 'measuring') {
             triggerRemeasure();
         }
-    }, [propsToWatch, shapeProps]);
+    }, [propsToWatch, shapeProps, rangeColorSignature]);
 
     useEffect(() => {
         if (phase !== 'measuring' && layoutRef.current.chart && layoutRef.current.chartLegend) {
@@ -513,6 +523,16 @@ const LegendItem: React.FC<LegendItemProps> = ({
                     rx={legendShape.rx}
                     ry={legendShape.ry}
                 />
+            ) : (legendItem.type === 'Line' || legendItem.shape === 'HorizontalLine' || legendItem.shape === 'VerticalLine' || (legendItem.type.includes('StackingLine'))) ? (
+                <path
+                    id={legendShape.id}
+                    opacity={props.opacity}
+                    fill={legendShape.fill}
+                    stroke={legendShape.stroke}
+                    strokeWidth={legendShape.strokeWidth}
+                    d={legendShape.d}
+                    pointerEvents="stroke"
+                />
             ) : (
                 <path
                     id={legendShape.id}
@@ -561,6 +581,90 @@ const LegendItem: React.FC<LegendItemProps> = ({
     );
 };
 
+interface GradientLegendProps {
+    legend: BaseLegend;
+    props: ChartLegendProps;
+    chartTheme: IThemeStyle;
+}
+
+/**
+ * Renders a gradient legend with color range visualization
+ *
+ * This component displays a linear gradient bar with start and end labels
+ * for range-based color mapping legends. It includes the gradient definition
+ * and the gradient bar rectangle.
+ *
+ * @component
+ * @param {GradientLegendProps} props - Properties for the gradient legend
+ * @param {BaseLegend} props.legend - The legend configuration object
+ * @param {ChartLegendProps} props.props - The original legend props from the chart
+ * @param {IThemeStyle} props.chartTheme - The theme styling for the chart
+ * @returns {React.ReactElement} The rendered gradient legend
+ */
+const GradientLegend: React.FC<GradientLegendProps> = ({
+    legend,
+    props,
+    chartTheme
+}: GradientLegendProps): React.ReactElement => {
+    return (
+        <>
+            {legend.gradientOptions?.gradientTextOption &&
+                legend.gradientOptions.gradientTextOption.map((textOpt: TextOption, idx: number) => (
+                    <text
+                        key={idx}
+                        id={textOpt.id}
+                        x={textOpt.x}
+                        y={textOpt.y}
+                        fill={textOpt.fill}
+                        fontSize={props.textStyle?.fontSize || chartTheme.legendLabelFont.fontSize}
+                        fontFamily={props.textStyle?.fontFamily || chartTheme.legendLabelFont.fontFamily}
+                        fontStyle={props.textStyle?.fontStyle || chartTheme.legendLabelFont.fontStyle}
+                        fontWeight={props.textStyle?.fontWeight || chartTheme.legendLabelFont.fontWeight}
+                        opacity={textOpt.opacity || props.opacity}
+                        textAnchor={textOpt.anchor as TextAnchor}
+                    >
+                        {textOpt.text}
+                    </text>
+                ))}
+            <defs>
+                {legend.gradientOptions?.gradientId && legend.gradientOptions?.gradientStops && (
+                    <linearGradient
+                        id={legend.gradientOptions.gradientId}
+                        x1={legend.gradientOptions.gradientX1}
+                        y1={legend.gradientOptions.gradientY1}
+                        x2={legend.gradientOptions.gradientX2}
+                        y2={legend.gradientOptions.gradientY2}
+                    >
+                        {legend.gradientOptions.gradientStops.map((stop: GradientStopOption, index: number) => (
+                            <stop
+                                key={index}
+                                offset={stop.offset}
+                                stopColor={stop.stopColor}
+                                stopOpacity={stop.stopOpacity}
+                            />
+                        ))}
+                    </linearGradient>
+                )}
+            </defs>
+            {legend.gradientOptions?.gradientBarRect && (
+                <rect
+                    id={legend.gradientOptions.gradientBarRect.id}
+                    opacity={legend.gradientOptions.gradientBarRect.opacity}
+                    fill={legend.gradientOptions.gradientBarRect.fill}
+                    stroke={legend.gradientOptions.gradientBarRect.stroke}
+                    strokeWidth={legend.gradientOptions.gradientBarRect.strokeWidth}
+                    x={legend.gradientOptions.gradientBarRect.x}
+                    y={legend.gradientOptions.gradientBarRect.y}
+                    width={legend.gradientOptions.gradientBarRect.width}
+                    height={legend.gradientOptions.gradientBarRect.height}
+                    rx={legend.gradientOptions.gradientBarRect.rx}
+                    ry={legend.gradientOptions.gradientBarRect.ry}
+                />
+            )}
+        </>
+    );
+};
+
 interface LegendItemsProps {
     legend: BaseLegend;
     props: ChartLegendProps;
@@ -572,6 +676,7 @@ interface LegendItemsProps {
  *
  * This component serves as a container for all the individual legend items,
  * mapping through the legend collection and rendering each item component.
+ * It handles both regular legend items and gradient legends based on the legend mode.
  *
  * @component
  * @param {LegendItemsProps} props - Properties for the legend items collection
@@ -648,7 +753,7 @@ forwardRef<SVGGElement, ChartLegendProps>((props: ChartLegendProps, ref: React.R
             const legend: BaseLegend = layoutRef.current.chartLegend as BaseLegend;
 
             for (const series of chart.visibleSeries as SeriesProperties[]) {
-                if (series.name !== '' && !(series.category === 'TrendLine' && chart.visibleSeries[series.sourceIndex].name === '')) {
+                if (series.name !== '' && (legend.legendCollections as LegendOptions[]) && !(series.category === 'TrendLine' && chart.visibleSeries[series.sourceIndex].name === '') && series.category !== 'Indicator') {
                     (legend.legendCollections as LegendOptions[])[series.index as number].shape =
                         series.legendShape as LegendShape;
                 }
@@ -780,21 +885,23 @@ forwardRef<SVGGElement, ChartLegendProps>((props: ChartLegendProps, ref: React.R
 
     return (
         <>
-            <clipPath id={`${legend.legendID}_clipPath`}>
-                <rect
-                    id={clipRect.id}
-                    opacity={clipRect.opacity}
-                    fill={clipRect.fill}
-                    stroke={clipRect.stroke}
-                    strokeWidth={clipRect.strokeWidth}
-                    x={clipRect.x}
-                    y={clipRect.y}
-                    width={clipRect.width}
-                    height={clipRect.height}
-                    rx={clipRect.rx}
-                    ry={clipRect.ry}
-                />
-            </clipPath>
+            <defs>
+                <clipPath id={`${legend.legendID}_clipPath`}>
+                    <rect
+                        id={clipRect.id}
+                        opacity={clipRect.opacity}
+                        fill={clipRect.fill}
+                        stroke={clipRect.stroke}
+                        strokeWidth={clipRect.strokeWidth}
+                        x={clipRect.x}
+                        y={clipRect.y}
+                        width={clipRect.width}
+                        height={clipRect.height}
+                        rx={clipRect.rx}
+                        ry={clipRect.ry}
+                    />
+                </clipPath>
+            </defs>
             <g id={`${legend.legendID}_g`} >
                 <rect
                     id={`${legend.legendID}_element`}
@@ -825,11 +932,19 @@ forwardRef<SVGGElement, ChartLegendProps>((props: ChartLegendProps, ref: React.R
                         transform={legend.isPaging ? 'translate(0, 0)' : ''}
                         ref={legendRef}
                     >
-                        <LegendItems
-                            legend={legend}
-                            props={props}
-                            chartTheme={chartTheme}
-                        />
+                        {legend.mode === 'Gradient' ? (
+                            <GradientLegend
+                                legend={legend}
+                                props={props}
+                                chartTheme={chartTheme}
+                            />
+                        ) : (
+                            <LegendItems
+                                legend={legend}
+                                props={props}
+                                chartTheme={chartTheme}
+                            />
+                        )}
                     </g>
                 </g>
 

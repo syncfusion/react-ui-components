@@ -1,0 +1,89 @@
+@use 'theme-variables' as *;
+@use '../common/layout' as common;
+
+@include export-module('menu-layout') {
+
+  @keyframes MenuSlideDown {
+      from {
+        height: 0;
+      }
+
+      to {
+        height: var(--sf-slide-height, 100%);
+      }
+    }
+
+  .sf-menu {
+    position: relative;
+    display: inline-block;
+    max-width: $menu-max-width;
+
+    .sf-menu-parent,
+    .sf-menu-root {
+      max-width: $menu-max-width;
+      display: flex;
+    }
+
+    .sf-menu-item.sf-separator {
+      padding: $menu-separator-padding;
+    }
+
+    &.sf-menu-horizontal .sf-menu-root {
+      align-items: center;
+      flex-wrap: nowrap;
+      padding: $menu-bar-padding;
+      overflow-x: visible;
+    }
+
+    &.sf-menu-vertical .sf-menu-root {
+      flex-direction: column;
+      align-items: stretch;
+      min-width: $menu-vertical-min-width;
+      padding: $menu-vertical-padding;
+    }
+
+    .sf-menu-submenu {
+      flex-direction: column;
+      min-width: $menu-flyout-min-width;
+      max-height: $menu-flyout-max-height;
+      overflow-y: auto;
+      overflow-x: visible;
+    }
+  }
+
+  .sf-submenu-wrapper {
+    position: unset;
+  }
+
+  .sf-menu-root {
+    gap: $menu-bar-gap;
+
+    .sf-submenu-icon {
+      &.sf-chevron-right {
+        @include common.sf-chevron-rotation($menu-chevron-right-angle);
+      }
+
+      &.sf-chevron-down {
+        @include common.sf-chevron-rotation($menu-chevron-down-angle);
+      }
+
+      svg {
+        font-size: $menu-submenu-icon-font-size;
+      }
+    }
+
+    .sf-menu-item {
+      gap: $menu-item-gap;
+      padding: $menu-item-padding;
+      border-radius: $menu-item-radius;
+      line-height: $menu-item-content-line-height;
+      font-size: $menu-item-content-font-size;
+    }
+
+    &>.sf-menu-item.sf-separator[aria-orientation='vertical'] {
+      height: stretch;
+      background: $menu-separator-bg;
+    }
+  }
+
+}

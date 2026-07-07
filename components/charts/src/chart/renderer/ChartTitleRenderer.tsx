@@ -242,7 +242,7 @@ function titleElement(chart: Chart, titleProps: ChartTitleProps, ref: ForwardedR
             fontStyle={titleProps.fontStyle || chart.themeStyle.chartTitleFont.fontStyle}
             transform={titleOptions.rotation}
             opacity={titleProps.opacity}
-            aria-label={titleProps.accessibility?.ariaLabel}
+            aria-label={titleProps.accessibility?.ariaLabel || titleProps.text}
             role={titleProps.accessibility?.role}
             tabIndex={titleProps.accessibility?.focusable ? titleProps.accessibility?.tabIndex : -1}
             style={{ outline: 'none' }}

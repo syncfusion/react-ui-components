@@ -1,7 +1,7 @@
 import type { JSX, RefObject } from 'react';
 import { ChartMarkerProps, ChartWaterfallSettings } from '../../base/interfaces';
 import { DoubleRangeType, PointRenderingEvent, Points, Rect, RenderOptions, SeriesProperties } from '../../chart-area/chart-interfaces';
-import { useVisiblePoints } from '../../utils/helper';
+import { calculateVisiblePoints } from '../../utils/helper';
 import { ColumnBase, ColumnBaseReturnType } from './ColumnBase';
 import MarkerRenderer from './MarkerRenderer';
 import { handleRectAnimation } from './SeriesAnimation';
@@ -56,12 +56,10 @@ const WaterfallSeriesRenderer : {
      * Main render method for Waterfall series.
      *
      * @param {SeriesProperties} series - Series configuration and data points.
-     * @param {boolean} _isInverted - Whether axes are inverted (unused here; we read from series).
      * @returns {RenderResult} RenderOptions array and optional marker information.
      */
     render: (
-        series: SeriesProperties,
-        _isInverted: boolean
+        series: SeriesProperties
     ): RenderResult => {
         const points: Points[] = series.points;
         const settings: ChartWaterfallSettings | undefined = series.waterfallSettings;
@@ -260,12 +258,13 @@ const WaterfallSeriesRenderer : {
                 fill: 'none',
                 stroke: settings?.connectorLine?.strokeColor ?? '#5F6A6A',
                 strokeWidth: settings?.connectorLine?.strokeWidth ?? 1,
-                opacity: series.opacity,
+                opacity: settings?.connectorLine?.strokeOpacity ?? series.opacity,
+                strokeOpacity: settings?.connectorLine?.strokeOpacity ?? series.opacity,
                 dashArray: settings?.connectorLine?.dashArray ?? '',
                 d: connectorPathD
             });
         }
-        series.visiblePoints = useVisiblePoints(series).filter((point : Points) =>
+        series.visiblePoints = calculateVisiblePoints(series).filter((point : Points) =>
             point.symbolLocations &&
             point.symbolLocations.length &&
             isFinite(point.symbolLocations[0].x) &&
@@ -347,7 +346,7 @@ export function drawConnectorLines(
             strokeWidth={currentSeries.waterfallSettings?.connectorLine?.strokeWidth ?? pathOption.strokeWidth ?? 1}
             fill="none"
             strokeDasharray={currentSeries.waterfallSettings?.connectorLine?.dashArray ?? ''}
-            opacity={currentSeries.waterfallSettings?.connectorLine?.strokeOpacity ?? pathOption.opacity ?? 1}
+            strokeOpacity={currentSeries.waterfallSettings?.connectorLine?.strokeOpacity ?? pathOption.strokeOpacity ?? 1}
             style={{
                 outline: 'none',
                 visibility: currentSeries.isLegendClicked ? 'visible' : animationProgress === 1 ? 'visible' : 'hidden'

@@ -1,4 +1,5 @@
-import { DateService } from './DateService';
+import { DateService, DEFAULT_WEEKS, WEEK_LENGTH } from './DateService';
+import { Timezone } from './Timezone';
 import { View } from '../types/enums';
 
 /** @private */
@@ -8,6 +9,11 @@ export interface NavigationOptions {
     interval: number;
     showWeekend?: boolean;
     workDays?: number[];
+    agendaDaysCount?: number;
+    numberOfWeeks?: number;
+    firstDayOfWeek?: number;
+    displayDate?: Date;
+    renderDates?: Date[];
 }
 
 /**
@@ -53,7 +59,8 @@ export class NavigationService {
      * @private
      */
     static navigate(direction: 1 | -1, options: NavigationOptions): Date {
-        const { currentDate, viewType, interval, showWeekend, workDays } = options;
+        const { currentDate, viewType, interval, showWeekend, workDays, agendaDaysCount, numberOfWeeks, firstDayOfWeek, renderDates,
+            displayDate } = options;
 
         switch (viewType) {
         case 'Day':
@@ -67,7 +74,16 @@ export class NavigationService {
             return DateService.addDays(currentDate, direction * 7 * interval);
 
         case 'Month':
+            if (displayDate || numberOfWeeks > 0) {
+                const viewDate: Date = direction === 1 ? renderDates[renderDates.length - 1] : renderDates[0];
+                const weekStart: Date = DateService.getWeekFirstDate(viewDate, firstDayOfWeek);
+                const numberOfDays: number = direction === 1 ? WEEK_LENGTH : direction * (numberOfWeeks || DEFAULT_WEEKS) * WEEK_LENGTH;
+                return DateService.addDays(weekStart, numberOfDays);
+            }
             return DateService.addMonths(currentDate, direction * interval);
+
+        case 'Agenda':
+            return DateService.addDays(currentDate, direction * (agendaDaysCount || 7) * interval);
 
         default:
             return DateService.addDays(currentDate, direction);
@@ -95,11 +111,18 @@ export class NavigationService {
     }
 
     /**
-     * Navigate to today's date
+     * Navigate to today's date in the specified timezone.
      *
-     * @returns {Date} Today's date
+     * @param {string} timezone - The timezone to compute today's date in (IANA name)
+     * @returns {Date} Today's date in the specified timezone
      */
-    static navigateToToday(): Date {
-        return new Date();
+    static navigateToToday(timezone?: string): Date {
+        if (!timezone) {
+            return new Date();
+        }
+        const now: Date = new Date();
+        const convertedDate: Date = Timezone.add(now, timezone);
+        const today: Date = DateService.normalizeDate(convertedDate);
+        return today;
     }
 }

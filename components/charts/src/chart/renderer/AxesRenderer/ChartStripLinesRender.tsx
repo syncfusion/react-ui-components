@@ -179,7 +179,7 @@ export const StripLineAfterRenderer: React.FC<StripLineRendererProps> = ({ axes 
 
     useEffect(() => {
         const chart: Chart = layoutRef.current?.chart as Chart;
-        if (phase !== 'measuring' && axisOverInfo.id === chart.element.id) {
+        if (phase !== 'measuring' && chart && axisOverInfo.id === chart.element.id) {
             if (chart && axes && axes.some((axis: AxisModel) => axis.stripLines?.length as number > 0)) {
                 const updatedOverValue: StriplineOptions[] = renderStripLineElements(chart, axes, 'Over');
                 chart.striplineOver = updatedOverValue;

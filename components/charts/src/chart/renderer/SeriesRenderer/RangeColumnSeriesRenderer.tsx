@@ -1,6 +1,6 @@
 import { ChartMarkerProps } from '../../base/interfaces';
 import { DoubleRangeType, PointRenderingEvent, Points, RangeColumnSeriesRendererType, Rect, RenderOptions, SeriesProperties } from '../../chart-area/chart-interfaces';
-import { useVisiblePoints } from '../../utils/helper';
+import { calculateVisiblePoints } from '../../utils/helper';
 import { ColumnBase, ColumnBaseReturnType } from './ColumnBase';
 import { AnimationResult, AnimationState } from './ColumnSeriesRenderer';
 import MarkerRenderer from './MarkerRenderer';
@@ -41,7 +41,7 @@ const RangeColumnSeriesRenderer: RangeColumnSeriesRendererType = {
             );
             if (option) { options.push(option); }
         }
-        series.visiblePoints = useVisiblePoints(series);
+        series.visiblePoints = calculateVisiblePoints(series);
         const marker: ChartMarkerProps | undefined = series.marker?.visible
             ? (MarkerRenderer.render(series) as ChartMarkerProps)
             : undefined;
@@ -84,6 +84,11 @@ const RangeColumnSeriesRenderer: RangeColumnSeriesRendererType = {
                 series.columnWidthInPixel * series.index;
             rect.x = rect.x - offset;
         }
+
+        if (rect.width <= 0) {
+            return undefined;
+        }
+
         const args: PointRenderingEvent = columnBase.triggerEvent(
             series, point, series.interior,
             { width: series.border?.width, color: series.border?.color }

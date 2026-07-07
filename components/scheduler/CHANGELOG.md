@@ -1,5 +1,21 @@
 # Changelog
 
+## 34.1.29 (2026-07-06)
+
+### Scheduler
+
+#### Features
+
+- **Resource Grouping:** The Scheduler now supports grouping resources across multiple nested levels, making it easy to track schedules, manage allocations, and compare availability across different resources simultaneously. Grouping can be configured to display dates as the top-level header, establish clear parent-child dependencies between categories, or organize resources in a sequential hierarchy.
+
+- **Agenda view:** A new view that lists upcoming appointments in order by date. This compact layout is optimized for mobile and narrow screens.
+
+- **Timezone:** Support for displaying events accurately across different geographical regions. Features a global timezone property to ensure consistent event rendering regardless of the user's local system time, along with support for defining individual start and end timezones at the event level to manage schedules across multiple locations.
+
+- **Load on Demand:**  Support for dynamically loading event data based on the active view's date range instead of loading the entire dataset at once. This significantly optimizes performance and reduces memory usage when managing extensive datasets.
+
+- **Following occurrence edit:** Support for editing a chosen occurrence and all subsequent events within an ongoing recurring series.
+
 ## 33.1.44 (2026-03-16)
 
 ### Scheduler

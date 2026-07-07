@@ -1,7 +1,7 @@
 import * as React from 'react';
-import { FC, ReactElement, useRef, useMemo, RefObject, useCallback, ReactNode, forwardRef, ForwardRefRenderFunction, isValidElement, useState, useLayoutEffect } from 'react';
+import { FC, ReactElement, useRef, useMemo, RefObject, ReactNode, forwardRef, ForwardRefRenderFunction, isValidElement, useState, useLayoutEffect, useCallback, useEffect } from 'react';
 import { Button, Variant, Color, Position, IButton } from '@syncfusion/react-buttons';
-import { OverflowMode, Toolbar, ToolbarItem, ToolbarSpacer } from '@syncfusion/react-navigations';
+import { IToolbar, OverflowMode, Toolbar, ToolbarItem, ToolbarSpacer } from '@syncfusion/react-navigations';
 import { ChevronRightIcon, ChevronLeftIcon, ChevronDownIcon, TimelineTodayIcon } from '@syncfusion/react-icons';
 import { ViewsInfo } from '../types/internal-interface';
 import { Popup, CollisionType, ActionOnScrollType } from '@syncfusion/react-popups';
@@ -93,6 +93,11 @@ interface SchedulerToolbarProps {
      * The render dates for date range calculation
      */
     renderDates?: Date[];
+
+    /**
+     * Reference to the scheduler element for positioning dropdowns/popups
+     */
+    schedulerElementRef?: RefObject<HTMLDivElement>;
 }
 
 /**
@@ -291,7 +296,8 @@ export const ViewButton: FC<ViewButtonProps> = (props: ViewButtonProps): ReactEl
         disabled = false,
         className,
         variant = Variant.Outlined,
-        color = Color.Secondary
+        color = Color.Secondary,
+        viewPortElementRef
     }: ViewButtonProps = props;
 
     const displayText: string | undefined = items.find((item: ItemModel): boolean => item.id === currentView)?.text || currentView;
@@ -309,6 +315,7 @@ export const ViewButton: FC<ViewButtonProps> = (props: ViewButtonProps): ReactEl
                 aria-label={ariaLabel}
                 title={title}
                 disabled={disabled}
+                popupSettings={{ viewPortElementRef: viewPortElementRef }}
             >
                 {displayText}
             </DropDownButton>
@@ -342,12 +349,21 @@ export const SchedulerToolbar: FC<SchedulerToolbarProps> = ({
     calendarView = CalendarView.Month,
     onCalendarChange,
     renderDates,
-    customizeHeader
+    customizeHeader,
+    schedulerElementRef
 }: SchedulerToolbarProps): ReactElement => {
     const popupAnchorRef: RefObject<IButton> = useRef<IButton | null>(null);
     const toolbarElementRef: RefObject<HTMLDivElement> = useRef<HTMLDivElement | null>(null);
     const [isAnchorReady, setIsAnchorReady] = useState(false);
     const popupContainerRef: RefObject<HTMLDivElement> = useRef<HTMLDivElement | null>(null);
+    const toolbarRef: RefObject<IToolbar> = useRef<IToolbar | null>(null);
+    const prevIsCalendarOpen: React.RefObject<boolean> = useRef(isCalendarOpen);
+
+    useEffect((): void => {
+        if (Browser.isDevice && dateRangeText && toolbarRef.current) {
+            toolbarRef.current.refreshOverflow();
+        }
+    });
 
     useLayoutEffect(() => {
         if (isCalendarOpen && popupAnchorRef?.current?.element) {
@@ -355,6 +371,10 @@ export const SchedulerToolbar: FC<SchedulerToolbarProps> = ({
         } else {
             setIsAnchorReady(false);
         }
+        if (!isCalendarOpen && prevIsCalendarOpen.current && popupAnchorRef.current && popupAnchorRef.current?.element) {
+            popupAnchorRef.current.element.focus();
+        }
+        prevIsCalendarOpen.current = isCalendarOpen;
     }, [isCalendarOpen, popupAnchorRef?.current]);
 
     useOutsideClick(
@@ -377,8 +397,6 @@ export const SchedulerToolbar: FC<SchedulerToolbarProps> = ({
             const id: string = event.item?.id as string | undefined;
             if (id) { onViewButtonClick(id); }
         }, [onViewButtonClick]);
-
-    const itemsKey: string = useMemo(() => items.map((v: ItemModel) => `${v.id}:${v.text}`).join('|'), [items]);
 
     const shouldShowCustomDateRange: boolean = !!renderDates && renderDates.length >= 2;
     const dateRangeTextForLabel: string | undefined = shouldShowCustomDateRange
@@ -452,6 +470,7 @@ export const SchedulerToolbar: FC<SchedulerToolbarProps> = ({
                     currentView={view}
                     onSelect={handleViewSelect}
                     ariaLabel={availableViews?.find((v: ViewsInfo) => v.name === view)?.displayName ?? view}
+                    viewPortElementRef={schedulerElementRef}
                     {...(customProps?.viewSwitcherProps || {})}
                 />
             </ToolbarItem>
@@ -514,7 +533,7 @@ export const SchedulerToolbar: FC<SchedulerToolbarProps> = ({
 
     return (
         <div ref={toolbarElementRef} className={CSS_CLASSES.SCHEDULER_TOOLBAR_CONTAINER} >
-            <Toolbar overflowMode={overflowMode} key={`tb-${itemsKey}-${dateRangeText}`} style={{ width: 'auto' }}>
+            <Toolbar ref={toolbarRef} overflowMode={overflowMode} style={{ width: 'auto' }}>
                 {toolbarChildren}
             </Toolbar>
             {isCalendarOpen && popupAnchorRef.current && isAnchorReady && (

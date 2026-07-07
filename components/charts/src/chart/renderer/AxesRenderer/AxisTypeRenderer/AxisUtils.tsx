@@ -6,6 +6,7 @@ import { createDoubleRange } from './DoubleAxisRenderer';
 import { AxisModel, Chart, ColumnProps, RowProps, ChartSizeProps, TextStyleModel, VisibleLabel, SeriesProperties } from '../../../chart-area/chart-interfaces';
 import { calculateCrossAxisLabelSize } from './CrossAxisHerlper';
 import { TextOverflow } from '../../../../common';
+import { getMultilevelLabelsHeight } from '../ChartMultiLevelLabelRender';
 
 /**
  * Calculates the maximum width of visible labels on the specified chart axis.
@@ -160,6 +161,9 @@ export function getMaxLabelWidth(chart: Chart, axis: AxisModel): void {
                                                    axis.angle, chart.themeStyle.axisLabelFont);
         }
     }
+    if (axis.multiLevelLabels) {
+        getMultilevelLabelsHeight(axis, chart);
+    }
 }
 
 /**
@@ -195,12 +199,12 @@ export function findLabelSize(axis: AxisModel, innerPadding: number, definition:
     }
 
     let labelSize: number = titleSize + innerPadding + (axis.titleStyle.padding as number) + (axis.labelStyle.padding as number) +
-        (axis.orientation === 'Vertical' ? axis.maxLabelSize.width : axis.maxLabelSize.height);
+        (axis.orientation === 'Vertical' ? axis.maxLabelSize.width : axis.maxLabelSize.height) + (axis.multiLevelLabelHeight as number);
 
     labelSize = calculateCrossAxisLabelSize(axis, labelSize);
 
     labelSize = titleSize + innerPadding + (axis.titleStyle.padding as number) + (axis.labelStyle.padding as number) +
-        (axis.orientation === 'Vertical' ? axis.maxLabelSize.width : axis.maxLabelSize.height);
+        (axis.orientation === 'Vertical' ? axis.maxLabelSize.width : axis.maxLabelSize.height) + (axis.multiLevelLabelHeight as number);
     const computedTitlePadding: number = ((axis.titleStyle.text !== '' && axis.titleStyle.padding !== 5) ? axis.titleStyle.padding as number : 0);
     if (axis.isAxisOpposedPosition) {
         definition.insideFarSizes.push(labelSize);
@@ -215,7 +219,8 @@ export function findLabelSize(axis: AxisModel, innerPadding: number, definition:
             return titleSize + innerPadding + computedTitlePadding;
         } else {
             return titleSize + innerPadding + computedTitlePadding + (axis.labelStyle.padding || 0) +
-                (axis.orientation === 'Vertical' ? axis.maxLabelSize.width : axis.maxLabelSize.height);
+                (axis.orientation === 'Vertical' ? axis.maxLabelSize.width : axis.maxLabelSize.height) +
+                    (axis.multiLevelLabelHeight as number);
         }
     }
     return labelSize;

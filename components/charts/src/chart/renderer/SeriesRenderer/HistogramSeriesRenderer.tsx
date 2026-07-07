@@ -7,7 +7,8 @@ import { ChartHistogramSettings, ChartLocationProps } from '../../base/interface
 
 
 /**
- * Histogram render result
+ * Histogram render result.
+ *
  * @private
  */
 interface HistogramRenderResult {
@@ -292,6 +293,7 @@ export function drawHistogramNormalDistribution(
 ): JSX.Element {
     return (
         <path
+            key={pathOption.id}
             id={pathOption.id}
             d={pathOption.d}
             fill="none"

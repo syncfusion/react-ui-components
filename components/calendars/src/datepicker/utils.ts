@@ -1,5 +1,5 @@
 import { IL10n, L10n, parseDate} from '@syncfusion/react-base';
-import { GregorianCalendar } from '../calendar-core';
+import { CalendarSystem, CalendarType, createCalendarSystem } from '../calendar-core';
 import { CalendarCellProps } from '../calendar';
 
 export const getPlaceholderL10n: (
@@ -30,24 +30,27 @@ export const parseInputValueDate: (
         locale?: string;
         format?: string;
         inputFormatsString: string[];
+        calendarType?: string;
     }
 ) => Date | null = (inputVal: string, opts: {
     locale?: string;
     format?: string;
     inputFormatsString: string[];
+    calendarType?: string;
 }): Date | null => {
-    const { locale, format, inputFormatsString } = opts;
+    const { locale, format, inputFormatsString, calendarType } = opts;
 
     if (!inputVal || !inputVal.trim()) {
         return null;
     }
     const normalizedAMPM: string = inputVal.replace(/(am|pm)/gi, (s: string): string => s.toUpperCase());
-    const normalized: string = normalizeTwoDigitYear(normalizedAMPM);
+    const normalized: string = format && format.includes('yy') && !format.includes('yyyy')
+        ? normalizedAMPM : normalizeTwoDigitYear(normalizedAMPM);
 
     if (inputFormatsString && inputFormatsString.length) {
         for (const fmt of inputFormatsString) {
             try {
-                const d: Date = parseDate(normalized, { locale: locale || 'en-US', format: fmt, type: 'date' });
+                const d: Date = parseDate(normalized, { locale: locale || 'en-US', format: fmt, type: 'date', calendar: calendarType });
                 if (d && !isNaN(d.getTime())) {
                     return d;
                 }
@@ -56,7 +59,7 @@ export const parseInputValueDate: (
             }
         }
     } else {
-        const d: Date = parseDate(normalized, { locale: locale || 'en-US', format, type: 'date' });
+        const d: Date = parseDate(normalized, { locale: locale || 'en-US', format, type: 'date', calendar: calendarType });
         if (d && !isNaN(d.getTime())) {
             return d;
         }
@@ -69,26 +72,29 @@ export const createIsDateDisabledByCellTemplate: (
     currentValue: Date | null,
     minDate: Date,
     maxDate: Date,
-    calendarSystem?: GregorianCalendar
+    calendarSystem?: CalendarSystem,
+    calendarType?: CalendarType
 ) => (date: Date) => boolean = (
     cellTemplate: ((props: CalendarCellProps) => React.ReactNode) | undefined,
     currentValue: Date | null,
     minDate: Date,
     maxDate: Date,
-    calendarSystem: GregorianCalendar = new GregorianCalendar()
+    calendarSystem?: CalendarSystem,
+    calendarType: CalendarType = 'gregorian'
 ) => {
     if (typeof cellTemplate !== 'function') {
-        return (_date: Date): boolean => false;
+        return (): boolean => false;
     }
+    const system: CalendarSystem = calendarSystem ?? createCalendarSystem(calendarType);
     return (date: Date): boolean => {
         try {
             const today: Date = new Date();
             const referenceDate: Date = currentValue && !Array.isArray(currentValue) ? currentValue : today;
             const isWeekend: boolean = date.getDay() === 0 || date.getDay() === 6;
-            const isOtherMonth: boolean = calendarSystem.getMonth(date) !== calendarSystem.getMonth(referenceDate);
-            const isToday: boolean = calendarSystem.isSameDate(date, today);
+            const isOtherMonth: boolean = system.getMonth(date) !== system.getMonth(referenceDate);
+            const isToday: boolean = system.isSameDate(date, today);
             const isSelected: boolean = !!(currentValue &&
-                !Array.isArray(currentValue) && calendarSystem.isSameDate(date, currentValue));
+                !Array.isArray(currentValue) && calendarSystem?.isSameDate(date, currentValue));
 
             const cellProps: CalendarCellProps = {
                 date,
@@ -101,8 +107,8 @@ export const createIsDateDisabledByCellTemplate: (
                 className: '',
                 id: `${date.valueOf()}`
             };
-            const result: any = (cellTemplate as Function)(cellProps);
-            if (result && typeof result === 'object' && 'props' in (result as Record<string, unknown>)) {
+            const result: React.ReactNode = (cellTemplate as Function)(cellProps);
+            if (result && typeof result === 'object' && 'props' in result) {
                 return Boolean((result as { props?: { isDisabled?: boolean } }).props?.isDisabled);
             }
             return false;

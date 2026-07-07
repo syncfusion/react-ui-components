@@ -1,15 +1,17 @@
 
-import { useState, useCallback, useEffect, forwardRef, useImperativeHandle, useRef, useId } from 'react';
-import { preRender, useProviderContext, Variant, Size } from '@syncfusion/react-base';
-import { CLASS_NAMES, LabelMode, InputBase, renderClearButton, renderFloatLabelElement, inputBaseProps } from '../common/inputbase';
-import * as React from 'react';
+import { useState, useCallback, useEffect, forwardRef, useImperativeHandle, useRef, useMemo, ReactNode, InputHTMLAttributes,
+    ForwardRefExoticComponent, RefAttributes, ForwardedRef, RefObject, type ChangeEvent, type FocusEvent
+} from 'react';
+import { preRender, useProviderContext, Variant, Size, useStableId } from '@syncfusion/react-base';
+import { CLASS_NAMES, LabelMode, InputBase, renderClearButton, renderFloatLabelElement, inputBaseProps, renderAdornmentElement } from '../common/inputbase';
+import { HelperText } from '../common/helper-text';
 export { LabelMode, Variant, Size };
 
 export interface TextBoxChangeEvent {
     /**
      * Specifies the initial event object received from the input element.
      */
-    event?: React.ChangeEvent<HTMLInputElement>;
+    event?: ChangeEvent<HTMLInputElement>;
 
     /**
      * Specifies the current value of the TextBox.
@@ -67,7 +69,7 @@ export interface TextBoxProps extends inputBaseProps {
      *
      * @default false
      */
-    clearButton?: React.ReactNode;
+    clearButton?: ReactNode;
 
     /**
      * Specifies the Callback that fired when the input value is changed.
@@ -84,19 +86,6 @@ export interface TextBoxProps extends inputBaseProps {
      */
     color?: Color;
 
-    /**
-     * Specifies the icon to display at the beginning of the input.
-     *
-     * @default -
-     */
-    prefix?: React.ReactNode;
-
-    /**
-     * Specifies the icon to display at the end of the input.
-     *
-     * @default -
-     */
-    suffix?: React.ReactNode;
 }
 
 export interface ITextBox extends TextBoxProps {
@@ -109,7 +98,7 @@ export interface ITextBox extends TextBoxProps {
     element?: HTMLInputElement | null;
 }
 
-type ITextBoxProps = TextBoxProps & Omit<React.InputHTMLAttributes<HTMLInputElement>, keyof TextBoxProps>;
+type ITextBoxProps = TextBoxProps & Omit<InputHTMLAttributes<HTMLInputElement>, keyof TextBoxProps>;
 
 /**
  * TextBox component that provides a standard text input with extended functionality.
@@ -121,8 +110,8 @@ type ITextBoxProps = TextBoxProps & Omit<React.InputHTMLAttributes<HTMLInputElem
  * <TextBox defaultValue="Initial text" placeholder="Enter text" />
  * ```
  */
-export const TextBox: React.ForwardRefExoticComponent<ITextBoxProps & React.RefAttributes<ITextBox>> =
-forwardRef<ITextBox, ITextBoxProps>((props: ITextBoxProps, ref: React.ForwardedRef<ITextBox>) => {
+export const TextBox: ForwardRefExoticComponent<ITextBoxProps & RefAttributes<ITextBox>> =
+forwardRef<ITextBox, ITextBoxProps>((props: ITextBoxProps, ref: ForwardedRef<ITextBox>) => {
     const {
         disabled = false,
         onChange,
@@ -142,17 +131,20 @@ forwardRef<ITextBox, ITextBoxProps>((props: ITextBoxProps, ref: React.ForwardedR
         color,
         prefix,
         suffix,
+        helperText,
+        helperTextOnFocus = false,
+        helperTextDirection = 'Left',
         ...rest
     } = props;
-    const stableIdRef: React.RefObject<string> = useRef(id || `default_${useId()}`);
-    const stableId: string = stableIdRef.current;
+    const reactId: string = useStableId('sf-textbox');
+    const textboxId: string = id ?? reactId;
     const isControlled: boolean = value !== undefined;
     const [inputValue, setValue] = useState<string | undefined>(
         isControlled ? value : (defaultValue || '')
     );
 
     const [isFocused, setIsFocused] = useState(false);
-    const inputRef: React.RefObject<HTMLInputElement | null> = useRef<HTMLInputElement>(null);
+    const inputRef: RefObject<HTMLInputElement | null> = useRef<HTMLInputElement>(null);
     const { locale, dir } = useProviderContext();
     const publicAPI: Partial<ITextBoxProps> = {
         clearButton,
@@ -162,32 +154,33 @@ forwardRef<ITextBox, ITextBoxProps>((props: ITextBoxProps, ref: React.ForwardedR
         variant,
         size,
         color,
-        value
-    };
-
-    const getContainerClassNames: () => string = () => {
-        return classNames(
-            CLASS_NAMES.INPUTGROUP,
-            CLASS_NAMES.WRAPPER,
-            labelMode !== 'Never' ? CLASS_NAMES.FLOATINPUT : '',
-            className,
-            (dir === 'rtl') ? CLASS_NAMES.RTL : '',
-            disabled ? CLASS_NAMES.DISABLE : '',
-            isFocused ? CLASS_NAMES.TEXTBOX_FOCUS : '',
-            ((inputValue) !== '') ? CLASS_NAMES.VALIDINPUT : '',
-            variant && variant.toLowerCase() !== 'standard'  ? variant.toLowerCase() === 'outlined' ? 'sf-outline' : `sf-${variant.toLowerCase()}` : '',
-            size && size.toLowerCase() !== 'small' ? `sf-${size.toLowerCase()}` : '',
-            color ? `sf-${color.toLowerCase()}` : '',
-            prefix ? 'sf-has-prefix' : '',
-            'sf-control'
-        );
+        value,
+        helperText,
+        helperTextOnFocus,
+        helperTextDirection
     };
 
     const classNames: (...classes: string[]) => string = (...classes: string[]) => {
         return classes.filter(Boolean).join(' ');
     };
 
-    const containerClassNames: string = getContainerClassNames();
+    const containerClassNames: string = useMemo(() => classNames(
+        CLASS_NAMES.INPUTGROUP,
+        CLASS_NAMES.WRAPPER,
+        labelMode !== 'Never' ? CLASS_NAMES.FLOATINPUT : '',
+        className,
+        (dir === 'rtl') ? CLASS_NAMES.RTL : '',
+        disabled ? CLASS_NAMES.DISABLE : '',
+        readOnly ? CLASS_NAMES.READONLY : '',
+        isFocused ? CLASS_NAMES.TEXTBOX_FOCUS : '',
+        ((inputValue) !== '') ? CLASS_NAMES.VALIDINPUT : '',
+        variant && variant.toLowerCase() !== 'standard' ? variant.toLowerCase() === 'outlined' ? 'sf-outline' : `sf-${variant.toLowerCase()}` : '',
+        size && size.toLowerCase() !== 'small' ? `sf-${size.toLowerCase()}` : '',
+        color ? `sf-${color.toLowerCase()}` : '',
+        prefix ? 'sf-has-prefix' : '',
+        suffix ? 'sf-has-suffix' : '',
+        'sf-control'
+    ), [labelMode, className, dir, disabled, readOnly, isFocused, inputValue, variant, size, color, prefix, suffix]);
 
     useEffect(() => {
         preRender('textbox');
@@ -204,8 +197,8 @@ forwardRef<ITextBox, ITextBoxProps>((props: ITextBoxProps, ref: React.ForwardedR
         element: inputRef.current
     }));
 
-    const updateValue: (newValue: string, event?: React.ChangeEvent<HTMLInputElement>) => void =
-    useCallback((newValue: string, event?: React.ChangeEvent<HTMLInputElement>) => {
+    const updateValue: (newValue: string, event?: ChangeEvent<HTMLInputElement>) => void =
+    useCallback((newValue: string, event?: ChangeEvent<HTMLInputElement>) => {
         if (!isControlled) {
             setValue(newValue);
         }
@@ -214,14 +207,14 @@ forwardRef<ITextBox, ITextBoxProps>((props: ITextBoxProps, ref: React.ForwardedR
         }
     }, [onChange, isControlled]);
 
-    const changeHandler: (event: React.ChangeEvent<HTMLInputElement>) => void =
-    useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const changeHandler: (event: ChangeEvent<HTMLInputElement>) => void =
+    useCallback((event: ChangeEvent<HTMLInputElement>) => {
         const newValue: string = event.target.value;
         updateValue(newValue, event);
     }, [updateValue]);
 
-    const handleFocus: (event: React.FocusEvent<HTMLInputElement>) => void =
-    useCallback((event: React.FocusEvent<HTMLInputElement>) => {
+    const handleFocus: (event: FocusEvent<HTMLInputElement>) => void =
+    useCallback((event: FocusEvent<HTMLInputElement>) => {
         setIsFocused(true);
         if (onFocus) {
             onFocus(event);
@@ -241,8 +234,8 @@ forwardRef<ITextBox, ITextBoxProps>((props: ITextBoxProps, ref: React.ForwardedR
         }
     }, [isControlled, onChange]);
 
-    const handleBlur: (event: React.FocusEvent<HTMLInputElement>) => void =
-    useCallback((event: React.FocusEvent<HTMLInputElement>) => {
+    const handleBlur: (event: FocusEvent<HTMLInputElement>) => void =
+    useCallback((event: FocusEvent<HTMLInputElement>) => {
         setIsFocused(false);
         if (onBlur) {
             onBlur(event);
@@ -252,37 +245,45 @@ forwardRef<ITextBox, ITextBoxProps>((props: ITextBoxProps, ref: React.ForwardedR
     const displayValue: string | undefined = isControlled ? value : inputValue;
 
     return (
-        <div
-            className={containerClassNames}
-            style={{ width: width || '100%' }}
-        >
-            {prefix && <span className='sf-input-icon sf-no-hover'>{prefix}</span>}
-            <InputBase
-                id={stableId}
-                floatLabelType={labelMode}
-                ref={inputRef as React.RefObject<HTMLInputElement>}
-                {...rest}
-                readOnly={readOnly}
-                value={isControlled ? (displayValue) : undefined}
-                defaultValue={!isControlled ? (inputValue || '') : undefined}
-                disabled={disabled}
-                placeholder={labelMode === 'Never' ? placeholder : undefined}
-                className={'sf-textbox sf-lib sf-ellipsis'}
-                onChange={changeHandler}
-                aria-label={labelMode === 'Never' ? 'textbox' : undefined}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
+        <>
+            <div
+                className={containerClassNames}
+                style={{ width: width || '100%' }}
+            >
+                {renderAdornmentElement(prefix)}
+                <InputBase
+                    id={textboxId}
+                    floatLabelType={labelMode}
+                    ref={inputRef as RefObject<HTMLInputElement>}
+                    {...rest}
+                    readOnly={readOnly}
+                    value={isControlled ? (displayValue) : undefined}
+                    defaultValue={!isControlled ? (inputValue || '') : undefined}
+                    disabled={disabled}
+                    placeholder={labelMode === 'Never' ? placeholder : undefined}
+                    className={'sf-textbox sf-lib sf-ellipsis'}
+                    onChange={changeHandler}
+                    aria-label={labelMode === 'Never' ? 'textbox' : undefined}
+                    onFocus={handleFocus}
+                    onBlur={handleBlur}
+                />
+                {renderFloatLabelElement(
+                    labelMode || 'Never',
+                    isFocused || (displayValue) !== '',
+                    (displayValue as string),
+                    placeholder,
+                    textboxId
+                )}
+                {clearButton && renderClearButton((isFocused ? displayValue as string : ''), clearInput, clearButton, 'textbox', locale)}
+                {renderAdornmentElement(suffix)}
+            </div>
+            <HelperText
+                helperText={helperText}
+                helperTextOnFocus={helperTextOnFocus}
+                isFocused={isFocused}
+                helperTextDirection={helperTextDirection}
             />
-            {renderFloatLabelElement(
-                labelMode || 'Never',
-                isFocused || (displayValue) !== '',
-                (displayValue as string),
-                placeholder,
-                stableId
-            )}
-            {clearButton && renderClearButton((isFocused ? displayValue as string : ''), clearInput, clearButton, 'textbox', locale)}
-            {suffix && <span className='sf-input-icon sf-no-hover'>{suffix}</span>}
+        </>
 
-        </div>
     );
 });

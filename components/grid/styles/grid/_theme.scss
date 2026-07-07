@@ -7,7 +7,8 @@
     border-color: $grid-border-color;
     
     .sf-focused {
-      box-shadow: $grid-cell-focus-shadow;
+      outline: $grid-cell-focus-outline;
+      outline-offset: -1px;
     }
 
     .sf-grid-pager {
@@ -32,6 +33,7 @@
   }
 
   .sf-cell,
+  .sf-grid-detail-cell,
   .sf-grid-header-content {
     border-color: $grid-border-color;
   }
@@ -45,16 +47,19 @@
   }
 
   .sf-grid-content-row .sf-cell,
+  .sf-group-togglebtn,
+  .sf-detail-toggle-icon,
   .sf-grid-summary-row .sf-cell {
     color: $grid-text-color;
   }
 
   .sf-row-hover .sf-grid-content-row:not(.sf-grid-edit-row):hover {
-    .sf-cell:not(.sf-active) {
-        @include bgcolor-color-styles($grid-hover-bg-color, $grid-hover-content-text-color);
+    .sf-cell:not(.sf-active, .sf-cell-selected) {
+      @include bgcolor-color-styles($grid-hover-bg-color, $grid-hover-content-text-color);
     }
 
-    .sf-cell {
+    .sf-cell,
+    .sf-cell-selected {
       @include bgcolor-color-styles($grid-row-selection-hover-bg-color, $grid-text-color);
     }
   }
@@ -63,7 +68,8 @@
     @include bgcolor-color-styles($grid-sort-order-bg, $grid-sort-order-text-color);
   }
 
-  td.sf-active {
+  td.sf-active,
+  .sf-cell-selected {
     @include bgcolor-color-styles($grid-row-selection-bg-color, $grid-text-color);
   }
 
@@ -111,6 +117,35 @@
   }
 
   .sf-excel-filter .sf-virtual-scroll-container {
-    border-bottom-color:rgba($on-surface-variant, 0.12);
+    border-bottom-color: $excel-virtual-bottom-border-color;
+  }
+
+  .sf-group-drop-area {
+    background: $grid-sort-order-bg;
+  }
+
+  .sf-group-drag-clone-hover {
+    border-color: rgba($primary);
+  }
+
+  .sf-groupable-header-clone,
+  .sf-groupable-header-clone:hover {
+    @include bgcolor-color-styles($grid-header-bg-color, $grid-header-text-color);
+  }
+
+  .sf-group-togglebtn, .sf-detail-toggle-icon {
+    background-color: transparent;
+
+    &:hover {
+      background-color: $grid-hover-bg-color;
+    }
+
+    &:active {
+      background-color: $content-bg-color-pressed;
+    }
+
+    &:focus {
+      background-color: $content-bg-color-focus;
+    }
   }
 }

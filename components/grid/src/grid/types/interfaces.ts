@@ -1,12 +1,13 @@
 import { Dispatch, HTMLAttributes, JSX, ReactElement, ReactNode, RefObject, SetStateAction, MouseEvent, FocusEvent, CSSProperties, UIEvent } from 'react';
 import { ReturnType, DataManager, Predicate, Query, DataResult, Aggregates } from '@syncfusion/react-data';
 import { DateFormatOptions, NumberFormatOptions } from '@syncfusion/react-base';
-import { CellTypes, RenderType, ScrollMode } from '../types/enum';
+import { AggregateType, CellTypes, RenderType, ScrollMode } from '../types/enum';
 import { FilterSettings, FilterEvent, filterModule } from '../types/filter.interfaces';
 import { ColumnProps, IColumnBase } from '../types/column.interfaces';
 import { FocusStrategyModule } from '../types/focus.interfaces';
-import { InlineEditFormRef, payload, editModule } from '../types/edit.interfaces';
+import { InlineEditFormRef, payload, editModule, CellEditFormRef } from '../types/edit.interfaces';
 import { selectionModule } from '../types/selection.interfaces';
+import { CellSelectionModel } from '../types/cell-selection.interfaces';
 import { PagerRef } from '@syncfusion/react-pager';
 import { AggregateColumnProps, AggregateData, AggregateRowProps } from '../types/aggregate.interfaces';
 import { GridActionEvent, IGrid, IGridBase } from '../types/grid.interfaces';
@@ -17,6 +18,10 @@ import { ToolbarAPI } from './toolbar.interfaces';
 import * as React from 'react';
 import { UseCommandColumnResult } from './command.interfaces';
 import { VirtualSettings } from './virtualization.interface';
+import { ContextMenuPanelRef } from './context.interfaces';
+import { InfiniteScrollState } from './infinite-scroll.interface';
+import { GroupedData } from './grouping.interfaces';
+import { UseGroupResult } from '../hooks/useGroup';
 
 /**
  * IValueFormatter interface defines the methods for value formatting services
@@ -155,6 +160,14 @@ export interface ICell<T> {
      * @default -
      */
     className?: string;
+
+    /**
+     * Indicates whether the cell is selected.
+     * Used for cell selection mode to track which cells are currently selected.
+     *
+     * @default false
+     */
+    isSelected?: boolean;
 }
 /**
  * Interface defining row properties and metadata for grid rendering.
@@ -162,6 +175,7 @@ export interface ICell<T> {
  * @private
  */
 export interface IRow<T> {
+    spanCells?: ICell<ColumnProps<T>>[];
     /**
      * Function to set the row object state.
      *
@@ -181,7 +195,7 @@ export interface IRow<T> {
      *
      * @default null
      */
-    data?: T extends IColumnBase<infer C> ? C : unknown;
+    data?: (T extends IColumnBase<infer C> ? C : unknown) | GroupedData<T extends IColumnBase<infer C> ? C : unknown>;
 
     /**
      * Group summary count for the row.
@@ -219,6 +233,13 @@ export interface IRow<T> {
     isDataRow?: boolean;
 
     /**
+     * Indicates whether this is a data row.
+     *
+     * @default false
+     */
+    isDetailRow?: boolean;
+
+    /**
      * Indicates whether this is an aggregate row.
      *
      * @default false
@@ -238,6 +259,13 @@ export interface IRow<T> {
      * @default false
      */
     isIntermediateState?: boolean;
+
+    /**
+     * Indicates whether the selection is in an disabled state.
+     *
+     * @default false
+     */
+    isDisabled?: boolean;
 
     /**
      * Indicates whether the row is expanded.
@@ -295,6 +323,14 @@ export interface IRow<T> {
      */
     parentUid?: string;
 
+    // /**
+    //  * Unique identifier for the row's parent group if this row is part of a grouped dataset.
+    //  * Used for efficient lookups and operations on grouped rows.
+    //  *
+    //  * @default -
+    //  */
+    // parentGroupedRowIndex?: number;
+
     /**
      * Reference to the row's DOM element.
      *
@@ -328,8 +364,10 @@ export interface Scroll {
     getScrollBarWidth?: () => number;
     virtualRowInfo: VirtualRowInfo;
     virtualColumnInfo: VirtualColumnInfo;
-    scrollIntoVirtualRowsRangeView: (startPage: number, endPage: number, filteredTotalRecordsCount?: number) => void;
+    scrollIntoVirtualRowsRangeView: (startPage: number, endPage: number, filteredTotalRecordsCount?: number, throttle?: number) => void;
+    // virtualScrollRequest: () => void;
     isDataOperationPreventVirtualCache: RefObject<boolean>;
+    // isDataOperationTotalCountChange: RefObject<boolean>;
     scrollToVirtualColumnIndex: (index?: number) => void;
     setVirtualColumnEndIndex: (visibleColumns?: ColumnProps[]) => void;
 }
@@ -365,24 +403,27 @@ export interface MutableGridBase<T = unknown> {
      *
      * @param {Object[]} data - The data to set
      */
-    setCurrentViewData?: (data: T[]) => void;
+    setCurrentViewData?: (data: (T | GroupedData<T>)[]) => void;
 
     /**
      * Current view data
      */
-    currentViewData?: T[];
+    currentViewData?: (T | GroupedData<T>)[];
+
+    pageWiseGroupResponseViewData?: Map<number, GroupedData<T>[]>;
+    setPageWiseGroupResponseViewData?: Dispatch<SetStateAction<Map<number, GroupedData<T>[]>>>;
 
     /**
      * Sets the virtual cached current view data
      *
      * @param {Map<number, Object>} data - The data to set
      */
-    setVirtualCachedViewData?: Dispatch<SetStateAction<Map<number, T>>>;
+    setVirtualCachedViewData?: Dispatch<SetStateAction<Map<number, (T | GroupedData<T>)>>>;
 
     /**
      * Current virtual cached view data
      */
-    virtualCachedViewData?: Map<number, T>;
+    virtualCachedViewData?: Map<number, (T | GroupedData<T>)>;
 
     /**
      * Header row depth for stacked headers
@@ -406,6 +447,11 @@ export interface MutableGridBase<T = unknown> {
     selectionModule?: selectionModule<T>;
 
     /**
+     * The `cellSelectionModule` is used for cell selection in the Data Grid.
+     */
+    cellSelectionModule?: CellSelectionModel;
+
+    /**
      * The `sortModule` is used to manipulate sorting in the Data Grid.
      */
     sortModule?: SortModule;
@@ -421,20 +467,33 @@ export interface MutableGridBase<T = unknown> {
     searchModule?: searchModule;
 
     /**
+     * The `groupModule` is used to manipulate row grouping in the Data Grid.
+     */
+    groupModule?: UseGroupResult<T>;
+
+    /**
      * The `editModule` is used to manipulate editing in the Data Grid.
      */
     editModule?: editModule<T>;
+
+    /**
+     * Manages user-selected aggregate types via context menu.
+     */
+    aggregateSelection?: UseAggregateSelectionResult;
 
     gridAction?: GridActionEvent;
     filterSettings?: FilterSettings;
     searchSettings?: SearchSettings;
     currentPage?: number;
     totalRecordsCount?: number;
+    expandedGroupCountRef: RefObject<number>;
+    loadedPageWiseGroupExpandedCountRef?: RefObject<Map<number, number>>;
+    loadedPageWiseVirtualGroupStartEndRowIndexes?: RefObject<Map<number, {startIndex: number, endIndex: number}>>;
+    singleGroupColumn?: ColumnProps<T> | undefined;
+    groupCaptionAggregateType?: Map<string, string[]>;
     responseData?: Object;
     setResponseData?: Dispatch<SetStateAction<Object>>;
     commandColumnModule?: UseCommandColumnResult<T>;
-    // isContentBusy?: boolean
-    // setIsContentBusy?: React.Dispatch<React.SetStateAction<boolean>>;
     /**
      * Get the parent element
      */
@@ -458,6 +517,8 @@ export interface MutableGridBase<T = unknown> {
      */
     dataModule?: UseDataResult;
 
+    setColumnChooserState?: Dispatch<SetStateAction<object>>;
+
     /**
      * The toolbar module for toolbar operations
      */
@@ -467,6 +528,10 @@ export interface MutableGridBase<T = unknown> {
      * Indicates whether the grid has a checkbox selection column
      */
     isCheckBoxColumn?: boolean;
+    /**
+     * Indicates whether the configured columns include rowSpan or colSpan.
+     */
+    isSpannedColumns?: boolean;
     /** @default {enableRow: true, enableColumn: true, preventMaxRenderedRows: false, rowBuffer: preventMaxRenderedRows ? 500 : 5, columnBuffer: 5} */
     virtualSettings?: VirtualSettings;
     /** @default ScrollMode.Auto */
@@ -477,6 +542,39 @@ export interface MutableGridBase<T = unknown> {
     offsetY?: number;
     setOffsetX?: Dispatch<SetStateAction<number>>;
     setOffsetY?: Dispatch<SetStateAction<number>>;
+
+    /**
+     * Infinite scroll internal state (unified object for all infinite scroll data).
+     * Internal mutable state for infinite scroll pagination via continuation tokens.
+     *
+     * @default { isInfiniteEndReached: false, infiniteCachePages: new Map(), infiniteCacheViewData: [], nextContinuationToken: null }
+     */
+    infiniteScrollState?: InfiniteScrollState;
+
+    /**
+     * Sets the infinite scroll state.
+     * Updates entire state object atomically to maintain consistency.
+     *
+     * @param {InfiniteScrollState} state - New infinite scroll state
+     */
+    setInfiniteScrollState?: Dispatch<SetStateAction<InfiniteScrollState>>;
+
+    /**
+     * Stores the expansion state for master-detail rows in the grid.
+     * Maps row indices to boolean values indicating whether each row is expanded or collapsed.
+     *
+     * @default new Map()
+     */
+    expansionState?: Map<number, boolean>;
+
+    /**
+     * Toggles expansion state for a master row
+     *
+     * @param {number} rowIndex - The row ID to toggle
+     * @param {T} [rowData] - Optional row data
+     * @returns {void}
+     */
+    onExpandStateChange?: (rowIndex: number, rowData?: T) => void;
 }
 
 /**
@@ -505,6 +603,14 @@ export interface RowRef<T = unknown> {
      * @default null
      */
     editInlineRowFormRef?: RefObject<InlineEditFormRef<T>>;
+
+    /**
+     * Reference to the cell edit form for this row in cell edit mode.
+     * Provides access to programmatic methods: focus(), getValue(), setValue(), and inputRef.
+     *
+     * @default null
+     */
+    editCellFormRef?: RefObject<CellEditFormRef>;
 
     /**
      * Function to set the row object state.
@@ -605,7 +711,7 @@ export type ValueType = number | string | Date | boolean;
  *
  * @private
  */
-export interface RenderRef<T = unknown> extends HeaderPanelRef, ContentPanelRef<T>, FooterPanelRef {
+export interface RenderRef<T = unknown> extends HeaderPanelRef, ContentPanelRef<T>, FooterPanelRef, ContextMenuPanelRef {
     /**
      * Refreshes the grid view by getting the updated data
      */
@@ -635,6 +741,14 @@ export interface RenderRef<T = unknown> extends HeaderPanelRef, ContentPanelRef<
      * Pager module reference
      */
     pagerModule?: PagerRef;
+
+    /**
+     * Opens the column chooser dialog programmatically
+     *
+     * @param {number} x - Optional X coordinate for custom positioning
+     * @param {number} y - Optional Y coordinate for custom positioning
+     */
+    openColumnChooser(x?: number, y?: number): void;
 }
 
 /**
@@ -816,6 +930,10 @@ export interface ContentTableRef<T = unknown> extends ContentRowsRef<T> {
      * @private
      */
     editInlineRowFormRef?: RefObject<InlineEditFormRef<T>>;
+    /**
+     * @private
+     */
+    editCellFormRef?: RefObject<CellEditFormRef>;
     columnClientWidth?: number;
 }
 
@@ -1061,6 +1179,51 @@ export interface DataRequestEvent {
      * @default -
      */
     name?: string;
+
+    /**
+     * Contains an array of field names to retrieve from the data source.
+     * Specifies which columns or properties should be included in the query result.
+     * Used to optimize data retrieval by selecting only necessary fields.
+     *
+     * @default []
+     */
+    select?: string[];
+
+    /**
+     * Indicates whether the data service should return distinct counts for the result set.
+     * When true, requires the service to calculate unique value counts alongside the data.
+     * Used for scenarios requiring unique record counting or deduplication.
+     *
+     * @default false
+     */
+    distinctCounts?: boolean;
+
+    /**
+     * Specifies the type of request being made to the data service.
+     * Indicates the context of the data request, such as 'filterChoiceRequest' for filter dropdown data.
+     * Used to determine how the response should be processed and applied to the grid.
+     *
+     * @default null
+     */
+    requestType?: string;
+
+    /**
+     * Specifies a callback function to handle the data service response.
+     * Executes with the query result when a specific request type requires custom handling.
+     * Used for scenarios like filter choice requests that need direct response processing.
+     *
+     * @default null
+     */
+    dataSource?: Function;
+
+    /**
+     * Contains an array of filter criteria for distinct value queries.
+     * Specifies conditions to filter data when calculating distinct counts.
+     * Used alongside distinctCounts to apply the same filter predicates when fetching distinct values.
+     *
+     * @default []
+     */
+    distinct?: Predicate[];
 }
 
 /**
@@ -1221,7 +1384,7 @@ export interface RowRenderEvent<T = unknown> {
     /**
      * Defines the current row data.
      */
-    data: T;
+    data: T | GroupedData<T>;
     /** Defines the row element. */
     row?: Element;
     /** Defines the row height */
@@ -1300,6 +1463,10 @@ export interface VirtualColumnInfo extends VirtualInfo {
     offsetX: number;
     scrollFocusCurrentAriaColIndex: number;
     columns: ColumnProps[];
+    /**
+     * Visible header cell metadata for the current virtual column viewport.
+     */
+    visibleHeaderColumns?: ColumnProps[];
 }
 
 /**
@@ -1380,6 +1547,26 @@ export interface UseDataResult<T = unknown> {
     getData: (props?: { requestType?: string; data?: T | T[]; index?: number }, query?: Query, payload?: payload) =>
     Promise<Response | ReturnType | DataResult>;
     dataState: RefObject<PendingState>;
+    getStateEventArgument: (query: Query) => DataRequestEvent;
+}
+
+/**
+ * Manages user-selected aggregate types via context menu.
+ *
+ * @private
+ */
+export interface UseAggregateSelectionResult {
+    /**
+     * Retrieves selected aggregate for a specific row and column.
+     * Returns undefined if no selection exists.
+     */
+    getAggregate: (rowIndex: number, field: string) => AggregateType | undefined;
+
+    /**
+     * Adds/replaces aggregate type for a specific row and column.
+     * Replaces previous selection if it exists.
+     */
+    addAggregate: (rowIndex: number, field: string, type: AggregateType) => void;
 }
 
 /**
@@ -1395,7 +1582,7 @@ export interface ServiceLocator {
      * @param name - The name of the service
      * @param type - The service implementation
      */
-    register<T>(name: string, type: T): void;
+    register<T extends object>(name: string, type: T): void;
     /**
      * Unregister all services
      * Used for cleanup
@@ -1409,7 +1596,7 @@ export interface ServiceLocator {
      * @returns The requested service
      * @throws Error if the service is not registered
      */
-    getService<T>(name: string): T;
+    getService<T extends object>(name: string): T;
 
     /**
      * Dictionary of registered services
@@ -1428,7 +1615,7 @@ export interface MutableGridSetter<T = unknown> {
     /**
      * Function to set the current view data.
      */
-    setCurrentViewData: Dispatch<SetStateAction<T[]>>;
+    setCurrentViewData: Dispatch<SetStateAction<(T | GroupedData<T>)[]>>;
     /**
      * Function to set the initial load state.
      */

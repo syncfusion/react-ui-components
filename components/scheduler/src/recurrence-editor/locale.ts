@@ -11,10 +11,10 @@ export const DEFAULT_LOCALE_STRINGS: Record<string, string> = {
     month: 'Month',
     year: 'Year',
     repeat: 'Repeat',
-    repeatEvery: 'Repeat Every',
+    repeatEvery: 'Repeat every',
     repeatedMode: 'Mode',
     end: 'End',
-    repeatOn: 'Repeat On',
+    repeatOn: 'Repeat on',
     repeatMode: 'Repeat Mode',
     first: 'First',
     second: 'Second',
@@ -35,7 +35,19 @@ export const DEFAULT_LOCALE_STRINGS: Record<string, string> = {
     summaryYear: 'year(s)',
     summaryOn: 'on',
     summaryUntil: 'until',
-    summaryTimes: 'time(s)'
+    summaryTimes: 'time(s)',
+    intervalAriaLabel: 'Number of repeats',
+    frequencyAriaLabel: 'Select repeat frequency',
+    byMonthAriaLabel: 'Select month of the year',
+    byMonthDayAriaLabel: 'Repeat on the day of month',
+    byDayAriaLabel: 'Repeat on a specific weekday of the month',
+    bySetPositionAriaLabel: 'Select week position in month',
+    endTypeAriaLabel: 'Select recurrence end type',
+    countAriaLabel: 'Number of occurrences',
+    untilAriaLabel: 'Choose recurrence until date',
+    untilEarlierThanStart: 'Until date cannot be earlier than the start date',
+    ok: 'OK',
+    alert: 'Alert'
 };
 
 /**

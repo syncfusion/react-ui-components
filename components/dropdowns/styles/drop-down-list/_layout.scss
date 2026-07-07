@@ -23,7 +23,15 @@
         max-height: inherit;
         display: flex;
         flex-direction: column;
-        padding: $spacing-4 $spacing-0;
+        padding: $ddl-medium-popup-padding;
+      }
+
+      > .sf-small {
+        padding: $ddl-small-popup-padding;
+      }
+
+      > .sf-large {
+        padding: $ddl-large-popup-padding;
       }
     }
 

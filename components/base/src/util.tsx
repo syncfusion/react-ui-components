@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ReactElement, RefObject, version } from 'react';
+import { ReactElement, RefObject, version, useRef, useId } from 'react';
 /**
  * Common utility methods
  *
@@ -453,4 +453,32 @@ export function getElementRef(element: ReactElement): React.RefObject<HTMLElemen
     } else {
         return (element as any).ref || null;
     }
+}
+
+let idCounter: number = 0;
+
+/**
+ * Returns a stable unique ID for the lifetime of the component instance.
+ *
+ * Behavior:
+ * - React 18+: uses React's native `useId()` and prefixes the result.
+ * - React 17: falls back to a module-local counter stored in a `useRef`.
+ *
+ * @private
+ * @param {string} [prefix] prefix [componentName] to prepend to the generated ID.
+ * @returns {string} Stable ID string scoped to the component instance.
+ * @example
+ * const inputId = useStableId('field');
+ * return <label htmlFor={inputId}>Name</label>;
+ */
+export function useStableId(prefix: string): string {
+    if (typeof useId === 'function') {
+        return `${prefix}_${useId()}`;
+    }
+
+    const idRef: React.RefObject<string | null> = useRef(null);
+    if (idRef.current === null) {
+        idRef.current = `${prefix}_${++idCounter}`;
+    }
+    return idRef.current;
 }

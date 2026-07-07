@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useSchedulerPropsContext } from '../context/scheduler-context';
 import { CSS_CLASSES } from '../common/constants';
+import { DateService } from '../services/DateService';
 
 /**
  * Result returned by the useVerticalView hook
@@ -46,9 +47,9 @@ interface UseVerticalViewResult {
  * @private
  */
 export const useVerticalView: (viewType: string) => UseVerticalViewResult = (viewType: string): UseVerticalViewResult => {
-    const { timeScale } = useSchedulerPropsContext();
+    const { timeScale, timezone } = useSchedulerPropsContext();
     const [currentTimePosition, setCurrentTimePosition] = useState<number>(0);
-    const [currentTime, setCurrentTime] = useState<Date>(new Date());
+    const [currentTime, setCurrentTime] = useState<Date>(DateService.getCurrentTime(timezone));
     const [isTimeWithinBounds, setIsTimeWithinBounds] = useState<boolean>(false);
 
     /**
@@ -60,9 +61,9 @@ export const useVerticalView: (viewType: string) => UseVerticalViewResult = (vie
     const handleTimePositionUpdate: (position: number, isWithinBounds: boolean) => void =
         useCallback((position: number, isWithinBounds: boolean): void => {
             setCurrentTimePosition(position);
-            setCurrentTime(new Date());
+            setCurrentTime(DateService.getCurrentTime(timezone));
             setIsTimeWithinBounds(isWithinBounds);
-        }, []);
+        }, [timezone]);
 
     /**
      * Get the CSS class for the current view type

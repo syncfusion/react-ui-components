@@ -1,13 +1,17 @@
 import * as React from 'react';
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { useLayout } from '../../layout/LayoutContext';
-import { ChartSeriesProps, Column, Row } from '../../base/interfaces';
+import { ChartMultiLevelLabelCategoryProps, ChartSeriesProps, Column, Row } from '../../base/interfaces';
 import { drawXAxisLabels, drawYAxisLabels, drawAxisTitle, drawBottomLines, drawMajorGridLines, drawXAxisMinorGridLines, drawXAxisMinorTicks, drawXAxisTickLines, drawYAxisMinorGridLines, drawYAxisMinorTicks, drawYAxisTickLines, measureAxis, renderAxis, drawAxisLine } from './CartesianLayoutRender';
+import { measurePolarRadarAxis, renderPolarVerticalAxisGroup, renderPolarHorizontalAxisGroup } from './PolarRadarLayoutRender';
 import { extend } from '@syncfusion/react-base';
 import { calculateStackValues, pushCategoryData } from '../SeriesRenderer/ProcessData';
 import { useAxisRenderVersion, useClipRectSetter, useRegisterAxesRender, useRegisterAxieOutsideRender } from '../../hooks/useClipRect';
-import { AxisModel, Chart, ColumnProps, Rect, RowProps, SeriesProperties, VisibleRangeProps } from '../../chart-area/chart-interfaces';
+import { AxisModel, Chart, ChartMultiLevelLabelsProps, ColumnProps, Rect, RowProps, SeriesProperties, VisibleRangeProps } from '../../chart-area/chart-interfaces';
 import { isSecondaryAxis } from '../LegendRenderer/CommonLegend';
+import { defaultChartConfigs } from '../../base/default-properties';
+import { normalizeScrollbarPosition } from '../Zooming/scrollbarUtils';
+import { drawXAxisMultiLevelLabels, drawYAxisMultiLevelLabels } from './ChartMultiLevelLabelRender';
 
 /**
  * Represents the properties required to configure chart axes.
@@ -41,13 +45,27 @@ export const AxisRenderer: React.FC<ChartAxesProps> = ({ axes }: { axes: AxisMod
         });
         return initial;
     });
+    const axisAnimationRunIdRef: React.RefObject<number> = React.useRef(0);
 
     const axisInfo: { version: number; id: string } = useAxisRenderVersion();
     // Animate from old axis range to new axis range;
     const animateYAxis: (axes: AxisModel[]) => void = useCallback((axes: AxisModel[]) => {
-        const duration: number = !chart.delayRedraw ? 300 : 1000;
+        const currentRunId: number = ++axisAnimationRunIdRef.current;
+        let duration: number = !chart.delayRedraw ? 300 : 1000;
+        if (chart.isScrollbarThumbDrag) {
+            duration = 0;
+            const visibleRangeCollection: { [key: string]: VisibleRangeProps } = {};
+            for (let i: number = 0; i < axes.length; i++) {
+                const axis: AxisModel = axes[i as number];
+                // Snap directly to computed range (no easing timeline)
+                visibleRangeCollection[axis.name as string] = axis.visibleRange;
+            }
+            setAxisVisibleRanges(visibleRangeCollection);
+            return;
+        }
         const start: number = performance.now();
         const step: (now: number) => void = (now: number) => {
+            if (currentRunId !== axisAnimationRunIdRef.current) { return; }
             const elapsed: number = now - start;
             const progress: number = Math.min(1, elapsed / duration);
             const eased: number = ease(progress);
@@ -89,7 +107,7 @@ export const AxisRenderer: React.FC<ChartAxesProps> = ({ axes }: { axes: AxisMod
             requestAnimationFrame(step);
         }
 
-    }, [axisVisibleRanges]);
+    }, [axisVisibleRanges, chart, axisAnimationRunIdRef, setAxisVisibleRanges, ease]);
 
     // Measuring phase: compute layout but render nothing.
     useLayoutEffect(() => {
@@ -97,7 +115,11 @@ export const AxisRenderer: React.FC<ChartAxesProps> = ({ axes }: { axes: AxisMod
             const chart: Chart = layoutRef.current.chart as Chart;
             measure(chart, chart.axisCollection);
             calculateStackValues(chart);
-            measureAxis(chart.clipRect, chart);
+            if (chart.chartAreaType === 'PolarRadar') {
+                measurePolarRadarAxis(chart.clipRect, chart);
+            } else {
+                measureAxis(chart.clipRect, chart);
+            }
             chart.clipRect = chart.chartAxislayout.seriesClipRect;
             renderAxis(chart);
             setLayoutValue('ChartAxis', {});
@@ -130,6 +152,19 @@ export const AxisRenderer: React.FC<ChartAxesProps> = ({ axes }: { axes: AxisMod
             axes,
             chart.visibleSeries
         );
+        for (const runtimeAxis of chart.axisCollection) {
+            const propAxis: AxisModel | undefined = axes.find((a: AxisModel) => a.name === runtimeAxis.name);
+            if (!propAxis || !propAxis.scrollbarSettings) { continue; }
+            runtimeAxis.scrollbarSettings = {
+                ...(runtimeAxis.scrollbarSettings ?? {}),
+                ...(propAxis.scrollbarSettings ?? {})
+            };
+            const scrollbarEnabled: boolean = chart.zoomSettings?.enableScrollbar === true &&
+                runtimeAxis.scrollbarSettings?.enable !== false &&
+                ((runtimeAxis.zoomFactor as number) < 1 || (runtimeAxis.zoomPosition as number) > 0);
+            runtimeAxis.scrollbarThickness = scrollbarEnabled ? (runtimeAxis.scrollbarSettings?.thickness ??
+                runtimeAxis.scrollbarThickness) : 0;
+        }
         (layoutRef.current.chart as Chart).visibleSeries?.map((series: SeriesProperties) => {
             refreshAxisLabel(series);
         });
@@ -147,7 +182,11 @@ export const AxisRenderer: React.FC<ChartAxesProps> = ({ axes }: { axes: AxisMod
         chart.rows = chartRows; chart.columns = chartColumns;
         measure(chart, chart.axisCollection);
         calculateStackValues(chart);
-        measureAxis(chart.chartAreaRect, chart);
+        if (chart.chartAreaType === 'PolarRadar') {
+            measurePolarRadarAxis(chart.chartAreaRect, chart);
+        } else {
+            measureAxis(chart.chartAreaRect, chart);
+        }
         chart.clipRect = chart.chartAxislayout.seriesClipRect;
         renderAxis(chart);
         animateYAxis(chart.axisCollection);
@@ -198,11 +237,48 @@ export const AxisRenderer: React.FC<ChartAxesProps> = ({ axes }: { axes: AxisMod
             axis.labelStyle.placement,
             axis.labelStyle.align,
             axis.labelStyle.format,
+            axis.labelStyle.border?.color,
+            axis.labelStyle.border?.dashArray,
+            axis.labelStyle.border?.width,
             axis.indexed,
             axis.crossAt?.value,
             axis.crossAt?.axis,
             axis.crossAt?.allowOverlap,
-            axis.crosshairTooltip
+            axis.crosshairTooltip,
+            axis.coefficient,
+            axis.startAngle,
+            axis.crosshairTooltip,
+            axis.scrollbarSettings?.enable,
+            axis.scrollbarSettings?.thickness,
+            axis.scrollbarSettings?.thumbColor,
+            axis.scrollbarSettings?.thumbRadius,
+            axis.scrollbarSettings?.trackColor,
+            axis.scrollbarSettings?.trackRadius,
+            axis.scrollbarSettings?.position,
+            axis.scrollbarSettings?.enableZoom,
+            axis.scrollbarSettings?.resizeCircle?.arrowColor,
+            axis.scrollbarSettings?.resizeCircle?.borderColor,
+            axis.scrollbarSettings?.resizeCircle?.borderWidth,
+            axis.scrollbarSettings?.resizeCircle?.circleColor,
+            ...(axis.multiLevelLabels?.flatMap((level: ChartMultiLevelLabelsProps) => [
+                level.alignment,
+                level.overflow,
+                level.border?.width,
+                level.border?.color,
+                level.border?.dashArray,
+                level.textStyle?.fontSize,
+                level.textStyle?.color,
+                level.textStyle?.fontFamily,
+                level.textStyle?.fontStyle,
+                level.textStyle?.fontWeight,
+                level.textStyle?.opacity,
+                ...(level.categories?.flatMap((category: ChartMultiLevelLabelCategoryProps) => [
+                    category.text,
+                    category.start,
+                    category.end,
+                    category.maximumTextWidth
+                ]) ?? [])
+            ]) ?? [])
         ])
     ]);
 
@@ -293,40 +369,73 @@ export const AxisRenderer: React.FC<ChartAxesProps> = ({ axes }: { axes: AxisMod
                     >
 
                         {axis.visible && axis.internalVisibility && axis.orientation === 'Vertical' && (
-                            <>
-                                <defs>
-                                    <clipPath id={`${chart.element.id}_Axis_${idx}_Clip`}>
-                                        <rect x={0}
-                                            y={chart.chartAreaRect.y - (currentAxis.majorGridLines.width as number)}
-                                            width={chart.chartAreaRect.width + chart.chartAreaRect.x}
-                                            height={chart.chartAreaRect.height + (currentAxis.majorGridLines.width as number)} />
-                                    </clipPath>
-                                </defs>
-                                {drawMajorGridLines(idx, axis, chart, currentAxis, yScale)}
-                                {drawYAxisTickLines(axis, idx, yScale, chart, currentAxis)}
-                                {drawYAxisMinorGridLines(axis, idx, chart, yScale, currentAxis)}
-                                {drawYAxisMinorTicks(axis, idx, yScale, chart, currentAxis)}
-                                {drawYAxisLabels(axis, idx, axis.crossAt?.allowOverlap ? axis.updatedRect : axis.rect, chart, yScale)}
-                                {drawAxisTitle(axis, chart, idx, currentAxis)}
-                                {drawAxisLine(axis, currentAxis, chart)}
+                            <>{
+                                chart.chartAreaType === 'PolarRadar'
+                                    ? renderPolarVerticalAxisGroup(axis, idx, chart)
+                                    : <>
+                                        <defs>
+                                            <clipPath id={`${chart.element.id}_Axis_${idx}_Clip`}>
+                                                <rect x={0}
+                                                    y={chart.chartAreaRect.y - (currentAxis.majorGridLines.width as number)}
+                                                    width={chart.chartAreaRect.width + chart.chartAreaRect.x}
+                                                    height={chart.chartAreaRect.height + (currentAxis.majorGridLines.width as number)} />
+                                            </clipPath>
+                                        </defs>
+                                        {drawMajorGridLines(idx, axis, chart, currentAxis, yScale)}
+                                        {drawYAxisTickLines(axis, idx, yScale, chart, currentAxis)}
+                                        {drawYAxisMinorGridLines(axis, idx, chart, yScale, currentAxis)}
+                                        {drawYAxisMinorTicks(axis, idx, yScale, chart, currentAxis)}
+                                        {drawYAxisLabels(axis, idx, axis.crossAt?.allowOverlap ? axis.updatedRect : axis.rect,
+                                                         chart, yScale)}
+                                        {axis.labelStyle.position !== 'Inside' && (axis.multiLevelLabels?.length ?? 0) > 0 &&
+                                            drawYAxisMultiLevelLabels(
+                                                axis.multiLevelLabels ?? [],
+                                                axis,
+                                                axis.updatedRect,
+                                                idx,
+                                                chart.element.id,
+                                                chart
+                                            )
+                                        }
+                                        {drawAxisTitle(axis, chart, idx, currentAxis)}
+                                        {drawAxisLine(axis, currentAxis, chart)}
+                                    </>
+                            }
                             </>
                         )}
 
                         {axis.visible && axis.internalVisibility && axis.orientation === 'Horizontal' && (
                             <>
-                                <defs>
-                                    <clipPath id={`${chart.element.id}_Axis_${idx}_Clip`}>
-                                        <rect x={chart.clipRect.x - (currentAxis.majorGridLines.width as number)} y={chart.chartAreaRect.y}
-                                            width={chart.chartAreaRect.width} height={chart.chartAreaRect.height} />
-                                    </clipPath>
-                                </defs>
-                                {drawMajorGridLines(idx, axis, chart, currentAxis, xScale)}
-                                {drawXAxisTickLines(axis, idx, xScale, chart, currentAxis)}
-                                {drawXAxisMinorGridLines(axis, idx, chart, xScale, currentAxis)}
-                                {drawXAxisMinorTicks(axis, idx, xScale, chart, currentAxis)}
-                                {drawXAxisLabels(axis, idx, axis.crossAt?.allowOverlap ? axis.updatedRect : axis.rect, chart, xScale)}
-                                {drawAxisTitle(axis, chart, idx, currentAxis)}
-                                {drawAxisLine(axis, currentAxis, chart)}
+                                {chart.chartAreaType === 'PolarRadar'
+                                    ? renderPolarHorizontalAxisGroup(axis, idx, chart)
+                                    : <>
+                                        <defs>
+                                            <clipPath id={`${chart.element.id}_Axis_${idx}_Clip`}>
+                                                <rect x={chart.clipRect.x - (currentAxis.majorGridLines.width as number)}
+                                                    y={chart.chartAreaRect.y}
+                                                    width={chart.chartAreaRect.width} height={chart.chartAreaRect.height} />
+                                            </clipPath>
+                                        </defs>
+                                        {drawMajorGridLines(idx, axis, chart, currentAxis, xScale)}
+                                        {drawXAxisTickLines(axis, idx, xScale, chart, currentAxis)}
+                                        {drawXAxisMinorGridLines(axis, idx, chart, xScale, currentAxis)}
+                                        {drawXAxisMinorTicks(axis, idx, xScale, chart, currentAxis)}
+                                        {drawXAxisLabels(axis, idx, axis.crossAt?.allowOverlap ? axis.updatedRect : axis.rect,
+                                                         chart, xScale)}
+                                        {axis.labelStyle.position !== 'Inside' && (axis.multiLevelLabels?.length ?? 0) > 0 &&
+                                            drawXAxisMultiLevelLabels(
+                                                axis.multiLevelLabels ?? [],
+                                                axis,
+                                                axis.updatedRect,
+                                                idx,
+                                                chart.element.id,
+                                                chart
+                                            )
+                                        }
+                                        {drawAxisTitle(axis, chart, idx, currentAxis)}
+                                        {drawAxisLine(axis, currentAxis, chart)}
+                                    </>
+                                }
                             </>
                         )}
                     </g>
@@ -403,6 +512,12 @@ export function calculateVisibleAxis(
                 series.yAxis.internalVisibility = series.paretoOptions?.showAxis ?? true;
             }
         }
+        const hasStack100: boolean = axis.series?.some( (series: SeriesProperties) => series.visible && (series.type?.includes('100') || series.drawType?.includes('100'))) ?? false;
+        const isValueAxis: boolean = axis.valueType === 'Double' || axis.valueType === 'Logarithmic';
+        if (hasStack100 && isValueAxis) {
+            axis.isStack100 = true;
+            axis.maximum = 100;
+        }
         if (axis.orientation != null) {
             axisCollections.push(axis);
         }
@@ -456,6 +571,9 @@ export function measure(chart: Chart, axes: AxisModel[]): void {
             chart.columns[actualIndex as number] = column;
         }
         axis.isRTLEnabled = chart.enableRtl || false;
+        const scrollbarEnabled: boolean = chart.zoomSettings.enableScrollbar === true && axis.scrollbarSettings?.enable !== false &&
+            ((axis.zoomFactor as number) < 1 || (axis.zoomPosition as number) > 0);
+        axis.scrollbarThickness = scrollbarEnabled ? axis.scrollbarSettings?.thickness ?? defaultChartConfigs.ChartScrollBar.thickness : 0;
         setIsInversedAndOpposedPosition(axis);
     }
 }
@@ -480,6 +598,9 @@ function initAxis(requireInvertedAxis: boolean, series: SeriesProperties, axis: 
         axis.orientation = requireInvertedAxis ? 'Horizontal' : 'Vertical';
         series.yAxis = axis;
         if (isSeries) { axis.series.push(series); }
+    }
+    if (axis.scrollbarSettings?.position) {
+        axis.scrollbarSettings.position = normalizeScrollbarPosition(axis);
     }
 }
 
@@ -544,7 +665,7 @@ export function refreshAxisLabel(series: SeriesProperties): void {
     series.xAxis.indexLabels = {};
 
     for (const item of series.xAxis.series) {
-        if (item.visible && item.category !== 'TrendLine') {
+        if (item.visible && item.category !== 'TrendLine' && item.category !== 'Indicator') {
             item.xMin = Infinity;
             item.xMax = -Infinity;
 
@@ -564,22 +685,23 @@ export function refreshAxisLabel(series: SeriesProperties): void {
  * Determines the orientation to set properties that influence how the axis is displayed.
  *
  * @param {AxisModel} axis - The axis model to configure inverseness and opposed position properties.
+ * @param {boolean} isPolar - Indicates whether the axis is polar or not.
  * @returns {void} This function modifies axis properties directly and does not return any value.
  * @private
  */
-function setIsInversedAndOpposedPosition(axis: AxisModel): void {
+function setIsInversedAndOpposedPosition(axis: AxisModel, isPolar: boolean = false): void {
     const isVertical: boolean = axis.orientation === 'Vertical';
     const isHorizontal: boolean = axis.orientation === 'Horizontal';
 
     // Determine if the axis should be opposed
-    axis.isAxisOpposedPosition = (axis.opposedPosition || false) || ((axis.isRTLEnabled || false) && isVertical);
-    if (axis.opposedPosition && axis.isRTLEnabled && isVertical) {
+    axis.isAxisOpposedPosition = (axis.opposedPosition || false) || ((axis.isRTLEnabled || false) && isVertical && !isPolar);
+    if (axis.opposedPosition && axis.isRTLEnabled && isVertical && !isPolar) {
         axis.isAxisOpposedPosition = false;
     }
 
     // Determine if the axis should be inverted
     axis.isAxisInverse = (axis.inverted || (axis.isRTLEnabled && isHorizontal)) || false;
-    if (axis.inverted && axis.isRTLEnabled && isHorizontal) {
+    if (axis.inverted && axis.isRTLEnabled && isHorizontal && !isPolar) {
         axis.isAxisInverse = false;
     }
 }

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ChartCrosshairTooltipProps, ChartAxisProps, MajorGridLines, MajorTickLines, MinorGridLines, MinorTickLines } from '../base/interfaces';
+import { ChartCrosshairTooltipProps, ChartAxisProps, MajorGridLines, MajorTickLines, MinorGridLines, MinorTickLines, ChartScrollbarProps } from '../base/interfaces';
 import { ChartContext } from '../layout/ChartProvider';
 import { useContext, useEffect, useMemo } from 'react';
 import { defaultChartConfigs } from '../base/default-properties';
@@ -12,10 +12,12 @@ import { ChartAxisLabel } from './LabelStyle';
 import { ChartAxisTitle } from './TitleStyle';
 import { AxisModel, ChartProviderChildProps } from '../chart-area/chart-interfaces';
 import { ChartStripLines } from './StripLines';
-import { processChildElement, processStripLines } from './PrimaryXAxis';
-import { ChartStripLineProps } from '../base/interfaces';
+import { processChildElement, processStripLines, processMultiLevelLabels } from './PrimaryXAxis';
+import { ChartStripLineProps, ChartMultiLevelLabelProps } from '../base/interfaces';
+import { ChartMultiLevelLabels } from './ChartMultiLevelLabel';
 import { extend, isNullOrUndefined } from '@syncfusion/react-base';
 import { ChartCrosshairTooltip } from './CrosshairTooltip';
+import { ChartScrollbar } from './ChartScrollBar';
 
 /**
  * Primary Y-Axis component for the chart.
@@ -23,15 +25,21 @@ import { ChartCrosshairTooltip } from './CrosshairTooltip';
  * A non-rendering component that configures the chart's primary Y-axis.
  *
  * @param {ChartAxisProps} props - The properties for configuring the Y-axis
- * @returns {null} This component doesn't render any visible elements
+ * @returns {null} - It is used only to pass the primary y axis configuration to the chart through the React context.
  */
 export const ChartPrimaryYAxis: React.FC<ChartAxisProps> = (props: ChartAxisProps) => {
     const context: ChartProviderChildProps = useContext(ChartContext);
     const childArray: React.ReactNode[] = React.Children.toArray(props.children);
     const childrenPropsSignature: string = childArray
-        .map((child: React.ReactNode) => processChildElement(child, ChartStripLines))
+        .map((child: React.ReactNode) => {
+            if (React.isValidElement(child) && child.type === ChartMultiLevelLabels) {
+                const processedMultiLevelLabels: ChartMultiLevelLabelProps[] =
+                    processMultiLevelLabels(child, defaultChartConfigs.MultiLevelLabels);
+                return JSON.stringify({ type: 'ChartMultiLevelLabels', props: processedMultiLevelLabels });
+            }
+            return processChildElement(child, ChartStripLines);
+        })
         .join('|'); // simple delimiter for the string array
-
     const serializedProps: string = useMemo(() => {
         const { children, ...rest } = props;
         return JSON.stringify(rest);
@@ -47,6 +55,8 @@ export const ChartPrimaryYAxis: React.FC<ChartAxisProps> = (props: ChartAxisProp
         let titleStyle: ChartAxisTitleProps = defaultChartConfigs.TitleStyle;
         let axisCrosshairTooltip: ChartCrosshairTooltipProps = defaultChartConfigs.AxisCrosshairTooltip;
         let stripLines: ChartStripLineProps[] = [...defaultChartConfigs.StripLines];
+        let scrollbarSettings: ChartScrollbarProps = defaultChartConfigs.ChartScrollBar;
+        let multiLevelLabels: ChartMultiLevelLabelProps[] = [...defaultChartConfigs.MultiLevelLabels];
 
         childArray.forEach((child: React.ReactNode) => {
             if (!React.isValidElement(child)) { return; }
@@ -92,6 +102,15 @@ export const ChartPrimaryYAxis: React.FC<ChartAxisProps> = (props: ChartAxisProp
                     ...childProps
                 };
             }
+            else if (child.type === ChartScrollbar) {
+                scrollbarSettings = {
+                    ...defaultChartConfigs.ChartScrollBar,
+                    ...child.props as ChartScrollbarProps   // config only
+                };
+            }
+            else if (child.type === ChartMultiLevelLabels) {
+                multiLevelLabels = processMultiLevelLabels(child, defaultChartConfigs.MultiLevelLabels);
+            }
         });
         axisProps.majorGridLines = extend({}, majorGridLines);
         axisProps.majorGridLines.width = isNullOrUndefined(axisProps.majorGridLines.width) ? 1 : axisProps.majorGridLines.width;
@@ -102,6 +121,8 @@ export const ChartPrimaryYAxis: React.FC<ChartAxisProps> = (props: ChartAxisProp
         axisProps.titleStyle = titleStyle;
         axisProps.stripLines = stripLines;
         axisProps.crosshairTooltip = axisCrosshairTooltip;
+        axisProps.scrollbarSettings = scrollbarSettings;
+        axisProps.multiLevelLabels = multiLevelLabels;
         axisProps.crossAt = { ...defaultChartConfigs.PrimaryYAxis.crossAt, ...props.crossAt};
         axisProps.lineStyle = { ...defaultChartConfigs.PrimaryYAxis.lineStyle, ...props.lineStyle };
         context?.setChartPrimaryYAxis(axisProps as AxisModel);

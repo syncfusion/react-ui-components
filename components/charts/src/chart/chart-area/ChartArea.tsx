@@ -8,7 +8,7 @@ import { ChartProviderChildProps } from './chart-interfaces';
  * ChartArea component for configuring the area within the chart where the series are rendered.
  *
  * @param {ChartAreaProps} props - Props for configuring the chart area.
- * @returns {null} This component does not render any visible output.
+ * @returns {null} - It is used only to pass the chart area configuration to the chart through the React context.
  */
 export const ChartArea: React.FC<ChartAreaProps> = (props: ChartAreaProps) => {
     const context: ChartProviderChildProps = useContext(ChartContext);

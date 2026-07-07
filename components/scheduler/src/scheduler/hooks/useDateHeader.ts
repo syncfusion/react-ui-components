@@ -95,7 +95,7 @@ interface DateHeaderResult {
 export function useDateHeader(): DateHeaderResult {
 
     const { renderDates } = useSchedulerRenderDatesContext();
-    const { showWeekNumber, workDays, weekRule, firstDayOfWeek } = useSchedulerPropsContext();
+    const { showWeekNumber, workDays, weekRule, firstDayOfWeek, timezone } = useSchedulerPropsContext();
     const { locale } = useProviderContext();
 
     const [isAllDayCollapsed, setIsAllDayCollapsed] = useState<boolean>(true);
@@ -114,7 +114,7 @@ export function useDateHeader(): DateHeaderResult {
     }, []);
 
     const headerCells: DateHeaderCell[] = renderDates.map((date: Date, index: number): DateHeaderCell => {
-        const isToday: boolean = DateService.isSameDay(date, new Date());
+        const isToday: boolean = DateService.isSameDay(date, DateService.getCurrentTime(timezone));
         const isWeekend: boolean = DateService.isWeekend(date, workDays);
         const dayName: string = formatDate(date, { type: 'date', skeleton: 'E', locale });
         const dateNumber: string = formatDate(date, { type: 'date', skeleton: 'd', locale });

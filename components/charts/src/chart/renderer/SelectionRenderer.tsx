@@ -1,13 +1,14 @@
-import { JSX, RefObject, useContext, useEffect, useLayoutEffect } from 'react';
+import { forwardRef, JSX, RefObject, useContext, useEffect, useLayoutEffect } from 'react';
 import { BaseSelection, ChartSelectionProps, ChartIndexesProps } from '../base/interfaces';
 import { useLayout } from '../layout/LayoutContext';
 import { registerChartEventHandler } from '../hooks/useClipRect';
 import { Chart, ChartTrendlineModel, SeriesProperties } from '../chart-area/chart-interfaces';
 import { AnimationOptions, Animation, extend, isNullOrUndefined, IAnimation } from '@syncfusion/react-base';
-import { indexFinder, withInBounds } from '../utils/helper';
+import { indexFinder, isRangeColorEnabled, withInBounds } from '../utils/helper';
 import { SelectionMode, SelectionPattern } from '../base/enum';
 import { ChartContext } from '../layout/ChartProvider';
 import * as React from 'react';
+import { applySeriesLabelBlurEffect } from './SeriesRenderer/SeriesLabelRenderer';
 
 /**
  * The SelectionRenderer component is responsible for handling the selection interactions on the chart.
@@ -15,11 +16,13 @@ import * as React from 'react';
  * It uses `useLayoutEffect` and `useEffect` hooks to manage the component's lifecycle and updates related to selection.
  *
  * @param {ChartSelectionProps} props - The properties for the SelectionRenderer component, including mode, allowMultiSelection, selectedDataIndexes, and pattern.
+ * @param {React.ForwardedRef<SVGPatternElement>} ref - Forwarded ref to the rendered SVG pattern element.
  * @returns {JSX.Element} A JSX fragment that conditionally renders selection patterns.
  * @private
  */
-export const SelectionRenderer: React.FC<ChartSelectionProps> = (props: ChartSelectionProps) => {
-    const { layoutRef, phase, reportMeasured, setLayoutValue, seriesRef, legendRef } = useLayout();
+export const SelectionRenderer: React.FC<ChartSelectionProps & React.RefAttributes<SVGPatternElement>> = forwardRef<SVGPatternElement,
+ChartSelectionProps>((props: ChartSelectionProps, ref: React.ForwardedRef<SVGPatternElement>) => {
+    const { layoutRef, phase, reportMeasured, setLayoutValue, seriesRef, legendRef, highlightRef, selectionRef } = useLayout();
     const { chartLegend } = useContext(ChartContext);
     let chartSelection: BaseSelection = layoutRef.current?.chartSelection as BaseSelection;
     let chart: Chart = layoutRef.current?.chart as Chart;
@@ -49,7 +52,7 @@ export const SelectionRenderer: React.FC<ChartSelectionProps> = (props: ChartSel
                         if (chartSelection.mode === 'Point') {
                             const chartId: string = chart.element.id;
                             const allChildren: Element[] = Array.from(seriesRef?.current?.children || []);
-                            const isScatterOrBubble: boolean = chart.visibleSeries[index.seriesIndex as number]?.type === 'Scatter' || chart.visibleSeries[index.seriesIndex as number]?.type === 'Bubble';
+                            const isScatterOrBubble: boolean = (chart.visibleSeries[index.seriesIndex as number]?.type?.indexOf('Scatter') as number > -1) || chart.visibleSeries[index.seriesIndex as number]?.type === 'Bubble';
                             const groupId: string = isScatterOrBubble ? `${chartId}_Series_${index.seriesIndex}_SymbolGroup` : `${chartId}SeriesGroup${index.seriesIndex}`;
                             const seriesGroup: SVGGElement | undefined =
                             allChildren.find((c: Element) => c.id === groupId) as SVGGElement | undefined;
@@ -64,7 +67,9 @@ export const SelectionRenderer: React.FC<ChartSelectionProps> = (props: ChartSel
                             seriesRef,
                             chartSelection.selectedDataIndexes![i as number] as ChartIndexesProps,
                             selectionElement,
-                            false
+                            false,
+                            highlightRef,
+                            selectionRef
                         );
                     }
                 }, 100);
@@ -118,7 +123,8 @@ export const SelectionRenderer: React.FC<ChartSelectionProps> = (props: ChartSel
             chartSelection = layoutRef.current?.chartSelection as BaseSelection;
             chart = layoutRef.current?.chart as Chart;
             if (chartSelection && chart && chartSelection.mode !== 'None') {
-                calculateSelectedElements(chart, chartSelection, legendRef, seriesRef, e.target!, true);
+                calculateSelectedElements(chart, chartSelection, legendRef
+                    , seriesRef, e.target!, true, undefined, highlightRef, selectionRef);
             }
         };
 
@@ -150,13 +156,14 @@ export const SelectionRenderer: React.FC<ChartSelectionProps> = (props: ChartSel
                                 chart.visibleSeries[i as number].interior,
                                 i,
                                 chart.visibleSeries[i as number].opacity as number,
-                                'Selection')}
+                                'Selection',
+                                ref)}
                         </React.Fragment>
                     );
                 })}
         </>
     );
-};
+});
 
 /**
  * Retrieves and initializes the selection options for the chart.
@@ -195,28 +202,55 @@ function getSelectionOptions(chartSelection: ChartSelectionProps, chart: Chart, 
  * @param {EventTarget} targetElement - The DOM element that triggered the selection event.
  * @param {boolean} [pointClick] - An optional boolean indicating if the event was triggered by a point click.
  * @param {boolean} [isSelected] - An optional boolean indicating if any data points are already selected.
+ * @param {RefObject<SVGPatternElement | null>} [highlightRef] - Reference to the SVG pattern used for highlighting.
+ * @param {RefObject<SVGPatternElement | null>} [selectionRef] - Reference to the SVG pattern used for selection.
  * @returns {void}
  * @private
  */
 export const calculateSelectedElements: (chart: Chart, chartSelection: BaseSelection, legendRef: RefObject<SVGGElement | null>,
-    seriesRef: RefObject<SVGGElement | null>, targetElement: EventTarget, pointClick?: boolean, isSelected?: boolean) => void = (
+    seriesRef: RefObject<SVGGElement | null>, targetElement: EventTarget, pointClick?: boolean
+    , isSelected?: boolean, highlightRef?: RefObject<SVGPatternElement | null>
+    , selectionRef?: RefObject<SVGPatternElement | null>) => void = (
     chart: Chart,
     chartSelection: BaseSelection,
     legendRef: RefObject<SVGGElement | null>,
     seriesRef: RefObject<SVGGElement | null>,
     targetElement: EventTarget,
     pointClick?: boolean,
-    isSelected?: boolean
+    isSelected?: boolean, highlightRef?: RefObject<SVGPatternElement | null>, selectionRef?: RefObject<SVGPatternElement | null>
 ) => {
     if (isNullOrUndefined(targetElement)) {
         return;
     }
-
+    const target: HTMLElement = targetElement as HTMLElement;
+    const cylinderGroup: HTMLElement = target.closest('.e-cylinder-point-group') as HTMLElement;
+    if (cylinderGroup) {
+        targetElement = cylinderGroup;
+    }
     chartSelection.isLegendSelection = (targetElement as HTMLElement).id.indexOf('_legend_shape') > -1
             || (targetElement as HTMLElement).id.indexOf('_legend_text') > -1 || (targetElement as HTMLElement).id.indexOf('_legend_g_') > -1;
-    if (((targetElement as HTMLElement).id && (targetElement as HTMLElement).id.indexOf('_Series_') > -1 && (targetElement as HTMLElement).id.indexOf('_Text_') === -1 &&
+
+    // FIX: When tooltip highlight is enabled, prioritize using the tooltip's identified series
+    // instead of DOM element order to ensure highlight matches the tooltip's nearest point detection.
+    // This ensures that overlapping area series highlight the correct series based on actual mouse position,
+    // not DOM rendering order.
+    if (chartSelection.isTooltipHighlight && !isNullOrUndefined(chart.toolTipSeriesIndex) &&
+        targetElement && withInBounds(chart.mouseX, chart.mouseY, chart.clipRect)) {
+        const tooltipSeries: SeriesProperties = chart.visibleSeries[chart.toolTipSeriesIndex as number];
+        const pointIndex: number | undefined = !isNullOrUndefined(chart.toolTipPointIndex) && chart.toolTipPointIndex >= 0
+            ? chart.toolTipPointIndex
+            : undefined;
+        const indexInfo: ChartIndexesProps = tooltipSeries.category === 'TrendLine' ? {
+            seriesIndex: tooltipSeries.sourceIndex
+            , pointIndex: pointIndex, trendlineIndex: tooltipSeries.trendIndex
+        } : { seriesIndex: chart.toolTipSeriesIndex, pointIndex: pointIndex };
+        performSelection(chart, chartSelection, legendRef, seriesRef, indexInfo,
+                         targetElement as HTMLElement, pointClick, highlightRef, selectionRef);
+    }
+    else if (((targetElement as HTMLElement).id && (targetElement as HTMLElement).id.indexOf('_Series_') > -1 && (targetElement as HTMLElement).id.indexOf('_Text_') === -1 &&
             (chartSelection.mode !== 'None' || chartSelection.isTooltipHighlight)) || (chartSelection.isLegendSelection && (chartSelection.isLegendHighlight || !chartSelection.isLegendToggle))) {
         let indexInfo: ChartIndexesProps = indexFinder((targetElement as HTMLElement).id);
+        indexInfo.seriesIndex = isRangeColorEnabled(chart) ? 0 : indexInfo.seriesIndex;
         if ((chartSelection.isLegendSelection || (targetElement as HTMLElement).id.includes('Trackball')) && chart.visibleSeries[indexInfo.seriesIndex as number].category === 'TrendLine') {
             indexInfo = {
                 seriesIndex: chart.visibleSeries[indexInfo.seriesIndex as number].sourceIndex, pointIndex: undefined
@@ -224,17 +258,7 @@ export const calculateSelectedElements: (chart: Chart, chartSelection: BaseSelec
             };
         }
         performSelection(chart, chartSelection, legendRef, seriesRef, indexInfo,
-                         targetElement as HTMLElement, pointClick);
-    }
-    else if (targetElement && withInBounds(chart.mouseX, chart.mouseY, chart.clipRect) &&
-    chartSelection.isTooltipHighlight && !isNullOrUndefined(chart.toolTipSeriesIndex)) {
-        const tooltipSeries: SeriesProperties = chart.visibleSeries[chart.toolTipSeriesIndex];
-        const indexInfo: ChartIndexesProps = tooltipSeries.category === 'TrendLine' ? {
-            seriesIndex: tooltipSeries.sourceIndex
-            , pointIndex: undefined, trendlineIndex: tooltipSeries.trendIndex
-        } : { seriesIndex: chart.toolTipSeriesIndex, pointIndex: undefined };
-        performSelection(chart, chartSelection, legendRef, seriesRef, indexInfo,
-                         targetElement as HTMLElement, pointClick);
+                         targetElement as HTMLElement, pointClick, highlightRef, selectionRef);
     }
     else if (chartSelection.previousSelectedElements && chartSelection.previousSelectedElements.length > 0) {
         const pointElements: Element[] = chartSelection.previousSelectedElements as Element[];
@@ -261,18 +285,22 @@ export const calculateSelectedElements: (chart: Chart, chartSelection: BaseSelec
  * @param {ChartIndexesProps} index - The index information of the selected element(s).
  * @param {HTMLElement} [element] - The specific HTML element that was selected (if applicable).
  * @param {boolean} [pointClick] - An optional boolean indicating if the event was triggered by a point click.
+ * @param {RefObject<SVGPatternElement | null>} [highlightRef] - Reference to the SVG pattern used for highlighting.
+ * @param {RefObject<SVGPatternElement | null>} [selectionRef] - Reference to the SVG pattern used for selection.
  * @returns {void}
  * @private
  */
 export const performSelection: (chart: Chart, chartSelection: BaseSelection, legendRef: RefObject<SVGGElement | null>,
-    seriesRef: RefObject<SVGGElement | null>, index: ChartIndexesProps, element?: HTMLElement, pointClick?: boolean) => void = (
+    seriesRef: RefObject<SVGGElement | null>, index: ChartIndexesProps, element?: HTMLElement, pointClick?: boolean
+    , highlightRef?: RefObject<SVGPatternElement | null>, selectionRef?: RefObject<SVGPatternElement | null>) => void = (
     chart: Chart,
     chartSelection: BaseSelection,
     legendRef: RefObject<SVGGElement | null>,
     seriesRef: RefObject<SVGGElement | null>,
     index: ChartIndexesProps,
     element?: HTMLElement,
-    pointClick?: boolean
+    pointClick?: boolean,
+    highlightRef?: RefObject<SVGPatternElement | null>, selectionRef?: RefObject<SVGPatternElement | null>
 
 ): void => {
     if (chartSelection.isLegendSelection && !isNullOrUndefined(index?.seriesIndex) &&
@@ -281,12 +309,59 @@ export const performSelection: (chart: Chart, chartSelection: BaseSelection, leg
             ).targetSeries?.visible))) {
         return;
     }
+
+    // FIX: For single-point selection mode, clear previously selected elements from the same series
+    if (chartSelection.mode === 'Point' && !chartSelection.allowMultiSelection &&
+            chartSelection.previousSelectedElements && chartSelection.previousSelectedElements.length > 0) {
+        const previousElements: Element[] = chartSelection.previousSelectedElements as Element[];
+        const currentSeriesIdx: number = index.seriesIndex as number;
+        const currentPointIdx: number | undefined = index.pointIndex;
+
+        // Check if clicking the same point again (toggle off)
+        let isSamePointClicked: boolean = false;
+        previousElements.forEach((selectedElement: Element) => {
+            const elementIdx: ChartIndexesProps = indexFinder(selectedElement.id);
+            const elementSeriesIdx: number = elementIdx.seriesIndex as number;
+            const elementPointIdx: number | undefined = elementIdx.pointIndex;
+
+            if (elementSeriesIdx === currentSeriesIdx && elementPointIdx === currentPointIdx) {
+                isSamePointClicked = true;
+            }
+        });
+        if (!isSamePointClicked) {
+            previousElements.forEach((selectedElement: Element) => {
+                const elementSeriesIdx: number = indexFinder(selectedElement.id).seriesIndex as number;
+
+                // Only remove if it's from the same series
+                if (elementSeriesIdx === currentSeriesIdx) {
+                    selectedElement.removeAttribute('data-selected');
+                    (selectedElement as HTMLElement).style.opacity = '';
+                    (selectedElement as HTMLElement).style.fill = '';
+                    const elementSeries: SeriesProperties = chart.visibleSeries[elementSeriesIdx as number];
+                    if (elementSeries && elementSeries.isRectSeries) {
+                        selectedElement.setAttribute('stroke-width', elementSeries.width ? elementSeries.width.toString() : '1');
+                    }
+                }
+            });
+            // Update previousSelectedElements to only keep elements from other series
+            chartSelection.previousSelectedElements = previousElements.filter((element: Element) => {
+                const elementSeriesIdx: number = indexFinder(element.id).seriesIndex as number;
+                return elementSeriesIdx !== currentSeriesIdx;
+            });
+
+            // Clear indexes only for the current series
+            chartSelection.chartSelectedDataIndexes = (chartSelection.chartSelectedDataIndexes as ChartIndexesProps[]).filter(
+                (idx: ChartIndexesProps) => idx.seriesIndex !== currentSeriesIdx
+            );
+        }
+    }
+
     const selectionMode: SelectionMode = chartSelection.isLegendSelection || chartSelection.isTooltipHighlight || !Number.isNaN(index.trendlineIndex) ? 'Series' : chartSelection.mode as SelectionMode;
     let pointElements: Element[];
     switch (selectionMode) {
     case 'Series':
-        pointElements = getSeriesElements(seriesRef, legendRef, index.seriesIndex!, chart, index.trendlineIndex!);
-        selection(chartSelection, chart, pointElements, index);
+        pointElements = getSeriesElements(seriesRef, legendRef, index.seriesIndex!, chart, index.trendlineIndex!, element);
+        selection(chartSelection, chart, pointElements, index, highlightRef, selectionRef);
         blurEffect(chart, chart.visibleSeries, chartSelection, legendRef, seriesRef);
         break;
     case 'Point':
@@ -305,18 +380,18 @@ export const performSelection: (chart: Chart, chartSelection: BaseSelection, leg
             const baseId: string = `${chartId}_Series_${seriesIdx}_Point_${index.pointIndex}`;
             const allChildren: Element[] = Array.from(seriesRef?.current?.children || []);
             const series: SeriesProperties = chart.visibleSeries[seriesIdx as number];
-            if (series?.marker?.visible) {
-                const isScatterOrBubble: boolean = chart.visibleSeries[seriesIdx as number]?.type === 'Scatter' || chart.visibleSeries[seriesIdx as number]?.type === 'Bubble';
+            if (series?.marker?.visible || series?.marker?.dataLabel?.visible) {
+                const isScatterOrBubble: boolean = (chart.visibleSeries[seriesIdx as number]?.type?.indexOf('Scatter') as number > -1) || chart.visibleSeries[seriesIdx as number]?.type === 'Bubble';
                 const symbolGroupId: string = isScatterOrBubble ? `${chartId}_Series_${seriesIdx}_SymbolGroup` : `${chartId}SymbolGroup${seriesIdx}`;
-                const symbolGroups: SVGGElement[] = allChildren.filter((c: Element) => c.id === symbolGroupId) as SVGGElement[];
+                const symbolGroups: SVGGElement[] = allChildren.filter((child: Element) => child.id === symbolGroupId) as SVGGElement[];
                 // The base point element resides under the series group, not the symbol group. Find it once.
-                const seriesGroup: SVGGElement | undefined = allChildren.find((c: Element) => c.id === `${chartId}SeriesGroup${seriesIdx}`) as SVGGElement | undefined;
+                const seriesGroup: SVGGElement | undefined = allChildren.find((child: Element) => child.id === `${chartId}SeriesGroup${seriesIdx}`) as SVGGElement | undefined;
                 const seriesChildren: Element[] = seriesGroup ? Array.from(seriesGroup.children) : [];
 
-                for (const sg of symbolGroups) {
-                    const children: Element[] = Array.from(sg.children);
-                    const symbolEl: Element | undefined = children.find((e: Element) => e.id.startsWith(`${baseId}_Symbol`));
-                    const basePointEl: Element | undefined = seriesChildren.find((e: Element) => e.id === baseId);
+                for (const symbolGroup of symbolGroups) {
+                    const children: Element[] = Array.from(symbolGroup.children);
+                    const symbolEl: Element | undefined = children.find((element: Element) => element.id.startsWith(`${baseId}_Symbol`));
+                    const basePointEl: Element | undefined = seriesChildren.find((element: Element) => element.id === baseId);
                     const isClickedSymbol: boolean = !!element?.id && /_Symbol\d*$/.test(element.id);
                     if (isClickedSymbol) {
                         // When a marker (symbol) is clicked, also select the corresponding series point element
@@ -328,14 +403,71 @@ export const performSelection: (chart: Chart, chartSelection: BaseSelection, leg
                         pushIfUnique(symbolEl);
                     }
                 }
+
+                // Highlight Text and TextShape elements
+                const dataLabelRoot: Element | undefined = allChildren.find((child: Element) => child.id === 'containerDataLabelCollection');
+                const labelChildren: Element[] = dataLabelRoot ? Array.from((dataLabelRoot as SVGGElement).children) : allChildren;
+
+                // Get TextShape elements
+                const shapeGroupId: string = `containerShapeGroup${seriesIdx}`;
+                const shapeGroup: Element | undefined = labelChildren.find((child: Element) => child.id === shapeGroupId);
+                if (shapeGroup) {
+                    const textShapeElements: Element[] = Array.from(shapeGroup.children).filter(
+                        (element: Element) => element.id.startsWith(`${baseId}_TextShape_`)
+                    );
+                    textShapeElements.forEach((textShapeElement: Element) => pushIfUnique(textShapeElement));
+                }
+
+                // Get Text elements
+                const textGroupId: string = `containerTextGroup${seriesIdx}`;
+                const textGroup: Element | undefined = labelChildren.find((child: Element) => child.id === textGroupId);
+                if (textGroup) {
+                    const textElements: Element[] = Array.from(textGroup.children).filter(
+                        (element: Element) => element.id.startsWith(`${baseId}_Text_`)
+                    );
+                    textElements.forEach((textElement: Element) => pushIfUnique(textElement));
+                }
             }
-            selection(chartSelection, chart, pointElements, index);
+            if (chart.legendSettings.mode !== 'Gradient' && legendRef?.current) {
+                const legendTranslateGroup: Element | undefined = (legendRef.current as SVGGElement)?.children[0];
+                if (legendTranslateGroup && element) {
+                    // For range color mode in Point mode, match legend shapes by fill color
+                    if (chart.legendSettings.mode === 'Range' && isRangeColorEnabled(chart)) {
+                        const targetFill: string | null = element.getAttribute('fill');
+                        if (targetFill) {
+                            const legendShapes: Element[] = Array.from(
+                                legendTranslateGroup.querySelectorAll('[id*="_chart_legend_shape_"]')
+                            );
+                            for (const shape of legendShapes) {
+                                const shapeFill: string | null = shape.getAttribute('fill');
+                                if (shapeFill === targetFill) {
+                                    pushIfUnique(shape);
+                                }
+                            }
+                        }
+                    } else {
+                        // For non-range color mode or Series mode, use index-based lookup
+                        const legendLookupId: string = chart.legendSettings.mode === 'Point'
+                            ? `${chartId}_chart_legend_shape_${index.pointIndex}`
+                            : `${chartId}_chart_legend_shape_${seriesIdx}`;
+
+                        const legendShape: Element | undefined = Array.from(legendTranslateGroup.children).find(
+                            (child: Element) => child.querySelector(`#${legendLookupId}`) !== null
+                        );
+                        if (legendShape) {
+                            const shapeElement: Element | null = legendShape.querySelector(`#${legendLookupId}`);
+                            pushIfUnique(shapeElement);
+                        }
+                    }
+                }
+            }
+            selection(chartSelection, chart, pointElements, index, highlightRef, selectionRef);
             blurEffect(chart, chart.visibleSeries, chartSelection, legendRef, seriesRef);
         }
         break;
     case 'Cluster':
         pointElements = getClusterElements(seriesRef, chart.element.id, index.pointIndex!);
-        selection(chartSelection, chart, pointElements, index);
+        selection(chartSelection, chart, pointElements, index, highlightRef, selectionRef);
         blurEffect(chart, chart.visibleSeries, chartSelection, legendRef, seriesRef);
         break;
     }
@@ -349,17 +481,20 @@ export const performSelection: (chart: Chart, chartSelection: BaseSelection, leg
  * @param {Chart} chart - The chart instance.
  * @param {Element[]} [selectedElements] - An array of elements to be selected.
  * @param {ChartIndexesProps} [index] - The index information of the selected element(s).
+ * @param {RefObject<SVGPatternElement | null>} [highlightRef] - Reference to the SVG pattern used for highlighting.
+ * @param {RefObject<SVGPatternElement | null>} [selectionRef] - Reference to the SVG pattern used for selection.
  * @returns {void}
  * @private
  */
 function selection(
     chartSelection: BaseSelection, chart: Chart, selectedElements?: Element[], index?: ChartIndexesProps
+    , highlightRef?: RefObject<SVGPatternElement | null>, selectionRef?: RefObject<SVGPatternElement | null>
 ): void {
     if (chartSelection.name === 'Selection' && !chartSelection.allowMultiSelection && chartSelection.mode !== 'None') {
         removeMultiSelectElements(chart, chartSelection.chartSelectedDataIndexes!, index!, chartSelection);
     }
     if (!isNullOrUndefined(selectedElements![0])) {
-        applyStyles(selectedElements!, chartSelection, chart);
+        applyStyles(selectedElements!, chartSelection, chart, highlightRef, selectionRef);
         addOrRemoveIndex(chartSelection.chartSelectedDataIndexes as ChartIndexesProps[], index!, chartSelection, !chartSelection.isAdd);
     }
 }
@@ -380,6 +515,17 @@ export const blurEffect: (chart: Chart, visibleSeries: SeriesProperties[],
     chartSelection: BaseSelection, legendRef: RefObject<SVGGElement | null>, seriesRef: RefObject<SVGGElement | null>) => void =
     (chart: Chart, visibleSeries: SeriesProperties[], chartSelection: BaseSelection,
      legendRef: RefObject<SVGGElement | null>, seriesRef: RefObject<SVGGElement | null>): void => {
+        const selected: Set<number> = new Set<number>(
+            (chartSelection.chartSelectedDataIndexes ?? []).map((index: ChartIndexesProps) => index.seriesIndex).filter(
+                (value: number | undefined): value is number => typeof value === 'number')
+        );
+        const hasSelection: boolean = selected.size > 0 && chartSelection.isSelected as boolean;
+        const chartId: string = chart.element.id;
+        const seriesChildren: Element[] = Array.from(seriesRef.current?.children ?? []);
+        const seriesLabelRoot: Element | undefined = seriesChildren.find(
+            (c: Element) => (c as HTMLElement).id === `${chartId}_SeriesLabelCollection`
+        );
+        if (seriesLabelRoot) { applySeriesLabelBlurEffect(seriesLabelRoot, selected, hasSelection, indexFinder); }
         const attributes: 'data-selected' | 'data-highlighted' = chartSelection.name === 'Selection' ? 'data-selected' : 'data-highlighted';
 
         visibleSeries.forEach((series: SeriesProperties, seriesIndex: number) => {
@@ -388,7 +534,7 @@ export const blurEffect: (chart: Chart, visibleSeries: SeriesProperties[],
 
             const seriesGroup: SVGGElement | undefined = children.find((c: Element) => c.id === `${chartId}SeriesGroup${seriesIndex}`) as SVGGElement | undefined;
             // There can be multiple symbol groups with the same id; collect all of them
-            const symbolGroups: SVGGElement[] = children.filter((c: Element) => c.id === (chart.visibleSeries[seriesIndex as number]?.type === 'Scatter' || chart.visibleSeries[seriesIndex as number]?.type === 'Bubble' ? `${chartId}_Series_${seriesIndex}_SymbolGroup` : `${chartId}SymbolGroup${seriesIndex}`)) as SVGGElement[];
+            const symbolGroups: SVGGElement[] = children.filter((c: Element) => c.id === ((chart.visibleSeries[seriesIndex as number]?.type?.indexOf('Scatter') as number > -1) || chart.visibleSeries[seriesIndex as number]?.type === 'Bubble' ? `${chartId}_Series_${seriesIndex}_SymbolGroup` : `${chartId}SymbolGroup${seriesIndex}`)) as SVGGElement[];
             // Data labels can be under a separate container
             const dataLabelRoot: SVGGElement | undefined = children.find((c: Element) => c.id === 'containerDataLabelCollection') as SVGGElement | undefined;
             const dlChildren: Element[] = dataLabelRoot ? Array.from(dataLabelRoot.children) : children;
@@ -529,7 +675,7 @@ export const blurEffect: (chart: Chart, visibleSeries: SeriesProperties[],
         });
 
         const legendTranslateGroup: Element = (legendRef?.current as SVGGElement)?.children[0];
-        if (legendTranslateGroup) {
+        if (chart.legendSettings.mode !== 'Gradient' && legendTranslateGroup) {
             for (const node of Array.from(legendTranslateGroup.children)) {
                 const legendShape: HTMLElement = node?.children.item(0) as HTMLElement;
                 const isSelected: boolean = legendShape?.getAttribute('data-selected') === 'true' || legendShape?.getAttribute(attributes) === 'true';
@@ -576,24 +722,43 @@ export const blurEffect: (chart: Chart, visibleSeries: SeriesProperties[],
  * @param {Element[]} elements - An array of HTML elements to apply styles to.
  * @param {BaseSelection} chartSelection - The selection configuration object.
  * @param {Chart} chart - The chart instance.
+ * @param {RefObject<SVGPatternElement | null>} [highlightRef] - Reference to the SVG pattern used for highlighting.
+ * @param {RefObject<SVGPatternElement | null>} [selectionRef] - Reference to the SVG pattern used for selection.
  * @returns {void}
  * @private
  */
-const applyStyles: (elements: Element[], chartSelection: BaseSelection, chart: Chart) => void =
-    (elements: Element[], chartSelection: BaseSelection, chart: Chart): void => {
+const applyStyles: (elements: Element[], chartSelection: BaseSelection, chart: Chart, highlightRef?: RefObject<SVGPatternElement | null>
+    , selectionRef?: RefObject<SVGPatternElement | null> ) => void =
+    (elements: Element[], chartSelection: BaseSelection, chart: Chart, highlightRef?: RefObject<SVGPatternElement | null>
+        , selectionRef?: RefObject<SVGPatternElement | null>): void => {
         const attributes: string = chartSelection.name === 'Selection' ? 'data-selected' : 'data-highlighted';
         for (const element of elements) {
             if (element) {
                 if (element.getAttribute(attributes) !== 'true') {
-                    const seriesIndex: number = indexFinder(element.id)!.seriesIndex!;
+                    const seriesIndex: number = isRangeColorEnabled(chart)
+                        ? 0 : indexFinder(element.id)!.seriesIndex!;
                     element.setAttribute(attributes, 'true');
                     const rectSeries: boolean = chart.visibleSeries[seriesIndex as number].type?.indexOf('Line') === -1 && chart.visibleSeries[seriesIndex as number].type !== 'Spline';
                     if (chartSelection.name === 'Selection' && element.hasAttribute('data-highlighted')) {
                         element.removeAttribute('data-highlighted');
                     }
-                    if (chartSelection.pattern !== 'None' && rectSeries) {
+                    if (chartSelection.pattern !== 'None' && rectSeries && !(element.id.indexOf('Text') > -1)) {
                         const patternId: string = `${chart.element.id}_${chartSelection.pattern}_${chartSelection.name}_${seriesIndex}`;
                         (element as HTMLElement).style.fill = `url(#${patternId})`;
+                        const shouldSkipPatternFillUpdate: boolean = chart.legendSettings.mode === 'Series' && element.id.indexOf('legend') > -1;
+                        if (isRangeColorEnabled(chart) && !shouldSkipPatternFillUpdate) {
+                            const pattern: SVGPatternElement | null = (chartSelection.name === 'Selection' ? selectionRef?.current : highlightRef?.current) ?? null;
+                            if (pattern) {
+                                const fillValue: string | null = element.getAttribute('fill') || (element as HTMLElement).style.fill || '';
+                                for (let i: number = 1; i < pattern.children.length; i++) {
+                                    const child: Element = pattern.children[i as number];
+                                    if (fillValue !== null) {
+                                        child.setAttribute('fill', fillValue as string);
+                                        child.setAttribute('stroke', fillValue as string);
+                                    }
+                                }
+                            }
+                        }
                     }
                     else if (chartSelection.name === 'Highlight' && chartSelection.fill && rectSeries) {
                         (element as HTMLElement).style.fill = chartSelection.fill;
@@ -642,9 +807,7 @@ function removeMultiSelectElements(
         const shouldRemove: boolean =
             ((chartSelection.mode === 'Series' || (!chartSelection.isLegendToggle && chartSelection.isLegendSelection)) && !toEquals(targetIndex, currentIndex, true, chartSelection)) ||
             (chartSelection.mode === 'Cluster' && !toEquals(targetIndex, currentIndex, false, chartSelection)) ||
-            (chartSelection.mode === 'Point' &&
-                toEquals(targetIndex, currentIndex, true, chartSelection) &&
-                !toEquals(targetIndex, currentIndex, false, chartSelection));
+            (chartSelection.mode === 'Point' && chartSelection.allowMultiSelection !== false && (toEquals(targetIndex, currentIndex, true, chartSelection) && !toEquals(targetIndex, currentIndex, false, chartSelection)));
 
         if (shouldRemove) {
 
@@ -741,6 +904,7 @@ function toEquals(first: ChartIndexesProps, second: ChartIndexesProps, checkSeri
  * @param {number} seriesIndex - The index of the series whose elements are to be retrieved.
  * @param {Chart} chart - The chart instance.
  * @param {number} trendlineIndex - Index of the trendline.
+ * @param {HTMLElement} [targetElement] - Optional DOM element that triggered the selection; used to match legend shapes when range-color mapping is active.
  * @returns {SVGElement[]} An array of SVG elements belonging to the specified series.
  * @private
  */
@@ -749,7 +913,8 @@ function getSeriesElements(
     legendRef: RefObject<SVGGElement | null>,
     seriesIndex: number,
     chart: Chart,
-    trendlineIndex: number
+    trendlineIndex: number,
+    targetElement?: HTMLElement
 ): SVGElement[] {
     if (!seriesRef.current) { return []; }
 
@@ -760,7 +925,7 @@ function getSeriesElements(
 
     // Group IDs used by renderer
     const seriesGroupId: string = `${chartId}SeriesGroup${seriesIndex}`;
-    const symbolGroupId: string = chart.visibleSeries[seriesIndex as number]?.type === 'Scatter' || chart.visibleSeries[seriesIndex as number]?.type === 'Bubble' ? `${chartId}_Series_${seriesIndex}_SymbolGroup` : `${chartId}SymbolGroup${seriesIndex}`;
+    const symbolGroupId: string = (chart.visibleSeries[seriesIndex as number]?.type?.indexOf('Scatter') as number > -1) || chart.visibleSeries[seriesIndex as number]?.type === 'Bubble' ? `${chartId}_Series_${seriesIndex}_SymbolGroup` : `${chartId}SymbolGroup${seriesIndex}`;
     const shapeGroupId: string = `containerShapeGroup${seriesIndex}`;
     const textGroupId: string = `containerTextGroup${seriesIndex}`;
     const pathPrefix: string = `${chartId}_Series_`; // path and general series elements
@@ -781,6 +946,51 @@ function getSeriesElements(
 
     const trendlineCollection: Element | undefined = children.find((c: Element) => checkById(c, `${chartId}TrendlineCollection`));
 
+    const seriesLabelCollectionId: string = `${chartId}_SeriesLabelCollection`;
+    const seriesLabelRoot: Element | undefined = children.find((child: Element) => checkById(child, seriesLabelCollectionId));
+    if (seriesLabelRoot) {
+        const labelElementChildren: Element[] = Array.from((seriesLabelRoot as SVGGElement).children);
+        for (const childElement of labelElementChildren) {
+            if (childElement.tagName.toLowerCase() !== 'text') { continue; }
+            const info: ChartIndexesProps = indexFinder((childElement as SVGTextElement).id);
+            if (info?.seriesIndex === seriesIndex) {
+                collected.push(childElement as SVGElement);
+            }
+        }
+    }
+    let targetID: string = '';
+    let targetLegendShapeElement: HTMLElement | undefined;
+    let isPointElement: boolean = false;
+    if (isRangeColorEnabled(chart)) {
+        if (targetElement && targetElement.id.indexOf('text') > 1) {
+            targetID = targetElement.id.replace('text', 'shape');
+        }
+        else if (targetElement && targetElement.id.indexOf('marker') > 1) {
+            targetID = targetElement.id.replace('_marker', '');
+        }
+        else if (targetElement && targetElement.id.indexOf('_g') > 1) {
+            targetID = targetElement.id.replace('_g_', '_shape_');
+        }
+        else if (targetElement && targetElement.id.indexOf('_shape_') > 1) {
+            targetID = targetElement.id;
+        }
+        else{
+            isPointElement = true;
+        }
+        // If we have a targetID and a legend, look up the corresponding legend shape element by id
+        if ((targetID || isPointElement) && legendRef && legendRef.current) {
+            const legendTranslateGroup: Element | undefined = (legendRef.current as SVGGElement).children[0];
+            if (legendTranslateGroup) {
+                for (const node of Array.from(legendTranslateGroup.children)) {
+                    const shapeEl: HTMLElement | null = node?.children?.item(0) as HTMLElement | null;
+                    if (shapeEl && (isPointElement ? targetElement?.getAttribute('fill') === shapeEl.getAttribute('fill') : shapeEl.id === targetID)) {
+                        targetLegendShapeElement = shapeEl;
+                        break;
+                    }
+                }
+            }
+        }
+    }
     if (Number.isFinite(trendlineIndex) && trendlineCollection) {
         const trendlineRoot: SVGGElement = trendlineCollection as SVGGElement;
         const seriesTrendlineGroupId: string = `${chartId}TrendlineSeriesGroup${seriesIndex}`;
@@ -841,12 +1051,26 @@ function getSeriesElements(
             for (const element of Array.from(seriesGroup.children)) {
                 const tag: string = element.tagName.toLowerCase();
                 if (tag === 'defs') { continue; }
-                if (startsWith(element, pathPrefix)) { collected.push(element as SVGElement); }
+                if (isRangeColorEnabled(chart)) {
+                    if (targetLegendShapeElement ? (targetLegendShapeElement.getAttribute('fill') === element.getAttribute('fill') && startsWith(element, pathPrefix)) : startsWith(element, pathPrefix)) {
+                        collected.push(element as SVGElement);
+                    }
+                } else {
+                    if (startsWith(element, pathPrefix)) { collected.push(element as SVGElement); }
+                }
             }
         } else {
             // Fallback: search directly under root for path element
             const directPath: Element | undefined = children.find((child: Element) => startsWith(child, pathPrefix));
-            if (directPath) { collected.push(directPath as SVGElement); }
+            if (directPath) {
+                if (isRangeColorEnabled(chart)) {
+                    if (targetLegendShapeElement ? (targetLegendShapeElement.getAttribute('fill') === directPath.getAttribute('fill') && startsWith(directPath, pathPrefix)) : startsWith(directPath, pathPrefix)) {
+                        collected.push(directPath as SVGElement);
+                    }
+                } else {
+                    collected.push(directPath as SVGElement);
+                }
+            }
         }
 
         // 2) Collect marker symbols for the series
@@ -861,12 +1085,34 @@ function getSeriesElements(
         // 3) Collect data label shapes (TextShape) and text
         if (shapeGroup) {
             for (const element of Array.from(shapeGroup.children)) {
-                if (startsWith(element, pointPrefix) && element.id.includes('_TextShape_')) { collected.push(element as SVGElement); }
+                if (isRangeColorEnabled(chart)) {
+                    if (startsWith(element, pointPrefix) && element.id.includes('_TextShape_')) {
+                        const shapeBaseId: string = element.id.split('_TextShape_')[0];
+                        const shapeBaseSelector: string = `[id^="${shapeBaseId}"]`;
+                        const matchingElementInDom: Element | null = typeof document !== 'undefined' ? document.querySelector(shapeBaseSelector) : null;
+                        const isBaseFoundInCollected: boolean = !!matchingElementInDom
+                        && collected.some((c: SVGElement) => c.id === (matchingElementInDom as Element).id);
+                        if (isBaseFoundInCollected) { collected.push(element as SVGElement); }
+                    }
+                } else {
+                    if (startsWith(element, pointPrefix) && element.id.includes('_TextShape_')) { collected.push(element as SVGElement); }
+                }
             }
         }
         if (textGroup) {
             for (const element of Array.from(textGroup.children)) {
-                if (startsWith(element, pointPrefix) && element.id.includes('_Text_')) { collected.push(element as SVGElement); }
+                if (isRangeColorEnabled(chart)) {
+                    if (startsWith(element, pointPrefix) && element.id.includes('_Text_')) {
+                        const textBaseId: string = element.id.split('_Text_')[0];
+                        const baseIdSelector: string = `[id^="${textBaseId}"]`;
+                        const matchingElementInDom: Element | null = typeof document !== 'undefined' ? document.querySelector(baseIdSelector) : null;
+                        const isBaseFoundInCollected: boolean = !!matchingElementInDom
+                        && collected.some((c: SVGElement) => c.id === (matchingElementInDom as Element).id);
+                        if (isBaseFoundInCollected) { collected.push(element as SVGElement); }
+                    }
+                } else {
+                    if (startsWith(element, pointPrefix) && element.id.includes('_Text_')) { collected.push(element as SVGElement); }
+                }
             }
         }
     }
@@ -879,11 +1125,33 @@ function getSeriesElements(
         const legendRoot: SVGGElement = legendRef.current;
         const legendTranslateGroup: Element = legendRoot?.children[0];
         if (legendTranslateGroup) {
-            const legendItemGroup: Element = legendTranslateGroup.children.item(effectiveSeriesIndex) as Element;
-            const legendShape: Element = legendItemGroup?.children.item(0) as Element;
-            void ((legendShape) && (
-                collected.push(legendShape as SVGElement)
-            ));
+            if (isRangeColorEnabled(chart)) {
+                // For range color mode with point element, find ALL legend shapes that match the target fill
+                if (isPointElement && targetElement) {
+                    const targetFill: string | null = targetElement.getAttribute('fill');
+                    if (targetFill) {
+                        // Get all legend shape elements
+                        const legendShapes: Element[] = Array.from(legendTranslateGroup.querySelectorAll('[id*="_chart_legend_shape_"]'));
+                        // Push all shapes that match the target fill color
+                        for (const shape of legendShapes) {
+                            if (shape.getAttribute('fill') === targetFill) {
+                                collected.push(shape as SVGElement);
+                            }
+                        }
+                    }
+                } else if (targetLegendShapeElement && targetLegendShapeElement.id) {
+                    // Fallback for other cases - find by specific ID
+                    const selector: string = `[id="${targetLegendShapeElement.id}"]`;
+                    const found: Element | null = (legendTranslateGroup as Element).querySelector(selector);
+                    if (found) { collected.push(found as SVGElement); }
+                }
+            } else {
+                const legendItemGroup: Element = legendTranslateGroup.children.item(effectiveSeriesIndex) as Element;
+                const legendShape: Element = legendItemGroup?.children.item(0) as Element;
+                void ((legendShape) && (
+                    collected.push(legendShape as SVGElement)
+                ));
+            }
         }
     }
 
@@ -962,6 +1230,7 @@ export function getClusterElements(
  * @param {number} index - The index of the series or element the pattern is associated with.
  * @param {number} opacity - The opacity of the pattern fill.
  * @param {string} interaction - The type of interaction (e.g., 'Selection', 'Highlight').
+ * @param {React.Ref<SVGPatternElement>} ref - Ref forwarded to the generated SVG pattern element.
  * @returns {JSX.Element} An SVG pattern element.
  * @private
  */
@@ -971,7 +1240,8 @@ export function ensureSelectionPattern(
     color: string,
     index: number,
     opacity: number,
-    interaction: string
+    interaction: string,
+    ref: React.Ref<SVGPatternElement>
 ): JSX.Element {
     const patternId: string = `${chartId}_${patternName}_${interaction}_${index}`;
 
@@ -1129,7 +1399,7 @@ export function ensureSelectionPattern(
     }
 
     return (
-        <pattern key={patternId} id={patternId} patternUnits="userSpaceOnUse" width={patternWidth} height={patternHeight}>
+        <pattern ref={ref} key={patternId} id={patternId} patternUnits="userSpaceOnUse" width={patternWidth} height={patternHeight}>
             {body}
         </pattern>
     );

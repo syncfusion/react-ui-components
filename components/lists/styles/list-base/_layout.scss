@@ -32,6 +32,11 @@
     color: $list-item-text-color;
     line-height: $list-item-line-height;
 
+    &.sf-active{
+      background-color: $list-item-select-bg;
+      color: $list-item-text-select-color;
+    }
+
     &.sf-hover,
     &:hover {
       background-color: $list-item-hover-bg;
@@ -49,7 +54,6 @@
       }
     }
 
-    &.sf-active,
     &:active {
       background-color: $list-item-active-bg;
       color: $list-item-text-active-color;
@@ -62,13 +66,21 @@
 
     &.sf-item-focus {
       background: $list-focus-bg-color;
+      color: $list-item-text-hover-color;
+    }
+
+    &.sf-disabled {
+      color: $list-item-disabled-text-color;
+      background: $list-item-disabled-bg-color;
+      opacity: 1;
     }
   }
 
   .sf-list-group-item {
     border-bottom: $list-group-item-border-bottom;
-    font-weight: $font-weight-semibold;
+    font-weight: $list-groupheader-font-weight;
     font-size: $list-groupheader-font-size;
+    line-height: $list-groupheader-line-height;
     padding: $list-group-item-header-padding;
     margin-bottom: $list-item-margin-bottom;
     display: flex;
@@ -129,15 +141,30 @@
     flex-shrink: 0;
   }
 
-  .sf-small .sf-list-item {
-    padding: $small-list-item-padding;
-    font-size: $small-list-text-size;
-    line-height: $small-list-item-line-height;
+  .sf-small {
+    .sf-list-item {
+      padding: $list-item-small-padding;
+      font-size: $small-list-text-size;
+      line-height: $small-list-item-line-height;
+    }
+    .sf-list-group-item {
+      padding: $list-group-item-header-small-padding;
+      font-size: $list-groupheader-small-font-size;
+      line-height: $list-groupheader-small-line-height;
+    }
   }
 
-  .sf-large .sf-list-item {
-    padding: $large-list-item-padding;
-    line-height: $large-list-item-line-height;
+  .sf-large {
+    .sf-list-item {
+      padding: $list-item-large-padding;
+      font-size: $large-list-text-size;
+      line-height: $large-list-item-line-height;
+    }
+    .sf-list-group-item {
+      padding: $list-group-item-header-large-padding;
+      font-size: $list-groupheader-large-font-size;
+      line-height: $list-groupheader-large-line-height;
+    }
   }
 
   @keyframes sf-shimmer-wave {

@@ -483,14 +483,8 @@ const AreaSeriesRenderer: AreaSeriesRendererType = {
 export function parsePathCommands(path: string): PathCommand[] {
     const result: PathCommand[] = [];
     const commandRegex: RegExp = /([MLZ])([^MLZ]*)/g;
-    let match: RegExpExecArray | null;
-
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-        match = commandRegex.exec(path);
-        if (match === null) {
-            break;
-        }
+    let match: RegExpExecArray | null = commandRegex.exec(path);
+    while (match !== null) {
         const [, type, coordsStr] = match;
         const coords: number[] = coordsStr.trim().split(/\s+/).map(parseFloat).filter((n: number) => !isNaN(n));
 
@@ -498,6 +492,7 @@ export function parsePathCommands(path: string): PathCommand[] {
             type,
             coords
         });
+        match = commandRegex.exec(path);
     }
     return result;
 }

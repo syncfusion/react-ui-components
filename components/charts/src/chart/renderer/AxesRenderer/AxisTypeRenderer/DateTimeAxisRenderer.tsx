@@ -7,13 +7,13 @@ import { firstToLowerCase, isZoomSet, setRange, withIn } from '../../../utils/he
 import { ChartRangePadding, IntervalType } from '../../../base/enum';
 import { extend, isNullOrUndefined } from '@syncfusion/react-base';
 import { calculateVisibleRangeOnZooming, getMaxLabelWidth } from './AxisUtils';
-import { AxisModel, Chart, ChartSizeProps, Points, SeriesProperties, VisibleRangeProps } from '../../../chart-area/chart-interfaces';
+import { AxisModel, Chart, ChartIndicatorSettings, ChartSizeProps, Points, SeriesProperties, VisibleRangeProps } from '../../../chart-area/chart-interfaces';
 
 /**
  * Calculates the range and interval for a DateTime axis within a chart.
  * This involves adjusting the axis properties based on the chart size and configuration.
  *
- * @param {Size} size - The dimensions of the chart area, which influence axis calculations.
+ * @param {ChartSizeProps} size - The dimensions of the chart area, which influence axis calculations.
  * @param {AxisModel} axis - The axis model to be calculated, containing data and settings.
  * @param {Chart} chart - The chart instance that includes the axis and other relevant properties.
  * @returns {void} This function modifies axis properties related to range and interval without returning a value.
@@ -27,7 +27,7 @@ export function calculateDateTimeAxis(size: ChartSizeProps, axis: AxisModel, cha
  * Calculates the range and interval for an axis based on the provided chart size and configuration.
  * This adjusts the axis range and interval properties according to the chart's needs.
  *
- * @param {Size} size - The overall size of the chart, affecting the range and interval calculations.
+ * @param {ChartSizeProps} size - The overall size of the chart, affecting the range and interval calculations.
  * @param {AxisModel} axis - The axis model for which the range and interval are calculated.
  * @param {Chart} chart - The chart context that contains the axis and its configuration.
  * @returns {void} This function updates properties on the axis for range and interval; it does not return a value.
@@ -47,9 +47,8 @@ function calculateRangeAndInterval(size: ChartSizeProps, axis: AxisModel, chart:
 /**
  * Calculates the actual range for the DateTime axis.
  *
- * @private
  * @param {AxisModel} axis - The axis for which the actual range is calculated.
- * @param {Size} size - The size used for calculation.
+ * @param {ChartSizeProps} size - The size used for calculation.
  * @param {DoubleRange} dateTimeRange - The range for datetime calculations.
  * @returns {void}
  * @private
@@ -124,6 +123,18 @@ function hasFinancialSeries(axis: AxisModel): boolean {
 }
 
 /**
+ * Determines whether the chart has any indicators with a non-empty seriesName.
+ * When indicators with seriesName exist, certain financial series calculations should be skipped.
+ *
+ * @param {AxisModel} axis - The axis to inspect.
+ * @returns {boolean} True if any indicator has a non-empty seriesName; otherwise false.
+ */
+function hasIndicatorsWithSeriesName(axis: AxisModel): boolean {
+    const chart: Chart = axis.chart as Chart;
+    return Array.isArray(chart.indicators) && chart.indicators.some((indicator: ChartIndicatorSettings) => indicator?.seriesName !== '');
+}
+
+/**
  * Computes half of the smallest adjacent x-distance (in milliseconds) among
  * all Candle/HiloOpenClose series bound to the given axis.
  *
@@ -155,7 +166,7 @@ function getHalfCandleSlotMs(axis: AxisModel): number {
  *
  * @private
  * @param {AxisModel} axis - The axis for which padding is applied.
- * @param {Size} size - The size of the chart area.
+ * @param {ChartSizeProps} size - The size of the chart area.
  * @param {DoubleRange} dateTimeRange - The range for which padding is applied.
  * @returns {void}
  */
@@ -252,7 +263,8 @@ function applyRangePadding(axis: AxisModel, size: ChartSizeProps, dateTimeRange:
     }
     // Candle-only symmetric half-slot padding in time-domain
     try {
-        if (hasFinancialSeries(axis)) {
+
+        if (hasFinancialSeries(axis) && !hasIndicatorsWithSeriesName(axis)) {
             const halfSlot: number = getHalfCandleSlotMs(axis);
             if (halfSlot > 0) {
                 dateTimeRange.min = (dateTimeRange.min as number) - halfSlot;
@@ -381,7 +393,7 @@ function alignRangeStart(axis: AxisModel, sDate: number, intervalSize: number): 
  * Method to calculate numeric datetime interval.
  *
  * @param {AxisModel} axis - The axis for which to calculate the interval.
- * @param {Size} size - The size of the axis.
+ * @param {ChartSizeProps} size - The size of the axis.
  * @param {number} start - The start value of the axis.
  * @param {number} end - The end value of the axis.
  * @returns {number} - The calculated numeric datetime interval.
@@ -462,7 +474,7 @@ export function calculateDateTimeNiceInterval(axis: AxisModel, size: ChartSizePr
  *
  * @private
  * @param {AxisModel} axis - The axis for which the visible range is calculated.
- * @param {Size} size - The size of the chart area.
+ * @param {ChartSizeProps} size - The size of the chart area.
  * @returns {void}
  */
 function calculateVisibleRange(axis: AxisModel, size: ChartSizeProps): void {
@@ -478,7 +490,7 @@ function calculateVisibleRange(axis: AxisModel, size: ChartSizeProps): void {
         calculateVisibleRangeOnZooming(axis);
         axis.visibleRange.interval = calculateDateTimeNiceInterval(axis, size, axis.visibleRange.minimum, axis.visibleRange.maximum);
         try {
-            if (hasFinancialSeries(axis)) {
+            if (hasFinancialSeries(axis) && !hasIndicatorsWithSeriesName(axis)) {
                 const halfSlot: number = getHalfCandleSlotMs(axis);
                 if (halfSlot > 0) {
                     axis.visibleRange.minimum -= halfSlot;

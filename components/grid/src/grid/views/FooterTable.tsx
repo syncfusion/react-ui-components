@@ -56,19 +56,21 @@ const FooterTableBase: ForwardRefExoticComponent<Partial<IFooterTableBase> & Ref
             const colGroupContent: JSX.Element = useMemo(() => {
                 let visibleCols: JSX.Element[] = [];
 
-                if (!virtualSettings.enableColumn) {
-                    visibleCols = ColElements;
-                } else {
-                    const startIndex: number = scrollModule?.virtualColumnInfo?.startIndex;
-                    const endIndex: number = scrollModule?.virtualColumnInfo?.endIndex;
-                    totalWidth.current = 0;
-                    for (let i: number = startIndex; i < endIndex; i++) {
-                        const col: JSX.Element = ColElements[i as number];
-                        visibleCols.push(col);
+                if (ColElements.length) {
+                    if (!virtualSettings.enableColumn) {
+                        visibleCols = ColElements;
+                    } else {
+                        const startIndex: number = scrollModule?.virtualColumnInfo?.startIndex;
+                        const endIndex: number = scrollModule?.virtualColumnInfo?.endIndex;
+                        totalWidth.current = 0;
+                        for (let i: number = startIndex; i < endIndex; i++) {
+                            const col: JSX.Element = ColElements[i as number];
+                            visibleCols.push(col);
 
-                        // Optional: If you ever need cumulative width, you can calculate here
-                        const styleWidth: number = col?.props?.style?.width;
-                        totalWidth.current += parseUnit(styleWidth);
+                            // Optional: If you ever need cumulative width, you can calculate here
+                            const styleWidth: number = col?.props?.style?.width;
+                            totalWidth.current += parseUnit(styleWidth);
+                        }
                     }
                 }
 

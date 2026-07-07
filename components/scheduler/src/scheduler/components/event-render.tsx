@@ -49,6 +49,32 @@ export const renderTimeNode: (time: string) => ReactNode =
     (time: string): ReactNode => <div className={CSS_CLASSES.TIME}>{time}</div>;
 
 /**
+ * Renders the inner appointment details with optional overflow indicators and recurrence icon.
+ *
+ * @param {ReactNode} content - The main content (subject, time, or template).
+ * @param {boolean} isOverflowLeft - Whether to show the left overflow indicator.
+ * @param {boolean} isOverflowRight - Whether to show the right overflow indicator.
+ * @param {EventModel} event - The event model (for recurrence icon).
+ * @returns {ReactNode} The composed appointment node.
+ * @private
+ */
+const renderInnerAppointment: (content: ReactNode, isOverflowLeft: boolean, isOverflowRight: boolean, event: EventModel) => ReactNode = (
+    content: ReactNode,
+    isOverflowLeft: boolean,
+    isOverflowRight: boolean,
+    event: EventModel
+): ReactNode => (
+    <div className={CSS_CLASSES.INNER_APPOINTMENT}>
+        <div className={CSS_CLASSES.APPOINTMENT_DETAILS}>
+            {isOverflowLeft && renderOverflowIndicator('left')}
+            {content}
+            {isOverflowRight && renderOverflowIndicator('right')}
+            <RecurrenceIcon event={event} />
+        </div>
+    </div>
+);
+
+/**
  * Renders the content for a spanned (multi-day or overflowing) event.
  *
  * @param {EventModel} event - The event model to render.
@@ -86,13 +112,15 @@ export const renderSpannedContent: (
         : !isAllDay && renderTimeNode(formatEventTime(endTime, timeFormat, locale));
 
     return (
-        <div className={CSS_CLASSES.APPOINTMENT_DETAILS}>
-            {left}
-            <div className={`${CSS_CLASSES.SUBJECT} ${CSS_CLASSES.TEXT_CENTER} ${CSS_CLASSES.ELLIPSIS}`}>
-                {subject || addTitleLabel}
+        <div className={`${CSS_CLASSES.INNER_APPOINTMENT}`}>
+            <div className={CSS_CLASSES.APPOINTMENT_DETAILS}>
+                {left}
+                <div className={`${CSS_CLASSES.SUBJECT} ${CSS_CLASSES.TEXT_CENTER} ${CSS_CLASSES.ELLIPSIS}`}>
+                    {subject || addTitleLabel}
+                </div>
+                {right}
+                <RecurrenceIcon event={event} />
             </div>
-            {right}
-            <RecurrenceIcon event={event} />
         </div>
     );
 };
@@ -120,12 +148,14 @@ export const renderStandardEventContent: (
 ): ReactNode => {
     const { subject, startTime, isAllDay } = event;
     return (
-        <div className={CSS_CLASSES.APPOINTMENT_DETAILS}>
-            {!isAllDay && renderTimeNode(formatEventTime(startTime, timeFormat, locale))}
-            <div className={`${CSS_CLASSES.SUBJECT} ${CSS_CLASSES.ELLIPSIS}`}>
-                {subject || addTitleLabel}
+        <div className={`${CSS_CLASSES.INNER_APPOINTMENT}`}>
+            <div className={CSS_CLASSES.APPOINTMENT_DETAILS}>
+                {!isAllDay && renderTimeNode(formatEventTime(startTime, timeFormat, locale))}
+                <div className={`${CSS_CLASSES.SUBJECT} ${CSS_CLASSES.ELLIPSIS}`}>
+                    {subject || addTitleLabel}
+                </div>
+                <RecurrenceIcon event={event} />
             </div>
-            <RecurrenceIcon event={event} />
         </div>
     );
 };
@@ -133,7 +163,7 @@ export const renderStandardEventContent: (
 /**
  * Determines and returns the appropriate event content based on type.
  *
- * @param {(event: EventModel) | undefined} eventTemplate - Optional custom event template.
+ * @param {Function | undefined} eventTemplate - Optional custom event template.
  * @param {EventModel} event - The event model.
  * @param {number | undefined} totalSegments - Number of segments if the event is spanned.
  * @param {boolean} isOverflowLeft - Whether the event overflows to the left.
@@ -163,11 +193,14 @@ export const getEventContent: (
     timeFormat: string,
     addTitleLabel: string
 ): ReactNode => {
-    if (eventTemplate) {
-        return eventTemplate(event);
-    }
     if (totalSegments) {
+        if (eventTemplate) {
+            return renderInnerAppointment(eventTemplate(event), isOverflowLeft, isOverflowRight, event);
+        }
         return renderSpannedContent(event, isOverflowLeft, isOverflowRight, locale, timeFormat, addTitleLabel);
+    }
+    if (eventTemplate) {
+        return renderInnerAppointment(eventTemplate(event), false, false, event);
     }
     return renderStandardEventContent(event, locale, timeFormat, addTitleLabel);
 };
@@ -194,6 +227,28 @@ export const getTimeRangeString: (start: Date, end: Date, timeFormat: string, lo
         return `${startStr} - ${endStr}`;
     };
 
+const renderAppointmentDetails: (eventInfo: ProcessedEventsData, timeFormat: string,
+    locale: string, addTitleLabel: string) => ReactNode =
+    (eventInfo: ProcessedEventsData, timeFormat: string, locale: string, addTitleLabel: string): ReactNode => {
+        const { event, timeDisplay } = eventInfo;
+        const timeText: string = timeDisplay ||
+            (event.startTime && event.endTime
+                ? getTimeRangeString(event.startTime, event.endTime, timeFormat, locale)
+                : '');
+        return (
+            <div className={CSS_CLASSES.APPOINTMENT_DETAILS}>
+                <div className={CSS_CLASSES.SUBJECT}>{event.subject || addTitleLabel}</div>
+                {!event.isBlock && event.location && (
+                    <div className={`${CSS_CLASSES.EVENT_LOCATION} ${CSS_CLASSES.ELLIPSIS}`}>{event.location}</div>
+                )}
+                {!event.isBlock && (
+                    <div className={`${CSS_CLASSES.EVENT_TIME} ${CSS_CLASSES.ELLIPSIS}`}>{timeText}</div>
+                )}
+                <RecurrenceIcon event={event} />
+            </div>
+        );
+    };
+
 /**
  * Renders the standard content for a time-slot event.
  * Displays subject, optional location, time range and recurrence icon.
@@ -216,28 +271,9 @@ export const renderTimeSlotStandardContent: (
     locale: string,
     addTitleLabel: string
 ): ReactNode => {
-    const { event, timeDisplay } = eventInfo;
-    const timeText: string = timeDisplay ||
-        (event.startTime && event.endTime
-            ? getTimeRangeString(event.startTime, event.endTime, timeFormat, locale)
-            : '');
-
     return (
-        <div className={CSS_CLASSES.APPOINTMENT_DETAILS}>
-            <div className={CSS_CLASSES.SUBJECT}>
-                {event.subject || addTitleLabel}
-            </div>
-            {!event.isBlock && event.location && (
-                <div className={`${CSS_CLASSES.EVENT_LOCATION} ${CSS_CLASSES.ELLIPSIS}`}>
-                    {event.location}
-                </div>
-            )}
-            {!event.isBlock && (
-                <div className={`${CSS_CLASSES.EVENT_TIME} ${CSS_CLASSES.ELLIPSIS}`}>
-                    {timeText}
-                </div>
-            )}
-            <RecurrenceIcon event={event} />
+        <div className={`${CSS_CLASSES.INNER_APPOINTMENT}`}>
+            {renderAppointmentDetails(eventInfo, timeFormat, locale, addTitleLabel)}
         </div>
     );
 };
@@ -254,6 +290,7 @@ export const renderTimeSlotStandardContent: (
  * @param {string} addTitleLabel - The localized label for 'Add title'.
  * @param {[number, number]} [startHourTuple] - The scheduler start hour tuple.
  * @param {[number, number]} [endHourTuple] - The scheduler end hour tuple.
+ * @param {Function} [eventTemplate] - Optional custom event template.
  * @returns {ReactNode} The spanned time-slot event content.
  * @private
  */
@@ -265,7 +302,8 @@ export const renderTimeSlotSpannedContent: (
     locale: string,
     addTitleLabel: string,
     startHourTuple?: [number, number],
-    endHourTuple?: [number, number]
+    endHourTuple?: [number, number],
+    eventTemplate?: (event: EventModel) => ReactNode
 ) => ReactNode = (
     eventInfo: ProcessedEventsData,
     renderDates: Date[],
@@ -274,44 +312,55 @@ export const renderTimeSlotSpannedContent: (
     locale: string,
     addTitleLabel: string,
     startHourTuple?: [number, number],
-    endHourTuple?: [number, number]
+    endHourTuple?: [number, number],
+    eventTemplate?: (event: EventModel) => ReactNode
 ): ReactNode => {
-    const standardContent: ReactNode = renderTimeSlotStandardContent(eventInfo, timeFormat, locale, addTitleLabel);
+    const contentNode: ReactNode = eventTemplate
+        ? eventTemplate(eventInfo.event)
+        : renderAppointmentDetails(eventInfo, timeFormat, locale, addTitleLabel);
 
     if (timeScaleEnabled) {
         const { isOverflowTop, isOverflowBottom } =
             PositioningService.getOverflowDirection(eventInfo, renderDates, startHourTuple, endHourTuple);
-        return (
-            <Fragment>
-                {isOverflowTop && (
-                    <div className={`${CSS_CLASSES.INDICATOR} ${CSS_CLASSES.ICONS} ${CSS_CLASSES.UP_ARROW_ICON}`}>
-                        <ChevronUpDoubleIcon />
+        if (isOverflowTop || isOverflowBottom) {
+            return (
+                <Fragment>
+                    <div className={CSS_CLASSES.INNER_APPOINTMENT}>
+                        {isOverflowTop && (
+                            <div className={`${CSS_CLASSES.INDICATOR} ${CSS_CLASSES.ICONS} ${CSS_CLASSES.UP_ARROW_ICON}`}>
+                                <ChevronUpDoubleIcon />
+                            </div>
+                        )}
+                        {contentNode}
+                        {eventTemplate && <RecurrenceIcon event={eventInfo.event} />}
+                        {isOverflowBottom && (
+                            <div className={`${CSS_CLASSES.INDICATOR} ${CSS_CLASSES.ICONS} ${CSS_CLASSES.DOWN_ARROW_ICON}`}>
+                                <ChevronDownDoubleIcon />
+                            </div>
+                        )}
                     </div>
-                )}
-                {standardContent}
-                {isOverflowBottom && (
-                    <div className={`${CSS_CLASSES.INDICATOR} ${CSS_CLASSES.ICONS} ${CSS_CLASSES.DOWN_ARROW_ICON}`}>
-                        <ChevronDownDoubleIcon />
-                    </div>
-                )}
-            </Fragment>
-        );
+                </Fragment>
+            );
+        }
     }
 
     const { isOverflowLeft, isOverflowRight } = PositioningService.getOverflowDirection(eventInfo, renderDates);
     return (
         <Fragment>
-            {isOverflowLeft && (
-                <div className={`${CSS_CLASSES.INDICATOR} ${CSS_CLASSES.ICONS} ${CSS_CLASSES.LEFT_ARROW_ICON}`}>
-                    <ChevronLeftDoubleIcon />
-                </div>
-            )}
-            {standardContent}
-            {isOverflowRight && (
-                <div className={`${CSS_CLASSES.INDICATOR} ${CSS_CLASSES.ICONS} ${CSS_CLASSES.RIGHT_ARROW_ICON}`}>
-                    <ChevronRightDoubleIcon />
-                </div>
-            )}
+            <div className={CSS_CLASSES.INNER_APPOINTMENT}>
+                {isOverflowLeft && (
+                    <div className={`${CSS_CLASSES.INDICATOR} ${CSS_CLASSES.ICONS} ${CSS_CLASSES.LEFT_ARROW_ICON}`}>
+                        <ChevronLeftDoubleIcon />
+                    </div>
+                )}
+                {contentNode}
+                {eventTemplate && <RecurrenceIcon event={eventInfo.event} />}
+                {isOverflowRight && (
+                    <div className={`${CSS_CLASSES.INDICATOR} ${CSS_CLASSES.ICONS} ${CSS_CLASSES.RIGHT_ARROW_ICON}`}>
+                        <ChevronRightDoubleIcon />
+                    </div>
+                )}
+            </div>
         </Fragment>
     );
 };
@@ -320,7 +369,7 @@ export const renderTimeSlotSpannedContent: (
  * Resolves and returns the appropriate content for a time-slot event.
  * Prioritizes the custom event template, then spanned, then standard content.
  *
- * @param {(event: EventModel) | undefined} eventTemplate - Optional custom template.
+ * @param {Function | undefined} eventTemplate - Optional custom template.
  * @param {ProcessedEventsData} eventInfo - The processed event data.
  * @param {Date[]} renderDates - The dates currently rendered.
  * @param {boolean} timeScaleEnabled - Whether timescale is enabled.
@@ -353,9 +402,6 @@ export const getTimeSlotEventContent: (
     startHourTuple?: [number, number],
     endHourTuple?: [number, number]
 ): ReactNode => {
-    if (eventTemplate) {
-        return eventTemplate(eventInfo.event);
-    }
     const isSpanned: boolean = !!(eventInfo.totalSegments || startHourTuple || endHourTuple);
     if (isSpanned) {
         return renderTimeSlotSpannedContent(
@@ -366,8 +412,12 @@ export const getTimeSlotEventContent: (
             locale,
             addTitleLabel,
             startHourTuple,
-            endHourTuple
+            endHourTuple,
+            eventTemplate
         );
+    }
+    if (eventTemplate) {
+        return renderInnerAppointment(eventTemplate(eventInfo.event), false, false, eventInfo.event);
     }
     return renderTimeSlotStandardContent(eventInfo, timeFormat, locale, addTitleLabel);
 };

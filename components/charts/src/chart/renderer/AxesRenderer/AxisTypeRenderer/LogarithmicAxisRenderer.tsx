@@ -9,7 +9,7 @@ import { AxisModel, Chart, ChartSizeProps } from '../../../chart-area/chart-inte
  * Calculates the range and interval for a Logarithmic axis within a chart.
  * This involves adjusting the axis properties based on the chart size and configuration.
  *
- * @param {Size} size - The dimensions of the chart area (width and height in pixels)
+ * @param {ChartSizeProps} size - The dimensions of the chart area (width and height in pixels)
  * @param {AxisModel} axis - The logarithmic axis model containing configuration settings
  * @param {Chart} chart - The parent chart instance that contains this axis
  * @returns {void} Updates the axis model with calculated range, interval, and labeling properties
@@ -23,7 +23,7 @@ export function calculateLogarithmicAxis(size: ChartSizeProps, axis: AxisModel, 
  * Calculates the range and interval for the logarithmic axis.
  * Processes raw data into usable axis information by calculating ranges and intervals.
  *
- * @param {Size} size - The chart area dimensions that influence axis calculations
+ * @param {ChartSizeProps} size - The chart area dimensions that influence axis calculations
  * @param {AxisModel} axis - The axis model to update with calculated values
  * @param {Chart} chart - The chart instance for accessing related configuration
  * @returns {void} Modifies the axis object with calculated range and interval values
@@ -54,7 +54,7 @@ function calculateRangeAndInterval(size: ChartSizeProps, axis: AxisModel, chart:
  * Transforms regular values to logarithmic scale and ensures proper range boundaries.
  *
  * @param {AxisModel} axis - The axis model with logBase and range configurations
- * @param {Size} size - The chart dimensions used for range calculations
+ * @param {ChartSizeProps} size - The chart dimensions used for range calculations
  * @param {DoubleRange} logarithmicRange - Object to store calculated min/max values
  * @returns {void} Updates the logarithmicRange object and sets axis.actualRange properties
  * @private
@@ -90,7 +90,7 @@ function getActualRange(axis: AxisModel, size: ChartSizeProps, logarithmicRange:
  * Handles user zoom interactions by adjusting the visible portion of the axis.
  *
  * @param {AxisModel} axis - The axis model with zoom settings and actual range
- * @param {Size} size - The chart dimensions used for interval calculations
+ * @param {ChartSizeProps} size - The chart dimensions used for interval calculations
  * @returns {void} Updates axis.visibleRange with values representing the currently visible portion
  * @private
  *
@@ -121,7 +121,7 @@ function calculateVisibleRange(axis: AxisModel, size: ChartSizeProps): void {
  * Uses axis interval divisions to find an appropriate interval that creates readable labels.
  *
  * @param {number} delta - The difference between axis maximum and minimum values
- * @param {Size} size - The chart dimensions used to determine label density
+ * @param {ChartSizeProps} size - The chart dimensions used to determine label density
  * @param {AxisModel} axis - The axis model containing intervalDivs and other settings
  * @returns {number} A calculated interval value that produces visually appealing labels
  * @private

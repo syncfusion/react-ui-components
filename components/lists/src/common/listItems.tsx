@@ -1,4 +1,4 @@
-import * as React from 'react';
+import { ForwardedRef, forwardRef, HTMLAttributes, JSX, memo, NamedExoticComponent, ReactNode, RefAttributes, RefObject, UIEventHandler, useCallback, useImperativeHandle, useMemo, useRef, type UIEvent, type KeyboardEvent, type MouseEvent } from 'react';
 import { DataSource, FieldsMapping, VirtualizationProps } from './types';
 import { ListItem } from './listItem';
 import { SelectEvent, useListItemSelection, UseListItemSelectionResult } from './useListItemSelection';
@@ -21,18 +21,18 @@ export interface ListItemBaseProps {
     /** ARIA roles/text for list and items; listRole is applied to the <ul>. */
     ariaAttributes?: ListAriaAttributes;
     /** Custom item content template (function or ReactNode). */
-    itemTemplate?: Function | React.ReactNode;
+    itemTemplate?: Function | ReactNode;
     /** Custom group header template (function or ReactNode). */
-    groupTemplate?: Function | React.ReactNode;
+    groupTemplate?: Function | ReactNode;
     /** Custom container class; also disables spacer path when set. */
     parentClass?: string;
     /** Fields mapping for ListItem; falls back to options.fields when omitted. */
     fields?: FieldsMapping;
     /*** Optional callback to provide additional/overridden HTML attributes for each rendered item. */
     getItemProps?: (args: GetItemPropsOptions) =>
-    React.HTMLAttributes<HTMLElement> & React.RefAttributes<HTMLElement> | undefined;
+    HTMLAttributes<HTMLElement> & RefAttributes<HTMLElement> | undefined;
     /** KeyDown handler for each ListItem (overrides options.itemKeyDown when provided). */
-    onItemKeyDown?: (e: React.KeyboardEvent<HTMLElement>, index: number) => void;
+    onItemKeyDown?: (e: KeyboardEvent<HTMLElement>, index: number) => void;
 }
 
 /**
@@ -83,12 +83,10 @@ export interface ListItemsProps extends ListItemBaseProps {
     items?: DataSource[];
     /** Selection event handler triggered when item is selected/checked. */
     onSelect?: (event: SelectEvent, isAlreadySelected: boolean) => void;
-    /** Function to update list item data source. */
-    setListItemDatas?: (data: DataSource[]) => void;
     /** Whether the list is disabled. */
     disabled?: boolean;
     /**Ref to the scrollable parent element for virtualization calculations. */
-    scrollParent?: React.RefObject<HTMLElement>
+    scrollParent?: RefObject<HTMLElement>
     /** Virtualization settings; when set and no parentClass, renders via VirtualizedList. */
     virtualization?: VirtualizationProps;
     /** Disable the built-in keyboard navigation and click actions. */
@@ -100,8 +98,8 @@ export interface ListItemsProps extends ListItemBaseProps {
 /**
  * ListItems — presentational list renderer.
  */
-export const ListItems: React.NamedExoticComponent<ListItemsProps & React.RefAttributes<HTMLDivElement>> =
-    React.memo(React.forwardRef<HTMLDivElement, ListItemsProps>(({
+export const ListItems: NamedExoticComponent<ListItemsProps & RefAttributes<HTMLDivElement>> =
+    memo(forwardRef<HTMLDivElement, ListItemsProps>(({
         items,
         fields = defaultMappedFields,
         scrollParent,
@@ -110,34 +108,33 @@ export const ListItems: React.NamedExoticComponent<ListItemsProps & React.RefAtt
         itemTemplate,
         groupTemplate,
         ariaAttributes, getItemProps,
-        onItemKeyDown, onSelect, setListItemDatas, onScrollRequest,
+        onItemKeyDown, onSelect, onScrollRequest,
         disableDefaultInteractions = false, disabled = false}:
-    ListItemsProps, ref: React.ForwardedRef<HTMLDivElement>) => {
+    ListItemsProps, ref: ForwardedRef<HTMLDivElement>) => {
         const curAttributes: ListAriaAttributes = { ...defaultAriaAttributes, ...ariaAttributes };
         ariaAttributes = curAttributes;
-        const contentRef: React.RefObject<HTMLDivElement | null> = React.useRef<HTMLDivElement | null>(null);
-        const ULRef: React.RefObject<HTMLDivElement | HTMLUListElement | null> = React.useRef<HTMLDivElement>(null);
+        const contentRef: RefObject<HTMLDivElement | null> = useRef<HTMLDivElement | null>(null);
+        const ULRef: RefObject<HTMLDivElement | HTMLUListElement | null> = useRef<HTMLDivElement>(null);
 
-        React.useImperativeHandle(ref, () => contentRef.current as HTMLDivElement, []);
+        useImperativeHandle(ref, () => contentRef.current as HTMLDivElement, []);
 
         const selectionHook: UseListItemSelectionResult = useListItemSelection({
             fields: fields,
             listItemDatas: items || [],
             onSelect,
-            setListItemDatas: setListItemDatas || (() => undefined),
-            scrollParent: (scrollParent?.current ? scrollParent : (ULRef as React.RefObject<HTMLElement>))
+            scrollParent: (scrollParent?.current ? scrollParent : (ULRef as RefObject<HTMLElement>))
         });
 
         const idField: string = fields?.id ?? 'id';
-        const focusedIndexNumber: number = React.useMemo(() => {
+        const focusedIndexNumber: number = useMemo(() => {
             if (!selectionHook.focusedItem || !items) { return -1; }
             const focussedId: string = String(selectionHook.focusedItem?.[String(idField)]);
             if (isNullOrUndefined(focussedId)) { return -1; }
             return items.findIndex((item: DataSource) => String(item?.[String(idField)]) === String(focussedId));
         }, [selectionHook.focusedItem, items, idField]);
 
-        const handleItemClick: (e: React.MouseEvent<HTMLLIElement, MouseEvent>, index: number) => void =
-        React.useCallback((e: React.MouseEvent<HTMLLIElement>, index: number) => {
+        const handleItemClick: (e: MouseEvent<HTMLLIElement>, index: number) => void =
+        useCallback((e: MouseEvent<HTMLLIElement>, index: number) => {
             if (disabled) { return; }
             if (disableDefaultInteractions) {
                 onSelect?.({event: e, index: index}, focusedIndexNumber === index);
@@ -148,8 +145,8 @@ export const ListItems: React.NamedExoticComponent<ListItemsProps & React.RefAtt
             selectionHook.handleSelection(currentData, e, index);
         }, [disableDefaultInteractions, disabled, selectionHook]);
 
-        const handleItemKeyDown: (e: React.KeyboardEvent<HTMLElement>) => void =
-        React.useCallback((e: React.KeyboardEvent<HTMLElement>) => {
+        const handleItemKeyDown: (e: KeyboardEvent<HTMLElement>) => void =
+        useCallback((e: KeyboardEvent<HTMLElement>) => {
             if (disabled) { return; }
             if (!disableDefaultInteractions) {
                 selectionHook.keyActionHandler(e);
@@ -157,13 +154,13 @@ export const ListItems: React.NamedExoticComponent<ListItemsProps & React.RefAtt
             onItemKeyDown?.(e, focusedIndexNumber);
         }, [disableDefaultInteractions, selectionHook, onItemKeyDown, focusedIndexNumber, disabled]);
 
-        const wrapperClass: string = React.useMemo(() => { return [
+        const wrapperClass: string = useMemo(() => { return [
             parentClass ? parentClass : 'sf-list-container',
             virtualization ? 'sf-virtualization' : ''
         ].filter(Boolean).join(' ').trim();
         }, [virtualization, parentClass]);
 
-        const renderItem: (index: number, item: DataSource) => React.JSX.Element = React.useCallback(
+        const renderItem: (index: number, item: DataSource) => JSX.Element = useCallback(
             (index: number, item: DataSource) => (
                 <ListItem
                     key={`sf-item-${index}`}
@@ -178,13 +175,14 @@ export const ListItems: React.NamedExoticComponent<ListItemsProps & React.RefAtt
                     ariaAttributes={ariaAttributes}
                     focusedIndex={focusedIndexNumber}
                     as={!virtualization ? 'li' : 'div'}
+                    style={virtualization ? { height: virtualization.itemSize } : undefined}
                 />
             ),
             [fields, handleItemClick, getItemProps, itemTemplate, groupTemplate, parentClass, ariaAttributes,
                 focusedIndexNumber]);
 
-        const handleScrollRequest: React.UIEventHandler<HTMLUListElement>
-        = React.useCallback((e: React.UIEvent<HTMLUListElement, UIEvent>) => {
+        const handleScrollRequest: UIEventHandler<HTMLUListElement>
+        = useCallback((e: UIEvent<HTMLUListElement>) => {
             onScrollRequest?.({
                 originalEvent: e.nativeEvent as Event,
                 startIndex: 0,
@@ -195,7 +193,7 @@ export const ListItems: React.NamedExoticComponent<ListItemsProps & React.RefAtt
         return (
             <div ref={contentRef} className={wrapperClass}>
                 {!virtualization ? (
-                    <ul ref={ULRef as React.RefObject<HTMLUListElement>} className={UL_CLASS}
+                    <ul ref={ULRef as RefObject<HTMLUListElement>} className={UL_CLASS}
                         role={ariaAttributes?.listRole ?? undefined} aria-label={ariaAttributes?.listLabel ?? undefined}
                         tabIndex={0} onKeyDown={handleItemKeyDown} onScroll={handleScrollRequest}>
                         {items?.map((item: DataSource, index: number) => {
@@ -203,7 +201,7 @@ export const ListItems: React.NamedExoticComponent<ListItemsProps & React.RefAtt
                         })}
                     </ul>
 
-                ) : (<div ref={ULRef as React.RefObject<HTMLDivElement>} className={UL_CLASS} role={ariaAttributes?.listRole ?? undefined}
+                ) : (<div ref={ULRef as RefObject<HTMLDivElement>} className={UL_CLASS} role={ariaAttributes?.listRole ?? undefined}
                     aria-label={ariaAttributes?.listLabel ?? undefined} tabIndex={0} onKeyDown={handleItemKeyDown}>
                     <VirtualScroller
                         items={items as DataSource[]}
@@ -211,7 +209,7 @@ export const ListItems: React.NamedExoticComponent<ListItemsProps & React.RefAtt
                         pageSize={virtualization?.pageSize}
                         overscanCount={virtualization?.overscanCount}
                         showSkeleton={virtualization.showSkeleton}
-                        scrollParent={scrollParent || ULRef as React.RefObject<HTMLElement>}
+                        scrollParent={scrollParent || ULRef as RefObject<HTMLElement>}
                         onScrollRequest={onScrollRequest}
                         itemContent={renderItem}
                     />

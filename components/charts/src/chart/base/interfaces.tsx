@@ -1,11 +1,12 @@
-import { AxisLabelPosition, ChartRangePadding, ChartSeriesType, EmptyPointMode, StepPosition, AxisValueType, LabelPosition, LegendShape, ChartMarkerShape, ZoomMode, ToolbarItems, SplineType, IntervalType, SkeletonType, StripLineSizeUnit, ZIndex, DataLabelIntersectMode, CrosshairLineType, SelectionMode, SelectionPattern, AnnotationCoordinateUnit, ErrorBarType, TrendlineTypes } from './enum';
+import { AxisLabelPosition, ChartRangePadding, ChartSeriesType, EmptyPointMode, StepPosition, AxisValueType, LabelPosition, LegendShape, ChartMarkerShape, ZoomMode, ToolbarItems, SplineType, IntervalType, SkeletonType, StripLineSizeUnit, ZIndex, DataLabelIntersectMode, CrosshairLineType, SelectionMode, SelectionPattern, ErrorBarType, TrendlineTypes, ColumnFacet, BoxPlotMode, ScrollbarPosition, IndicatorsType, FinancialDataField, MacdType, LegendMode } from './enum';
 import { DataManager, Query } from '@syncfusion/react-data';
 import { AxisDataProps, Chart, ChartSizeProps, ChartTrendlineModel, VisibleRangeProps } from '../chart-area/chart-interfaces';
 import { Animation } from '../../common';
 import { HorizontalAlignment, VerticalAlignment } from '@syncfusion/react-base';
 import { JSX } from 'react';
 import { FadeOutMode, LegendPosition, TextOverflow, Theme, TitlePosition } from '../../common';
-import { FocusOutlineProps } from '../../common/interfaces';
+import { ConnectorProps, FocusOutlineProps } from '../../common/interfaces';
+import { AnnotationCoordinateUnit } from '../../common/annotation';
 
 
 /**
@@ -60,7 +61,7 @@ export interface TitleSettings {
     /**
      * Sets the font size for the chart title and subtitle.
      *
-     * @default '15px'
+     * @default ''
      */
     size?: string;
 
@@ -87,6 +88,8 @@ export interface TitleSettings {
 
     /**
      * Specifies the font family used for the chart title and subtitle.
+     *
+     * @default ''
      */
     fontFamily?: string;
 
@@ -99,6 +102,11 @@ export interface TitleSettings {
 
     /**
      * Controls how the title and subtitle text behaves when it exceeds the available space.
+     *
+     * Available options:
+     * - `None`: Displays the full text even if it overlaps with other chart elements.
+     * - `Wrap`: Breaks the text into multiple lines to fit within the container.
+     * - `Trim`: Cuts off the text and may append ellipsis if it exceeds the container width.
      *
      * @default 'Wrap'
      */
@@ -147,7 +155,7 @@ export interface TitleSettings {
     /**
      * Provides accessibility options for the chart title and subtitle elements.
      *
-     * @default { ariaLabel: null, focusable: true, role: null, tabIndex: 0 }
+     * @default { ariaLabel: '', focusable: true, role: 'img', tabIndex: 0 }
      */
     accessibility?: ChartAccessibilityProps;
 }
@@ -167,7 +175,7 @@ export interface ChartBorderProps {
     /**
      * Sets the width of the border in pixels.
      *
-     * @default 1
+     * @default 0
      */
     width?: number;
 
@@ -222,7 +230,7 @@ export interface ChartFontProps {
     /**
      * Specifies the font style of the text (e.g., 'Normal', 'Italic').
      *
-     * @default 'Normal'
+     * @default ''
      */
     fontStyle?: string;
 
@@ -236,7 +244,7 @@ export interface ChartFontProps {
     /**
      * Specifies the font weight (thickness) of the text (e.g., 'Normal', 'Bold', '400').
      *
-     * @default 'Normal'
+     * @default ''
      */
     fontWeight?: string;
 
@@ -271,10 +279,10 @@ export interface ChartWaterfallConnectorProps {
     /**
      * Enables or disables the connector line.
      *
-     * When set to `true`, a line is drawn between consecutive columns  to show the progression
+     * When set to `true`, a line is drawn between consecutive columns to show the progression
      * of values.
      *
-     * @default trued
+     * @default true
      */
     visible?: boolean;
 
@@ -309,6 +317,52 @@ export interface ChartWaterfallConnectorProps {
 }
 
 /**
+ * Specifies visual styling options for whisker stems and end caps in chart series that render
+ * whiskers, such as the Box‑and‑Whisker chart.
+ *
+ * This configuration controls the stroke appearance of whiskers that represent the data range
+ * outside the interquartile box.
+ */
+export interface ChartWhiskerStyleProps {
+
+    /**
+     * Stroke color for both whiskers and stems and their end caps.
+     *
+     * If not specified, the series border color is used as a fallback.
+     *
+     * @default ''
+     */
+    stroke?: string;
+
+    /**
+     * Stroke width applied to both whisker stems and their end caps.
+     *
+     * If not specified, the series border width is used as a fallback.
+     *
+     * @default 1
+     */
+    width?: number;
+
+    /**
+     * Specifies the dash pattern applied to whisker stems and end caps.
+     *
+     * The value follows the SVG/CSS `stroke-dasharray` format (for example: '5,5' or '10,3,2').
+     *
+     * @default ''
+     */
+    dashArray?: string;
+
+    /**
+     * Determines the relative length of the whisker end caps.
+     *
+     * The value is expressed as a ratio of the available box width.
+     *
+     * @default 0.5
+     */
+    capLength?: number;
+}
+
+/**
  * Defines the configuration options for customizing the chart area.
  */
 export interface ChartAreaProps {
@@ -340,7 +394,7 @@ export interface ChartAreaProps {
      * Specifies a background image for the chart area.
      * Accepts a URL or a local image path.
      *
-     * @default null
+     * @default ''
      */
     backgroundImage?: string;
 
@@ -359,6 +413,93 @@ export interface ChartAreaProps {
      * @default {left: 0, right: 0, top: 0, bottom: 0}
      */
     margin?: ChartMarginProps;
+}
+
+/**
+ * Defines the configuration options for a single level of multi-level axis labels.
+ *
+ * @public
+ */
+export interface ChartMultiLevelLabelProps {
+    /**
+     * Defines the position of the multi-level labels.
+     * The available options are:
+     * * Left: Places the multi-level labels close to the chart elements.
+     * * Center: Positions the multi-level labels in the center of the chart elements.
+     * * Right: Places the multi-level labels further from the chart elements.
+     *
+     * @default 'Center'
+     */
+    alignment?: HorizontalAlignment;
+
+    /**
+     * Defines the text overflow behavior for multi-level labels.
+     * The available options are:
+     * * Trim: Trims the text that overflows for multi-level labels.
+     * * Wrap: Wraps the text that overflows for multi-level labels.
+     * * None: No text overflow handling for multi-level labels.
+     *
+     * @default 'Wrap'
+     */
+    overflow?: TextOverflow;
+
+    /**
+     * Options to customize the text styling for multi-level labels.
+     * Includes font family, size, weight, color, and opacity settings.
+     */
+    textStyle?: ChartFontProps;
+
+    /**
+     * The `border` property allows customization of the border for multi-level labels.
+     * It includes options to set the color, width, and dash pattern of the border.
+     *
+     * @default {color: '', width: 0, dashArray: ''}
+     */
+    border?: ChartBorderProps;
+
+    /**
+     * Configures multi-level categories for multi-level labels.
+     * Each category defines a range within the axis with a start and end value.
+     */
+    categories?: ChartMultiLevelLabelCategoryProps[];
+}
+
+/**
+ * Defines the configuration options for a single category within a multi-level label level.
+ *
+ * @public
+ */
+export interface ChartMultiLevelLabelCategoryProps {
+    /**
+     * Specifies the text to be displayed for the multi-level label category.
+     *
+     * @default ''
+     */
+    text: string;
+
+    /**
+     * Specifies the starting axis value for the multi-level label category.
+     * This value defines where the category span begins on the axis.
+     *
+     * @default null
+     */
+    start: string | number | Date;
+
+    /**
+     * Specifies the ending axis value for the multi-level label category.
+     * This value defines where the category span ends on the axis.
+     *
+     * @default null
+     */
+    end: string | number | Date;
+
+    /**
+     * Specifies the maximum width for the text in pixels.
+     * If the text exceeds this width, overflow handling (Trim/Wrap) is applied.
+     *
+     * @default null
+     */
+    maximumTextWidth?: number;
 }
 
 /**
@@ -381,7 +522,7 @@ export interface ChartSelectionProps {
 
     /**
      * Enables selection of multiple data points, series, or clusters.
-     > Note that the `selectionMode` must be set to `Point`, `Series`, or `Cluster` for multi-selection to be enabled.
+     * Note that the `selectionMode` must be set to `Point`, `Series`, or `Cluster` for multi-selection to be enabled.
      *
      * @default false
      */
@@ -389,14 +530,14 @@ export interface ChartSelectionProps {
 
     /**
      * Defines the indexes of points to be selected when the chart is initially rendered.
-     > Note that `selectionMode` or `highlightMode` must be set to `Point`, `Series`, or `Cluster` for this feature to work.
+     * Note that `selectionMode` or `highlightMode` must be set to `Point`, `Series`, or `Cluster` for this feature to work.
      *
      * @default []
      */
     selectedDataIndexes?: ChartIndexesProps[];
 
     /**
-     * Specifies the visual pattern applied to selected data points or series
+     * Specifies the visual pattern applied to selected data points or series.
      * The available options are:
      * * 'None': No selection pattern is applied.
      * * 'Chessboard': Applies a chessboard pattern as the selection effect.
@@ -415,10 +556,11 @@ export interface ChartSelectionProps {
      * * 'VerticalDash': Applies a vertical dash pattern as the selection effect.
      * * 'Rectangle': Applies a rectangle pattern as the selection effect.
      * * 'Box': Applies a box pattern as the selection effect.
+     * * 'VerticalStripe': Applies a vertical stripe pattern as the selection effect.
      * * 'HorizontalStripe': Applies a horizontal stripe pattern as the selection effect.
      * * 'Bubble': Applies a bubble pattern as the selection effect.
      *
-     * @default None
+     * @default 'None'
      */
     pattern?: SelectionPattern;
 }
@@ -492,28 +634,30 @@ export interface ChartHighlightProps {
 
     /**
      * Defines the visual pattern applied to highlighted data points or series.
-     * The available options are:
-     * * 'None': No highlight. pattern is applied.
-     * * 'Chessboard': Applies a chessboard pattern as the highlight. effect.
-     * * 'Dots': Applies a dot pattern as the highlight. effect.
-     * * 'DiagonalForward': Applies a forward diagonal line pattern as the highlight. effect.
-     * * 'Crosshatch': Applies a crosshatch pattern as the highlight. effect.
-     * * 'Pacman': Applies a Pacman pattern as the highlight. effect.
-     * * 'DiagonalBackward': Applies a backward diagonal line pattern as the highlight. effect.
-     * * 'Grid': Applies a grid pattern as the highlight. effect.
-     * * 'Turquoise': Applies a turquoise pattern as the highlight. effect.
-     * * 'Star': Applies a star pattern as the highlight. effect.
-     * * 'Triangle': Applies a triangle pattern as the highlight. effect.
-     * * 'Circle': Applies a circle pattern as the highlight. effect.
-     * * 'Tile': Applies a tile pattern as the highlight. effect.
-     * * 'HorizontalDash': Applies a horizontal dash pattern as the highlight. effect.
-     * * 'VerticalDash': Applies a vertical dash pattern as the highlight. effect.
-     * * 'Rectangle': Applies a rectangle pattern as the highlight. effect.
-     * * 'Box': Applies a box pattern as the highlight. effect.
-     * * 'HorizontalStripe': Applies a horizontal stripe pattern as the highlight. effect.
-     * * 'Bubble': Applies a bubble pattern as the highlight. effect.
      *
-     * @default None
+     * The available options are:
+     * * 'None': No highlight pattern is applied.
+     * * 'Chessboard': Applies a chessboard pattern as the highlight effect.
+     * * 'Dots': Applies a dot pattern as the highlight effect.
+     * * 'DiagonalForward': Applies a forward diagonal line pattern as the highlight effect.
+     * * 'Crosshatch': Applies a crosshatch pattern as the highlight effect.
+     * * 'Pacman': Applies a Pacman pattern as the highlight effect.
+     * * 'DiagonalBackward': Applies a backward diagonal line pattern as the highlight effect.
+     * * 'Grid': Applies a grid pattern as the highlight effect.
+     * * 'Turquoise': Applies a turquoise pattern as the highlight effect.
+     * * 'Star': Applies a star pattern as the highlight effect.
+     * * 'Triangle': Applies a triangle pattern as the highlight effect.
+     * * 'Circle': Applies a circle pattern as the highlight effect.
+     * * 'Tile': Applies a tile pattern as the highlight effect.
+     * * 'HorizontalDash': Applies a horizontal dash pattern as the highlight effect.
+     * * 'VerticalDash': Applies a vertical dash pattern as the highlight effect.
+     * * 'Rectangle': Applies a rectangle pattern as the highlight effect.
+     * * 'Box': Applies a box pattern as the highlight effect.
+     * * 'VerticalStripe': Applies a vertical stripe pattern as the highlight effect.
+     * * 'HorizontalStripe': Applies a horizontal stripe pattern as the highlight effect.
+     * * 'Bubble': Applies a bubble pattern as the highlight effect.
+     *
+     * @default 'None'
      */
     pattern?: SelectionPattern;
 }
@@ -622,6 +766,125 @@ export interface ChartZoomSettingsProps {
      */
     toolbar?: ChartToolbarProps;
 
+    /**
+     * Enables or disables the rendering of scrollbars for zoomed axes.
+     *
+     * When set to true, scrollbars are rendered for axes that have scrollbar settings enabled and whose
+     * visible range is smaller than the total data range.
+     *
+     * @default false
+     */
+    enableScrollbar?: boolean;
+}
+
+/**
+ *  Defines configuration options for enabling and customizing the scrollbar associated with an axis.
+ */
+export interface ChartScrollbarProps {
+    /**
+     * Enables or disables the scrollbar for the associated axis.
+     *
+     * @default true
+     */
+    enable?: boolean;
+
+    /**
+     * Specifies the thickness of the scrollbar track. For horizontal scrollbars this represents height;
+     * for vertical scrollbars, this represents width.
+     *
+     * @default 14
+     */
+    thickness?: number;
+
+    /**
+     * Specifies the background color of the scrollbar track.
+     *
+     * @default '#E0E0E0'
+     */
+    trackColor?: string;
+
+    /**
+     * Defines the corner radius of the scrollbar thumb.
+     *
+     * @default 6
+     */
+    thumbRadius?: number;
+
+    /**
+     * Specifies the fill color of the scrollbar thumb.
+     *
+     * @default '#9E9E9E'
+     */
+    thumbColor?: string;
+
+    /**
+     * Defines the corner radius of the scrollbar track.
+     *
+     * @default 6
+     */
+    trackRadius?: number;
+
+    /**
+     * Specifies the position of the scrollbar relative to the axis.
+     *
+     * Available options:
+     * - `Top`: Places the scrollbar at the top of the chart. Applicable only for horizontal scrollbars.
+     * - `Bottom`: Places the scrollbar at the bottom of the chart. Applicable only for horizontal scrollbars.
+     * - `Left`: Places the scrollbar on the left side of the chart. Applicable only for vertical scrollbars.
+     * - `Right`: Places the scrollbar on the right side of the chart. Applicable only for vertical scrollbars.
+     * - `PlaceNextToAxisLine`: Places the scrollbar next to the axis line.
+     *
+     * @default 'PlaceNextToAxisLine'
+     */
+    position?: ScrollbarPosition;
+
+    /**
+     * Specifies whether interactions on the scrollbar can modify the zoom factor of the axis.
+     * When set to false, scrollbar interaction performs panning only without changing zoom level.
+     *
+     * @default false
+     */
+    enableZoom?: boolean;
+
+    /**
+     * Configures the resize handles shown on the scrollbar thumb.
+     *
+     * @default { circleColor: '#E6E6E6', borderColor: '#9E9E9E', borderWidth: 1, arrowColor: '#6E6E6E' }
+     */
+    resizeCircle?: ResizeCircleSettingProps;
+}
+
+/**
+ * Defines configuration options for customizing the resize handles displayed on the scrollbar thumb.
+ */
+export interface ResizeCircleSettingProps {
+    /**
+     * Fill color of the resize circles.
+     *
+     * @default '#E6E6E6'
+     */
+    circleColor?: string;
+
+    /**
+     * Border color of the resize circles.
+     *
+     * @default '#9E9E9E'
+     */
+    borderColor?: string;
+
+    /**
+     * Border width of the resize circles.
+     *
+     * @default 1
+     */
+    borderWidth?: number;
+
+    /**
+     * Color of the arrow inside resize circles.
+     *
+     * @default '#6E6E6E'
+     */
+    arrowColor?: string;
 }
 
 /**
@@ -757,6 +1020,8 @@ export interface ChartToolbarProps {
 
     /**
      * Customizes the position of the zoom toolbar within the chart area.
+     *
+     * @default { hAlign: 'Right', vAlign: 'Top', x: 0, y: 0 }
      */
     position?: ToolbarPosition;
 }
@@ -795,6 +1060,12 @@ export interface ChartComponentProps {
      * Unique identifier for the chart element.
      *
      * @default ''
+     *
+     * @example
+     * ```tsx
+     * <Chart id='container'>
+     * </Chart>
+     * ```
      */
     id?: string;
 
@@ -803,6 +1074,12 @@ export interface ChartComponentProps {
      * If set to `'100%'`, the chart occupies the full width of its parent container.
      *
      * @default null
+     *
+     * @example
+     * ```tsx
+     * <Chart width='100px'>
+     * </Chart>
+     * ```
      */
     width?: string;
 
@@ -811,6 +1088,12 @@ export interface ChartComponentProps {
      * If set to `'100%'`, the chart occupies the full height of its parent container.
      *
      * @default null
+     *
+     * @example
+     * ```tsx
+     * <Chart height='100px'>
+     * </Chart>
+     * ```
      */
     height?: string;
 
@@ -818,6 +1101,12 @@ export interface ChartComponentProps {
      * Customizes the chart border using `color`, `width`, and `dashArray` properties.
      *
      * @default { color: '', width: 1, dashArray: '' }
+     *
+     * @example
+     * ```tsx
+     * <Chart border={{ color: '#0078D4', width: 2, dashArray: '2,2' }}>
+     * </Chart>
+     * ```
      */
     border?: ChartBorderProps;
 
@@ -833,6 +1122,12 @@ export interface ChartComponentProps {
      * Defines the space between the chart's outer edge and its chart area.
      *
      * @default { top: 10, right: 10, bottom: 10, left: 10 }
+     *
+     * @example
+     * ```tsx
+     * <Chart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+     * </Chart>
+     * ```
      */
     margin?: ChartMarginProps;
 
@@ -840,7 +1135,13 @@ export interface ChartComponentProps {
      * Sets the background color of the chart.
      * Accepts valid CSS color strings in hex or RGBA formats.
      *
-     * @default null
+     * @default ''
+     *
+     * @example
+     * ```tsx
+     * <Chart background='#0078D4'>
+     * </Chart>
+     * ```
      */
     background?: string;
 
@@ -848,7 +1149,13 @@ export interface ChartComponentProps {
      * Sets the background image of the chart.
      * Accepts a URL or local image path.
      *
-     * @default null
+     * @default ''
+     *
+     * @example
+     * ```tsx
+     * <Chart backgroundImage='https://ej2.syncfusion.com/demos/src/chart/images/sunny.png'>
+     * </Chart>
+     * ```
      */
     backgroundImage?: string;
 
@@ -856,6 +1163,12 @@ export interface ChartComponentProps {
      * If set to `true`, the chart is rendered in a transposed layout, swapping the X and Y axes.
      *
      * @default false
+     *
+     * @example
+     * ```tsx
+     * <Chart transposed={true}>
+     * </Chart>
+     * ```
      */
     transposed?: boolean;
 
@@ -865,31 +1178,45 @@ export interface ChartComponentProps {
      * Available options:
      * - `Material`: Applies the Material light theme.
      * - `MaterialDark`: Applies the Material dark theme.
+     * - `Tailwind`: Applies the Tailwind theme.
+     * - `TailwindDark`: Applies the Tailwind dark theme.
+     * - `Bootstrap`: Applies the Bootstrap theme.
+     * - `BootstrapDark`: Applies the Bootstrap dark theme.
      *
      * @default 'Material'
+     *
+     * @example
+     * ```tsx
+     * <Chart theme='Material'>
+     * </Chart>
+     * ```
      */
     theme?: Theme;
-
-    /**
-     * Enables animation effects for chart elements such as axis labels, gridlines, series, markers, and data labels.
-     * When set to `true`, animations are triggered during interactions like legend item clicks or when the data source is updated.
-     *
-     * @default true
-     */
-    enableAnimation?: boolean;
 
     /**
      * Defines a set of colors used for rendering chart series.
      * Each color in the array is applied sequentially to the series.
      *
      * @default []
+     *
+     * @example
+     * ```tsx
+     * <Chart palettes={['#2C3E50', '#E74C3C', '#3498DB', '#F39C12', '#27AE60', '#9B59B6']}>
+     * </Chart>
+     * ```
      */
     palettes?: string[];
 
     /**
      * Provides accessibility options for chart container element.
      *
-     * @default { ariaLabel: null, focusable: true, role: null, tabIndex: 0 }
+     * @default { ariaLabel: '', focusable: true, role: '', tabIndex: 0 }
+     *
+     * @example
+     * ```tsx
+     * <Chart accessibility={{ ariaLabel: 'Sales performance chart showing monthly revenue trends', focusable: true, role: 'img', tabIndex: 0 }}>
+     * </Chart>
+     * ```
      */
     accessibility?: ChartAccessibilityProps;
 
@@ -897,6 +1224,12 @@ export interface ChartComponentProps {
      * Specifies the visual outline style applied when the chart container receives focus.
      *
      * @default { width: 1.5, color: null, offset: 0 }
+     *
+     * @example
+     * ```tsx
+     * <Chart focusOutline={{ width: 2, color: '#0078D4', offset: 2 }}>
+     * </Chart>
+     * ```
      */
     focusOutline?: FocusOutlineProps;
 
@@ -904,6 +1237,12 @@ export interface ChartComponentProps {
      * Controls whether columns for different series appear side by side in a column chart.
      *
      * @default true
+     *
+     * @example
+     * ```tsx
+     * <Chart enableSideBySidePlacement={true}>
+     * </Chart>
+     * ```
      */
     enableSideBySidePlacement?: boolean;
 
@@ -913,6 +1252,14 @@ export interface ChartComponentProps {
      * Provides details about the zoomed axis, including its name, zoom factor, zoom position, and visible range before and after the operation.
      *
      * @event onZoomEnd
+     *
+     * @example
+     * ```tsx
+     * <Chart onZoomEnd={(args) => {
+     *     console.log('Zoom End:', args.axisName);
+     *   }}>
+     * </Chart>
+     * ```
      */
     onZoomEnd?: (args: ZoomEndEvent) => void;
 
@@ -922,6 +1269,14 @@ export interface ChartComponentProps {
      * Provides access to the axis data involved in the zoom operation.
      *
      * @event onZoomStart
+     *
+     * @example
+     * ```tsx
+     * <Chart onZoomStart={(args) => {
+     *     console.log('Zoom Start:', args.axisData);
+     *   }}>
+     * </Chart>
+     * ```
      */
     onZoomStart?: (args: ZoomStartEvent) => void;
 
@@ -930,6 +1285,14 @@ export interface ChartComponentProps {
      * Provides information about the mouse event, including the target element and pointer coordinates relative to the chart.
      *
      * @event onMouseMove
+     *
+     * @example
+     * ```tsx
+     * <Chart onMouseMove={(args) => {
+     *     console.log('Mouse Move:', args.x);
+     *   }}>
+     * </Chart>
+     * ```
      */
     onMouseMove?: (args: ChartMouseEvent) => void;
 
@@ -938,6 +1301,14 @@ export interface ChartComponentProps {
      * Provides information about the mouse event, including the target element and pointer coordinates relative to the chart.
      *
      * @event onMouseEnter
+     *
+     * @example
+     * ```tsx
+     * <Chart onMouseEnter={(args) => {
+     *     console.log('Mouse Enter:', args.x);
+     *   }}>
+     * </Chart>
+     * ```
      */
     onMouseEnter?: (args: ChartMouseEvent) => void;
 
@@ -946,6 +1317,14 @@ export interface ChartComponentProps {
      * Provides information about the mouse event, including the target element and pointer coordinates.
      *
      * @event onClick
+     *
+     * @example
+     * ```tsx
+     * <Chart onClick={(args) => {
+     *     console.log('Click:', args.x);
+     *   }}>
+     * </Chart>
+     * ```
      */
     onClick?: (args: ChartMouseEvent) => void;
 
@@ -954,6 +1333,14 @@ export interface ChartComponentProps {
      * Provides information about the mouse event, including the target element and pointer coordinates relative to the chart.
      *
      * @event onClick
+     *
+     * @example
+     * ```tsx
+     * <Chart onMouseLeave={(args) => {
+     *     console.log('Mouse Leave:', args.x);
+     *   }}>
+     * </Chart>
+     * ```
      */
     onMouseLeave?: (args: ChartMouseEvent) => void;
 
@@ -962,6 +1349,14 @@ export interface ChartComponentProps {
      * Provides details about the clicked legend item including associated series and data points.
      *
      * @event onLegendClick
+     *
+     * @example
+     * ```tsx
+     * <Chart onLegendClick={(args) => {
+     *     console.log('Legend Click:', args.text);
+     *   }}>
+     * </Chart>
+     * ```
      */
     onLegendClick?: (args: LegendClickEvent) => void;
 
@@ -970,14 +1365,47 @@ export interface ChartComponentProps {
      * Provides details about the clicked label including its position, value, and associated axis.
      *
      * @event onAxisLabelClick
+     *
+     * @example
+     * ```tsx
+     * <Chart onAxisLabelClick={(args) => {
+     *     console.log('Axis Label Click:', args.text);
+     *   }}>
+     * </Chart>
+     * ```
      */
     onAxisLabelClick?: (args: AxisLabelClickEvent) => void;
+
+
+    /**
+     * Triggered when a multi-level label is clicked in the chart.
+     * Provides details about the clicked label, including its axis, text, level, and range.
+     *
+     * @event onMultiLevelLabelClick
+     *
+     * @example
+     * ```tsx
+     * <Chart onMultiLevelLabelClick={(args) => {
+     *     console.log('Multi Level Label Click:', args.text);
+     *   }}>
+     * </Chart>
+     * ```
+     */
+    onMultiLevelLabelClick?: (args: MultiLevelLabelClickEvent) => void;
 
     /**
      * Triggered when a data point in the chart is clicked.
      * Provides details about the clicked point, including its position, series index, and mouse coordinates.
      *
      * @event onPointClick
+     *
+     * @example
+     * ```tsx
+     * <Chart onPointClick={(args) => {
+     *     console.log('Point Click:', args.seriesIndex);
+     *   }}>
+     * </Chart>
+     * ```
      */
     onPointClick?: (args: PointClickEvent) => void;
 
@@ -986,6 +1414,14 @@ export interface ChartComponentProps {
      * Provides details about the chart's size before and after the resize.
      *
      * @event onResize
+     *
+     * @example
+     * ```tsx
+     * <Chart onResize={(args) => {
+     *     console.log('Resize:', args.currentSize);
+     *   }}>
+     * </Chart>
+     * ```
      */
     onResize?: (args: ResizeEvent) => void;
 
@@ -993,8 +1429,32 @@ export interface ChartComponentProps {
      * Specifies a callback function to customize the color of individual points in the series.
      *
      * @default null
+     *
+     * @example
+     * ```tsx
+     * <Chart pointRender={(args) => {
+     *     console.log('Point Render:', args.color);
+     *   }}>
+     * </Chart>
+     * ```
      */
     pointRender?: (args: PointRenderProps) => string;
+
+    /**
+     * Specifies a template to display when the chart has no data.
+     *
+     * This template is rendered when all series data sources are empty.
+     * It supports both HTML string content and React functional templates.
+     *
+     * @default null
+     *
+     * @example
+     * ```tsx
+     * <Chart noDataTemplate={`<div style="text-align:center; padding:10px; color:#888;">No data available to display</div>`}>
+     * </Chart>
+     * ```
+     */
+    noDataTemplate?: string | Function;
 }
 
 /**
@@ -1016,6 +1476,11 @@ export interface ChartMouseEvent {
      * The Y-coordinate of the mouse pointer relative to the chart.
      */
     y: number;
+
+    /**
+     * Defines a collection of axis data, where the key is the axis name and the value is the axis value at the mouse location.
+     */
+    axisData: { [key: string]: number };
 
 }
 
@@ -1261,10 +1726,36 @@ export interface ChartAxisProps {
      * Defines the configuration for where and how the axis line intersects with another axis.
      * This includes the intersection value, the target axis, and whether overlapping of axis elements is allowed.
      *
-     * @default null
+     * @default { value:null, axis:'', allowOverlap:true}
      */
     crossAt?: ChartAxisCrossingProps;
 
+    /**
+     * The coefficient value adjusts the radius
+     * size of  the polar or radar chart.
+     *
+     * A higher value increases the radius size,
+     * while a smaller value decreases it.
+     *
+     * `coefficient` is a layout-level property
+     * controlling overall radial scale.
+     *
+     * @default 100
+     */
+    coefficient?: number;
+
+    /**
+     * Specifies the starting angle of the
+     * circular axis for a polar or radar chart.
+     *
+     * The angle is measured in degrees from
+     * the horizontal axis and determines the
+     * initial angle from which the series
+     * rendering begins.
+     *
+     * @default 0
+     */
+    startAngle?: number;
 }
 
 
@@ -1330,7 +1821,7 @@ export interface MajorGridLines {
      * Specifies the color of the major grid lines.
      * Accepts any valid CSS color string.
      *
-     * @default null
+     * @default ''
      */
     color?: string;
 }
@@ -1344,7 +1835,7 @@ export interface MinorGridLines {
      * Specifies the width of the minor grid lines, in pixels.
      * A value of `0` hides the grid lines.
      *
-     * @default 1
+     * @default 0.7
      */
     width?: number;
 
@@ -1360,7 +1851,7 @@ export interface MinorGridLines {
      * Specifies the color of the minor grid lines.
      * Accepts any valid CSS color string.
      *
-     * @default null
+     * @default ''
      */
     color?: string;
 }
@@ -1390,7 +1881,7 @@ export interface MajorTickLines {
      * Specifies the color of the major tick lines.
      * Accepts any valid CSS color string.
      *
-     * @default null
+     * @default ''
      */
     color?: string;
 }
@@ -1404,7 +1895,7 @@ export interface MinorTickLines {
      * Specifies the width of the minor tick lines, in pixels.
      * A value of `0` hides the tick lines.
      *
-     * @default 1
+     * @default 0.7
      */
     width?: number;
 
@@ -1412,7 +1903,7 @@ export interface MinorTickLines {
      * Specifies the height of the minor tick lines, in pixels.
      * Determines how far the tick lines extend from the axis.
      *
-     * @default 3
+     * @default 5
      */
     height?: number;
 
@@ -1420,7 +1911,7 @@ export interface MinorTickLines {
      * Specifies the color of the minor tick lines.
      * Accepts any valid CSS color string.
      *
-     * @default null
+     * @default ''
      */
     color?: string;
 }
@@ -1485,7 +1976,7 @@ export interface ChartSeriesProps {
     /**
      * Sets the fill color of the series. Accepts any valid CSS color value, including hex codes, RGB, RGBA, HSL.
      *
-     * @default null
+     * @default ''
      */
 
     fill?: string | null;
@@ -1571,7 +2062,7 @@ export interface ChartSeriesProps {
      * - `MultiColoredLine` - Renders a multicolored line chart.
      * - `Column` - Renders a column chart.
      * - `Area` - Renders an area chart.
-     * - `StepArea` - Renders an  step area chart.
+     * - `StepArea` - Renders a step area chart.
      * - `Bar` - Renders a bar chart.
      * - `StackingArea` - Renders a stacking area chart.
      * - `StackingArea100` - Renders a 100% stacking area chart.
@@ -1592,8 +2083,30 @@ export interface ChartSeriesProps {
      * - `SplineRangeArea` - Renders a spline range area series.
      * - `Waterfall` - Renders a waterfall series.
      * - `MultiColoredArea` - Renders a MultiColoredArea chart.
-     * - `Histogram` - Renders a histogram series
+     * - `Histogram` - Renders a histogram series.
+     * - `PolarLine` - Renders a polar line chart.
+     * - `PolarSpline` - Renders a polar spline chart.
+     * - `PolarArea` - Renders a polar area chart.
+     * - `PolarSplineArea` - Renders a polar spline area chart.
+     * - `PolarColumn` - Renders a polar column chart.
+     * - `PolarStackingArea` - Renders a polar stacking area chart.
+     * - `PolarStackingColumn` - Renders a polar stacking column chart.
+     * - `PolarRangeColumn` - Renders a polar range column chart.
+     * - `PolarScatter` - Renders a polar scatter chart.
+     * - `RadarLine` - Renders a radar line chart.
+     * - `RadarSpline` - Renders a radar spline chart.
+     * - `RadarArea` - Renders a radar area chart.
+     * - `RadarSplineArea` - Renders a radar spline area chart.
+     * - `RadarColumn` - Renders a radar column chart.
+     * - `RadarStackingArea` - Renders a radar stacking area chart.
+     * - `RadarStackingColumn` - Renders a radar stacking column chart.
+     * - `RadarRangeColumn` - Renders a radar range column chart.
+     * - `RadarScatter` - Renders a radar scatter chart.
      * - `Pareto` - Renders a pareto series.
+     * -`StackingLine` - Renders a stacking line chart.
+     * -`StackingLine100` - Renders a 100% stacking line chart.
+     * - `BoxAndWhisker` - Renders a box and whisker chart.
+     * - `StackingStepArea` - Renders a stacking step area chart.
      *
      * @default 'Line'
      */
@@ -1612,7 +2125,7 @@ export interface ChartSeriesProps {
     /**
      * Enhances accessibility for series elements to ensure compatibility with assistive technologies, such as screen readers and keyboard navigation.
      *
-     * @default { ariaLabel: null, descriptionFormat: null, focusable: true, role: null, tabIndex: 0 }
+     * @default { ariaLabel: '', descriptionFormat: '', focusable: true, role: '', tabIndex: 0 }
      */
     accessibility?: SeriesAccessibility;
 
@@ -1696,6 +2209,19 @@ export interface ChartSeriesProps {
 
     /**
      * Specifies the shape used to represent the series in the chart legend.
+     *
+     * Available options:
+     * - `Circle`: Renders a circular legend shape.
+     * - `Rectangle`: Renders a rectangular legend shape.
+     * - `Triangle`: Renders a triangular legend shape.
+     * - `Diamond`: Renders a diamond-shaped legend.
+     * - `Cross`: Renders a cross-shaped legend.
+     * - `HorizontalLine`: Renders a horizontal line as the legend shape.
+     * - `VerticalLine`: Renders a vertical line as the legend shape.
+     * - `Pentagon`: Renders a pentagon-shaped legend.
+     * - `InvertedTriangle`: Renders an inverted triangle shape.
+     * - `SeriesType`: Uses the shape based on the series type.
+     * - `Image`: Renders a custom image as the legend shape.
      *
      * @default 'SeriesType'
      */
@@ -1788,7 +2314,7 @@ export interface ChartSeriesProps {
      *
      * Commonly used to indicate upward price movement.
      *
-     * @default null
+     * @default ''
      */
     bullFillColor?: string | null;
 
@@ -1798,7 +2324,7 @@ export interface ChartSeriesProps {
      *
      * Commonly used to indicate downward price movement.
      *
-     * @default null
+     * @default ''
      */
     bearFillColor?: string | null;
 
@@ -1856,12 +2382,109 @@ export interface ChartSeriesProps {
     waterfallSettings?: ChartWaterfallSettings;
 
     /**
+     * Specifies whether to join the start and
+     * end points of a line or area series in a
+     * polar or radar chart to form a closed
+     * SVG path.
+     *
+     * This property is applicable only to polar
+     * and radar series types.
+     *
+     * @default true
+     */
+    isClosedPath?: boolean;
+
+    /**
      * Configuration options for customizing
      * the appearance and behavior of a
      * Histogram chart series.
      */
     histogramSettings?: ChartHistogramSettings;
 
+    /**
+     * Specifies the visual facet used to render column and bar series data points.
+     * Affects only the visual geometry of the series and does not influence data processing, layout, axis calculations, animations, or interactions.
+     * **Note:** Applicable only to **Column** and **Bar** series types.
+     *
+     * @default 'Rectangle'
+     *
+     */
+    columnFacet?: ColumnFacet;
+
+
+    /**
+     * Configuration options for customizing the behavior and visual appearance of a Box‑and‑Whisker chart series.
+     *
+     * Includes settings for quartile calculation,
+     * whisker styling, mean display, and outlier
+     * rendering.
+     */
+    boxAndWhiskerSettings?: ChartBoxAndWhiskerSettings;
+
+    /**
+     * Specifies the data source field that contains the volume value.
+     * This property is applicable only to candle (candlestick) series and is used to render volume-related information associated with the candle data.
+     * It is not used by other chart series types. Technical indicators that require volume data will read it indirectly from the associated candle series.
+     *
+     * @default ''
+     */
+    volume?: string;
+
+}
+
+/**
+ * Configures options for displaying series names as inline labels in the chart.
+ */
+export interface ChartSeriesLabelProps {
+    /**
+     * Enables or disables the rendering of series names as inline labels.
+     *
+     * @default false
+     */
+    visible?: boolean;
+
+    /**
+     * Defines the custom text to display as the series label.
+     * If not specified, the series name will be used.
+     *
+     * @default ''
+     */
+    text?: string;
+
+    /**
+     * Specifies the font properties for the series label.
+     *
+     * @default { color: '', fontFamily: '', fontSize: '14px', fontStyle: 'Normal', fontWeight: 'Normal', opacity: 1 }
+     */
+    font?: ChartFontProps;
+
+    /**
+     * Specifies the background color of the inline series label.
+     *
+     * @default 'transparent'
+     */
+    background?: string;
+
+    /**
+     * Specifies the border properties for the inline label.
+     *
+     * @default { color: '', width: 0, dashArray: '' }
+     */
+    border?: ChartBorderProps;
+
+    /**
+     * Sets the opacity of the series label.
+     *
+     * @default 1
+     */
+    opacity?: number;
+
+    /**
+     * Determines whether to show the label text even when it overlaps with other labels.
+     *
+     * @default false
+     */
+    showOverlapText?: boolean;
 }
 
 /**
@@ -1976,6 +2599,75 @@ export interface ChartHistogramSettings {
     normalCurveDashArray?: string;
 }
 
+/**
+ * Defines the visual appearance settings for an LastValueLabel line in the chart.
+ *
+ * @public
+ */
+export interface ChartLineStyleProps {
+
+    /**
+     * Specifies the thickness of the LastValueLabel line in pixels.
+     *
+     * @default 1
+     */
+    width?: number;
+
+    /**
+     * Defines the dash pattern used to render the LastValueLabel line.
+     * Accepts a string of comma-separated numbers (e.g., `'2,2'`) to create dashed lines.
+     *
+     * @default ''
+     */
+    dashArray?: string;
+
+    /**
+     * Specifies the color of the LastValueLabel line.
+     * Accepts any valid CSS color string.
+     *
+     * @default ''
+     */
+    color?: string;
+}
+
+/**
+ * Provides configuration options for controlling the calculation logic and visual appearance of a Box‑and‑Whisker chart series.
+ */
+export interface ChartBoxAndWhiskerSettings {
+    /**
+     * Defines the statistical method used to calculate quartiles and whisker ranges in the Box‑and‑Whisker series.
+     * - `Exclusive`– Quartiles exclude the median from the halves.
+     * - `Inclusive` – Quartiles include the median in both halves.
+     * - `Normal`– Uses the standard box plot calculation method.
+     *
+     * @default 'Normal'
+     */
+    boxPlotMode?: BoxPlotMode;
+
+    /**
+     *  Indicates whether the mean value should be calculated and visually rendered as a marker or line within the box.
+     *
+     * @default true
+     */
+    showMean?: boolean;
+
+    /** Determines whether values outside the whisker range should be treated as outliers and rendered as individual markers.
+     *
+     * When enabled, outliers are collected into `symbolLocations` and rendered using the existing marker rendering pipeline.
+     *
+     * @default true
+     */
+    showOutliers?: boolean;
+
+    /**
+     * Specifies the visual styling for whisker stems and end caps in the Box‑and‑Whisker series.
+     *
+     * Includes control over line color, width, dash pattern, and cap length.
+     *
+     * @default  { color: '', width: 1, dashArray: '', capLength: 0.5 }
+     */
+    whiskerStyle?: ChartWhiskerStyleProps;
+}
 
 /**
  * Configuration options for handling empty data points in a chart series.
@@ -1985,7 +2677,7 @@ export interface EmptyPointSettings {
     /**
      * Sets the fill color for empty points in the series.
      *
-     * @default null
+     * @default ''
      */
     fill?: string;
 
@@ -2018,7 +2710,7 @@ export interface ChartAccessibilityProps {
      * Provides a descriptive label for the chart to assist screen readers.
      * This value is automatically mapped to the `aria-label` attribute in the DOM.
      *
-     * @default null
+     * @default ''
      */
     ariaLabel?: string;
 
@@ -2026,7 +2718,7 @@ export interface ChartAccessibilityProps {
      * Specifies the ARIA role of the chart element. Helps assistive technologies understand the semantic purpose of the chart (e.g., "img", "figure", "application").
      * If not set, the default role will be inferred based on the element type.
      *
-     * @default null
+     * @default ''
      */
     role?: string;
 
@@ -2086,6 +2778,9 @@ export interface ChartMarkerProps {
      * * `InvertedTriangle` - Inverted triangle marker.
      * * `Image` - Custom image marker.
      * * `Star` - Star-shaped marker.
+     * * `Cross` - Cross-shaped marker.
+     * * `Plus` - Plus-shaped marker.
+     * * `None` - disable the marker.
      *
      * @default null
      */
@@ -2131,7 +2826,7 @@ export interface ChartMarkerProps {
     /**
      * Sets the fill color of the marker. Accepts valid CSS color values such as hex codes or RGBA. Defaults to the series color if not specified.
      *
-     * @default null
+     * @default ''
      */
     fill?: string | null;
 
@@ -2200,7 +2895,7 @@ export interface ChartDataLabelProps {
      *
      * The mapped field's value is displayed as the label for each data point.
      *
-     * @default null
+     * @default ''
      */
     labelField?: string | null;
 
@@ -2215,7 +2910,7 @@ export interface ChartDataLabelProps {
     /**
      * Used to format the data label. This property accepts global string formats such as `C`, `n1`, `P`, etc. It also accepts placeholders like `{value}°C`, where `{value}` represents the data label (e.g., 20°C).
      *
-     * @default null
+     * @default ''
      */
     format?: string | null;
 
@@ -2300,7 +2995,7 @@ export interface ChartDataLabelProps {
     /**
      * Customizes the font used in the data label, including size, color, style, weight, and family.
      *
-     * @default { color: '', fontFamily: '', fontSize: '12px', fontStyle: 'Normal', fontWeight: 'Normal', opacity: 1 }
+     * @default { color: '', fontFamily: '', fontSize: '', fontStyle: 'Normal', fontWeight: '', opacity: 1 }
      */
     font?: ChartFontProps;
 
@@ -2437,21 +3132,21 @@ export interface ChartTitleProps {
     /**
      * Specifies the font style of the title (e.g., 'Normal', 'Italic').
      *
-     * @default 'Normal'
+     * @default ''
      */
     fontStyle?: string;
 
     /**
      * Sets the font size of the text in pixels.
      *
-     * @default '15px'
+     * @default ''
      */
     fontSize?: string;
 
     /**
      * Specifies the font weight (thickness) of the title (e.g., 'Normal', 'Bold', '400').
      *
-     * @default '500'
+     * @default ''
      */
     fontWeight?: string;
 
@@ -2546,7 +3241,7 @@ export interface ChartTitleProps {
     /**
      * Provides customization options to enhance accessibility for the chart title.
      *
-     * @default { ariaLabel: null, focusable: true, role: null, tabIndex: 0 }
+     * @default { ariaLabel: '', focusable: true, role: 'img', tabIndex: 0 }
      */
     accessibility?: ChartAccessibilityProps;
 }
@@ -2581,7 +3276,7 @@ export interface ChartTooltipProps {
      * Sets the background color of the tooltip.
      * Accepts any valid CSS color value (hex, RGB, named colors).
      *
-     * @default null
+     * @default ''
      */
     fill?: string;
 
@@ -2589,7 +3284,7 @@ export interface ChartTooltipProps {
      * Customizes the header text displayed at the top of the tooltip.
      * By default, displays the series name.
      *
-     * @default null
+     * @default ''
      */
     headerText?: string;
 
@@ -2597,7 +3292,7 @@ export interface ChartTooltipProps {
      * Controls the transparency level of the tooltip.
      * Values range from 0 (fully transparent) to 1 (fully opaque).
      *
-     * @default null
+     * @default 1
      */
     opacity?: number;
 
@@ -2609,7 +3304,7 @@ export interface ChartTooltipProps {
      * - `${point.y}` - Represents the y-value of the data point.
      * - `${series.name}` - Represents the name of the data series the point belongs to.
      *
-     * @default null
+     * @default ''
      */
     format?: string;
 
@@ -2659,7 +3354,7 @@ export interface ChartTooltipProps {
     /**
      * Defines the font styling for the tooltip text, including font family, size, weight, and color.
      *
-     * @default { color: '', fontFamily: '', fontStyle: 'Normal', fontWeight: 'Normal', opacity: 1 }
+     * @default { color: '', fontFamily: '', fontSize: '', fontStyle: '', fontWeight: '', opacity: 1 }
      */
     textStyle?: ChartFontProps;
 
@@ -2712,6 +3407,20 @@ export interface ChartTooltipProps {
      */
     template?: ((data: ChartTooltipTemplateProps) => JSX.Element | null);
 
+    /**
+     * Specifies whether the tooltip should follow the pointer position dynamically. When set to true, the tooltip position is updated based on the current mouse or touch coordinates instead of the data point location. This property is ignored if an explicit location is provided for the tooltip.
+     *
+     * @default false
+     */
+    followPointer?: boolean;
+
+    /**
+     * Specifies the distance, in pixels, between the tooltip and the associated data point. This value is applied only when followPointer is set to false.When followPointer is enabled, this property has no effect.
+     *
+     * @default 0
+     */
+    distance?: number;
+
 }
 
 /**
@@ -2743,6 +3452,37 @@ export interface AxisLabelClickEvent {
      * The value associated with the clicked axis label.
      */
     value: number;
+}
+
+/**
+ * Provides data for the event triggered when a multi-level axis label is clicked in the chart.
+ */
+export interface MultiLevelLabelClickEvent {
+
+    /**
+     * Gets the name of the axis associated with the clicked multi-level label.
+     */
+    axisName: string;
+
+    /**
+     * Gets the text value of the clicked multi-level label.
+     */
+    text: string;
+
+    /**
+     * Gets the level index of the clicked multi-level label.
+     */
+    level: number;
+
+    /**
+     * Gets the starting value of the clicked multi-level label.
+     */
+    start: number | Date | string;
+
+    /**
+     * Gets the ending value of the clicked multi-level label.
+     */
+    end: number | Date | string;
 }
 
 /**
@@ -2808,7 +3548,7 @@ export interface ChartStackLabelsProps {
      * Custom format string for the stack label text.
      * Supports placeholders such as `{value}`, where `{value}` represents the total stack value.
      *
-     * @default null
+     * @default ''
      */
     format?: string | null;
 
@@ -2844,7 +3584,7 @@ export interface ChartStackLabelsProps {
     /**
      * Defines the font styling for the stack label text.
      *
-     * @default { fontStyle: 'Normal', fontSize: '12px', fontWeight: 'Normal', color: '', fontFamily: '' }
+     * @default { fontStyle: 'Normal', fontSize: '12px', fontWeight: 'Normal', color: '', fontFamily: '', opacity: 1 }
      */
     font?: ChartFontProps;
 
@@ -2876,14 +3616,14 @@ export interface ChartLegendProps {
     /**
      * Specifies the height of the legend area in pixels.
      *
-     * @default null
+     * @default ''
      */
     height?: string;
 
     /**
      * Specifies the width of the legend area in pixels.
      *
-     * @default null
+     * @default ''
      */
     width?: string;
 
@@ -3027,7 +3767,7 @@ export interface ChartLegendProps {
      * Specifies a title to be displayed for the legend.
      * The title provides a descriptive heading for the legend items.
      *
-     * @default null
+     * @default ''
      */
     title?: string;
 
@@ -3112,9 +3852,20 @@ export interface ChartLegendProps {
     /**
      * Provides options to enhance accessibility for screen readers and keyboard navigation.
      *
-     * @default { ariaLabel: null, focusable: true, role: null, tabIndex: 0 }
+     * @default { tabIndex: 0, focusable: true }
      */
     accessibility?: ChartAccessibilityProps;
+
+    /**
+     * Defines the mode for displaying legend items.
+     * * Series - Legend items are generated based on the count of series.
+     * * Point - Legend items are created according to each unique data point.
+     * * Range - Legend items are generated based on the range color mapping property.
+     * * Gradient - Displays a single linear bar that represents the range color mapping property.
+     *
+     * @default 'Series'
+     */
+    mode?: LegendMode;
 }
 
 /**
@@ -3182,7 +3933,7 @@ export interface ChartStripLineProps {
      * labels or annotations directly on the highlighted range, with options to control text
      * content, styling, rotation, and alignment.
      *
-     * @default { content: '', style: { color: '', fontFamily: '', fontSize: '', fontStyle: '', fontWeight: '', opacity: 1 }, rotation: null, hAlign: 'Center', vAlign: 'Center' }
+     * @default { content: '', font: { color: '', fontFamily: '', fontSize: '', fontStyle: '', fontWeight: '', opacity: 1 }, rotation: null, hAlign: 'Center', vAlign: 'Center' }
      */
     text?: StripLineTextProps;
 
@@ -3242,6 +3993,16 @@ export interface StripLineRangeProps {
      * Specifies how the `size` property is interpreted, either in pixel values or axis units.
      * When set to 'Pixel', the strip line has a fixed size regardless of zoom level.
      * 'Auto' (or axis units) makes the strip line scale with the axis.
+     *
+     * Available options:
+     * - `Auto`: In numeric axis, size is interpreted as a number; in DateTime axis, as milliseconds.
+     * - `Pixel`: The strip line size is in pixels.
+     * - `Years`: The strip line size is based on years (DateTime axis only).
+     * - `Months`: The strip line size is based on months (DateTime axis only).
+     * - `Days`: The strip line size is based on days (DateTime axis only).
+     * - `Hours`: The strip line size is based on hours (DateTime axis only).
+     * - `Minutes`: The strip line size is based on minutes (DateTime axis only).
+     * - `Seconds`: The strip line size is based on seconds (DateTime axis only).
      *
      * @default 'Auto'
      */
@@ -3476,6 +4237,65 @@ export interface AxisLine {
 }
 
 /**
+ * Configuration options for displaying a label for the last visible data point in a series.
+ * The label is axis-aligned and appears on the chart's axis edge.
+ *
+ * @public
+ */
+export interface ChartLastValueLabelProps {
+    /**
+     * Enables or disables the display of the last value label.
+     *
+     * @default false
+     */
+    enable?: boolean;
+
+    /**
+     * The background color for the label.
+     * Accepts any valid CSS color string.
+     *
+     * @default ''
+     */
+    background?: string;
+
+    /**
+     * The border properties for the label.
+     *
+     * @default { color: '#D3D3D3', width: 1, dashArray: '' }
+     */
+    border?: ChartBorderProps;
+
+    /**
+     * Customizes the font styling for the label text.
+     *
+     * @default { fontSize: '12px', fontFamily: 'Roboto', fontWeight: 'Normal', fontStyle: 'Normal', opacity: 1, color: '' }
+     */
+    font?: ChartFontProps;
+
+    /**
+     * Line styling for connector/grid lines behind the labels.
+     * Contains width, color and dashArray.
+     *
+     * @default { width: 1, color: '', dashArray: '' }
+     */
+    lineStyle?: ChartLineStyleProps;
+
+    /**
+     * Rounded corner radius (X) for the label background.
+     *
+     * @default 5
+     */
+    rx?: number;
+
+    /**
+     * Rounded corner radius (Y) for the label background.
+     *
+     * @default 5
+     */
+    ry?: number;
+}
+
+/**
  * Represents a point location in a 2D chart coordinate space.
  *
  */
@@ -3601,7 +4421,7 @@ export interface ChartCrosshairProps {
      * You can customize the line's color, width, and dash pattern
      * using the `dashArray` property.
      *
-     * @default { color: undefined, width: 1, dashArray: '' }
+     * @default { color: '', width: 1, dashArray: '' }
      */
     lineStyle?: ChartCrosshairLineStyleProps;
 
@@ -3613,7 +4433,7 @@ export interface ChartCrosshairProps {
      * - `Vertical`: Displays only the vertical line.
      * - `Horizontal`: Displays only the horizontal line.
      *
-     * @default Both
+     * @default 'Both'
      */
     lineType?: CrosshairLineType;
 
@@ -3698,7 +4518,7 @@ export interface ChartCrosshairTooltipProps {
      * Customizes the text style of the axis tooltip.
      * Accepts font-related properties such as font size, color, weight, and family.
      *
-     * @default { fontStyle: 'Normal', fontSize: '', fontWeight: 'Normal', color: '', fontFamily: '' }
+     * @default { fontStyle: 'Normal', fontSize: '', fontWeight: 'Normal', color: '', fontFamily: '', opacity: 1 }
      */
     textStyle?: ChartFontProps;
 
@@ -3728,7 +4548,7 @@ export interface ChartAxisCrossingProps {
     /**
      * Specifies the name of the target axis that the current axis line should intersect.
      *
-     * @default null
+     * @default ''
      */
     axis?: string | null;
 
@@ -3766,7 +4586,7 @@ export interface ChartAnnotationProps {
     /**
      * Content of the annotation. Accepts HTML string, plain text, or DOM element ID.
      *
-     * @default null
+     * @default ''
      */
     content?: string;
 
@@ -3816,7 +4636,7 @@ export interface ChartAnnotationProps {
     /**
      * Enhances accessibility for annotation elements to ensure compatibility with assistive technologies, such as screen readers and keyboard navigation.
      *
-     * @default { ariaLabel: null, role: 'img', focusable: true, tabIndex: 0 }
+     * @default { ariaLabel: '', role: 'img', focusable: false, tabIndex: 0 }
      */
     accessibility?: ChartAccessibilityProps;
 }
@@ -3911,7 +4731,7 @@ export interface ChartErrorBarCapProps {
      * Specifies the stroke color of the cap.
      * Accepts hex, rgba, or any valid CSS color string.
      *
-     * @default ""
+     * @default ''
      */
     color?: string;
     /**
@@ -4056,7 +4876,7 @@ export interface ChartTrendlineProps {
     /**
      * Sets the stroke color of the trendline. Accepts any valid CSS color string.
      *
-     * @default '' (inherits series color)
+     * @default ''
      */
     stroke?: string;
 
@@ -4089,7 +4909,7 @@ export interface ChartTrendlineProps {
      * Provides accessibility options for trendline elements to ensure compatibility
      * with assistive technologies.
      *
-     * @default { ariaLabel: null, focusable: true, role: 'img', tabIndex: 0 }
+     * @default { ariaLabel: '', focusable: true, tabIndex: 0, role: '' }
      */
     accessibility?: ChartAccessibilityProps;
 }
@@ -4128,3 +4948,284 @@ export interface ChartParetoOptionsProps {
      */
     showAxis?: boolean;
 }
+
+/**
+ * Defines the configuration for rendering technical indicators that represent
+ * market trends based on derived statistical calculations.
+ *
+ * Technical compute values from a source series and render them
+ * either as overlays or in separate indicator panels for advanced analysis.
+ */
+export interface ChartIndicatorProps {
+
+    /**
+     * Specifies the type of technical indicator to be rendered.
+     *
+     * Supported indicator types include:
+     * * `Sma` – Simple Moving Average
+     * * `Ema` – Exponential Moving Average
+     * * `Tma` – Triangular Moving Average
+     * * `Atr` – Average True Range
+     * * `AccumulationDistribution` – Accumulation / Distribution
+     * * `Momentum` – Momentum Indicator
+     * * `Rsi` – Relative Strength Index
+     * * `Macd` – Moving Average Convergence Divergence
+     * * `Stochastic` – Stochastic Oscillator
+     * * `BollingerBands` – Bollinger Bands
+     *
+     * @default 'Sma'
+     */
+    type?: IndicatorsType;
+
+    /**
+     * Specifies the look back period used to calculate the indicator values.
+     *
+     * This property is applicable to indicators that rely on rolling window
+     * calculations such as moving averages, RSI, ATR, and Momentum.
+     *
+     * @default 14
+     */
+    period?: number;
+
+    /**
+     * Defines the look back period used to calculate the %K value
+     * in the Stochastic Oscillator.
+     *
+     * @default 14
+     */
+    kPeriod?: number;
+
+    /**
+     * Defines the smoothing period used to calculate the %D value
+     * in the Stochastic Oscillator.
+     *
+     * @default 3
+     */
+    dPeriod?: number;
+
+    /**
+     * Specifies the over bought threshold value.
+     *
+     * This property is applicable to RSI and Stochastic indicators.
+     *
+     * @default 80
+     */
+    overBought?: number;
+
+    /**
+     * Specifies the over sold threshold value.
+     *
+     * This property is applicable to RSI and Stochastic indicators.
+     *
+     * @default 20
+     */
+    overSold?: number;
+
+    /**
+     * Defines the standard deviation multiplier used to calculate the upper and lower Bollinger Bands.
+     *
+     * @default 2
+     */
+    standardDeviation?: number;
+
+    /**
+     * Specifies the slow period used to calculate the MACD line.
+     *
+     * @default 12
+     */
+    slowPeriod?: number;
+
+    /**
+     * Specifies the fast period used to calculate the MACD line.
+     *
+     * @default 26
+     */
+    fastPeriod?: number;
+
+    /**
+     * Enables or disables the rendering of over bought and over sold
+     * regions for applicable indicators.
+     *
+     * @default true
+     */
+    showZones?: boolean;
+
+    /**
+     * Configures the visual appearance of the MACD line.
+     *
+     * @default { color: '#ff9933', width: 2 }
+     */
+    macdLine?: ConnectorProps;
+
+    /**
+     * Specifies the rendering mode of the MACD indicator.
+     *
+     * @default 'Both'
+     */
+    macdType?: MacdType;
+
+    /**
+     * Specifies the fill color for positive histogram bars
+     * in the MACD indicator.
+     *
+     * @default '#2ecd71'
+     */
+    macdPositiveColor?: string;
+
+    /**
+     * Specifies the fill color for negative histogram bars
+     * in the MACD indicator.
+     *
+     * @default '#e74c3d'
+     */
+    macdNegativeColor?: string;
+
+    /**
+     * Specifies the fill color used for the Bollinger Bands range area.
+     *
+     * @default 'rgba(211,211,211,0.25)'
+     */
+    bandColor?: string;
+
+    /**
+     * Configures the appearance of the upper line
+     * in band based technical indicators.
+     *
+     * @default { type: 'Line', color: '#000', width: 1, length: '', dashArray: '' }
+     */
+    upperLine?: ConnectorProps;
+
+    /**
+     * Configures the appearance of the lower line
+     * in band based technical indicators.
+     *
+     * @default { type: 'Line', color: '#000', width: 1, length: '', dashArray: '' }
+     */
+    lowerLine?: ConnectorProps;
+
+    /**
+     * Configures the appearance of the central or signal line used in technical indicators.
+     *
+     * @default { type: 'Line', color: '#000', width: 1, length: '', dashArray: '' }
+     */
+    periodLine?: ConnectorProps;
+
+    /**
+     * Specifies accessibility settings for technical indicator elements.
+     *
+     * @default { ariaLabel: '', focusable: true, tabIndex: 0, role: '' }
+     */
+    accessibility?: ChartAccessibilityProps;
+
+    /**
+     * Specifies the name of the source series used for calculating the indicator values.
+     *
+     * @default ''
+     */
+    seriesName?: string;
+
+    /**
+     * Determines whether the indicator is visible.
+     *
+     * @default true
+     */
+    visible?: boolean;
+
+    /**
+     * Specifies the name of the horizontal axis associated with the indicator.
+     *
+     * This property requires the axis to be defined in the chart axes collection.
+     *
+     * @default null
+     */
+    xAxisName?: string | null;
+
+    /**
+     * Specifies the name of the vertical axis associated with the indicator.
+     *
+     * This property enables rendering the indicator in a separate
+     * sub panel with an independent Y axis.
+     *
+     * @default null
+     */
+    yAxisName?: string | null;
+
+    /**
+     * Configures the animation settings for the indicator rendering.
+     *
+     * Animation is enabled by default and supports duration and delay.
+     *
+     * @default { enable: true, duration: 1000, delay: 0 }
+     */
+    animation?: Animation;
+
+    /**
+     * Specifies the stroke or fill color of the indicator.
+     *
+     * For technical indicators, this value represents the color of signal or trend lines.
+     *
+     * @default ''
+     */
+    fill?: string;
+
+    /**
+     * Specifies the stroke width of indicator lines.
+     *
+     * @default 1
+     */
+    width?: number;
+
+    /**
+     * Defines the dash pattern applied to indicator lines.
+     *
+     * @default ''
+     */
+    dashArray?: string;
+
+    /**
+     * Specifies the financial data field used to compare the current value
+     * with previous values when calculating technical indicators.
+     *
+     * This property is applicable to indicators that require price-based
+     * Comparisons such as RSI, MACD, ATR, and Stochastic.
+     *
+     * @default 'Close'
+     */
+    field?: FinancialDataField;
+}
+
+/**
+ * Defines configuration options for applying Y-value–based color mapping.
+ */
+export interface ChartRangeColorProps {
+
+    /**
+     * Specifies the inclusive starting value of the color-mapped range.
+     *
+     * @default 0
+     */
+    start?: number;
+
+    /**
+     * Specifies the inclusive ending value of the color-mapped range.
+     *
+     * @default 0
+     */
+    end?: number;
+
+    /**
+     * Defines the fill color applied to points within the specified range.
+     *
+     * @default ''
+     */
+    fill?: string;
+
+    /**
+     * Specifies the text displayed for this range in the legend.
+     *
+     * @default ''
+     */
+    label?: string;
+}
+
+

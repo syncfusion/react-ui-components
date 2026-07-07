@@ -72,10 +72,13 @@ export const inRange: (d: Date, min?: Date | null, max?: Date | null) => boolean
     min?: Date | null,
     max?: Date | null
 ): boolean => {
-    const minTime: number = isValidDateObj(min) ? +min : +d;
-    const maxTime: number = isValidDateObj(max) ? +max : +d;
-    const t: number = +d;
-    return t >= minTime && t <= maxTime;
+    const date: Date = new Date(d); date.setHours(0, 0, 0, 0);
+    const time: number = date.getTime();
+    const minTime: Date = new Date(isValidDateObj(min) ? min : date);
+    minTime.setHours(0, 0, 0, 0);
+    const maxTime: Date = new Date(isValidDateObj(max) ? max : date);
+    maxTime.setHours(23, 59, 59, 999);
+    return time >= minTime.getTime() && time <= maxTime.getTime();
 };
 
 export const isValidDateObj: (x: unknown) => x is Date = (x: unknown): x is Date => {
@@ -108,9 +111,10 @@ export const isInViewRange: (
     return +e >= +minV && +s <= +maxV;
 };
 
-export const getVisibleDates: (baseDate: Date, view: CalendarView) => Date[] = (
+export const getVisibleDates: (baseDate: Date, view: CalendarView, calendarSystem?: CalendarSystem) => Date[] = (
     baseDate: Date,
-    view: CalendarView
+    view: CalendarView,
+    calendarSystem?: CalendarSystem
 ): Date[] => {
     const dates: Date[] = [];
     if (view === CalendarView.Month) {
@@ -124,9 +128,11 @@ export const getVisibleDates: (baseDate: Date, view: CalendarView) => Date[] = (
             dates.push(new Date(baseDate.getFullYear(), m, 1));
         }
     } else {
-        const decadeStart: number = baseDate.getFullYear() - (baseDate.getFullYear() % 10) - 1;
-        for (let y: number = decadeStart; y < decadeStart + 12; y++) {
-            dates.push(new Date(y, 0, 1));
+        const startOfDecade: Date = calendarSystem ? calendarSystem.startOfDecade(baseDate)
+            : new Date(baseDate.getFullYear() - (baseDate.getFullYear() % 10) - 1, 0, 1);
+        for (let i: number = 0; i < 12; i++) {
+            const date: Date = calendarSystem ? calendarSystem.addYears(startOfDecade, i) : new Date(startOfDecade.getFullYear() + i, 0, 1);
+            dates.push(date);
         }
     }
     return dates;
@@ -139,7 +145,7 @@ export const findFirstFocusableInView: (
     max: Date,
     calendarSystem: CalendarSystem
 ) => Date = (baseDate: Date, view: CalendarView, min: Date, max: Date, calendarSystem: CalendarSystem): Date => {
-    const dates: Date[] = getVisibleDates(baseDate, view);
+    const dates: Date[] = getVisibleDates(baseDate, view, calendarSystem);
     for (const d of dates) {
         if (isInViewRange(d, view, min, max, calendarSystem)) {
             return d;
@@ -155,7 +161,7 @@ export const findLastFocusableInView: (
     max: Date,
     calendarSystem: CalendarSystem
 ) => Date = (baseDate: Date, view: CalendarView, min: Date, max: Date, calendarSystem: CalendarSystem): Date => {
-    const dates: Date[] = getVisibleDates(baseDate, view).reverse();
+    const dates: Date[] = getVisibleDates(baseDate, view, calendarSystem).reverse();
     for (const d of dates) {
         if (isInViewRange(d, view, min, max, calendarSystem)) {
             return d;
@@ -173,6 +179,9 @@ export interface CommonContext {
     selectedDate?: Date | null;
     multiSelect?: boolean;
     range?:  [Date | null, Date | null] | undefined;
+    focusTodayOnOtherMonth?: boolean;
+    suppressRangeSelection?: boolean;
+    isRangePreview?: boolean;
 }
 
 export interface CellState {
@@ -185,6 +194,7 @@ export interface CellState {
     className: string;
     ariaSelected?: boolean;
     ariaDisabled?: boolean;
+    suppressDisabledClass?: boolean
 }
 
 export const computeDisabled: (
@@ -238,57 +248,112 @@ export const buildCellState: (
     calendarSystem: CalendarSystem
 ) => {
     const date: Date = cell.date;
+    let isToday: boolean = !!cell.isToday;
+    const isMonthView: boolean = kind === 'month' || kind === CalendarView.Month;
+    const isYearView: boolean = kind === 'year' || kind === CalendarView.Year;
+    const isDecadeView: boolean = kind === 'decade' || kind === CalendarView.Decade;
 
     let isOutOfBounds: boolean;
-    if (kind === 'month') {
+    if (isMonthView) {
         isOutOfBounds = computeDisabled(date, ctx.minDate, ctx.maxDate);
-    } else if (kind === 'year') {
+    } else if (isYearView) {
         isOutOfBounds = !isInViewRange(date, CalendarView.Year, ctx.minDate, ctx.maxDate, calendarSystem);
+        isToday = calendarSystem.isSameMonth(date, new Date());
     } else {
         isOutOfBounds = !isInViewRange(date, CalendarView.Decade, ctx.minDate, ctx.maxDate, calendarSystem);
+        isToday = calendarSystem.isSameYear(date, new Date());
     }
 
     const isOtherRange: boolean = !cell.inRange;
     const isWeekend: boolean = !!cell.isWeekend;
-    const isToday: boolean = !!cell.isToday;
-
     let isFocused: boolean = false;
+
     if (ctx.focusedDate && !isOutOfBounds) {
-        if (kind === 'month') {
+        if (isMonthView) {
             isFocused = calendarSystem.isSameDate(date, ctx.focusedDate);
-        } else if (kind === 'year') {
+        } else if (isYearView) {
             isFocused = calendarSystem.isSameMonth(date, ctx.focusedDate);
+            isToday = calendarSystem.isSameMonth(date, new Date());
         } else {
             isFocused = calendarSystem.isSameYear(date, ctx.focusedDate);
+            isToday = calendarSystem.isSameYear(date, new Date());
         }
     }
 
     let isSelected: boolean = false;
-    if (kind === 'month') {
+    let isRangeEndpointSelected: boolean = false;
+    if (isMonthView) {
         isSelected = computeSelectedForMonth(date, ctx.normalizedDates, !!ctx.multiSelect);
-        if (!isSelected && ctx.range && Array.isArray(ctx.range) && cell.inRange) {
+        if (!isSelected && ctx.range && Array.isArray(ctx.range) &&
+            (cell.inRange || (!!ctx.focusTodayOnOtherMonth && !ctx.isRangePreview))) {
             const [start, end] = ctx.range;
-            if (start instanceof Date && !isNaN(start.getTime())) {
-                isSelected = date.toDateString() === start.toDateString();
-            }
-            if (!isSelected && end instanceof Date && !isNaN(end.getTime())) {
-                isSelected = date.toDateString() === end.toDateString();
+            if (!ctx.suppressRangeSelection) {
+                if (start instanceof Date && !isNaN(start.getTime())) {
+                    isRangeEndpointSelected = date.toDateString() === start.toDateString();
+                    isSelected = isRangeEndpointSelected;
+                }
+                if (!isSelected && end instanceof Date && !isNaN(end.getTime())) {
+                    isRangeEndpointSelected = date.toDateString() === end.toDateString();
+                    isSelected = isRangeEndpointSelected;
+                }
             }
         }
-    } else if (kind === 'year') {
-        isSelected = !!ctx.selectedDate && calendarSystem.isSameMonth(date, ctx.selectedDate);
+    } else if (isYearView) {
+        if (ctx.range && Array.isArray(ctx.range) && (cell.inRange || !!ctx.focusTodayOnOtherMonth)) {
+            const [start, end] = ctx.range;
+            if (!ctx.suppressRangeSelection) {
+                if (start instanceof Date && !isNaN(start.getTime())) {
+                    isRangeEndpointSelected = calendarSystem.isSameMonth(date, start);
+                    isSelected = isRangeEndpointSelected;
+                }
+                if (!isSelected && end instanceof Date && !isNaN(end.getTime())) {
+                    isRangeEndpointSelected = calendarSystem.isSameMonth(date, end);
+                    isSelected = isRangeEndpointSelected;
+                }
+            }
+        }
+        if (!isSelected) {
+            isSelected = !!ctx.selectedDate && calendarSystem.isSameMonth(date, ctx.selectedDate);
+        }
     } else {
-        isSelected = !!ctx.selectedDate && calendarSystem.isSameYear(date, ctx.selectedDate);
+        if (ctx.range && Array.isArray(ctx.range) && (cell.inRange || (!!ctx.focusTodayOnOtherMonth && !ctx.isRangePreview))) {
+            const [start, end] = ctx.range;
+            if (!ctx.suppressRangeSelection) {
+                if (start instanceof Date && !isNaN(start.getTime())) {
+                    isRangeEndpointSelected = calendarSystem.isSameYear(date, start);
+                    isSelected = isRangeEndpointSelected;
+                }
+                if (!isSelected && end instanceof Date && !isNaN(end.getTime())) {
+                    isRangeEndpointSelected = calendarSystem.isSameYear(date, end);
+                    isSelected = isRangeEndpointSelected;
+                }
+            }
+        }
+        if (!isSelected) {
+            isSelected = !!ctx.selectedDate && calendarSystem.isSameYear(date, ctx.selectedDate);
+        }
     }
 
     const base: string[] = ['sf-cell'];
+
+    if (ctx.focusTodayOnOtherMonth && isOtherRange) {
+        isToday = isFocused = false;
+        if (!isRangeEndpointSelected) {
+            isSelected = false;
+        }
+    }
+
+    const rangeStart: Date | null | undefined = ctx.range?.[0];
+    const suppressDisabledClass: boolean = isMonthView && isSelected && isOutOfBounds && !ctx.disabled &&
+        isValidDateObj(rangeStart) && calendarSystem.isSameDate(date, rangeStart);
+
     if (isOtherRange) {
-        base.push(kind === CalendarView.Decade ? 'sf-other-year' : 'sf-other-month');
+        base.push(isDecadeView ? 'sf-other-year' : 'sf-other-month');
     }
     if (isWeekend) {
         base.push('sf-weekend');
     }
-    if (isOutOfBounds || ctx.disabled) {
+    if ((isOutOfBounds || ctx.disabled) && !suppressDisabledClass) {
         base.push('sf-disabled');
     }
     if (isToday) {
@@ -310,7 +375,8 @@ export const buildCellState: (
         isSelected,
         className: base.join(' ').trim(),
         ariaSelected: isSelected || undefined,
-        ariaDisabled: isOutOfBounds || ctx.disabled || undefined
+        ariaDisabled: isOutOfBounds || ctx.disabled || undefined,
+        suppressDisabledClass
     };
 };
 
@@ -371,4 +437,33 @@ export const isDateDisabledByRule: (
         }
     }
     return false;
+};
+
+export const isCellWithinRange: (
+    cellDate: Date,
+    range: [Date | null, Date | null] | undefined,
+    precision: 'month' | 'year',
+    calendarSystem?: CalendarSystem
+) => boolean = (
+    cellDate: Date,
+    range: [Date | null, Date | null] | undefined,
+    precision: 'month' | 'year',
+    calendarSystem?: CalendarSystem
+): boolean => {
+    const [start, end] = range ?? [null, null];
+    if (!isValidDateObj(start) || !isValidDateObj(end)) {
+        return false;
+    }
+    const getComparableValue: (date: Date) => number = (date: Date): number => {
+        const year: number = calendarSystem ? calendarSystem.getYear(date) : date.getFullYear();
+        if (precision === 'month') {
+            const month: number = calendarSystem ? calendarSystem.getMonth(date) : date.getMonth();
+            return year * 12 + month;
+        }
+        return year;
+    };
+    const cellValue: number = getComparableValue(cellDate);
+    const startValue: number = getComparableValue(start);
+    const endValue: number = getComparableValue(end);
+    return cellValue > Math.min(startValue, endValue) && cellValue < Math.max(startValue, endValue);
 };

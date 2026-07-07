@@ -58,6 +58,7 @@ export interface TooltipRefHandle {
     /** Fades in the tooltip, setting its opacity to 1. */
     fadeIn: () => void;
 }
+
 // Define state types for grouped state
 type TextData = {
     textSpans: TextSpanElement[];
@@ -153,10 +154,10 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
     // Use refs for values that don't trigger re-renders
     const elementSizeRef: React.RefObject<Size> = useRef<Size>({ width: 100, height: 50 });
     const formattedTextRef: React.RefObject<string[]> = useRef<string[]>([]);
-    const fadeTimeoutRef: React.RefObject<NodeJS.Timeout> = useRef<NodeJS.Timeout | null>(null);
+    const fadeTimeoutRef: React.RefObject<NodeJS.Timeout | null> = useRef<NodeJS.Timeout | null>(null);
     const arrowLocationRef: React.RefObject<TooltipLocation> = useRef<TooltipLocation>(createTooltipLocation(0, 0));
     const tipLocationRef: React.RefObject<TooltipLocation> = useRef<TooltipLocation>(createTooltipLocation(0, 0));
-    const templateRef: React.RefObject<HTMLDivElement> = useRef<HTMLDivElement | null>(null);
+    const templateRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement | null>(null);
     const outOfBoundRef: React.RefObject<boolean> = useRef(false);
     const processingRef: React.RefObject<boolean> = useRef(false); // Prevent recursive processing
     const lastUpdateRef: React.RefObject<{
@@ -544,17 +545,18 @@ forwardRef<TooltipRefHandle, TooltipProps>((props: TooltipProps, ref: React.Forw
 
             // Handle RTL content if needed
             if (mergedProps.enableRTL) {
-                const idx: number = isHeader ? 1 : 0;
+                let contentIndex: number = isHeader ? 1 : 0;
                 const updatedSpans: TextSpanElement[] = [...newTextSpans];
                 for (let i: number = 0; i < updatedSpans.length; i++) {
                     const span: TextSpanElement = updatedSpans[i as number];
                     if (span.x !== undefined && ((!isHeader) || i > 0)) {
-                        if (idx >= 0 && idx < contentWidth.length) {
+                        if (contentIndex >= 0 && contentIndex < contentWidth.length) {
                             updatedSpans[i as number] = {
                                 ...span,
-                                x: (elementSizeRef.current.width - (markerSize + markerPadding + contentWidth[idx as number]))
+                                x: (elementSizeRef.current.width - (markerSize + markerPadding + contentWidth[contentIndex as number]))
                             };
                         }
+                        contentIndex++;
                     }
                 }
                 dispatch({

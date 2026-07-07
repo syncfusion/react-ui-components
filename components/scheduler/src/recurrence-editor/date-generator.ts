@@ -115,7 +115,7 @@ export function getRecurrenceDates(startDate: Date, rule: string, excludeDate: s
     let cacheDate: Date;
     const data: number[] = [];
     const modifiedDate: Date = new Date(startDate.getTime());
-    const tempDate: string[] = isNullOrUndefined(excludeDate) ? [] : excludeDate.split(',');
+    const tempDate: string[] = excludeDate ? excludeDate.split(',') : [];
     tempDate.forEach((content: string) => {
         const parsedDate: Date = getDateFromRecurrenceDateString(content);
         ctx.tempExcludeDate.push(new Date(parsedDate.getTime()).setHours(0, 0, 0, 0));

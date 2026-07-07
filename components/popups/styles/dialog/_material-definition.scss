@@ -13,6 +13,7 @@ $dialog-header-content-padding: $spacing-20 $spacing-20 $spacing-8 $spacing-20 !
 $dialog-header-content-border-radius: $radius-16 $radius-16 $radius-0 $radius-0 !default;
 $dialog-header-font-size: $font-size-2xl !default;
 $dialog-header-font-color: rgb($content-text-color) !default;
+$dialog-header-font-weight: $font-weight-normal !default;
 
 $dialog-close-button-right-position: 21px !default;
 $dialog-close-button-padding: $spacing-9 !default;
@@ -20,6 +21,9 @@ $dialog-close-icon-top-position: 17px !default;
 $dialog-close-icon-border-radius: $radius-full !default;
 $dialog-close-font-size: $font-size-xl !default;
 $dialog-close-icon-color: rgb($icon-color) !default;
+$dialog-close-icon-hover-color: rgb($icon-color) !default;
+$dialog-close-icon-active-color: rgb($icon-color) !default;
+$dialog-close-icon-bg-color: rgb($on-surface,0.1) !default;
 
 $dialog-content-padding: $spacing-16 $spacing-20 $spacing-12 $spacing-20 !default;
 $dialog-content-padding-top: $spacing-0 !default;
@@ -32,6 +36,7 @@ $dialog-footer-content-padding: $spacing-12 $spacing-20 $spacing-12 $spacing-20 
 $dialog-footer-content-border-top: none !default;
 $dialog-footer-content-border-radius: $radius-0 $radius-0 $radius-16 $radius-16 !default;
 $dialog-footer-gap: $spacing-8 !default;
+$dialog-footer-bg: $content-bg-color-alt3 !default;
 
 $dialog-resize-handler-line-height: $line-height-sm !default;
 $dialog-resize-handler-position: $spacing-4 !default;

@@ -1,11 +1,13 @@
 import * as React from 'react';
-import { forwardRef, useRef, useImperativeHandle, HTMLAttributes, useCallback, useState, useEffect, useMemo, useId } from 'react';
+import { forwardRef, useRef, useImperativeHandle, HTMLAttributes, useCallback, useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Popup, IPopup, getZindexPartial, PositionAxis } from '../popup/popup';
+import { Popup, IPopup, getZindexPartial } from '../popup/popup';
 import { Button, Color, IButton, Variant } from '@syncfusion/react-buttons';
-import { Effect, IL10n, L10n, preRender, useProviderContext, useDraggable, IDraggable, DragEvent } from '@syncfusion/react-base';
+import { Effect, IL10n, L10n, preRender, useProviderContext, useDraggable, IDraggable, DragEvent, useStableId } from '@syncfusion/react-base';
 import { useResize, ResizeDirections, IResize } from '../common/resize';
 import { ResizerRightIcon, CloseIcon } from '@syncfusion/react-icons';
+import { PositionAxis } from './type';
+export { ResizeDirections };
 
 const DIALOG_VIEWPORT_MARGIN: number = 20;
 
@@ -323,7 +325,7 @@ export const Dialog: React.ForwardRefExoticComponent<DialogComponentProps & Reac
             className = '',
             children,
             style,
-            id = `dialog_${useId()}`,
+            id = useStableId('sf-dialog'),
             ...restProps
         } = props;
 
@@ -333,7 +335,10 @@ export const Dialog: React.ForwardRefExoticComponent<DialogComponentProps & Reac
         const [dialogState, setDialogState] = useState<DialogState>({ internalOpen: open, dynamicMaxHeight: '' });
         const { internalOpen, dynamicMaxHeight } = dialogState;
         const { locale } = useProviderContext();
-
+        const getInitialZIndex: (style?: React.CSSProperties) => number = (style?: React.CSSProperties): number => {
+            return typeof style?.zIndex === 'number' ? style.zIndex : 1000;
+        };
+        const [zIndexBase, setZIndexBase] = useState(getInitialZIndex(style));
         const draggableOptions: Partial<IDraggable> = useMemo(() => ({
             handle: '.sf-dlg-header-content',
             clone: false,
@@ -732,17 +737,19 @@ export const Dialog: React.ForwardRefExoticComponent<DialogComponentProps & Reac
             };
         }, [position, fullScreen, style, dynamicMaxHeight, resizable, styleConstraints]);
 
-        const { zIndexBase, zIndexPopup, zIndexOverlay } = useMemo(() => {
-            let baseValue: number = typeof style?.zIndex === 'number' ? style.zIndex : 1000;
-            if ( baseValue === 1000 && dialogElementRef.current) {
+        useEffect(() => {
+            if (!dialogElementRef.current) {
+                return;
+            }
+            let baseValue: number = getInitialZIndex(style);
+            if (baseValue === 1000) {
                 baseValue = getZindexPartial(dialogElementRef.current);
             }
-            return {
-                zIndexBase: Math.max(2, baseValue),
-                zIndexPopup: Math.max(3, baseValue + 1),
-                zIndexOverlay: Math.max(1, baseValue - 1)
-            };
-        }, [style?.zIndex, open, internalOpen, dialogElementRef.current]);
+            setZIndexBase(Math.max(2, baseValue));
+        }, [style?.zIndex, open, internalOpen]);
+
+        const zIndexPopup: number = Math.max(3, zIndexBase + 1);
+        const zIndexOverlay: number = Math.max(1, zIndexBase - 1);
 
         if (!internalOpen) {
             return null;

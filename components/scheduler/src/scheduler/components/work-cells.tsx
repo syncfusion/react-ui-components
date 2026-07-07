@@ -47,6 +47,7 @@ export const WorkCells: FC = () => {
                             className={cell.className}
                             data-date={cell.dataAttributes.date}
                             data-date-key={cell.dataAttributes.dateKey}
+                            data-group-index={cell.dataAttributes.groupIndex}
                             onClick={(e: MouseEvent<HTMLElement>) => handleCellClick(e, cell.date)}
                             onDoubleClick={(e: MouseEvent<HTMLElement>) => handleCellDoubleClick(e, cell.date)}
                             onKeyDown={(e: React.KeyboardEvent<HTMLElement>) => { handleKeyDown(e, cell.date); }}

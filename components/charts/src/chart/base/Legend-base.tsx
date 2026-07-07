@@ -106,7 +106,9 @@ export interface BaseLegend extends ChartLegendProps {
     /** SVG translate transform value specifically for legend positioning. */
     legendTranslate?: string;
     /** Calculated position for the legend title element. */
-    legendTitleLoction?: ChartLocationProps
+    legendTitleLoction?: ChartLocationProps;
+    /** Configuration and rendering options for gradient legends. */
+    gradientOptions?: GradientOptions;
 }
 
 /**
@@ -167,6 +169,46 @@ export interface ILegendRegions {
     rect: Rect;
     /** Zero-based index corresponding to the associated legend item. */
     index: number;
+}
+
+/**
+ * Interface for SVG gradient stop elements used in linear gradient legends.
+ *
+ * @interface GradientStopOption
+ * @private
+ */
+export interface GradientStopOption {
+    /** Offset position of the color stop (0-1 or as percentage). */
+    offset: string;
+    /** Color value at this stop point. */
+    stopColor: string;
+    /** Opacity value for this color stop (0-1). */
+    stopOpacity: string;
+}
+
+/**
+ * Interface for gradient legend configuration and rendering options.
+ *
+ * @interface GradientOptions
+ * @private
+ */
+export interface GradientOptions {
+    /** Gradient element ID for linear gradient legends. */
+    gradientId?: string;
+    /** X1 coordinate for the linear gradient start point. */
+    gradientX1?: string;
+    /** Y1 coordinate for the linear gradient start point. */
+    gradientY1?: string;
+    /** X2 coordinate for the linear gradient end point. */
+    gradientX2?: string;
+    /** Y2 coordinate for the linear gradient end point. */
+    gradientY2?: string;
+    /** Collection of stop options for the linear gradient color stops. */
+    gradientStops?: GradientStopOption[];
+    /** Rectangle options for the gradient bar display. */
+    gradientBarRect?: RectOption;
+    /** Detailed rendering options for the legend text labels. */
+    gradientTextOption?: TextOption[];
 }
 
 /**

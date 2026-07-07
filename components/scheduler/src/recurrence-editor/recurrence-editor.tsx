@@ -4,6 +4,7 @@ import { NumericTextBox } from '@syncfusion/react-inputs';
 import { DropDownList } from '@syncfusion/react-dropdowns';
 import { Button, RadioButton } from '@syncfusion/react-buttons';
 import { DatePicker } from '@syncfusion/react-calendars';
+import { Dialog } from '@syncfusion/react-popups';
 import { CSS_CLASSES } from './constants';
 import { useRecurrenceEditorLocalization } from './locale';
 import { RecurrenceItems, RecurrenceEditorProps } from './types';
@@ -42,7 +43,9 @@ export const RecurrenceEditor: React.FC<RecurrenceEditorProps> = (props: Recurre
         dayDataSource,
         weekDayDataSource,
         handlers,
-        buildRecurrenceRule
+        buildRecurrenceRule,
+        alertDialogOpen,
+        setAlertDialogOpen
     } = useRecurrenceEditor(value, startDate, frequencies, endTypes, firstDayOfWeek);
 
     useEffect(() => {
@@ -67,6 +70,7 @@ export const RecurrenceEditor: React.FC<RecurrenceEditorProps> = (props: Recurre
                     min={1}
                     value={interval}
                     onChange={handlers.onIntervalChange}
+                    aria-label={getString('intervalAriaLabel')}
                 />
             </div>
             <div className={`${CSS_CLASSES.RECURRENCE_EDITOR_WIDTH_50}`}>
@@ -75,6 +79,7 @@ export const RecurrenceEditor: React.FC<RecurrenceEditorProps> = (props: Recurre
                     value={freq}
                     fields={{ text: 'text', value: 'value' }}
                     className={CSS_CLASSES.REPEAT_MODE}
+                    aria-label={getString('frequencyAriaLabel')}
                     onChange={handlers.onFreqChange}
                 />
             </div>
@@ -96,6 +101,7 @@ export const RecurrenceEditor: React.FC<RecurrenceEditorProps> = (props: Recurre
                             onClick={() => handlers.onToggleSelectedWeekDay(day.value)}
                             color={weekDays.includes(day.value) ? Color.Primary : Color.Secondary}
                             toggleable={weekDays.includes(day.value)}
+                            aria-label={day.text}
                         >
                             {day.text}
                         </Button>
@@ -116,6 +122,7 @@ export const RecurrenceEditor: React.FC<RecurrenceEditorProps> = (props: Recurre
                     labelMode="Always"
                     onChange={handlers.onMonthChange}
                     className={CSS_CLASSES.REPEAT_MONTH}
+                    aria-label={getString('byMonthAriaLabel')}
                 />
             </div>
         );
@@ -145,6 +152,7 @@ export const RecurrenceEditor: React.FC<RecurrenceEditorProps> = (props: Recurre
                             value="day"
                             checked={dayWeekMode === 'day'}
                             onChange={handlers.onDayWeekChange}
+                            aria-label={getString('repeatOn')}
                         />
                     </div>
                     <div className={`${CSS_CLASSES.REPEAT_YEAR_DAY_NUMBER_CONTAINER}`}>
@@ -153,6 +161,7 @@ export const RecurrenceEditor: React.FC<RecurrenceEditorProps> = (props: Recurre
                             min={1}
                             max={maxDate ?? undefined}
                             className={CSS_CLASSES.BY_MONTH_DAY}
+                            aria-label={getString('byMonthDayAriaLabel')}
                             onChange={handlers.onMonthDateChange}
                         />
                     </div>
@@ -175,6 +184,8 @@ export const RecurrenceEditor: React.FC<RecurrenceEditorProps> = (props: Recurre
                         className={CSS_CLASSES.WEEK_RADIO_BUTTON}
                         checked={dayWeekMode === 'week'}
                         value="week"
+                        aria-label={getString('repeatOn')}
+                        labelPlacement="After"
                         onChange={handlers.onDayWeekChange}
                     />
                 </div>
@@ -183,7 +194,7 @@ export const RecurrenceEditor: React.FC<RecurrenceEditorProps> = (props: Recurre
                         dataSource={monthPosDataSource}
                         value={weekNumber}
                         fields={{ text: 'text', value: 'value' }}
-                        placeholder={getString('weekNumber')}
+                        aria-label={getString('bySetPositionAriaLabel')}
                         onChange={handlers.onWeekNumber}
                         className={CSS_CLASSES.BY_SET_POSITION}
                     />
@@ -193,7 +204,7 @@ export const RecurrenceEditor: React.FC<RecurrenceEditorProps> = (props: Recurre
                         dataSource={dayDataSource}
                         value={weekDay}
                         fields={{ text: 'text', value: 'value' }}
-                        placeholder={getString('weekDay')}
+                        aria-label={getString('byDayAriaLabel')}
                         onChange={handlers.onWeekDayChange}
                         className={CSS_CLASSES.REPEAT_BY_DAY_DROPDOWN}
                     />
@@ -213,6 +224,7 @@ export const RecurrenceEditor: React.FC<RecurrenceEditorProps> = (props: Recurre
                     className={CSS_CLASSES.REPEAT_END_DAY_WEEK}
                     labelMode="Always"
                     onChange={handlers.onEndTypeChange}
+                    aria-label={getString('endTypeAriaLabel')}
                 />
             </div>
 
@@ -222,6 +234,7 @@ export const RecurrenceEditor: React.FC<RecurrenceEditorProps> = (props: Recurre
                         className={CSS_CLASSES.REPEAT_COUNT}
                         value={count}
                         min={1}
+                        aria-label={getString('countAriaLabel')}
                         onChange={handlers.onCountChange}
                     />
                 </div>
@@ -233,6 +246,7 @@ export const RecurrenceEditor: React.FC<RecurrenceEditorProps> = (props: Recurre
                         className={CSS_CLASSES.REPEAT_UNTIL}
                         value={until}
                         format={'MM/dd/yyyy'}
+                        aria-label={getString('untilAriaLabel')}
                         onChange={handlers.onUntilChange}
                     />
                 </div>
@@ -253,6 +267,21 @@ export const RecurrenceEditor: React.FC<RecurrenceEditorProps> = (props: Recurre
             {(freq === 'MONTHLY' || freq === 'YEARLY') && renderWeekNumberDayMode()}
 
             {renderEndFields()}
+
+            {alertDialogOpen && (
+                <Dialog
+                    header={getString('alert')}
+                    open={alertDialogOpen}
+                    onClose={() => setAlertDialogOpen(false)}
+                    footer={
+                        <Button onClick={() => setAlertDialogOpen(false)} variant={Variant.Standard}>
+                            {getString('ok')}
+                        </Button>
+                    }
+                >
+                    <div>{getString('untilEarlierThanStart')}</div>
+                </Dialog>
+            )}
         </div>
     );
 };

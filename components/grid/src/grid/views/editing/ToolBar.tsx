@@ -7,9 +7,26 @@ import { SelectionModel } from '../../types/selection.interfaces';
 import { editModule } from '../../types/edit.interfaces';
 import { searchModule } from '../../types/search.interfaces';
 import { useGridComputedProvider, useGridMutableProvider } from '../../contexts';
-import { IL10n } from '@syncfusion/react-base';
-import { CloseIcon, EditIcon, PlusIcon, SaveIcon, SearchIcon, TrashIcon } from '@syncfusion/react-icons';
+import { IL10n, Position } from '@syncfusion/react-base';
+import { ChevronDownFillIcon, CloseIcon, EditIcon, PlusIcon, SaveIcon, SearchIcon, TrashIcon, PrintIcon, ExportPdfIcon } from '@syncfusion/react-icons';
 import { InputBase, renderClearButton, renderFloatLabelElement } from '@syncfusion/react-inputs';
+
+// Constants for CSS classes to avoid hardcoding
+const INPUT_GROUP: string = 'sf-input-group';
+const CONTROL: string = 'sf-control';
+const MEDIUM: string = 'sf-medium';
+const GRID_SEARCH: string = 'sf-grid-search';
+const INPUT_FOCUS: string = 'sf-input-focus';
+const TOOLBAR_ITEM: string = 'sf-toolbar-item';
+const SEARCH_WRAPPER: string = 'sf-search-wrapper';
+const INPUT_ICON: string = 'sf-input-icon';
+const SEARCH_ICON: string = 'sf-search-icon';
+const GRID: string = 'sf-grid';
+
+// Constants for hardcoded strings
+const SEARCH_PLACEHOLDER: string = 'Search';
+const SEARCH_BUTTON_LABEL: string = 'searchButtonLabel';
+const COLUMN_CHOOSER_TITLE: string = 'Column Chooser';
 
 /**
  * Search Input Wrapper Component using InputBase similar to FilterBar pattern
@@ -90,38 +107,40 @@ const SearchInputWrapper: React.FC<{
         setIsFocused(false);
     }, []);
 
+    // Memoized click handler for search icon
+    const handleSearchIconClick: (e: React.MouseEvent<HTMLSpanElement>) => void = useCallback((e: React.MouseEvent<HTMLSpanElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleSearch(searchValue);
+        searchInputRef.current?.focus();
+    }, [searchValue, handleSearch]);
+
     const searchId: string = `${gridId}_searchbar`;
+    const focusClass: string = isFocused ? ` ${INPUT_FOCUS}` : '';
 
     return (
-        <div className={`sf-input-group sf-control sf-medium sf-grid-search${isFocused ? ' sf-input-focus' : ''}`}>
+        <div className={`${INPUT_GROUP} ${CONTROL} ${MEDIUM} ${GRID_SEARCH}${focusClass}`}>
             <InputBase
                 ref={searchInputRef}
                 id={searchId}
                 tabIndex={0}
-                placeholder="Search"
+                placeholder={SEARCH_PLACEHOLDER}
                 value={disabled ? '' : searchValue}
-                onClick={(e: React.MouseEvent<HTMLInputElement>) => handleClick(e)}
+                onClick={handleClick}
                 onChange={handleChange}
                 onKeyDown={allowKeyboard ? handleKeyDown : undefined}
                 onFocus={handleFocus}
                 onBlur={handleBlur}
                 disabled={disabled}
             />
-            {renderFloatLabelElement('Never', isFocused, searchValue, localization?.getConstant('searchButtonLabel'), searchId)}
+            {renderFloatLabelElement('Never', isFocused, searchValue, localization?.getConstant(SEARCH_BUTTON_LABEL), searchId)}
             {renderClearButton(searchValue, clearInput)}
             <span
                 id={`${gridId}_searchbutton`}
-                className="sf-input-icon sf-search-icon"
+                className={`${INPUT_ICON} ${SEARCH_ICON}`}
                 role="button"
-                title={localization?.getConstant('searchButtonLabel')}
-                onClick={(e: React.MouseEvent<HTMLSpanElement>) => {
-                    // Prevent default and stop propagation to avoid focus issues
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleSearch(searchValue);
-                    // Move focus back to the search input to ensure consistent UX
-                    searchInputRef.current?.focus();
-                }}
+                title={localization?.getConstant(SEARCH_BUTTON_LABEL)}
+                onClick={handleSearchIconClick}
             >
                 <SearchIcon key={`${gridId}_searchicon`}/>
             </span>
@@ -131,11 +150,20 @@ const SearchInputWrapper: React.FC<{
 
 const rearrangeToolbar: (toolbar: (string | ToolbarItemProps)[]) => (string | ToolbarItemProps)[] =
     (toolbar: (string | ToolbarItemProps)[]): (string | ToolbarItemProps)[] => {
-        const withoutSearch: (string | ToolbarItemProps)[] = toolbar.filter((item: string | ToolbarItemProps) => {
+        // Filter out Search and ColumnChooser to move them to the right
+        const withoutRightItems: (string | ToolbarItemProps)[] = toolbar.filter((item: string | ToolbarItemProps) => {
             if (typeof item === 'string') {
-                return item !== 'Search';
+                return item !== 'Search' && item !== 'ColumnChooser';
             }
-            return item.id !== 'Search' && item.text !== 'Search';
+            return item.id !== 'Search' && item.text !== 'Search' &&
+                   item.id !== 'ColumnChooser' && item.text !== 'ColumnChooser';
+        });
+
+        const columnChooserItem: string | ToolbarItemProps | undefined = toolbar.find((item: string | ToolbarItemProps) => {
+            if (typeof item === 'string') {
+                return item === 'ColumnChooser';
+            }
+            return item.id === 'ColumnChooser' || item.text === 'ColumnChooser';
         });
 
         const searchItem: string | ToolbarItemProps | undefined = toolbar.find((item: string | ToolbarItemProps) => {
@@ -145,7 +173,16 @@ const rearrangeToolbar: (toolbar: (string | ToolbarItemProps)[]) => (string | To
             return item.id === 'Search' || item.text === 'Search';
         });
 
-        return searchItem !== undefined ? [...withoutSearch, searchItem] : toolbar;
+        // Add right-side items in order: ColumnChooser, then Search
+        const rightItems: (string | ToolbarItemProps)[] = [];
+        if (columnChooserItem !== undefined) {
+            rightItems.push(columnChooserItem);
+        }
+        if (searchItem !== undefined) {
+            rightItems.push(searchItem);
+        }
+
+        return rightItems.length > 0 ? [...withoutRightItems, ...rightItems] : toolbar;
     };
 
 /**
@@ -170,7 +207,7 @@ export const GridToolbar: React.FC<ToolbarConfig> = ({
     toolbarAPI?: ToolbarAPI
 }) => {
     toolbar = rearrangeToolbar(toolbar || []);
-    const { serviceLocator, allowKeyboard, editSettings } = useGridComputedProvider();
+    const { serviceLocator, allowKeyboard, editSettings, openColumnChooser } = useGridComputedProvider();
     const localization: IL10n = serviceLocator?.getService<IL10n>('localization');
     const modulesRef: React.RefObject<{
         editModule?: editModule,
@@ -198,16 +235,38 @@ export const GridToolbar: React.FC<ToolbarConfig> = ({
     //  Stable button click handler that never changes
     const handleButtonClick: (itemId: string, originalEvent?: React.MouseEvent) => void =
         useCallback((itemId: string, originalEvent?: React.MouseEvent) => {
+            // Handle Column Chooser button click - access from computed context
+            if (itemId === `${gridId}_columnchooser`) {
+                openColumnChooser?.();
+                return;
+            }
+
             const args: ToolbarClickEvent = {
                 item: { id: itemId },
                 event: originalEvent?.nativeEvent,
                 cancel: false
             };
             toolbarAPI.handleToolbarClick(args);
-        }, [toolbarAPI.handleToolbarClick]); // Only depend on the stable function
+        }, [toolbarAPI.handleToolbarClick, gridId, openColumnChooser]); // Only depend on the stable function
 
     // Use disabledItems from the toolbar API for rendering
     const disabledItems: Set<string> = toolbarAPI.disabledItems;
+
+    // Use constants for CSS classes in renderToolbarItems
+    const searchWrapperClass: string = SEARCH_WRAPPER;
+    const columnChooserId: string = `${gridId}_columnchooser`;
+    const searchId: string = `${gridId}_search`;
+
+    // Create handleSearchClick callback once per render pass (not per item)
+    type SearchClickHandler = (args: React.MouseEvent<HTMLInputElement>) => void;
+    const handleSearchClick: SearchClickHandler = useCallback((args: React.MouseEvent<HTMLInputElement>) => {
+        handleButtonClick(searchId, args);
+    }, [handleButtonClick, searchId]);
+
+    // Create handleColumnChooserClick callback
+    const handleColumnChooserClick: () => void = useCallback(() => {
+        handleButtonClick(columnChooserId);
+    }, [handleButtonClick, columnChooserId]);
 
     // Create toolbar items only once based on configuration
     const renderToolbarItems: React.ReactElement<unknown, string | React.JSXElementConstructor<unknown>>[] = useMemo(() => {
@@ -264,22 +323,69 @@ export const GridToolbar: React.FC<ToolbarConfig> = ({
                         disabled: disabledItems.has(`${gridId}_cancel`)
                     };
                     break;
-                case 'Search':
-                    items.push(<ToolbarSpacer key={`spacer-${index}`} />); // condition based need to handle adding spacer.
+                case 'Print':
+                    itemConfig = {
+                        id: `${gridId}_print`,
+                        title: localization?.getConstant('printButtonLabel'),
+                        text: localization?.getConstant('printButtonLabel'),
+                        icon: <PrintIcon key={`${gridId}_printicon`}/>
+                    };
+                    break;
+                case 'PdfExport':
+                    itemConfig = {
+                        id: `${gridId}_pdfexport`,
+                        title: localization?.getConstant('pdfButtonLabel'),
+                        text: localization?.getConstant('pdfButtonLabel'),
+                        icon: <ExportPdfIcon key={`${gridId}_pdfexporticon`}/>
+                    };
+                    break;
+                case 'ColumnChooser':
+                    items.push(<ToolbarSpacer key={`spacer-${index}`} />); // Add spacer before ColumnChooser
+                    // Column Chooser needs custom rendering with suffix icon on the right
+                    items.push(
+                        <ToolbarItem key={`columnchooser-${index}`}>
+                            <Button
+                                id={columnChooserId}
+                                variant={Variant.Standard}
+                                color={Color.Secondary}
+                                onClick={handleColumnChooserClick}
+                                title={COLUMN_CHOOSER_TITLE}
+                                disabled={disabledItems.has(columnChooserId)}
+                                tabIndex={disabledItems.has(columnChooserId) ? -1 : 0}
+                                icon={<ChevronDownFillIcon key={`${gridId}_columnchooserchevronicon`}/>}
+                                iconPosition={Position.Right}
+                            >
+                                Columns
+                            </Button>
+                        </ToolbarItem>
+                    );
+                    return;
+                case 'Search': {
+                    // Only add spacer if ColumnChooser is not present (otherwise spacer already added)
+                    const hasColumnChooser: boolean = toolbar.some((item: string | ToolbarItemProps) => {
+                        if (typeof item === 'string') {
+                            return item === 'ColumnChooser';
+                        }
+                        return item.id === 'ColumnChooser' || item.text === 'ColumnChooser';
+                    });
+                    if (!hasColumnChooser) {
+                        items.push(<ToolbarSpacer key={`spacer-${index}`} />);
+                    }
                     // Search functionality using InputBase component similar to FilterBar pattern
                     items.push(
-                        <ToolbarItem key={`search-${index}`} className='sf-search-wrapper'>
+                        <ToolbarItem key={`search-${index}`} className={searchWrapperClass}>
                             <SearchInputWrapper
                                 gridId={gridId}
-                                handleClick={(args: React.MouseEvent<HTMLInputElement>) => handleButtonClick(`${gridId}_search`, args)}
+                                handleClick={handleSearchClick}
                                 localization={localization}
                                 searchModule={modulesRef.current.searchModule}
                                 allowKeyboard={allowKeyboard}
-                                disabled={disabledItems.has(`${gridId}_search`)}
+                                disabled={disabledItems.has(searchId)}
                             />
                         </ToolbarItem>
                     );
                     return;
+                }
                 }
             } else {
                 // For custom items, merge the existing config with the disabled state
@@ -342,8 +448,9 @@ export const GridToolbar: React.FC<ToolbarConfig> = ({
         };
 
         // Add event listeners to the grid element for state changes
+        // Store reference to ensure proper cleanup (prevents memory leaks)
         const toolbarElement: HTMLElement | null = toolbarAPI.getToolbar();
-        const gridElement: HTMLElement | null = toolbarElement?.closest('.sf-grid');
+        const gridElement: HTMLElement | null = toolbarElement?.closest(`.${GRID}`);
         gridElement?.addEventListener('selectionChanged', handleSelectionChange);
         gridElement?.addEventListener('editStateChanged', handleEditStateChange);
         gridElement?.addEventListener('toolbarRefresh', handleToolbarRefresh);
@@ -355,6 +462,16 @@ export const GridToolbar: React.FC<ToolbarConfig> = ({
         };
     }, [toolbarAPI.isRendered, toolbarAPI.refreshToolbarItems, gridId]);
 
+    // Memoized toolbar click handler using event delegation
+    type ToolbarClickHandler = (args: React.MouseEvent<HTMLDivElement, MouseEvent>) => void;
+    const handleToolbarClick: ToolbarClickHandler = useCallback((args: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+        const buttonSelector: string = `.${TOOLBAR_ITEM} button`;
+        const buttonElement: HTMLElement | null = (args.target as HTMLElement)?.closest(buttonSelector);
+        if (buttonElement?.id) {
+            handleButtonClick(buttonElement.id, args);
+        }
+    }, [handleButtonClick]);
+
     return (
         <Toolbar
             key={gridId + '_toolbar'}
@@ -362,11 +479,7 @@ export const GridToolbar: React.FC<ToolbarConfig> = ({
             ref={toolbarAPI.toolbarRef}
             className={className}
             aria-label="Grid Toolbar"
-            onClick={(args: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-                if ((args.target as HTMLElement)?.closest('.sf-toolbar-item button')?.id) {
-                    handleButtonClick((args.target as HTMLElement)?.closest('.sf-toolbar-item button')?.id, args);
-                }
-            }}
+            onClick={handleToolbarClick}
         >
             {renderToolbarItems}
         </Toolbar>

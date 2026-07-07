@@ -11,7 +11,8 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
     onTitleClick,
     onPrevClick,
     onNextClick,
-    className
+    className,
+    titleId
 }: CalendarHeaderProps): React.JSX.Element => {
     const prevDisabled: boolean = disabled || !onPrevClick;
     const nextDisabled: boolean = disabled || !onNextClick;
@@ -28,6 +29,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
     return (
         <div className={classNames}>
             <Button
+                id={titleId}
                 variant={Variant.Standard}
                 color={Color.Secondary}
                 className={`sf-calendar-title sf-radius-2 ${isDecade ? 'sf-readonly' : ''}`}

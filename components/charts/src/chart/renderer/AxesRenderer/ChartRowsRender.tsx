@@ -1,6 +1,6 @@
 import { useLayout } from '../../layout/LayoutContext';
 import { Row } from '../../base/interfaces';
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { Chart, Rect, RowProps } from '../../chart-area/chart-interfaces';
 
 /**
@@ -19,10 +19,7 @@ interface ChartRowsRenderProps {
 export const ChartRowsRender: React.FC<ChartRowsRenderProps> = ({ rows }: ChartRowsRenderProps) => {
     const { phase, triggerRemeasure } = useLayout();
 
-    const rowHeights: string = useMemo(
-        () => rows.map((row: Row) => row.height).join(','),
-        [rows]
-    );
+    const rowHeights: string = rows.map((row: Row) => row.height).join(',');
     useEffect(() => {
         if (phase !== 'measuring') {
             triggerRemeasure();

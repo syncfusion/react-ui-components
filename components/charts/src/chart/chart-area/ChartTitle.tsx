@@ -8,7 +8,7 @@ import { ChartProviderChildProps } from './chart-interfaces';
  * ChartTitle component for configuring and setting the main title of the chart.
  *
  * @param {ChartTitleProps} props - Props used to customize the chart title.
- * @returns {null} This component does not render any visible output.
+ * @returns {null} - It is used only to pass the title configuration to the chart through the React context.
  */
 export const ChartTitle: React.FC<ChartTitleProps> = (props: ChartTitleProps) => {
     const context: ChartProviderChildProps = useContext(ChartContext);

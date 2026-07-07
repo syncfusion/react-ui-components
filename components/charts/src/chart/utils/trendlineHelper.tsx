@@ -93,12 +93,13 @@ export function getLinearPoints(
 /**
  * Calculates the points for a moving average trendline.
  *
- * @param {Trendline} trendline - The moving average trendline configuration.
+ * @param {ChartTrendlineModel} trendline - The moving average trendline configuration.
  * @param {Points[]} points - The data points of the series.
  * @param {number[]} xValues - The x values of the data points.
  * @param {number[]} yValues - The y values of the data points.
- * @param {Series} series - The series to which the trendline belongs.
+ * @param {SeriesProperties} series - The series to which the trendline belongs.
  * @returns {Points[]} - The calculated points for the moving average trendline.
+ * @private
  */
 export function getMovingAveragePoints(
     trendline: ChartTrendlineModel, points: Points[],

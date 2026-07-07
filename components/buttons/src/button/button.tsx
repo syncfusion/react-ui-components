@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState, useImperativeHandle, forwardRef, ButtonHTMLAttributes, Ref } from 'react';
+import { useEffect, useRef, useState, useImperativeHandle, useMemo, useCallback,
+    forwardRef, ButtonHTMLAttributes, Ref, ForwardRefExoticComponent, RefAttributes,
+    RefObject, MouseEventHandler, ReactNode, MouseEvent, memo
+} from 'react';
 import { preRender, useProviderContext, useRippleEffect, Color, Size, Variant, Position } from '@syncfusion/react-base';
 import { ChevronDownFillIcon } from '@syncfusion/react-icons';
-import * as React from 'react';
 export {  Color, Size, Variant, Position };
 
 /**
@@ -21,7 +23,7 @@ export interface ButtonProps {
      *
      * @default -
      */
-    icon?: React.ReactNode;
+    icon?: ReactNode;
 
     /**
      * Indicates whether the button functions as a toggle button. If true, the button can switch between active and inactive states each time it is clicked.
@@ -100,9 +102,9 @@ type IButtonProps = IButton & ButtonHTMLAttributes<HTMLButtonElement>;
  * <Button color={Color.Success}>Submit</Button>
  * ```
  */
-export const Button: React.ForwardRefExoticComponent<IButtonProps & React.RefAttributes<IButton>> =
+export const Button: ForwardRefExoticComponent<IButtonProps & RefAttributes<IButton>> =
     forwardRef<IButton, IButtonProps>((props: IButtonProps, ref: Ref<IButton>) => {
-        const buttonRef: React.RefObject<HTMLButtonElement | null> = useRef<HTMLButtonElement>(null);
+        const buttonRef: RefObject<HTMLButtonElement | null> = useRef<HTMLButtonElement>(null);
         const {
             disabled = false,
             iconPosition = Position.Left,
@@ -123,7 +125,7 @@ export const Button: React.ForwardRefExoticComponent<IButtonProps & React.RefAtt
         const [isActive, setIsActive] = useState<boolean>(selected ?? false);
         const { dir, ripple } = useProviderContext();
         const { rippleMouseDown, Ripple} = useRippleEffect(ripple, { duration: 500 });
-        const publicAPI: Partial<IButton> = {
+        const publicAPI: Partial<IButton> = useMemo<Partial<IButton>>(() => ({
             iconPosition,
             icon,
             toggleable,
@@ -132,14 +134,15 @@ export const Button: React.ForwardRefExoticComponent<IButtonProps & React.RefAtt
             variant,
             size,
             isLink
-        };
+        }), [iconPosition, icon, toggleable, selected, color, variant, size, isLink]);
 
-        const handleButtonClick: React.MouseEventHandler<HTMLButtonElement> = (event: React.MouseEvent<HTMLButtonElement>) => {
+        const handleButtonClick: MouseEventHandler<HTMLButtonElement> =
+        useCallback<MouseEventHandler<HTMLButtonElement>>((event: MouseEvent<HTMLButtonElement>) => {
             if (toggleable && selected === undefined) {
                 setIsActive((prevState: boolean) => !prevState);
             }
             onClick?.(event);
-        };
+        }, [toggleable, selected, onClick]);
 
         useEffect(() => {
             if (selected !== undefined) {
@@ -164,11 +167,11 @@ export const Button: React.ForwardRefExoticComponent<IButtonProps & React.RefAtt
             isActive ? 'sf-active' : '',
             isLink ? 'sf-btn-link' + (!props.color ? ' sf-btn-info' : '') : '',
             !icon && children && `sf-btn sf-btn-${size.toLowerCase().substring(0, 2)}`,
-            icon && !dropIcon && !children && `sf-icon-btn sf-icon-btn-${size.toLowerCase().substring(0, 2)}`,
+            icon && !children && `sf-icon-btn sf-icon-btn-${size.toLowerCase().substring(0, 2)}`,
             icon && children ? `sf-icon sf-icon-${size.toLowerCase().substring(0, 2)}` : '',
             iconPosition && `sf-btn-${iconPosition.toLowerCase()}`,
             color && 'sf-btn-color',
-            color && `sf-btn-${color.toLowerCase()}`,
+            color && (!isLink || props.color) && `sf-btn-${color.toLowerCase()}`,
             variant ? `sf-btn-${variant.toLowerCase() }` : '',
             size && `sf-btn-${size.toLowerCase().substring(0, 2)}`,
             disabled && 'sf-cursor-default'
@@ -182,6 +185,7 @@ export const Button: React.ForwardRefExoticComponent<IButtonProps & React.RefAtt
                 onClick={handleButtonClick}
                 onMouseDown={rippleMouseDown}
                 disabled={disabled}
+                aria-pressed={toggleable ? isActive : undefined}
                 {...domProps}
             >
                 {!children && icon && (
@@ -214,4 +218,4 @@ export const Button: React.ForwardRefExoticComponent<IButtonProps & React.RefAtt
         );
     });
 
-export default React.memo(Button);
+export default memo(Button);

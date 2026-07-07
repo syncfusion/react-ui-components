@@ -3,6 +3,7 @@
 $toolbar-border-width: $spacing-0 !default;		
 $toolbar-border-style: solid !default;
 $toolbar-border-color: rgba($border-light) !default;
+$toolbar-border-radius: $radius-0 !default;
 $toolbar-bg-color: $content-bg-color-alt2 !default;
 $toolbar-box-shadow: none !default;
 
@@ -26,6 +27,8 @@ $toolbar-separator-horizontal-border-width: 0 1px 0 0 !default;
 $toolbar-separator-vertical-border-width: 0 0 1px 0 !default;
 
 $toolbar-nav-width: $spacing-40 !default;
+$toolbar-nav-height: $spacing-56 !default;
+$toolbar-nav-margin: $spacing-0 !default;
 $toolbar-nav-border-style: solid !default;
 $toolbar-nav-pressed-box-shadow: none !default;
 $toolbar-nav-selected-box-shadow: none !default;

@@ -1,11 +1,13 @@
-import { ChartBorderProps,  ChartLocationProps,  ChartSeriesProps } from '../../base/interfaces';
+import * as React from 'react';
+import { ChartBorderProps,  ChartLocationProps } from '../../base/interfaces';
 import { createRectOption, drawSymbol, setBorderColor, setPointColor } from '../../utils/helper';
 import { createMarkerPathOption } from './MarkerBase';
 import { JSX } from 'react';
 import { doInitialAnimation, interpolatePathD } from './SeriesAnimation';
 import { ChartMarkerShape } from '../../base/enum';
-import { MarkerElementData, markerOptions, MarkerOptions, MarkerOptionsList, MarkerPosition, MarkerProperties, PathOptions, PointRenderingEvent, Points, SeriesProperties } from '../../chart-area/chart-interfaces';
+import { MarkerElementData, MarkerShapeOptions, MarkerOptions, MarkerOptionsList, MarkerPosition, MarkerProperties, PathOptions, PointRenderingEvent, Points, Rect, SeriesProperties } from '../../chart-area/chart-interfaces';
 import { isAxisZoomed } from '../Zooming/zooming';
+import { resolveMarkerAriaLabel } from './ariaLabelHelper';
 
 /**
  * Array of available marker shapes that can be used in chart series.
@@ -96,13 +98,23 @@ export const MarkerRenderer: {
                         markerOptionsList.push(markerOptions),
                         markerElements.push(markerOptions)
                     ));
+
+                    // Register marker geometry for collision detection
+                    if (markerOptions && series.marker?.width && series.marker?.height && series.seriesLabel?.visible) {
+                        const markerSize: number = (series.marker.width + series.marker.height) / 2;
+                        const markerRect: Rect = {
+                            x: location.x + (series.clipRect as Rect).x - (markerSize / 2),
+                            y: location.y + (series.clipRect as Rect).y - (markerSize / 2),
+                            width: markerSize, height: markerSize
+                        };
+                        series.chart.markerCollections.push(markerRect);
+                    }
                 })
             );
         }
 
         MarkerRenderer.markerElementsMap.set(seriesKey, markerElements);
         void (series.marker!.shape && (markerOptionsList as Object[]).push(series.marker!.shape));
-
         void (series.animation?.enable && MarkerRenderer.doMarkerAnimation(series));
         return { options, symbolGroup, markerOptionsList };
     },
@@ -178,6 +190,8 @@ export const MarkerRenderer: {
             width: marker.border!.width
         };
         const borderColor: string = marker.border!.color as string;
+        const isOutlierEnable: boolean = series.type === 'BoxAndWhisker' &&
+        series.boxAndWhiskerSettings?.showOutliers === true;
 
         location.x = location.x + (marker.offset?.x as number);
         location.y = location.y - (marker.offset?.y as number);
@@ -185,7 +199,8 @@ export const MarkerRenderer: {
         let markerElementOptions: Element | undefined = undefined;
         const parentElement: Element = symbolGroup;
         border.color = borderColor || setPointColor(point, series.interior);
-        const symbolId: string = series.chart.element.id + '_Series_' + seriesIndex + '_Point_'
+        const symbolId: string = isOutlierEnable ? series.chart.element.id + '_Series_' + seriesIndex + '_Point_'
+    + (point.index) + '_Outlier_Symbol' + (index) : series.chart.element.id + '_Series_' + seriesIndex + '_Point_'
     + (point.index) + '_Symbol' + (index);
 
         const argsData: PointRenderingEvent = {
@@ -245,6 +260,7 @@ export const MarkerRenderer: {
     /**
      * Performs animation for all markers in a series.
      * For line series, markers are animated sequentially based on their distance.
+     * For polar/radar series, markers appear only after series animation completes.
      *
      * @param {SeriesProperties} series - The series containing the markers to animate
      * @returns {void} Nothing is returned
@@ -254,7 +270,42 @@ export const MarkerRenderer: {
             return;
         }
 
-        // Store animation progress for this series in the series object
+        // For polar/radar series, delay marker appearance until series animation completes
+        const isPolarRadar: boolean = series.chart?.chartAreaType === 'PolarRadar';
+        if (isPolarRadar) {
+            // Store animation progress for this series
+            if (!series.markerAnimationProgress) {
+                series.markerAnimationProgress = 0;
+            }
+
+            // Initially hide all markers completely for polar/radar
+            series.markerClipPath = 'inset(100% 100% 100% 100%)'; // Hide everything
+
+            const animationDelay: number = series.animation?.delay as number;
+            const animationDuration: number = series.type === 'PolarScatter' || series.type === 'RadarScatter' ? 0 : series.animation?.duration as number;
+            const startTime: number = performance.now();
+
+            const animateMarkerAppearance: (currentTime: number) => void = (currentTime: number) => {
+                const elapsed: number = currentTime - startTime;
+
+                // Wait for series animation to complete (delay + duration)
+                const totalSeriesAnimationTime: number = animationDelay + animationDuration;
+
+                if (elapsed < totalSeriesAnimationTime) {
+                    // Keep markers hidden during series animation
+                    series.markerClipPath = 'inset(100% 100% 100% 100%)';
+                    requestAnimationFrame(animateMarkerAppearance);
+                } else {
+                    // Series animation complete, reveal all markers
+                    series.markerClipPath = undefined;
+                    series.markerAnimationProgress = 1;
+                }
+            };
+
+            requestAnimationFrame(animateMarkerAppearance);
+            return;
+        }
+
         if (!series.markerAnimationProgress) {
             series.markerAnimationProgress = 0;
         }
@@ -350,10 +401,10 @@ export const MarkerRenderer: {
         const xCoords: number[] = markerPositions.map((pos: ChartLocationProps) => pos.x);
         const yCoords: number[] = markerPositions.map((pos: ChartLocationProps) => pos.y);
 
-        const minX: number = Math.min(...xCoords);
-        const maxX: number = Math.max(...xCoords);
-        const minY: number = Math.min(...yCoords);
-        const maxY: number = Math.max(...yCoords);
+        const minimumXInClip: number = Math.min(...xCoords);
+        const maximumXInClip: number = Math.max(...xCoords);
+        const minimumYInClip: number = Math.min(...yCoords);
+        const maximumYInClip: number = Math.max(...yCoords);
 
         const isInverted: boolean = series.chart?.requireInvertedAxis ?? false;
         const isXAxisInverse: boolean = series.xAxis?.isAxisInverse ?? false;
@@ -364,28 +415,32 @@ export const MarkerRenderer: {
 
         if (!isInverted) {
             // Normal orientation - clip horizontally
-            const range: number = maxX - minX;
-            const animWidth: number = range * progress;
+            const range: number = maximumXInClip - minimumXInClip;
+            const markerWidth: number = series.marker?.width ?? 0;
+            const markerHeight: number = series.marker?.height ?? 0;
+            const borderWidth: number = series.marker?.border?.width ?? 0;
+            const paddingX: number = Math.ceil(Math.max(markerWidth, markerHeight) / 2) + borderWidth;
+            const totalRange: number = range + 2 * paddingX;
+            const animWidth: number = totalRange * progress;
+            const remaining: number = Math.max(0, totalRange - animWidth);
+
 
             if (isXAxisInverse) {
                 // X-axis inverted - animate from right to left
-                clipPath = `inset(0 0 0 ${range - animWidth}px)`;
+                clipPath = `inset(0 0 0 ${remaining}px)`;
             } else {
                 // X-axis normal - animate from left to right
-                clipPath = `inset(0 ${range - animWidth}px 0 0)`;
+                clipPath = `inset(0 ${remaining}px 0 0)`;
             }
         } else {
             // Inverted orientation - clip vertically
-            const range: number = maxY - minY;
+            const range: number = maximumYInClip - minimumYInClip;
             const animHeight: number = range * progress;
 
-            if (isYAxisInverse) {
-                // Y-axis inverted - animate from top to bottom
-                clipPath = `inset(${Math.max(0, range - animHeight)}px 0 0 0)`;
-            } else {
-                // Y-axis normal - animate from bottom to top
-                clipPath = `inset(${Math.max(0, range - animHeight)}px 0 0 0)`;
-            }
+            const remaining: number = Math.max(0, range - animHeight);
+            clipPath = isYAxisInverse
+                ? `inset(${remaining}px 0 0 0)`   // clip top (reveal down)
+                : `inset(${remaining}px 0 0 0)`;  // clip bottom (reveal up)
         }
 
         // Store the clip path in the series for use in renderMarkerJSX
@@ -432,13 +487,38 @@ export function sanitizePathD(d: string): string {
 
     return cleaned.replace(/\s+/g, ' ').trim();
 }
+const OUTLIER_HOVER_TRANSITION: string =
+    'filter 140ms ease-in-out, stroke-width 140ms ease-in-out';
+const OUTLIER_SHADOW_FALLBACK: string = 'rgba(0,0,0,0.6)';
 
-export function formatAccessibilityDescription(point: Points, series: ChartSeriesProps): string {
-    const format: string = series.accessibility?.descriptionFormat as string;
-    return format
-        .replace('${series.name}', series && series.name ? series.name : '')
-        .replace('${point.x}', point && point.x ? point.x.toString() : '')
-        .replace('${point.y}', point && point.y ? point.y.toString() : '');
+/**
+ * Handles the mouse enter event for an outlier SVG element.
+ *
+ * @param {React.MouseEvent<SVGElement>} event - The mouse event triggered when the pointer enters the SVG element.
+ * @returns {void} Does not return a value.
+ *
+ */
+function handleOutlierMouseEnter(event: React.MouseEvent<SVGElement>): void {
+    const el: SVGElement = event.currentTarget;
+    const fill: string = el.getAttribute('data-outlier-fill') ?? OUTLIER_SHADOW_FALLBACK;
+    const baseStrokeWidth: number = Number(el.getAttribute('data-base-stroke-width') ?? '0');
+    el.style.transition = OUTLIER_HOVER_TRANSITION;
+    el.style.filter = `drop-shadow(0 0 8px ${fill})`;
+    el.style.strokeWidth = `${baseStrokeWidth + 2}`;
+}
+
+/**
+ * Handles the mouse leave event for an outlier SVG element.
+ *
+ * @param {React.MouseEvent<SVGElement>} event - The mouse event triggered when the pointer leaves the SVG element.
+ * @returns {void} Does not return a value.
+ *
+ */
+function handleOutlierMouseLeave(event: React.MouseEvent<SVGElement>): void {
+    const el: SVGElement = event.currentTarget;
+    const baseStrokeWidth: number = Number(el.getAttribute('data-base-stroke-width') ?? '0');
+    el.style.filter = '';
+    el.style.strokeWidth = `${baseStrokeWidth}`;
 }
 
 /**
@@ -481,7 +561,8 @@ export const renderMarkerJSX: (
     removeProgress: number = animationProgress
 ): JSX.Element | null => {
     if (!marker || marker.length === 0 ) { return null; }
-    if (!series?.marker?.visible && seriesType !== 'Bubble' && seriesType !== 'Scatter') {
+    const isEnhancedOutliers: boolean = series?.type === 'BoxAndWhisker' && series?.boxAndWhiskerSettings?.showOutliers === true && !series?.marker?.visible;
+    if (!series?.marker?.visible && !isEnhancedOutliers && seriesType !== 'Bubble' && (seriesType?.indexOf('Scatter') as number === -1)) {
         return null;
     }
     // Filter markers to only include those for the current series
@@ -517,17 +598,25 @@ export const renderMarkerJSX: (
         <>
             {filteredMarkers.map((markerData: MarkerProperties, markerLoopIndex: number) => {
                 if (!markerData) { return null; }
-                const clipPathUrl: string = seriesType === 'Bubble'
-                    ? `url(#${chartElementId}_ChartSeriesClipRect_${seriesIndexes})`
-                    : `url(#${markerData.options?.id})`;
 
                 // Get the current series to check for marker animation progress
                 const currentSeries: SeriesProperties | undefined = series;
+                const isOutlierOnly: boolean =
+                    currentSeries?.type === 'BoxAndWhisker' &&
+                    currentSeries?.boxAndWhiskerSettings?.showOutliers === true &&
+                    !currentSeries?.marker?.visible;
+
                 const isInitialAnimation: boolean | undefined = currentSeries?.animation?.enable &&
                     !propsChange &&
                     !currentSeries?.isLegendClicked &&
-                    !currentSeries?.skipMarkerAnimation;
+                    !currentSeries?.skipMarkerAnimation && !isOutlierOnly;
 
+                const markerClipId: string = currentSeries?.category === 'TrendLine' ? `${chartElementId}TrendlineSymbolGroup${currentSeries.trendIndex}` : `${chartElementId}_ChartMarkerClipRect_${seriesIndexes}`;
+                const clipPathUrl: string = seriesType === 'Bubble' ? `url(#${chartElementId}_ChartSeriesClipRect_${seriesIndexes})` : `url(#${markerClipId})`;
+                const markerWidth: number = series?.marker?.width ?? 0;
+                const markerHeight: number = series?.marker?.height ?? 0;
+                const borderWidth: number = series?.marker?.border?.width ?? 0;
+                const paddingX: number = seriesType === 'Bubble' ? 0 : Math.ceil(Math.max(markerWidth, markerHeight) / 2) + borderWidth;
                 return (
                     <g key={markerLoopIndex} id={currentSeries?.category === 'TrendLine' ? `${chartElementId}TrendlineSymbolGroup${currentSeries.trendIndex}` : markerData.symbolGroup?.id}
                         transform={markerData.symbolGroup?.transform}
@@ -537,24 +626,26 @@ export const renderMarkerJSX: (
                                 ? currentSeries.markerClipPath
                                 : undefined
                         }}>
-                        <defs>
-                            <clipPath id={currentSeries?.category === 'TrendLine' ? `${chartElementId}TrendlineSymbolGroup${currentSeries.trendIndex}` : markerData.symbolGroup?.id}>
-                                <rect
-                                    id={currentSeries?.category === 'TrendLine' ? `${chartElementId}TrendlineSymbolGroup${currentSeries.trendIndex}` : markerData.symbolGroup?.id + '_Rect'}
-                                    opacity={markerData.options?.opacity}
-                                    fill={markerData.options?.fill}
-                                    stroke={markerData.options?.stroke}
-                                    strokeWidth={markerData.options?.strokeWidth}
-                                    y={markerData.options?.y}
-                                    x={markerData.options?.x}
-                                    height={markerData.options?.height}
-                                    width={markerData.options?.width}
-                                    rx={markerData.options?.rx}
-                                    ry={markerData.options?.ry}
-                                    transform={markerData.options?.transform}
-                                />
-                            </clipPath>
-                        </defs>
+                        {(seriesType?.indexOf('Scatter') as number === -1) && seriesType !== 'Bubble' && (
+                            <defs>
+                                <clipPath id={markerClipId} clipPathUnits="userSpaceOnUse">
+                                    <rect
+                                        id={`${markerClipId}_Rect`}
+                                        opacity={markerData.options?.opacity}
+                                        fill={markerData.options?.fill}
+                                        stroke={markerData.options?.stroke}
+                                        strokeWidth={markerData.options?.strokeWidth}
+                                        y={markerData.options?.y}
+                                        x={(markerData.options?.x as number) - paddingX}
+                                        height={markerData.options?.height}
+                                        width={(markerData.options?.width as number) + 2 * paddingX}
+                                        rx={markerData.options?.rx}
+                                        ry={markerData.options?.ry}
+                                        transform={markerData.options?.transform}
+                                    />
+                                </clipPath>
+                            </defs>
+                        )}
                         {markerData.markerOptionsList && markerData.markerOptionsList.length > 0 &&
                         markerData.markerOptionsList.map((option: MarkerOptions, markerIndex: number) => {
                             const markerOptionsLength: number = markerData.markerOptionsList?.length as number;
@@ -566,12 +657,18 @@ export const renderMarkerJSX: (
                             const isTrendLine: boolean = currentSeries?.category === 'TrendLine';
                             const trendLineID: string = `${chartElementId}_Series_${currentSeries?.sourceIndex}_Trendline_${currentSeries?.trendIndex}_Symbol${pointIndex}`;
                             if (option.id) {
-                                const match: RegExpMatchArray = option.id.match(/_Series_(\d+)_Point_(\d+)_/) as RegExpMatchArray;
+                                const match: RegExpMatchArray | null = option.id.match(/_Series_(\d+)_Point_(\d+)_/) as RegExpMatchArray | null;
                                 if (match) {
                                     extractedSeriesIndex = parseInt(match[1], 10);
                                     pointIndex = parseInt(match[2], 10);
                                 }
                             }
+                            const currentPoint: Points | undefined = currentSeries?.points?.[pointIndex as number];
+                            // Detect BoxAndWhisker outlier markers by symbol id suffix
+                            const isBWOutlierMarker: boolean = !!(currentSeries && currentSeries.type === 'BoxAndWhisker' &&
+                                currentSeries.boxAndWhiskerSettings?.showOutliers === true && typeof option.id === 'string' &&
+                                option.id.includes('_Outlier_Symbol')
+                            );
                             // Create a unique key for the marker to track its position using extracted indices
                             const markerKey: string = `${extractedSeriesIndex}_${pointIndex}`;
 
@@ -611,9 +708,9 @@ export const renderMarkerJSX: (
 
                             // If no previous explicit position, check our tracking map
                             if (previousCx === undefined || previousCy === undefined) {
-                                const seriesPositions: markerOptions[] | undefined = chartPositions.get(markerKey);
+                                const seriesPositions: MarkerShapeOptions[] | undefined = chartPositions.get(markerKey);
                                 if (seriesPositions && seriesPositions[markerIndex as number]) {
-                                    const pos: markerOptions = seriesPositions[markerIndex as number];
+                                    const pos: MarkerShapeOptions = seriesPositions[markerIndex as number];
                                     previousCx = pos.cx;
                                     previousCy = pos.cy;
 
@@ -647,7 +744,7 @@ export const renderMarkerJSX: (
                                             seriesMap &&
                                             seriesMap[`${pointIdx + 1}`]
                                         ) {
-                                            let pos: markerOptions = seriesMap[`${pointIdx + 1}`];
+                                            let pos: MarkerShapeOptions = seriesMap[`${pointIdx + 1}`];
                                             previousCx = pos?.cx;
                                             previousCy = pos?.cy;
                                             if (previousCx === undefined) {
@@ -666,7 +763,7 @@ export const renderMarkerJSX: (
                             let cx: number = 0;
                             let cy: number = 0;
 
-                            if ((series?.type === 'Scatter' || series?.type === 'Bubble') && series.isLegendClicked) {
+                            if (((series?.type?.indexOf('Scatter') as number > -1) || series?.type === 'Bubble') && series?.isLegendClicked) {
                                 cx = currentCx;
                                 cy = currentCy;
                             } else {
@@ -686,14 +783,14 @@ export const renderMarkerJSX: (
 
                             const currentD: string = option.d as string;
                             // Get previous path data
-                            let previousD: string = '';
+                            //let previousD: string = '';
 
-                            previousD = chartPositions.get(markerKey)?.[markerIndex as number]?.d as string ?? previousD;
+                            //previousD = chartPositions.get(markerKey)?.[markerIndex as number]?.d as string ?? previousD;
 
                             // Store current position and path for future animations if animation is complete
                             if (animationProgress === 1 && series) {
                                 void (chartPositions.has(markerKey) ? null : chartPositions.set(markerKey, []));
-                                const positions: markerOptions[] = chartPositions.get(markerKey)!;
+                                const positions: MarkerShapeOptions[] = chartPositions.get(markerKey) as MarkerShapeOptions[];
                                 positions[markerIndex as number] = {
                                     cx: currentCx,
                                     cy: currentCy,
@@ -732,14 +829,19 @@ export const renderMarkerJSX: (
                                         fill={option.fill}
                                         stroke={option.stroke as string}
                                         strokeWidth={option.strokeWidth as number}
-                                        cx={cx}
-                                        cy={cy}
+                                        cx={(isNaN(cx) ? 0 : cx)}
+                                        cy={(isNaN(cy) ? 0 : cy)}
                                         rx={animatedRx as number}
                                         ry={animatedRy as number}
                                         strokeDasharray={option.strokeDasharray as string}
-                                        strokeOpacity={series?.type !== 'Scatter' ? animatedOpacity : 1}
+                                        strokeOpacity={series?.type?.indexOf('Scatter') as number === -1 ? animatedOpacity : 1}
                                         role="img"
-                                        aria-label={(series?.type !== 'Scatter' && series?.type !== 'Bubble') && series?.points[markerIndex as number] !== undefined ? series?.accessibility?.descriptionFormat ? formatAccessibilityDescription(series.points[markerIndex as number], series) : (series?.points[markerIndex as number]?.x + ': ' + series?.points[markerIndex as number]?.y + ', ' + series?.name) : ''}
+                                        aria-label={resolveMarkerAriaLabel({markerOption: option, markerIndex: pointIndex, seriesType,
+                                            series, point: currentPoint, isEnhancedOutliers })}
+                                        onMouseEnter={isBWOutlierMarker ? handleOutlierMouseEnter : undefined}
+                                        onMouseLeave={isBWOutlierMarker ? handleOutlierMouseLeave : undefined}
+                                        data-outlier-fill={isBWOutlierMarker ? (option.fill ?? OUTLIER_SHADOW_FALLBACK) : undefined}
+                                        data-base-stroke-width={isBWOutlierMarker ? String(option.strokeWidth ?? 0) : undefined}
                                     />
                                 );
                             } else if ((shape === 'Image' || option.shape === 'Image') && option.d === '') {
@@ -755,7 +857,12 @@ export const renderMarkerJSX: (
                                         y={option.y as number}
                                         visibility="visible"
                                         role="img"
-                                        aria-label={(series?.type !== 'Scatter' && series?.type !== 'Bubble') && series?.points[markerIndex as number] !== undefined ? series?.accessibility?.descriptionFormat ? formatAccessibilityDescription(series.points[markerIndex as number], series) : (series?.points[markerIndex as number]?.x + ': ' + series?.points[markerIndex as number]?.y + ', ' + series?.name) : ''}
+                                        aria-label={resolveMarkerAriaLabel({markerOption: option, markerIndex: pointIndex, seriesType,
+                                            series, point: currentPoint, isEnhancedOutliers })}
+                                        onMouseEnter={isBWOutlierMarker ? handleOutlierMouseEnter : undefined}
+                                        onMouseLeave={isBWOutlierMarker ? handleOutlierMouseLeave : undefined}
+                                        data-outlier-fill={isBWOutlierMarker ? (option.fill ?? OUTLIER_SHADOW_FALLBACK) : undefined}
+                                        data-base-stroke-width={isBWOutlierMarker ? String(option.strokeWidth ?? 0) : undefined}
                                     />
                                 );
                             } else {
@@ -767,7 +874,7 @@ export const renderMarkerJSX: (
 
 
                                 if (chartPositions.has(markerKey) && chartPositions.get(markerKey as string)?.[markerIndex as number] &&
-                                 previousD !== currentD && series?.type !== 'Scatter') {
+                                 previousD !== currentD && (series?.type?.indexOf('Scatter') as number === -1)) {
 
                                     interpolatedPath = interpolatePathD(previousD,
                                                                         currentD, animationProgress, series?.isLegendClicked, series?.type);
@@ -782,9 +889,15 @@ export const renderMarkerJSX: (
                                         strokeWidth={option.strokeWidth as number}
                                         d={interpolatedPath}
                                         strokeDasharray={option.strokeDasharray as string}
-                                        strokeOpacity={series?.type !== 'Scatter' ? animatedOpacity : 1}
-                                        role="img"
-                                        aria-label={(series?.type !== 'Scatter' && series?.type !== 'Bubble') && series?.points[markerIndex as number] !== undefined ? series?.accessibility?.descriptionFormat ? formatAccessibilityDescription(series.points[markerIndex as number], series) : (series?.points[markerIndex as number]?.x + ': ' + series?.points[markerIndex as number]?.y + ', ' + series?.name) : ''}
+                                        strokeOpacity={series?.type?.indexOf('Scatter') as number === -1 ? animatedOpacity : 1}
+                                        {...(interpolatedPath && {
+                                            role: 'img',
+                                            'aria-label': resolveMarkerAriaLabel({ markerOption: option, markerIndex: pointIndex, seriesType, series, point: currentPoint, isEnhancedOutliers })
+                                        })}
+                                        onMouseEnter={isBWOutlierMarker ? handleOutlierMouseEnter : undefined}
+                                        onMouseLeave={isBWOutlierMarker ? handleOutlierMouseLeave : undefined}
+                                        data-outlier-fill={isBWOutlierMarker ? (option.fill ?? OUTLIER_SHADOW_FALLBACK) : undefined}
+                                        data-base-stroke-width={isBWOutlierMarker ? String(option.strokeWidth ?? 0) : undefined}
                                     />
                                 );
                             }

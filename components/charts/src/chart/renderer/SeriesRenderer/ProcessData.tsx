@@ -1,13 +1,15 @@
 import { DataManager, DataUtil, Query } from '@syncfusion/react-data';
 import { useData } from '../../common/data';
 import { isNullOrUndefined, extend } from '@syncfusion/react-base';
-import { EmptyPointMode } from '../../base/enum';
-import { findSeriesCollection, isRectangularSeriesType, setRange, useVisiblePoints } from '../../utils/helper';
+import { ChartSeriesType, EmptyPointMode, IndicatorsType } from '../../base/enum';
+import { findSeriesCollection, firstToLowerCase, isRectangularSeriesType, setRange, calculateVisiblePoints } from '../../utils/helper';
 import { refreshAxisLabel } from '../AxesRenderer/AxisRender';
-import { Chart, ChartTrendlineModel, Points, SeriesProperties } from '../../chart-area/chart-interfaces';
+import { Chart, ChartIndicatorSettings, ChartTrendlineModel, Points, SeriesProperties } from '../../chart-area/chart-interfaces';
 import { initDataSource } from './TrendlinesRenderer';
 import HistogramSeriesRenderer from './HistogramSeriesRenderer';
 import { performCumulativeCalculation } from './ParetoSeriesRenderer';
+import { indicatorModules } from '../IndicatorsRenderer/ChartIndicatorsBase';
+import { ChartRangeColorProps } from '../../base/interfaces';
 
 /**
  * Constants used in the ProcessData component
@@ -39,16 +41,21 @@ type DataRecord = Record<string, string | number | boolean | Date | null>;
  * @param {Object} dataObject - Specifies the series data object.
  * @param {Object} dataObject.result - The actual data.
  * @param {number} dataObject.count - The count of data.
- * @param {Series} [series] - Optional series instance to be updated with fetched data.
+ * @param {SeriesProperties} [series] - Optional series instance to be updated with fetched data.
+ * @param {ChartIndicatorSettings[]} [chartIndicators] - Optional array of chart technical indicators.
+ * @param {ChartRangeColorProps[]} [rangeColor] - Optional range color mapping configurations.
+ * @param {SeriesProperties[]} [visibleSeries] - Optional visible series array used for range color processing.
  * @returns {void}
  */
-const dataManagerSuccess: (dataObject: { result: Object; count: number }, series?: SeriesProperties) => void =
-    (dataObject: { result: Object; count: number }, series?: SeriesProperties) => {
+const dataManagerSuccess: (dataObject: { result: Object; count: number }, series?: SeriesProperties
+    , chartIndicators?: ChartIndicatorSettings[], rangeColor?: ChartRangeColorProps[], visibleSeries?: SeriesProperties[]) => void =
+    (dataObject: { result: Object; count: number }, series?: SeriesProperties, chartIndicators?: ChartIndicatorSettings[]
+        , rangeColor?: ChartRangeColorProps[], visibleSeries?: SeriesProperties[]) => {
         [series].filter(Boolean).forEach((seriesArray: SeriesProperties | undefined) => {
             // Skip if we already have points data
             if (seriesArray && (!seriesArray.points || seriesArray.points.length === 0)) {
                 seriesArray.currentViewData = dataObject.count ? dataObject.result : [];
-                processJsonData(seriesArray);
+                processJsonData(seriesArray, rangeColor, visibleSeries);
                 seriesArray.recordsCount = dataObject.count;
                 seriesArray.currentViewData = null;
             }
@@ -60,17 +67,42 @@ const dataManagerSuccess: (dataObject: { result: Object; count: number }, series
                     }
                 }
             }
+            refreshTechnicalIndicator(seriesArray, chartIndicators);
         });
     };
+
+/**
+ * Find and refresh the technical indicator associated with a series.
+ *
+ * @private
+ * @param {SeriesProperties} [series] - The source series or indicator instance.
+ * @param {ChartIndicatorSettings[]} [chartIndicators] - Global indicator list to search.
+ * @returns {void}
+ */
+function refreshTechnicalIndicator(series: SeriesProperties | undefined, chartIndicators?: ChartIndicatorSettings[]): void {
+    if (chartIndicators?.length) {
+        if (series && series?.category !== 'Indicator') {
+            for (const indicator of chartIndicators) {
+                if (indicator.seriesName !== '' && indicator.seriesName === series?.name) {
+                    setDataSource(series, indicator);
+                }
+            }
+        }
+    }
+}
 
 /**
  * Processes data for the series.
  *
  * @hidden
- * @param {Series} series - The chart series object to process.
+ * @param {SeriesProperties} series - The chart series object to process.
+ * @param {ChartRangeColorProps[]} [rangeColor] - Optional range color mapping configurations.
+ * @param {SeriesProperties[]} [visibleSeries] - Optional visible series array used for range color processing.
  * @returns {void}
  */
-export const processJsonData: (series: SeriesProperties) => void = (series: SeriesProperties) => {
+export const processJsonData: (series: SeriesProperties, rangeColor?: ChartRangeColorProps[]
+    , visibleSeries?: SeriesProperties[]) => void = (series: SeriesProperties, rangeColor?: ChartRangeColorProps[]
+    , visibleSeries?: SeriesProperties[]) => {
     let i: number = 0;
     const point: Points = createPoint();
     const xName: string = series.xField as string;
@@ -112,17 +144,17 @@ export const processJsonData: (series: SeriesProperties) => void = (series: Seri
     // Process points based on axis type
     if (series.xAxis.valueType === 'Category') {
         while (i < len) {
-            pushCategoryPoint(series, point, i, xName, textMappingName);
+            pushCategoryPoint(series, point, i, xName, textMappingName, rangeColor, visibleSeries);
             i++;
         }
     } else if (series.xAxis.valueType === 'DateTime') {
         while (i < len) {
-            pushDateTimePoint(series, point, i, xName, textMappingName);
+            pushDateTimePoint(series, point, i, xName, textMappingName, rangeColor, visibleSeries);
             i++;
         }
     } else {
         while (i < len) {
-            pushDoublePoint(series, point, i, xName, textMappingName);
+            pushDoublePoint(series, point, i, xName, textMappingName, rangeColor, visibleSeries);
             i++;
         }
     }
@@ -135,7 +167,7 @@ export const processJsonData: (series: SeriesProperties) => void = (series: Seri
  * Finds the type of the series.
  *
  * @private
- * @param {Series} series - The series object whose type needs to be identified.
+ * @param {SeriesProperties} series - The series object whose type needs to be identified.
  * @returns {void}
  */
 const getSeriesType: (series: SeriesProperties) => void = (series: SeriesProperties): void => {
@@ -151,9 +183,15 @@ const getSeriesType: (series: SeriesProperties) => void = (series: SeriesPropert
                 break;
             case 'Hilo':
             case 'RangeArea':
+            case 'RangeStepArea':
             case 'SplineRangeArea':
             case 'RangeColumn':
+            case 'PolarRangeColumn':
+            case 'RadarRangeColumn':
                 s.seriesType = 'HighLow';
+                break;
+            case 'BoxAndWhisker':
+                s.seriesType = 'BoxPlot';
                 break;
             default:
                 s.seriesType = 'XY';
@@ -171,13 +209,55 @@ const getSeriesType: (series: SeriesProperties) => void = (series: SeriesPropert
     });
 };
 
+
+/**
+ * Initialize the indicator's data from a source series and invoke its module initializer.
+ *
+ * @private
+ * @param {SeriesProperties | undefined} series - Optional source series supplying x/y data and points.
+ * @param {ChartIndicatorSettings} indicator - The indicator model to initialize.
+ * @returns {void}
+ */
+function setDataSource(series: SeriesProperties | undefined, indicator: ChartIndicatorSettings): void {
+    if (series) {
+        indicator.xData = series.xData ?? [];
+        indicator.yData = series.yData ?? [];
+        indicator.points = series.points ?? [];
+    }
+
+    const rawType: IndicatorsType | undefined = indicator.type as IndicatorsType | undefined;
+    if (!rawType || !indicator.visible) {
+        return;
+    }
+
+    const moduleKey: string = `${firstToLowerCase(rawType)}IndicatorModule` as string;
+    const maybeModule: {
+        initDataSource?: ((ind: ChartIndicatorSettings) => void) | undefined;
+    } | undefined = indicatorModules[moduleKey as string] as {
+        initDataSource?: (ind:
+        ChartIndicatorSettings) => void
+    } | undefined;
+
+    if (maybeModule && typeof maybeModule.initDataSource === 'function') {
+        maybeModule.initDataSource(indicator);
+    }
+
+    // chart.visibleSeriesCount += this.targetSeries.length; // preserved for future use
+}
+
 /**
  * Refreshes the data manager for the series.
  *
- * @param {Series} series — The series needing source data fetch/refresh.
+ * @param {SeriesProperties} series - The series needing source data fetch/refresh.
+ * @param {ChartIndicatorSettings[]} [chartIndicators] - Optional array of chart technical indicators.
+ * @param {ChartRangeColorProps[]} [rangeColor] - Optional range color mapping configurations.
+ * @param {SeriesProperties[]} [visibleSeries] - Optional visible series array used for range color processing.
  * @returns {void}
  */
-export const refreshDataManager: (series: SeriesProperties) => void = (series: SeriesProperties): void => {
+export const refreshDataManager: (series: SeriesProperties, chartIndicators?: ChartIndicatorSettings[]
+    , rangeColor?: ChartRangeColorProps[], visibleSeries?: SeriesProperties[]) => void = (series:
+SeriesProperties, chartIndicators?: ChartIndicatorSettings[], rangeColor?: ChartRangeColorProps[]
+, visibleSeries?: SeriesProperties[]): void => {
     if (series.points && series.points.length > 0 && (series.dataSource instanceof DataManager)) {
         return;
     }
@@ -186,7 +266,7 @@ export const refreshDataManager: (series: SeriesProperties) => void = (series: S
 
     // Handle local array data source directly
     if (Array.isArray(dataSource) && !(dataSource instanceof DataManager) && !series.query) {
-        dataManagerSuccess({ result: dataSource, count: dataSource.length }, series);
+        dataManagerSuccess({ result: dataSource, count: dataSource.length }, series, chartIndicators, rangeColor, visibleSeries);
         triggerChartRerender(series);
         return;
     }
@@ -332,10 +412,15 @@ export function createPoint(): Points {
 /**
  * Processes and manages chart series data.
  *
- * @param {Series[]} chartSeries - An array of Series objects to be processed.
- * @returns {Series[]} - Returns the processed series array.
+ * @param {SeriesProperties[]} chartSeries - An array of SeriesProperties objects to be processed.
+ * @param {ChartIndicatorSettings[]} [chartIndicators] - Optional array of chart technical indicators.
+ * @param {ChartRangeColorProps[]} [rangeColor] - Optional range color mapping configurations.
+ * @returns {SeriesProperties[]} - Returns the processed series array.
  */
-export const processChartSeries: (chartSeries: SeriesProperties[]) => SeriesProperties[] = (chartSeries: SeriesProperties[]) => {
+export const processChartSeries: (chartSeries: SeriesProperties[]
+    , chartIndicators?: ChartIndicatorSettings[], rangeColor?: ChartRangeColorProps[]) =>
+SeriesProperties[] = (chartSeries: SeriesProperties[]
+    , chartIndicators?: ChartIndicatorSettings[], rangeColor?: ChartRangeColorProps[]) => {
     const visibleSeries: SeriesProperties[] = chartSeries;
 
     /**
@@ -351,7 +436,7 @@ export const processChartSeries: (chartSeries: SeriesProperties[]) => SeriesProp
             const isDataManager: boolean = series.dataSource as boolean &&
                 typeof series.dataSource === 'object' &&
                 !Array.isArray(series.dataSource) &&
-                'executeQuery' in (series.dataSource as any);
+                'executeQuery' in (series.dataSource as Object[]);
 
             // Skip if already processed and has points
             if (series.points && series.points.length > 0 && isDataManager) {
@@ -360,8 +445,8 @@ export const processChartSeries: (chartSeries: SeriesProperties[]) => SeriesProp
             }
 
             // Initialize data module for the series
-            if (series.category !== 'TrendLine') {
-                initializeDataModule(series);
+            if (series.category !== 'Indicator' && series.category !== 'TrendLine') {
+                initializeDataModule(series, chartIndicators, rangeColor);
             }
         }
     };
@@ -369,16 +454,20 @@ export const processChartSeries: (chartSeries: SeriesProperties[]) => SeriesProp
     /**
      * Initializes the data module for the series and refreshes data management.
      *
-     * @param {Series} series - The series for which the data module is initialized.
-     * @returns {void} This function does not return a value.
+     * @param {SeriesProperties} series - The series for which the data module is initialized.
+     * @param {ChartIndicatorSettings[]} [chartIndicators] - Optional array of chart technical indicators.
+     * @param {ChartRangeColorProps[]} [rangeColor] - Optional range color mapping configurations.
+     * @returns {void}
      */
-    const initializeDataModule: (series: SeriesProperties) => void = (series: SeriesProperties) => {
+    const initializeDataModule: (series: SeriesProperties, chartIndicators?: ChartIndicatorSettings[]
+        , rangeColor?: ChartRangeColorProps[]) => void =
+    (series: SeriesProperties, chartIndicators?: ChartIndicatorSettings[], rangeColor?: ChartRangeColorProps[]) => {
         series.xData = [];
         series.yData = [];
         const dataSource: Object | DataManager | undefined = series.dataSource;
         series.dataModule = useData(dataSource, series.query as Query);
         series.points = [];
-        refreshDataManager(series);
+        refreshDataManager(series, chartIndicators, rangeColor, visibleSeries);
     };
 
 
@@ -389,26 +478,31 @@ export const processChartSeries: (chartSeries: SeriesProperties[]) => SeriesProp
 /**
  * Pushes a category point to the data collection.
  *
- * @param {Series} series - The series model
+ * @param {SeriesProperties} series - The series model
  * @param {Points} point - The point to be pushed.
  * @param {number} index - The index of the point.
  * @param {string} xName - The name of the x-coordinate.
  * @param {string} textMappingName - The name of dataLabel mapping.
+ * @param {ChartRangeColorProps[]} [rangeColor] - Optional range color mapping configurations.
+ * @param {SeriesProperties[]} [visibleSeries] - Optional visible series array used for range color processing.
  * @returns {void}
  */
-export const pushCategoryPoint: (series: SeriesProperties, point: Points, index: number, xName: string, textMappingName: string) => void =
-(series: SeriesProperties, point: Points, index: number, xName: string, textMappingName: string): void => {
-    point = dataPoint(index, textMappingName, xName, series);
+export const pushCategoryPoint: (series: SeriesProperties, point: Points, index: number, xName: string,
+    textMappingName: string, rangeColor?: ChartRangeColorProps[], visibleSeries?: SeriesProperties[]) => void =
+(series: SeriesProperties, point: Points, index: number, xName: string, textMappingName: string,
+ rangeColor?: ChartRangeColorProps[], visibleSeries?: SeriesProperties[]): void => {
+    point = dataPoint(index, textMappingName, xName, series, rangeColor, visibleSeries);
     pushCategoryData(point, point.x as string, series, index);
     pushData(point, index, series);
     setEmptyPoint(point, series, index);
+    rangeColorsInterior(point, series, rangeColor, visibleSeries as SeriesProperties[]);
 };
 /**
  * Pushes category data into the series points.
  *
  * @param {Points} point - The point to which category data will be pushed.
  * @param {string} pointX - The x-value of the point.
- * @param {Series} series - The series object.
+ * @param {SeriesProperties} series - The series object.
  * @param {number} index - The index of the point.
  * @returns {void}
  * @private
@@ -433,19 +527,48 @@ export const pushCategoryData: (point: Points, pointX: string, series: SeriesPro
 };
 
 /**
+ * Groups points by their color and stores them in the series' range color points collection.
+ * Only applies to supported series types (Column, Bar, Scatter, Bubble) with range color mapping.
+ *
+ * @private
+ * @param {Points} point - The data point to be grouped by color.
+ * @param {SeriesProperties} series - The series object containing the range color points collection.
+ * @param {ChartRangeColorProps[]} [rangeColor] - Optional range color mapping configurations.
+ * @param {SeriesProperties[]} [visibleSeries] - Optional visible series array used to validate supported types.
+ * @returns {void}
+ */
+function rangeColorsInterior(point: Points, series: SeriesProperties, rangeColor?: ChartRangeColorProps[]
+    , visibleSeries?: SeriesProperties[]): void {
+    if (visibleSeries && rangeColor && rangeColor.length > 0
+        && visibleSeries.length === 1 &&
+        (visibleSeries[0].type === 'Column' || visibleSeries[0].type === 'Bar' ||
+            visibleSeries[0].type === 'Scatter' || visibleSeries[0].type === 'Bubble')) {
+        series.rangeColorPoints = series.rangeColorPoints || {};
+        const key: string = String(point.interior);
+        if (!series.rangeColorPoints[key as string]) {
+            series.rangeColorPoints[key as string] = [];
+        }
+        series.rangeColorPoints[key as string].push(point);
+    }
+}
+/**
  * Pushes a DateTime point to the data collection.
  *
- * @param {Series} series - The series object
+ * @param {SeriesProperties} series - The series object
  * @param {Points} point -The point to be pushed.
  * @param {number} index -The index of the point.
  * @param {string} xName -The name of the x-coordinate.
  * @param {string} textMappingName - The name of dataLabel mapping.
+ * @param {ChartRangeColorProps[]} [rangeColor] - Optional range color mapping configurations.
+ * @param {SeriesProperties[]} [visibleSeries] - Optional visible series array used for range color processing.
  * @returns {void}
  * @private
  */
-export const pushDateTimePoint: (series: SeriesProperties, point: Points, index: number, xName: string, textMappingName: string) => void =
-(series: SeriesProperties, point: Points, index: number, xName: string, textMappingName: string): void => {
-    point = dataPoint(index, textMappingName as string, xName, series);
+export const pushDateTimePoint: (series: SeriesProperties, point: Points, index: number, xName: string
+    , textMappingName: string, rangeColor?: ChartRangeColorProps[], visibleSeries?: SeriesProperties[]) => void =
+(series: SeriesProperties, point: Points, index: number, xName: string, textMappingName: string
+    , rangeColor?: ChartRangeColorProps[], visibleSeries?: SeriesProperties[]): void => {
+    point = dataPoint(index, textMappingName as string, xName, series, rangeColor, visibleSeries);
     if (!isNullOrUndefined(point.x) && point.x !== '') {
         point.x = new Date(
             (DataUtil.parse as Required<typeof DataUtil.parse>).parseJson({ val: point.x }).val
@@ -453,6 +576,7 @@ export const pushDateTimePoint: (series: SeriesProperties, point: Points, index:
         point.xValue = Date.parse(point.x.toString());
         pushData(point, index, series);
         setEmptyPoint(point, series, index);
+        rangeColorsInterior(point, series, rangeColor, visibleSeries as SeriesProperties[]);
     } else {
         point.visible = false;
     }
@@ -461,20 +585,25 @@ export const pushDateTimePoint: (series: SeriesProperties, point: Points, index:
 /**
  * Pushes a double point to the data collection.
  *
- * @param {Series} series - The series to which the point belongs.
+ * @param {SeriesProperties} series - The series to which the point belongs.
  * @param {Points} point - The point to be pushed.
  * @param {number} index - The index of the point.
  * @param {string} xName - The name of the x-coordinate.
  * @param {string} textMappingName - The name of dataLabel mapping.
+ * @param {ChartRangeColorProps[]} [rangeColor] - Optional range color mapping configurations.
+ * @param {SeriesProperties[]} [visibleSeries] - Optional visible series array used for range color processing.
  * @returns {void}
  * @private
  */
-export const pushDoublePoint: (series: SeriesProperties, point: Points, index: number, xName: string, textMappingName?: string) => void =
-    (series: SeriesProperties, point: Points, index: number, xName: string, textMappingName?: string): void => {
-        point = dataPoint(index, textMappingName as string, xName, series);
+export const pushDoublePoint: (series: SeriesProperties, point: Points, index: number, xName: string
+    , textMappingName?: string, rangeColor?: ChartRangeColorProps[], visibleSeries?: SeriesProperties[]) => void =
+    (series: SeriesProperties, point: Points, index: number, xName: string, textMappingName?: string
+        , rangeColor?: ChartRangeColorProps[], visibleSeries?: SeriesProperties[]): void => {
+        point = dataPoint(index, textMappingName as string, xName, series, rangeColor, visibleSeries);
         point.xValue = point.x as number;
         pushData(point, index, series);
         setEmptyPoint(point, series, index);
+        rangeColorsInterior(point, series, rangeColor, visibleSeries as SeriesProperties[]);
     };
 
 /**
@@ -483,17 +612,20 @@ export const pushDoublePoint: (series: SeriesProperties, point: Points, index: n
  * @param {number} i - The index of the data point to retrieve.
  * @param {string} textMappingName - The name of dataLabel mapping.
  * @param {string} xName - The name used for the x-axis.
- * @param {Series} series - The series object containing points and data.
+ * @param {SeriesProperties} series - The series object containing points and data.
+ * @param {ChartRangeColorProps[]} [rangeColor] - Optional range color mapping configurations.
+ * @param {SeriesProperties[]} [visibleSeries] - Optional visible series array used for range color processing.
  * @returns {Points} - The data point at the specified index.
  * @private
  */
-const dataPoint: (i: number, textMappingName: string,
-    xName: string, series: SeriesProperties) => Points = (i: number, textMappingName: string, xName: string, series: SeriesProperties) => {
+const dataPoint: (i: number, textMappingName: string, xName: string, series: SeriesProperties
+    , rangeColor?: ChartRangeColorProps[], visibleSeries?: SeriesProperties[]) => Points = (i: number, textMappingName: string
+    , xName: string, series: SeriesProperties, rangeColor?: ChartRangeColorProps[], visibleSeries?: SeriesProperties[]) => {
     series.points[i as number] = createPoint();
     const point: Points = series.points[i as number];
     const currentViewData: Object = (series.currentViewData as DataRecord[])[i as number];
     point.x = getObjectValueByMappingString(xName, currentViewData as DataRecord) as Object;
-    point.y = getObjectValueByMappingString(series.yField!, currentViewData as DataRecord) as Object;
+    point.y = getObjectValueByMappingString(series.yField as string, currentViewData as DataRecord) as Object;
     point.size = getObjectValueByMappingString(series.sizeField as string, currentViewData as DataRecord) as string;
     point.tooltip = getObjectValueByMappingString((series.tooltipField as string),
                                                   currentViewData as DataRecord) as string;
@@ -509,16 +641,69 @@ const dataPoint: (i: number, textMappingName: string,
     point.low = getObjectValueByMappingString(series.low as string, currentViewData as DataRecord) as string;
     point.open = getObjectValueByMappingString(series.open as string, currentViewData as DataRecord) as string;
     point.close = getObjectValueByMappingString(series.close as string, currentViewData as DataRecord) as string;
+    point.volume =  getObjectValueByMappingString(series.volume as string, currentViewData as DataRecord) as string;
+    if (rangeColor && isAdvancedColorSupported(series, rangeColor, visibleSeries as SeriesProperties[])) {
+        series.rangeColorName = series.colorField?.length as number > 0 ? series.colorField : series.yField;
+        point.colorValue = getObjectValueByMappingString(series.rangeColorName  as string, currentViewData as DataRecord) as number;
+        point.interior = getPointFillColor(point.interior, point.colorValue, rangeColor);
+    }
     return point;
 };
 
+/**
+ * Determines if the series supports advanced color mapping based on series type and range color configuration.
+ * Caches the result in the series object for subsequent calls.
+ *
+ * @private
+ * @param {SeriesProperties} series - The series object to check for advanced color support.
+ * @param {ChartRangeColorProps[]} rangeColor - The range color mapping configurations.
+ * @param {SeriesProperties[]} visibleSeries - The array of visible series used to validate supported types.
+ * @returns {boolean} - Returns true if advanced color is supported, false otherwise.
+ */
+function isAdvancedColorSupported(series: SeriesProperties
+    , rangeColor: ChartRangeColorProps[], visibleSeries: SeriesProperties[]): boolean {
+    if (isNullOrUndefined(series.isAdvancedColor)) {
+        if (rangeColor && rangeColor.length > 0 &&
+            (visibleSeries[0].type === 'Column' || visibleSeries[0].type === 'Bar' ||
+                visibleSeries[0].type === 'Scatter' || visibleSeries[0].type === 'Bubble')) {
+            series.isAdvancedColor = true;
+        } else {
+            series.isAdvancedColor = false;
+        }
+    }
+    return series.isAdvancedColor;
+}
+
+/**
+ * Retrieves the fill color for a point based on its value and the applicable range color mapping.
+ * If multiple colors are defined in the range, interpolates the color; otherwise, uses the single defined color.
+ *
+ * @private
+ * @param {string} pointFill - The default fill color for the point.
+ * @param {number} value - The numeric value used to determine the applicable color range.
+ * @param {ChartRangeColorProps[]} rangeColor - The array of range color mapping configurations.
+ * @returns {string} - The color for the point, either from range mapping or the default fill color.
+ */
+function getPointFillColor(pointFill: string, value: number, rangeColor: ChartRangeColorProps[]): string {
+    let color: string = pointFill;
+    if (value && rangeColor && rangeColor.length > 0) {
+        for (const rangeMap of rangeColor) {
+            if (rangeMap.start && rangeMap.end && value >= rangeMap.start && value <= rangeMap.end) {
+                if (rangeMap.fill && rangeMap.fill !== '') {
+                    color = rangeMap.fill as string;
+                }
+            }
+        }
+    }
+    return color;
+}
 
 /**
  * Sets the empty point values.
  *
  * @param {Points} point - The point to be set.
  * @param {number} i - The index of the point.
- * @param {Series} series - The series to which the point belongs.
+ * @param {SeriesProperties} series - The series to which the point belongs.
  * @private
  * @returns {void}
  */
@@ -592,7 +777,7 @@ export const setEmptyPoint: (point: Points, series: SeriesProperties, i: number)
  *
  * @param {string} member - The member whose average is to be calculated.
  * @param {number} i - The index of the data point.
- * @param {Series} series - The series object containing currentViewData.
+ * @param {SeriesProperties} series - The series object containing currentViewData.
  * @param {Object} data - The data array from which to calculate the average. Defaults to the current view data.
  * @returns {number} - The average value of the specified member.
  */
@@ -624,6 +809,29 @@ const findVisibility: (point: Points, series: SeriesProperties) => boolean = (po
         return isNullOrUndefined(point.x) || (isNullOrUndefined(point.low) || isNaN(+point.low)) ||
                 (isNullOrUndefined(point.open) || isNaN(+point.open)) || (isNullOrUndefined(point.close) || isNaN(+point.close))
                 || (isNullOrUndefined(point.high) || isNaN(+point.high));
+    case 'BoxPlot': {
+        const rawYValues: number[] = point.y as number[];
+        const numericYValues: number[] = Array.isArray(rawYValues)
+            ? rawYValues
+                .map((value: number) => (typeof value === 'number' ? value : Number(value)))
+                .filter((value: number) => Number.isFinite(value)) // Excludes NaN, Infinity, and invalid numeric conversions
+            : [];
+        if (numericYValues.length === 0 || isNullOrUndefined(point.x)) {
+            return true;
+        }
+        const localMin: number = Math.min(...numericYValues);
+        const localMax: number = Math.max(...numericYValues);
+        series.yMin = Math.min(series.yMin, localMin);
+        series.yMax = Math.max(series.yMax, localMax);
+        const valueCount: number = numericYValues.length;
+        const mid: number = Math.floor(valueCount / 2);
+        const sorted: number[] = [...numericYValues].sort((a: number, b: number) => a - b);
+        const median: number =
+                valueCount % 2 ? sorted[mid as number] : (sorted[mid - 1] + sorted[mid as number]) / 2;
+        point.yValue = median;
+        point.y = numericYValues as number[];
+        return false;
+    }
     default:
         return true;
     }
@@ -634,14 +842,14 @@ const findVisibility: (point: Points, series: SeriesProperties) => boolean = (po
  *
  * @private
  * @param {number} yValue - The y value used to determine the min and max for the series.
- * @param {Series} series - The series for which the yMin and yMax should be updated.
+ * @param {SeriesProperties} series - The series for which the yMin and yMax should be updated.
  * @returns {void}
  */
 const setXYMinMax: (yValue: number, series: SeriesProperties) => void = (yValue: number, series: SeriesProperties): void => {
     const isLogAxis: boolean = (series.yAxis.valueType === 'Logarithmic' || series.xAxis.valueType === 'Logarithmic');
     const isNegativeValue: boolean = yValue < 0 || series.yAxis.rangePadding === 'None';
     let seriesMinY: number;
-    if (isRectangularSeriesType(series, series.type!.indexOf('100') > -1) && !setRange(series.yAxis)) {
+    if (isRectangularSeriesType(series, (series.type as ChartSeriesType).indexOf('100') > -1) && !setRange(series.yAxis)) {
         seriesMinY = ((isLogAxis ? (yValue) : isNegativeValue ? yValue : 0));
     }
     else {
@@ -768,7 +976,7 @@ export const calculateStackingValues: (seriesCollection: SeriesProperties[], cha
             const stackedYTotalsByX: number[] = [];
             for (const series of seriesList) {
                 if ((series.type?.indexOf('Stacking') !== -1 && series.type?.indexOf('100') !== -1) || ((series.drawType?.indexOf('Stacking') !== -1) && series.type?.indexOf('100') !== -1)) {
-                    const points: Points[] = useVisiblePoints(series);
+                    const points: Points[] = calculateVisiblePoints(series);
                     const yValues: number[] = series.yData;
                     for (let j: number = 0; j < points.length; j++) {
                         const valueX: number = points[j as number].xValue as number;
@@ -795,7 +1003,7 @@ export const calculateStackingValues: (seriesCollection: SeriesProperties[], cha
                     startValues = [];
                     endValues = [];
                     stackingSeies.push(series);
-                    visiblePoints = useVisiblePoints(series);
+                    visiblePoints = calculateVisiblePoints(series);
 
                     for (let j: number = 0, pointsLength: number = visiblePoints.length; j < pointsLength; j++) {
                         lastValue = 0;
@@ -910,17 +1118,15 @@ export const calculateStackingValues: (seriesCollection: SeriesProperties[], cha
 /**
  * Calculates the percentage for stacking series.
  *
- * @param {Series[]} stackingSeies - Collection of stacking series.
+ * @param {SeriesProperties[]} stackingSeies - Collection of stacking series.
  * @param {number[]} values - The stacked values.
  * @returns {void}
  */
 export const findPercentageOfStacking: (stackingSeies: SeriesProperties[], values: number[]) => void
     = (stackingSeies: SeriesProperties[], values: number[]): void => {
         for (const item of stackingSeies) {
-            for (const point of useVisiblePoints(item)) {
+            for (const point of calculateVisiblePoints(item)) {
                 point.percentage = Math.abs(+((point.y as number) / values[point.index] * 100).toFixed(2));
             }
         }
     };
-
-

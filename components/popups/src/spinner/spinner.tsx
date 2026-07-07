@@ -1,5 +1,4 @@
-import * as React from 'react';
-import { forwardRef, useImperativeHandle, useMemo, useEffect, useRef} from 'react';
+import { forwardRef, useImperativeHandle, useMemo, useEffect, useRef, HTMLAttributes, ForwardRefExoticComponent, RefAttributes, Ref, RefObject, FC, memo, JSX, CSSProperties, ReactNode} from 'react';
 import { Color, preRender, formatUnit } from '@syncfusion/react-base';
 export { Color };
 
@@ -114,7 +113,13 @@ export interface ISpinner extends SpinnerProps {
      */
     element?: HTMLDivElement | null;
 }
-type SpinnerComponentProps = SpinnerProps & React.HTMLAttributes<HTMLDivElement>;
+
+interface SVGSpinnerProps {
+    thickness: number;
+    duration: string;
+}
+
+type SpinnerComponentProps = SpinnerProps & HTMLAttributes<HTMLDivElement>;
 
 /**
  * Spinner shows a lightweight loading indicator for pending operations. It supports multiple styles
@@ -129,8 +134,8 @@ type SpinnerComponentProps = SpinnerProps & React.HTMLAttributes<HTMLDivElement>
  * }
  * ```
  */
-export const Spinner: React.ForwardRefExoticComponent<SpinnerComponentProps & React.RefAttributes<ISpinner>> =
-forwardRef<ISpinner, SpinnerComponentProps>((props: SpinnerComponentProps, ref: React.Ref<ISpinner>) => {
+export const Spinner: ForwardRefExoticComponent<SpinnerComponentProps & RefAttributes<ISpinner>> =
+forwardRef<ISpinner, SpinnerComponentProps>((props: SpinnerComponentProps, ref: Ref<ISpinner>) => {
     const {
         className,
         label = '',
@@ -144,7 +149,7 @@ forwardRef<ISpinner, SpinnerComponentProps>((props: SpinnerComponentProps, ref: 
         children,
         ...rest
     } = props;
-    const elRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
+    const elRef: RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
     useEffect(() => {
         preRender('spinner');
     }, []);
@@ -170,19 +175,10 @@ forwardRef<ISpinner, SpinnerComponentProps>((props: SpinnerComponentProps, ref: 
      * @param {Object} props - Component props.
      * @param {number} props.thickness - Thickness of the spinner stroke.
      * @param {string} props.duration - Duration of the rotation animation.
-     * @returns {React.JSX.Element} - SVG spinner element.
+     * @returns {JSX.Element} - SVG spinner element.
      */
-    const CircularSVG: React.FC<{
-        thickness: number;
-        duration: string;
-    }> = ({
-        thickness,
-        duration
-    }: {
-        thickness: number;
-        duration: string;
-    }): React.JSX.Element => {
-        const memoizedSVG: React.JSX.Element = useMemo(() => {
+    const CircularSVG: FC<SVGSpinnerProps> = memo(({ thickness, duration }: SVGSpinnerProps) => {
+        const memoizedSVG: JSX.Element = useMemo(() => {
             const radius: number = (spinnerSize - thickness) / 2;
             const circumference: number = 2 * Math.PI * radius;
             return (
@@ -205,26 +201,17 @@ forwardRef<ISpinner, SpinnerComponentProps>((props: SpinnerComponentProps, ref: 
             );
         }, [thickness, duration, spinnerSize]);
         return memoizedSVG;
-    };
+    });
     /**
      * Renders a Cupertino SVG spinner.
      *
      * @param {Object} props - Component props.
      * @param {number} props.thickness - Thickness of the spinner stroke.
      * @param {string} props.duration - Duration of the rotation animation.
-     * @returns {React.JSX.Element} - SVG spinner element.
+     * @returns {JSX.Element} - SVG spinner element.
      */
-    const CupertinoSVG: React.FC<{
-        thickness: number;
-        duration: string;
-    }> = ({
-        duration,
-        thickness
-    }: {
-        thickness: number;
-        duration: string;
-    }): React.JSX.Element => {
-        const dotElements: React.JSX.Element[] = useMemo(() => {
+    const CupertinoSVG: FC<SVGSpinnerProps> = memo(({ thickness, duration }: SVGSpinnerProps) => {
+        const dotElements: JSX.Element[] = useMemo(() => {
             const dotCount: number = 12;
             const radius: number = spinnerSize / 2 - spinnerSize * 0.1;
             const strokeWidth: number = thickness;
@@ -260,31 +247,22 @@ forwardRef<ISpinner, SpinnerComponentProps>((props: SpinnerComponentProps, ref: 
                 {dotElements}
             </svg>
         );
-    };
+    });
     /**
      * Renders a DoubleCircle SVG spinner.
      *
      * @param {Object} props - Component props.
      * @param {number} props.thickness - Thickness of the spinner stroke.
      * @param {string} props.duration - Duration of the rotation animation.
-     * @returns {React.JSX.Element} - SVG spinner element.
+     * @returns {JSX.Element} - SVG spinner element.
      */
-    const DoubleCircle: React.FC<{
-        thickness: number;
-        duration: string;
-    }> = ({
-        thickness,
-        duration
-    }: {
-        thickness: number;
-        duration: string;
-    }): React.JSX.Element => {
+    const DoubleCircle: FC<SVGSpinnerProps> = memo(({ thickness, duration }: SVGSpinnerProps) => {
         const {
             outerCircleRadius,
             innerCircleRadius,
             outerDashLength,
             innerDashLength
-        } = React.useMemo(() => {
+        } = useMemo(() => {
             const outerCircleRadius: number = (spinnerSize - thickness) / 2;
             const innerCircleRadius: number = (spinnerSize - thickness * 5) / 2;
             const outerCircleCircumference: number = 2 * Math.PI * outerCircleRadius;
@@ -338,26 +316,17 @@ forwardRef<ISpinner, SpinnerComponentProps>((props: SpinnerComponentProps, ref: 
                 </svg>
             </>
         );
-    };
+    });
     /**
      * Renders a SingleCircle SVG spinner.
      *
      * @param {Object} props - Component props.
      * @param {number} props.thickness - Thickness of the spinner stroke.
      * @param {string} props.duration - Duration of the rotation animation.
-     * @returns {React.JSX.Element} - SVG spinner element.
+     * @returns {JSX.Element} - SVG spinner element.
      */
-    const SingleCircle: React.FC<{
-        thickness: number;
-        duration: string;
-    }>  = ({
-        thickness,
-        duration
-    }: {
-        thickness: number;
-        duration: string;
-    }): React.JSX.Element => {
-        const svgContent: React.JSX.Element = React.useMemo(() => {
+    const SingleCircle: FC<SVGSpinnerProps> = memo(({ thickness, duration }: SVGSpinnerProps) => {
+        const svgContent: JSX.Element = useMemo(() => {
             const radius: number = (spinnerSize - thickness) / 2;
             const circumference: number = 2 * Math.PI * radius;
             const segmentCount: number = 8;
@@ -385,7 +354,7 @@ forwardRef<ISpinner, SpinnerComponentProps>((props: SpinnerComponentProps, ref: 
         }, [thickness, duration]);
 
         return svgContent;
-    };
+    });
 
     const normalizeAnimationDuration: (input: string) => string = (input: string) => {
         if (typeof input !== 'string') {return '1s'; }
@@ -404,8 +373,8 @@ forwardRef<ISpinner, SpinnerComponentProps>((props: SpinnerComponentProps, ref: 
 
     const colorValue: Color = color;
     const thickValue: number = Math.max(1, parseFloat(thickness) || 3);
-    const durationValue: string = React.useMemo( () => normalizeAnimationDuration(animationDuration), [animationDuration] );
-    const spinnerNode: React.ReactNode = useMemo(() => {
+    const durationValue: string = useMemo( () => normalizeAnimationDuration(animationDuration), [animationDuration] );
+    const spinnerNode: ReactNode = useMemo(() => {
         if (children != null) {
             return children;
         }
@@ -422,7 +391,7 @@ forwardRef<ISpinner, SpinnerComponentProps>((props: SpinnerComponentProps, ref: 
         }
     }, [children, type, colorValue, thickValue, durationValue]);
     const spinnerWidth: string = formatUnit(size);
-    const spinnerSizeStyle: React.CSSProperties = useMemo(() => ({
+    const spinnerSizeStyle: CSSProperties = useMemo(() => ({
         width: spinnerWidth,
         height: spinnerWidth
     }), [spinnerWidth]);

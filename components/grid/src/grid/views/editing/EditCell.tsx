@@ -1,5 +1,5 @@
-import { forwardRef, useImperativeHandle, useRef, RefObject, useCallback, JSX, isValidElement, memo, ReactElement, RefAttributes, createElement } from 'react';
-import { ActionType, EditType, ValueType } from '../../types';
+import { forwardRef, useImperativeHandle, useRef, RefObject, useCallback, JSX, isValidElement, memo, createElement, useMemo, RefAttributes, ForwardRefExoticComponent } from 'react';
+import { ActionType, EditType, FocusedCellInfo, IFocusMatrix, ValueType } from '../../types';
 import { MutableGridSetter } from '../../types/interfaces';
 import { GridRef } from '../../types/grid.interfaces';
 import { EditParams, EditCellProps, EditCellRef, EditCellInputRef } from '../../types/edit.interfaces';
@@ -13,15 +13,23 @@ import { DataManager, DataResult, DataUtil, Predicate, Query } from '@syncfusion
 import { getCustomDateFormat } from '../../utils';
 import { getNumberPattern, Position } from '@syncfusion/react-base';
 
+// CSS class constants
+const CSS_FIELD_CLASS: string = 'sf-field';
+const CSS_ERROR_CLASS: string = 'sf-error';
+const CSS_FOCUS_CLASS: string = 'sf-focus';
+const CSS_CHECKBOX_WRAPPER: string = 'sf-checkbox-wrapper';
+const GRID_EDIT_PREFIX: string = 'grid-edit-';
+const ADAPTOR_URL: string = 'UrlAdaptor';
+
 /**
  * EditCell component for rendering different types of edit inputs
  *
  * @param props - EditCell component props
  * @param ref - Forward ref for imperative methods
- * @returns EditCell component
+ * @returns {JSX.Element | string} EditCell component
  */
-export const EditCell: <T>(props: EditCellProps<T> & RefAttributes<EditCellRef>) => ReactElement =
-    memo(forwardRef<EditCellRef, EditCellProps>(<T, >({
+export const EditCell: ForwardRefExoticComponent<EditCellProps<unknown> & RefAttributes<EditCellRef>> =
+    memo(forwardRef(function EditCell<T>({
         column,
         value,
         data,
@@ -34,13 +42,13 @@ export const EditCell: <T>(props: EditCellProps<T> & RefAttributes<EditCellRef>)
         formState,
         rowObject,
         popupRef
-    }: EditCellProps<T>, ref: React.ForwardedRef<EditCellRef>) => {
+    }: EditCellProps<T>, ref: React.ForwardedRef<EditCellRef>): JSX.Element | string {
         // Type for component refs that can be either native HTML elements or Syncfusion components
         const inputRef: RefObject<EditCellInputRef> = useRef<EditCellInputRef>(null);
 
         // Access grid context to get complete dataSource for dropdown
         const gridContext: Partial<GridRef<T>> & Partial<MutableGridSetter<T>> = useGridComputedProvider<T>();
-        const { cssClass, commandColumnModule, editModule } = useGridMutableProvider();
+        const { cssClass, commandColumnModule, editModule, focusModule } = useGridMutableProvider();
         const { commandEdit } = commandColumnModule;
         const dataSource: T[] | DataManager | DataResult = gridContext.dataSource;
 
@@ -68,10 +76,16 @@ export const EditCell: <T>(props: EditCellProps<T> & RefAttributes<EditCellRef>)
                 }
 
                 if ('element' in currentInput && currentInput.element) {
+                    if (gridContext?.editSettings?.mode === 'Cell') {
+                        focusModule.setActiveMatrix('Content');
+                        const matrix: IFocusMatrix = focusModule.getActiveMatrix();
+                        const focusedCell: FocusedCellInfo = focusModule.getFocusedCell();
+                        matrix.current = [focusedCell.rowIndex, focusedCell.colIndex];
+                    }
                     // For Syncfusion components, focus the underlying element
                     const element: HTMLElement = currentInput.element as HTMLElement;
                     if (element && typeof element.querySelector === 'function') {
-                        if (element && !element.hasAttribute('disabled') && !(element.hasAttribute('readonly') && !element.classList.contains('sf-dropdownlist')) && typeof element.focus === 'function') {
+                        if (element && !element.hasAttribute('disabled') && !(element.hasAttribute('readonly') && !element.classList.contains('sf-dropdown-list')) && typeof element.focus === 'function') {
                             ((element.classList.contains('sf-date-wrapper') || element.classList.contains('sf-datepicker')) ? element.querySelector('input') : element).focus();
                         }
                     }
@@ -80,7 +94,7 @@ export const EditCell: <T>(props: EditCellProps<T> & RefAttributes<EditCellRef>)
                     }
                 }
             });
-        }, [column.allowEdit, column.isPrimaryKey, isAdd]);
+        }, [column.allowEdit, column.isPrimaryKey, isAdd, disabled, gridContext, focusModule]);
 
         /**
          * Gets the current value
@@ -104,7 +118,7 @@ export const EditCell: <T>(props: EditCellProps<T> & RefAttributes<EditCellRef>)
             getValue,
             setValue,
             inputRef
-        }), [focus, getValue, setValue, onChange, isAdd, inputRef]);
+        }), [focus, getValue, setValue, onChange, isAdd, inputRef, disabled]);
 
         /**
          * Handle Syncfusion component change events
@@ -150,10 +164,10 @@ export const EditCell: <T>(props: EditCellProps<T> & RefAttributes<EditCellRef>)
                 // This replaces the complex isAddOperation calculation with the passed parameter
                 // Added disabled prop to fully support showAddNewRow functionality
                 const isDisabled: boolean = disabled || column.allowEdit === false || (column.isPrimaryKey === true && !isAdd);
-                const baseProps: {[key: string]: string | number | boolean} = {
+                const baseProps: {[key: string]: string | number | boolean} = useMemo(() => ({
                     'data-mappinguid': column.uid,
-                    'id': `${commandEdit.current ? rowObject.uid + '-' : ''}grid-edit-${column.field}`
-                };
+                    'id': `${commandEdit.current ? rowObject.uid + '-' : ''}${GRID_EDIT_PREFIX}${column.field}`
+                }), [column.uid, column.field, commandEdit, rowObject?.uid]);
                 const popupMode: boolean = editModule.editSettings.mode === 'Popup' && popupRef ? true : false;
                 const placeHolder: string = column.headerText ? column.headerText : column.field;
 
@@ -162,8 +176,8 @@ export const EditCell: <T>(props: EditCellProps<T> & RefAttributes<EditCellRef>)
                     return (
                         <TextBox
                             ref={inputRef as React.Ref<ITextBox>}
-                            className={`sf-field${formState?.errors?.[column.field] ?
-                                ' sf-error' : ''}` + (cssClass !== '' ? (' ' + cssClass) : '')}
+                            className={`${CSS_FIELD_CLASS}${formState?.errors?.[column.field] ?
+                                ' ' + CSS_ERROR_CLASS : ''}` + (cssClass !== '' ? (' ' + cssClass) : '')}
                             value={value?.toString() || ''}
                             onChange={isDisabled ? undefined : (event: TextBoxChangeEvent) =>
                                 handleSyncfusionChange(event.value)}
@@ -182,8 +196,8 @@ export const EditCell: <T>(props: EditCellProps<T> & RefAttributes<EditCellRef>)
                     return (
                         <NumericTextBox
                             ref={inputRef as React.Ref<INumericTextBox>}
-                            className={`sf-field${formState?.errors?.[column.field] ?
-                                ' sf-error' : ''}` + (cssClass !== '' ? (' ' + cssClass) : '')}
+                            className={`${CSS_FIELD_CLASS}${formState?.errors?.[column.field] ?
+                                ' ' + CSS_ERROR_CLASS : ''}` + (cssClass !== '' ? (' ' + cssClass) : '')}
                             format={(typeof (column.format) === 'object' ? getNumberPattern(column.format, false)?.toLowerCase() :
                                 (column.format as string)?.toLowerCase()) ?? 'n2'} // only provided string format support.
                             value={value as number || null}
@@ -206,19 +220,19 @@ export const EditCell: <T>(props: EditCellProps<T> & RefAttributes<EditCellRef>)
                     return (
                         <Checkbox
                             ref={inputRef as React.Ref<ICheckbox>}
-                            className={`sf-field${formState?.errors?.[column.field] ?
-                                ' sf-error' : ''}` + (cssClass !== '' ? (' ' + cssClass) : '')}
+                            className={`${CSS_FIELD_CLASS}${formState?.errors?.[column.field] ?
+                                ' ' + CSS_ERROR_CLASS : ''}` + (cssClass !== '' ? (' ' + cssClass) : '')}
                             checked={Boolean(value)}
                             onChange={isDisabled ? undefined : (event: CheckboxChangeEvent) =>
                                 handleSyncfusionChange(event.value)}
                             onBlur={isDisabled ? undefined : (args: React.FocusEventHandler<HTMLInputElement> &
                             React.FocusEvent<HTMLInputElement>) => {
-                                args.target.closest('.sf-checkbox-wrapper.sf-field')?.classList.remove('sf-focus');
+                                args.target.closest(`.${CSS_CHECKBOX_WRAPPER}.${CSS_FIELD_CLASS}`)?.classList.remove(CSS_FOCUS_CLASS);
                                 handleSyncfusionBlur();
                             }}
                             onFocus={isDisabled ? undefined : (args: React.FocusEventHandler<HTMLInputElement> &
                             React.FocusEvent<HTMLInputElement>) => {
-                                args.target.closest('.sf-checkbox-wrapper.sf-field')?.classList.add('sf-focus');
+                                args.target.closest(`.${CSS_CHECKBOX_WRAPPER}.${CSS_FIELD_CLASS}`)?.classList.add(CSS_FOCUS_CLASS);
                                 handleSyncfusionFocus();
                             }}
                             label={' '}
@@ -233,12 +247,12 @@ export const EditCell: <T>(props: EditCellProps<T> & RefAttributes<EditCellRef>)
                     return (
                         <DatePicker
                             ref={inputRef as React.Ref<IDatePicker>}
-                            className={`sf-field${formState?.errors?.[column.field] ?
-                                ' sf-error' : ''}` + (cssClass !== '' ? (' ' + cssClass) : '')}
+                            className={`${CSS_FIELD_CLASS}${formState?.errors?.[column.field] ?
+                                ' ' + CSS_ERROR_CLASS : ''}` + (cssClass !== '' ? (' ' + cssClass) : '')}
                             value={value ? new Date(value as Date) : null}
                             onChange={isDisabled ? undefined : ((args: DatePickerChangeEvent) => {
                                 handleSyncfusionChange(args.value as Date);
-                            }) as any}
+                            }) as (event: DatePickerChangeEvent) => void}
                             format={column.format ? getCustomDateFormat(column.format, column.type) : 'M/d/yyyy'} // only provided string format support
                             onClose={isDisabled ? undefined : handleSyncfusionBlur}
                             onOpen={isDisabled ? undefined : handleSyncfusionFocus}
@@ -252,25 +266,38 @@ export const EditCell: <T>(props: EditCellProps<T> & RefAttributes<EditCellRef>)
                         />
                     );
 
-                case 'dropdown':
+                case 'dropdown': {
+                    const data: DataManager | Object[] = (dataSource instanceof DataManager ? dataSource :
+                        'result' in dataSource ? dataSource.result : new DataManager(dataSource as Object[])) as
+                        DataManager | Object[];
+                    const moduleName: string = (data instanceof DataManager) ?
+                        ((data as DataManager).adaptor as { getModuleName?: Function })?.getModuleName?.() ?? ADAPTOR_URL : undefined;
+
+                    const query: Query = useMemo(() => {
+                        const pred: Predicate = new Predicate(column.field, 'notEqual', null, true, false);
+                        if (moduleName === ADAPTOR_URL) {
+                            pred.operator = pred?.operator?.toLowerCase();
+                        }
+                        return new Query().where(pred).select(
+                            editorProps.fields
+                                ? [editorProps.fields.value, editorProps.fields.text].filter(Boolean)
+                                : [column.field]);
+                    }, [column.field, editorProps.fields, moduleName]);
+
+                    const handleDataLoad: (e: DataLoadEvent) => void = useCallback((e: DataLoadEvent) => {
+                        e.data = DataUtil.distinct(e.data as Object[], column.field, true) as { [key: string]: unknown; }[];
+                    }, [column.field]);
+
                     return (
                         <DropDownList
                             ref={inputRef as React.Ref<IDropDownList>}
-                            className={`sf-field${formState?.errors?.[column.field] ?
-                                ' sf-error' : ''}` + (cssClass !== '' ? (' ' + cssClass) : '')}
+                            className={`${CSS_FIELD_CLASS}${formState?.errors?.[column.field] ?
+                                ' ' + CSS_ERROR_CLASS : ''}` + (cssClass !== '' ? (' ' + cssClass) : '')}
                             value={value}
-                            dataSource={(dataSource instanceof DataManager ? dataSource :
-                                'result' in dataSource ? dataSource.result : new DataManager(dataSource as Object[])) as
-                                DataManager | string[] | { [key: string]: object; }[] | number[] | boolean[]}
+                            dataSource={data}
                             fields={{ value: column.field }}
-                            query={new Query().where(new Predicate(column.field, 'notEqual', null, true, false)).select(
-                                editorProps.fields
-                                    ? [editorProps.fields.value, editorProps.fields.text].filter(Boolean)
-                                    : [column.field])
-                            }
-                            onDataLoad={(e: DataLoadEvent) => {
-                                e.data = DataUtil.distinct(e.data as Object[], column.field, true) as { [key: string]: unknown; }[];
-                            }}
+                            query={query}
+                            onDataLoad={handleDataLoad}
                             onChange={isDisabled ? undefined : (args: DDLChangeEvent) => {
                                 handleSyncfusionChange(args.value);
                             }}
@@ -296,13 +323,14 @@ export const EditCell: <T>(props: EditCellProps<T> & RefAttributes<EditCellRef>)
                             {...editorProps as DropDownListProps}
                         />
                     );
+                }
 
                 default:
                     return (
                         <TextBox
                             ref={inputRef as React.Ref<ITextBox>}
-                            className={`sf-field${formState?.errors?.[column.field] ?
-                                ' sf-error' : ''}` + (cssClass !== '' ? (' ' + cssClass) : '')}
+                            className={`${CSS_FIELD_CLASS}${formState?.errors?.[column.field] ?
+                                ' ' + CSS_ERROR_CLASS : ''}` + (cssClass !== '' ? (' ' + cssClass) : '')}
                             value={value?.toString() || ''}
                             onChange={isDisabled ? undefined : (event: TextBoxChangeEvent) =>
                                 handleSyncfusionChange(event.value)}
@@ -379,6 +407,6 @@ export const EditCell: <T>(props: EditCellProps<T> & RefAttributes<EditCellRef>)
                 {editorComponent}
             </>
         );
-    })) as <T>(props: EditCellProps<T> & RefAttributes<EditCellRef>) => ReactElement;
+    })) as React.ForwardRefExoticComponent<EditCellProps & React.RefAttributes<EditCellRef>>;
 
 (EditCell as React.ForwardRefExoticComponent<EditCellProps & React.RefAttributes<EditCellRef>>).displayName = 'EditCell';

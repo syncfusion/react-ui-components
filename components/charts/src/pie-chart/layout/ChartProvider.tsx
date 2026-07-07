@@ -1,7 +1,7 @@
 import { createContext, useCallback, useMemo, useState } from 'react';
 import * as React from 'react';
 import { LayoutProvider } from './LayoutContext';
-import { PieChartCenterLabelProps, PieChartTitleProps, PieChartComponentProps, PieChartSeriesProps, PieChartLegendProps, PieChartTooltipProps, PieChartHighlightProps, PieChartSelectionProps } from '../base/interfaces';
+import { PieChartCenterLabelProps, PieChartTitleProps, PieChartComponentProps, PieChartSeriesProps, PieChartLegendProps, PieChartTooltipProps, PieChartHighlightProps, PieChartSelectionProps, PieChartAnnotationProps } from '../base/interfaces';
 import { defaultChartConfigs } from '../base/default-properties';
 import { ElementWithSize } from '../base/internal-interfaces';
 
@@ -27,6 +27,7 @@ export const ChartProvider: React.FC<{
     const [chartTooltip, setChartTooltipState] = useState<PieChartTooltipProps>(defaultChartConfigs.ChartTooltip);
     const [chartHighlight, setChartHighlightState] = useState<PieChartHighlightProps>(defaultChartConfigs.ChartHighlight);
     const [chartSelection, setChartSelectionState] = useState<PieChartSelectionProps>(defaultChartConfigs.ChartSelection);
+    const [pieChartAnnotation, setPieChartAnnotationState] = useState<PieChartAnnotationProps[]>([defaultChartConfigs.PieChartAnnotation]);
 
     const setChartTitle: (titleProps: PieChartTitleProps) => void = useCallback((titleProps: PieChartTitleProps) => {
         setChartTitleState(titleProps);
@@ -65,6 +66,11 @@ export const ChartProvider: React.FC<{
         setRender(true);
     }, []);
 
+    const setPieChartAnnotation: (annotation: PieChartAnnotationProps[]) => void = useCallback((annotation: PieChartAnnotationProps[]) => {
+        setPieChartAnnotationState(annotation);
+        setRender(true);
+    }, []);
+
     const contextValue: ChartProviderChildProps = useMemo(() => ({
         parentElement,
         chartProps,
@@ -77,6 +83,7 @@ export const ChartProvider: React.FC<{
         chartTooltip,
         chartHighlight,
         chartSelection,
+        pieChartAnnotation,
         setChartTooltip,
         setChartHighlight,
         setChartSelection,
@@ -85,11 +92,12 @@ export const ChartProvider: React.FC<{
         setChartSubTitle,
         setChartLegend,
         setChartSeries,
-        setChartCenterLabel
+        setChartCenterLabel,
+        setPieChartAnnotation
     }), [parentElement, chartProps, chartTitle, chartSeries, chartSubTitle, render,
-        chartLegend, centerLabel, chartTooltip, chartHighlight, chartSelection,
+        chartLegend, centerLabel, chartTooltip, chartHighlight, chartSelection, pieChartAnnotation,
         setChartTitle, setChartSubTitle, setRender, setChartSeries, setChartLegend,
-        setChartCenterLabel, setChartTooltip, setChartHighlight, setChartSelection]);
+        setChartCenterLabel, setChartTooltip, setChartHighlight, setChartSelection, setPieChartAnnotation]);
 
     return (
         <ChartContext.Provider value={contextValue}>
@@ -201,5 +209,15 @@ export interface ChartProviderChildProps {
      * Updates the pie chart selection configuration.
      */
     setChartSelection: (chartHighlight: PieChartSelectionProps) => void;
+
+    /**
+     * Configuration for annotation on chart.
+     */
+    pieChartAnnotation: PieChartAnnotationProps[];
+
+    /**
+     * Updates the annotation configuration.
+     */
+    setPieChartAnnotation: (annotation: PieChartAnnotationProps[]) => void;
 
 }

@@ -1,0 +1,173 @@
+@use '../../../base/styles/themes/variables' as *;
+
+$switch-track-height-sm: $spacing-24 !default;
+$switch-track-width-sm: $spacing-48 !default;
+$switch-track-height-me: $spacing-28 !default;
+$switch-track-width-me: calc(var(--sf-spacing) * 3.75) !default;
+$switch-track-height-la: $spacing-32 !default;
+$switch-track-width-la: calc(var(--sf-spacing) * 4) !default;
+$switch-track-width-sm-label: $spacing-48 !default;
+$switch-track-width-me-label: calc(var(--sf-spacing) * 3.75) !default;
+$switch-track-width-la-label: calc(var(--sf-spacing) * 4) !default;
+$switch-track-width-sm-icon: $spacing-48 !default;
+$switch-track-width-me-icon: calc(var(--sf-spacing) * 3.75) !default;
+$switch-track-width-la-icon: calc(var(--sf-spacing) * 4) !default;
+$switch-track-border-width: $spacing-2 !default;
+$switch-track-border-radius: $radius-full !default;
+$switch-track-font-size-sm: $font-size-xs !default;
+$switch-track-font-size-me: $font-size-sm !default;
+$switch-track-font-size-la: $font-size-sm !default;
+$switch-track-icon-font-size-sm: $font-size-xs !default;
+$switch-track-icon-font-size-me: $font-size-base !default;
+$switch-track-icon-font-size-la: $font-size-lg !default;
+$switch-track-font-weight: $font-weight-normal !default;
+$switch-track-label-line-height: $line-height-sm !default;
+$switch-track-label-z-index: 1 !default;
+$switch-track-label-transfom: -50% !default;
+
+$switch-height: $spacing-1 !default;
+$switch-width: $spacing-1 !default;
+$switch-opacity: $spacing-0 !default;
+$switch-disabled-opacity: 1 !default;
+
+$switch-handle-on-padding-sm: $spacing-9 !default;
+$switch-handle-off-padding-sm: $spacing-6 !default;
+$switch-handle-on-padding-me: $spacing-10 !default;
+$switch-handle-off-padding-me: $spacing-8 !default;
+$switch-handle-on-padding-la: $spacing-12 !default;
+$switch-handle-off-padding-la: $spacing-8 !default;
+$switch-handle-off-active-padding-sm: $spacing-10 !default;
+$switch-handle-on-active-padding-sm: $spacing-11 !default;
+$switch-handle-off-active-padding-me: $spacing-12 !default;
+$switch-handle-on-active-padding-me: $spacing-12 !default;
+$switch-handle-off-active-padding-la: $spacing-14 !default;
+$switch-handle-on-active-padding-la: $spacing-14 !default;
+$switch-handle-on-active-left-sm: calc(var(--sf-spacing) * -0.01) !default;
+$switch-handle-on-active-left-me: calc(var(--sf-spacing) * -0.1) !default;
+$switch-handle-on-active-left-la: calc(var(--sf-spacing) * -0.1) !default;
+
+$switch-handle-translate-off-sm: $spacing-4 !default;
+$switch-handle-translate-off-me: $spacing-4 !default;
+$switch-handle-translate-off-la: $spacing-5 !default;
+
+$switch-handle-translate-on-sm: $spacing-24 !default;
+$switch-handle-translate-on-me: calc(var(--sf-spacing) * 2.125) !default;
+$switch-handle-translate-on-la: calc(var(--sf-spacing) * 2.125) !default;
+$switch-handle-translate-on-sm-label: $spacing-24 !default;
+$switch-handle-translate-on-me-label: calc(var(--sf-spacing) * 2.125) !default;
+$switch-handle-translate-on-la-label: calc(var(--sf-spacing) * 2.125) !default;
+$switch-handle-translate-on-sm-icon: $spacing-24 !default;
+$switch-handle-translate-on-me-icon: calc(var(--sf-spacing) * 2.125) !default;
+$switch-handle-translate-on-la-icon: calc(var(--sf-spacing) * 2.125) !default;
+
+
+$switch-state-layer-sm: $spacing-28 !default;
+$switch-state-layer-me: calc(var(--sf-spacing) * 2.25) !default;
+$switch-state-layer-la: $spacing-40 !default;
+$switch-state-layer-top: 50% !default;
+$switch-state-layer-left: 50% !default;
+
+$switch-icon-sm: $font-size-2xs !default;
+$switch-icon-me: $font-size-sm !default;
+$switch-icon-la: $font-size-base !default;
+$switch-handle-off-icon-sm: $spacing-9 !default;
+$switch-handle-off-icon-me: $spacing-10 !default;
+$switch-handle-off-icon-la: $spacing-12 !default;
+
+$switch-transition-duration: 200ms !default;
+$switch-transition-easing: cubic-bezier(0.2, 0, 0, 1) !default;
+
+$switch-track-off-bg: rgb($surface-variant) !default;
+$switch-track-off-border: rgb($outline) !default;
+$switch-track-off-bg-active: rgb($surface-variant) !default;
+$switch-track-off-bg-focus: rgb($surface-variant) !default;
+$switch-handle-off-bg: rgb($outline) !default;
+$switch-handle-off-bg-hover: rgb($content-text-color-alt1) !default;
+$switch-handle-off-bg-active-focus: rgb($content-text-color-alt1) !default;
+$switch-handle-off-icon-color: rgb($inverse-on-surface) !default;
+$switch-track-off-icon-color: rgb($icon-color) !default;
+$switch-track-off-text-color: rgb($content-text-color) !default;
+
+$switch-track-on-bg: rgb($primary) !default;
+$switch-track-on-border: rgb($primary) !default;
+$switch-handle-on-bg: rgb($on-primary) !default;
+$switch-handle-on-bg-hover: rgb($primary-light) !default;
+$switch-handle-on-icon-color: rgb($primary) !default;
+$switch-track-on-icon-color: rgb($on-primary) !default;
+$switch-track-on-text-color: rgb($primary-text-color) !default;
+$switch-me-track-on-left: $spacing-8;
+$switch-sm-track-label-on-left: $spacing-6;
+$switch-la-track-label-on-left: $spacing-10;
+$switch-me-track-off-left: $spacing-8;
+$switch-sm-track-label-off-left: $spacing-6;
+$switch-la-track-label-off-left: $spacing-10;
+$switch-sm-track-label-icon-on-left: $spacing-6 !default;
+$switch-track-label-icon-on-left: $spacing-8 !default;
+$switch-la-track-label-icon-on-left: $spacing-10 !default;
+$switch-sm-track-label-icon-off-left: $spacing-6 !default;
+$switch-track-label-icon-off-left: $spacing-8 !default;
+$switch-la-track-label-icon-off-left: $spacing-10 !default;
+$switch-focus-ring: $shadow-focus-ring1 !default;
+$switch-active-ring: none !default;
+$switch-state-layer-off-hover: rgba($content-text-color, $opacity8) !default;
+$switch-state-layer-off-focus: rgba($content-text-color, $opacity12) !default;
+$switch-state-layer-off-pressed: rgba($content-text-color, $opacity12) !default;
+$switch-state-layer-on-hover: rgba($primary, $opacity8) !default;
+$switch-state-layer-on-focus: rgba($primary, $opacity12) !default;
+$switch-state-layer-on-pressed: rgba($primary, $opacity12) !default;
+$switch-state-layer-transform: translate(-50%, -50%) !default;
+
+$switch-track-disabled-off-bg: rgb($surface-variant) !default;
+$switch-track-disabled-off-border: rgba($on-surface, $opacity12) !default;
+$switch-track-disabled-on-bg: rgba($on-surface, $opacity12) !default;
+$switch-handle-disabled-off-bg: rgba($on-surface, .38) !default;
+$switch-handle-disabled-on-bg: rgb($surface) !default;
+$switch-handle-disabled-icon-color: rgba($on-surface, .38) !default;
+$switch-label-disabled-color: $content-text-color-disabled !default;
+
+$switch-label-color: rgb($content-text-color) !default;
+$switch-label-gap-sm: $spacing-8 !default;
+$switch-label-gap: $spacing-8 !default;
+$switch-label-gap-la: $spacing-8 !default;
+$switch-label-font-weight: $font-weight-normal !default;
+$switch-label-font-size-sm: $font-size-sm !default;
+$switch-label-font-size-me: $font-size-base !default;
+$switch-label-font-size-la: $font-size-base !default;
+$switch-label-line-height-sm: $line-height-sm !default;
+$switch-label-line-height-me: $line-height-base !default; 
+$switch-label-line-height-la: $line-height-base !default;
+$switch-handle-rtl-right: calc(var(--sf-spacing) * 2.25) !default;
+$switch-handle-rtl-right-sm: calc(var(--sf-spacing) * 1.5625) !default;
+$switch-handle-off-rtl-right-sm: calc(var(--sf-spacing) * 1.8) !default;
+
+$switch-variants: (
+  'primary': (
+    track-on-bg: rgb($primary),
+    track-on-border: rgb($primary),
+    handle-on-bg: rgb($on-primary),
+    handle-on-bg-hover: rgb($primary-light),
+    state-layer-on-hover: rgba($primary, $opacity8)),
+  'success': (
+    track-on-bg: rgb($success),
+    track-on-border: rgb($success),
+    handle-on-bg: rgb($on-success),
+    handle-on-bg-hover: rgb($success-container),
+    state-layer-on-hover: rgba($success, $opacity8)),
+  'warning': (
+    track-on-bg: rgb($warning),
+    track-on-border: rgb($warning),
+    handle-on-bg: rgb($on-warning),
+    handle-on-bg-hover: rgb($warning-container),
+    state-layer-on-hover: rgba($warning, $opacity8)),
+  'error': (
+    track-on-bg: rgb($error),
+    track-on-border: rgb($error),
+    handle-on-bg: rgb($on-error),
+    handle-on-bg-hover: rgb($error-container),
+    state-layer-on-hover: rgba($error, $opacity8)),
+  'info': (
+    track-on-bg: rgb($info),
+    track-on-border: rgb($info),
+    handle-on-bg: rgb($on-info),
+    handle-on-bg-hover: rgb($info-container),
+    state-layer-on-hover: rgba($info, $opacity8))) !default;

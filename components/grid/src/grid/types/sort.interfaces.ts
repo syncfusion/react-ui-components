@@ -19,7 +19,7 @@ export interface SortDescriptor {
 
     /**
      * Specifies the `direction` of the sort operation for the column.
-     * Supports values like ascending or descending, typically defined by the SortDirection enum.
+     * Supports values like ascending or descending, typically defined by the `SortDirection` enum.
      * Controls whether the column data is sorted in ascending or descending order.
      *
      * @default SortDirection.Ascending | 'Ascending'
@@ -115,7 +115,7 @@ export interface SortEvent extends GridActionEvent {
     cancel?: boolean;
 
     /**
-     * Indicates the type of sort action that was completed (e.g., 'Sorting', 'ClearSorting').
+     * Indicates the type of sort action that was completed (e.g., `Sorting`, `ClearSorting`).
      * Describes the operation performed, aiding in post-sort processing.
      * Helps differentiate between various sort-related actions.
      *

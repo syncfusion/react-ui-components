@@ -15,40 +15,48 @@ $btn-large-horizontal-padding: $spacing-11 $spacing-24 !default;
 $btn-vertical-padding: $spacing-8 $spacing-16 !default;
 $btn-small-text-gap: $spacing-4 !default;
 $btn-medium-text-gap: $spacing-8 !default;
+$btn-large-text-gap: $spacing-8 !default;
 $btn-small-icon-padding: $spacing-5 !default;
 $btn-medium-icon-padding: $spacing-9 !default;
 $btn-large-icon-padding: $spacing-11 !default;
-$btn-large-text-gap: $spacing-8 !default;
-$btn-svg-font-size: $font-size-xl!default;
+$btn-svg-font-size: $font-size-xl !default;
 $btn-small-svg-font-size: $font-size-xl !default;
 $btn-large-svg-font-size: $font-size-2xl !default;
 $btn-color: rgb($secondary-text-color) !default;
-$btn-small-radius: $spacing-12 !default;
-$btn-medium-radius: $spacing-12 !default;
-$btn-large-radius: calc(var(--sf-radius) * 0.875);
+$btn-border-color: rgb($outline-variant) !default;
+$btn-small-radius: $radius-12 !default;
+$btn-medium-radius: $radius-12 !default;
+$btn-large-radius: calc(var(--sf-radius) * 0.875) !default;
 
+$btn-disabled-background: $secondary-bg-color-disabled !default;
 $btn-disabled-color: $primary-text-disabled !default;
 $btn-disabled-border-color: $success-border-color-disabled !default;
 
 $btn-hover-focus-box-shadow: $shadow-md !default;
 $btn-active-box-shadow: $shadow-sm !default;
-$btn-keyboard-focus-box-shadow: $shadow-focus-ring1 !default;
+$btn-primary-keyboard-focus-box-shadow: $shadow-focus-ring1 !default;
+$btn-secondary-keyboard-focus-box-shadow: $shadow-focus-ring1 !default;
+$btn-info-keyboard-focus-box-shadow: $shadow-focus-ring1 !default;
+$btn-success-keyboard-focus-box-shadow: $shadow-focus-ring1 !default;
+$btn-warning-keyboard-focus-box-shadow: $shadow-focus-ring1 !default;
+$btn-error-keyboard-focus-box-shadow: $shadow-focus-ring1 !default;
 
 $btn-bg-active-color: rgb($secondary-text-color, 0.1) !default;
-$btn-bg-color: rgb($surface, 0.1) !default;
-$btn-link-bg-color: transparent !default;
+$btn-hover-bg-color: rgb($secondary-text-color, 0.08) !default;
+$btn-bg-color: transparent !default;
 
 $btn-primary-color: rgb($primary) !default;
 $btn-primary-text-color: rgb($primary-text) !default;
 $btn-primary-bg-color: rgb($primary-bg-color) !default;
-$btn-primary-border-color:  rgb($primary-border-color) !default;
+$btn-primary-border-color: rgb($primary-border-color) !default;
 $btn-focus-outline-round: rgb($white) 0 solid !default;
+$btn-primary-flat-hover-bg-color: rgb($primary-bg-color, 0.08) !default;
 
 $btn-outline-success-color: $success-outline !default;
 $btn-outline-border-color: rgb($info-outline-border) !default;
-$btn-outline-focus-background-color: rgb($primary-outline, 0.1) !default;
+$btn-outline-focus-background-color: rgb($secondary-text-color, 0.1) !default;
 
-$btn-flat-hover-bg-color: rgb($primary-bg-color, 0.1) !default;
+$btn-flat-hover-bg-color: rgb($on-surface, 0.08) !default;
 $btn-flat-hover-border-color: none !default;
 $btn-flat-pressed-bg-color: $secondary-outline-bg-pressed !default;
 
@@ -58,21 +66,47 @@ $btn-success-hover-bg-color: $success-bg-color-hover !default;
 $btn-success-border-color: rgb($success-border-color) !default;
 $btn-success-hover-color: rgb($success-text-hover) !default;
 
+$btn-outline-primary-focus-visible-bg-color: rgb($primary-bg-color, 0.08)  !default;
+$btn-outline-secondary-focus-visible-bg-color:rgb($surface, 0.08) !default;
+$btn-outline-info-focus-visible-bg-color: rgb($info, 0.08) !default;
+$btn-outline-success-focus-visible-bg-color: rgb($success, 0.08) !default;
+$btn-outline-warning-focus-visible-bg-color: rgb($warning, 0.08) !default;
+$btn-outline-error-focus-visible-bg-color: rgb($error, 0.08) !default;
+
+$btn-outline-primary-focus-visible-color: rgb($primary) !default;
+$btn-outline-secondary-focus-visible-color: rgb($secondary-text-color) !default;
+$btn-outline-info-focus-visible-color: rgb($info) !default;
+$btn-outline-success-focus-visible-color: rgb($success) !default;
+$btn-outline-warning-focus-visible-color: rgb($warning) !default;
+$btn-outline-error-focus-visible-color: rgb($error) !default;
+
+$btn-primary-hover-flat-text-color: rgb($primary) !default;
+$btn-primary-active-flat-text-color: rgb($primary-text) !default;
+$btn-secondary-hover-flat-text-color: rgb($secondary-text-color) !default;
+$btn-success-hover-flat-text-color: rgb($success) !default;
+$btn-warning-hover-flat-text-color: rgb($warning) !default;
+$btn-info-hover-flat-text-color: rgb($info) !default;
+$btn-error-hover-flat-text-color: rgb($error) !default;
+
 $btn-warning-bg-color: rgb($warning-bg-color) !default;
 $btn-warning-color: rgb($warning) !default;
-$btn-warning-hover-color: rgb($warning-text-hover) !default;
+$btn-warning-filled-hover-color: rgb($primary-text) !default;
+$btn-warning-focus-visible-color: rgb($warning) !default;
 $btn-warning-hover-bg-color: $warning-bg-color-hover !default;
 $btn-warning-border-color: rgb($warning-border-color) !default;
+$btn-warning-focus-text-color: rgb($warning) !default;
+$btn-warning-filled-color: rgb($primary-text) !default;
 
-$btn-danger-color: rgb($error) !default;
-$btn-danger-bg-color: rgb($error-bg-color) !default;
-$btn-danger-border-color: rgb($error-border-color) !default;
-$btn-danger-hover-color: rgb($error-text-hover) !default;
+$btn-error-color: rgb($error) !default;
+$btn-error-bg-color: rgb($error-bg-color) !default;
+$btn-error-border-color: rgb($error-border-color) !default;
+$btn-error-hover-color: rgb($error-text-hover) !default;
 
 $btn-info-bg-color: rgb($info-bg-color) !default;
 $btn-info-color: rgb($info) !default;
 $btn-info-border-color: rgb($info-border-color) !default;
 $btn-info-hover-color: rgb($info-text-hover) !default;
+$btn-info-filled-color: rgb($primary-text) !default;
 
 $btn-success-hover-flat-bg-color: rgb($success-bg-color, 0.25) !default;
 $btn-warning-hover-flat-bg-color: rgb($warning-bg-color, 0.25) !default;
@@ -83,7 +117,16 @@ $btn-success-focus-flat-bg-color: rgb($success-bg-color, 0.1) !default;
 $btn-warning-focus-flat-bg-color: rgb($warning-bg-color, 0.1) !default;
 $btn-info-focus-flat-bg-color: rgb($info-bg-color, 0.1) !default;
 $btn-error-focus-flat-bg-color: rgb($error-bg-color, 0.1) !default;
+$btn-primary-focus-flat-bg-color: rgb($primary-bg-color, 0.1) !default;
 
+$btn-secondary-flat-text-color: rgb($secondary-text-color) !default;
+$btn-secondary-flat-hover-text-color: rgb($secondary-text-color) !default;
+$btn-secondary-flat-focus-text-color: rgb($secondary-text-color) !default;
+$btn-secondary-flat-focus-visible-text-color: rgb($secondary-text-color) !default;
+$btn-secondary-flat-active-text-color: rgb($secondary-text-color) !default;
+
+$btn-filled-bg-color: rgb($surface, 0.1) !default;
+$btn-primary-filled-hover-bg-color: rgb($primary-bg-color, 0.8) !default;
 $btn-primary-focus-filled-bg-color: rgb($primary, 0.8) !default;
 $btn-primary-active-filled-bg-color: rgb($primary, 12) !default;
 $btn-success-focus-filled-bg-color: rgb($success, 0.8) !default;
@@ -94,3 +137,57 @@ $btn-warning-focus-filled-bg-color: rgb($warning, 0.8) !default;
 $btn-warning-active-filled-bg-color: rgb($warning, 12) !default;
 $btn-error-focus-filled-bg-color: rgb($error, 0.8) !default;
 $btn-error-active-filled-bg-color: rgb($error, 12) !default;
+
+$btn-primary-hover-border-color: rgb($primary-border-color) !default;
+$btn-primary-active-border-color: rgb($primary-border-color) !default;
+$btn-secondary-hover-border-color: rgb($outline-variant) !default;
+$btn-secondary-active-border-color: rgb($outline-variant) !default;
+$btn-info-hover-border-color: rgb($info-border-color) !default;
+$btn-info-active-border-color: rgb($info-border-color) !default;
+$btn-success-hover-border-color: rgb($success-border-color) !default;
+$btn-success-active-border-color: rgb($success-border-color) !default;
+$btn-warning-hover-border-color: rgb($warning-border-color) !default;
+$btn-warning-active-border-color: rgb($warning-border-color) !default;
+$btn-warning-focus-border-color: rgb($warning-border-color) !default;
+$btn-error-hover-border-color: rgb($error-border-color) !default;
+$btn-error-active-border-color: rgb($error-border-color) !default;
+
+$btn-primary-disabled-bg-color: $primary-bg-color-disabled !default;
+$btn-primary-disabled-border-color: rgb($secondary, 0.12) !default;
+$btn-primary-disabled-color: rgb($on-surface, 0.38) !default;
+
+$btn-outline-primary-disabled-border-color: rgb($secondary, 0.12) !default;
+$btn-outline-primary-disabled-color: rgb($on-surface, 0.38) !default;
+$btn-outline-primary-disabled-bg-color: $primary-bg-color-disabled !default;
+
+$btn-info-disabled-bg-color: $info-bg-color-disabled !default;
+$btn-info-disabled-border-color: rgb($secondary, 0.12) !default;
+$btn-info-disabled-color: rgb($on-surface, 0.38) !default;
+
+$btn-outline-info-disabled-border-color: rgb($secondary, 0.12) !default;
+$btn-outline-info-disabled-color: rgb($on-surface, 0.38) !default;
+$btn-outline-info-disabled-bg-color: $info-bg-color-disabled !default;
+
+$btn-warning-disabled-bg-color: $warning-bg-color-disabled !default;
+$btn-warning-disabled-border-color: rgb($secondary, 0.12) !default;
+$btn-warning-disabled-color: rgb($on-surface, 0.38) !default;
+
+$btn-outline-warning-disabled-border-color: rgb($secondary, 0.12) !default;
+$btn-outline-warning-disabled-color: rgb($on-surface, 0.38) !default;
+$btn-outline-warning-disabled-bg-color: $warning-bg-color-disabled !default;
+
+$btn-error-disabled-bg-color: $error-bg-color-disabled !default;
+$btn-error-disabled-border-color: rgb($secondary, 0.12) !default;
+$btn-error-disabled-color: rgb($on-surface, 0.38) !default;
+
+$btn-outline-error-disabled-border-color: rgb($secondary, 0.12) !default;
+$btn-outline-error-disabled-color: rgb($on-surface, 0.38) !default;
+$btn-outline-error-disabled-bg-color: $error-bg-color-disabled !default;
+
+$btn-success-disabled-bg-color: $success-bg-color-disabled !default;
+$btn-success-disabled-border-color: rgb($secondary, 0.12) !default;
+$btn-success-disabled-color: rgb($on-surface, 0.38) !default;
+
+$btn-outline-success-disabled-border-color: rgb($secondary, 0.12) !default;
+$btn-outline-success-disabled-color: rgb($on-surface, 0.38) !default;
+$btn-outline-success-disabled-bg-color: $success-bg-color-disabled !default;

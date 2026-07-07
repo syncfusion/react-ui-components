@@ -87,5 +87,9 @@ export interface LayoutContextType {
     seriesRef: React.RefObject<SVGGElement | null>;
 
     legendRef: React.RefObject<SVGGElement | null>;
+
+    highlightRef: React.RefObject<SVGPatternElement | null>;
+
+    selectionRef: React.RefObject<SVGPatternElement | null>;
 }
 

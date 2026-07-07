@@ -1,17 +1,21 @@
 import { FC, JSX, ReactNode, useCallback, useEffect, useMemo } from 'react';
-import { useProviderContext } from '@syncfusion/react-base';
+import { isNullOrUndefined, useProviderContext } from '@syncfusion/react-base';
 import { TextBox, FormField, TextArea, ResizeMode, ValidationRules, Form, TextBoxChangeEvent, TextAreaChangeEvent, FormInitialValues, FormValueType } from '@syncfusion/react-inputs';
 import { Checkbox, CheckboxChangeEvent } from '@syncfusion/react-buttons';
 import { DatePicker, DatePickerChangeEvent, TimePicker, TimePickerChangeEvent } from '@syncfusion/react-calendars';
-import { SchedulerEditorField } from '../../types/scheduler-types';
+import { ChangeEvent } from '@syncfusion/react-dropdowns';
+import { SchedulerEditorField, TimezoneFields, SchedulerResource } from '../../types/scheduler-types';
 import { useSchedulerLocalization } from '../../common/locale';
 import { useSchedulerPropsContext } from '../../context/scheduler-context';
 import { CSS_CLASSES } from '../../common/constants';
 import { useEditorContext } from '../../context/scheduler-editor-popup-context';
-import { DropDownList } from '@syncfusion/react-dropdowns';
+import { DropDownList, MultiSelect } from '@syncfusion/react-dropdowns';
+import { useExtractResourceValuesFromGroupIndex } from '../../hooks/useResourceGrouping';
+import { Timezone } from '../../services/Timezone';
 
 /**
  * EditorPopupFields renders the form fields for the scheduler popup.
+ *
  * @param fields Optional custom field configuration.
  */
 interface EditorPopupFieldsProps {
@@ -26,6 +30,9 @@ const DEFAULT_FIELD_CONFIG: SchedulerEditorField[] = [
     { name: 'endDate', visible: true, className: CSS_CLASSES.END_DATE_CONTAINER },
     { name: 'endTime', visible: true, className: CSS_CLASSES.END_TIME_CONTAINER },
     { name: 'isAllDay', visible: true, className: CSS_CLASSES.ALL_DAY_CONTAINER },
+    { name: 'startTimezone', visible: true, className: CSS_CLASSES.START_TIMEZONE_CONTAINER },
+    { name: 'endTimezone', visible: true, className: CSS_CLASSES.END_TIMEZONE_CONTAINER },
+    { name: 'resource', visible: true, className: CSS_CLASSES.RESOURCE_CONTAINER },
     { name: 'description', visible: true, className: CSS_CLASSES.DESCRIPTION_CONTAINER },
     { name: 'repeatMode', visible: true, className: CSS_CLASSES.REPEAT_MODE}
 ];
@@ -34,15 +41,17 @@ const DEFAULT_ROW_GROUPS: string[][] = [
     ['subject', 'location'],
     ['startDate', 'startTime'],
     ['endDate', 'endTime'],
-    ['isAllDay'],
+    ['isAllDay', 'timezone'],
+    ['startTimezone', 'endTimezone'],
     ['repeatMode'],
+    ['resource'],
     ['description']
 ];
 
 export const EditorPopupFields: FC<EditorPopupFieldsProps> = ({ fields }: EditorPopupFieldsProps) => {
     const { locale } = useProviderContext();
     const { getString } = useSchedulerLocalization(locale || 'en-US');
-    const { dateFormat, timeFormat, timeScale } = useSchedulerPropsContext();
+    const { dateFormat, timeFormat, timeScale, timezone, timezoneDataSource, resources, group } = useSchedulerPropsContext();
 
     const {
         data,
@@ -65,9 +74,44 @@ export const EditorPopupFields: FC<EditorPopupFieldsProps> = ({ fields }: Editor
         handleEndTimeChange,
         handleIsAllDayChange,
         handleRepeatModeChange,
+        handleStartTimezoneChange,
+        handleEndTimezoneChange,
+        handleUseTimezoneChange,
         setSlotDuration,
-        action
+        action,
+        resourceValues,
+        setResourceValues,
+        handleResourceChange,
+        currentCellGroupIndex
     } = useEditorContext();
+
+    useExtractResourceValuesFromGroupIndex(currentCellGroupIndex, setResourceValues, action);
+
+    const getFilteredResourceData: (resourceIndex: number) => Record<string, unknown>[] = useCallback((resourceIndex: number) => {
+        if (!resources || resourceIndex >= resources.length) {
+            return [];
+        }
+        const resource: SchedulerResource = resources[parseInt(resourceIndex.toString(), 10)];
+        if (!resource.dataSource || !Array.isArray(resource.dataSource)) {
+            return [];
+        }
+        if (resourceIndex > 0 && group?.byGroupID) {
+            const parentResource: SchedulerResource = resources[resourceIndex - 1];
+            const parentFieldName: string = parentResource.field;
+            const parentValue: string | number | (string | number)[] = resourceValues[`${parentFieldName}`];
+
+            if (!isNullOrUndefined(parentValue) && resource.groupIDField) {
+                const parentValues: (string | number)[] = Array.isArray(parentValue) ? parentValue : [parentValue];
+                return (resource.dataSource as Record<string, unknown>[]).filter(
+                    (item: Record<string, unknown>) => {
+                        const itemGroupId: string | number = item[resource.groupIDField] as string | number;
+                        return parentValues.includes(itemGroupId);
+                    }
+                );
+            }
+        }
+        return resource.dataSource as Record<string, unknown>[];
+    }, [resources, resourceValues]);
 
     const validationRules: ValidationRules = useMemo(() => {
         if (!fields) { return {}; }
@@ -90,13 +134,33 @@ export const EditorPopupFields: FC<EditorPopupFieldsProps> = ({ fields }: Editor
         if (endDateOnly) { values.endDate = endDateOnly; }
         if (endTimeOnly) { values.endTime = endTimeOnly; }
         if (data?.isAllDay !== undefined) { values.isAllDay = data.isAllDay; }
-
+        if (data?.startTimezone) { values.startTimezone = data.startTimezone; }
+        if (data?.endTimezone) { values.endTimezone = data.endTimezone; }
         return values;
     }, [data, startDateOnly, startTimeOnly, endDateOnly, endTimeOnly]);
 
     const computedSlotDuration: number = useMemo(() => {
         return timeScale?.interval / timeScale?.slotCount || 30;
     }, [timeScale]);
+
+    const getDropDownOption: (currentTimeZone: string) => { options: TimezoneFields[]; current?: string } =
+        (currentTimeZone: string) => {
+            const tzData: TimezoneFields[] = timezoneDataSource;
+            let current: string;
+            if (currentTimeZone === 'start') {
+                current = (formState?.values?.startTimezone as string) ?? data?.startTimezone;
+            } else if (currentTimeZone === 'end') {
+                current = (formState?.values?.endTimezone as string) ?? data?.endTimezone;
+            }
+
+            current = current ?? timezone ?? Timezone.getLocalTimezoneName();
+            const exists: boolean = tzData.some((o: TimezoneFields) => o && (o.value === current || o.text === current));
+            if (exists) {
+                return { options: tzData, current };
+            }
+
+            return { options: [{ text: current, value: current }, ...tzData], current };
+        };
 
     useEffect(() => {
         setSlotDuration?.(computedSlotDuration);
@@ -264,6 +328,50 @@ export const EditorPopupFields: FC<EditorPopupFieldsProps> = ({ fields }: Editor
             );
         }, [formState, data?.isAllDay, handleIsAllDayChange]);
 
+    const getUseTimezone: () => boolean = useCallback((): boolean => {
+        return formState?.values?.useTimezone !== undefined
+            ? Boolean(formState?.values?.useTimezone)
+            : Boolean(data?.startTimezone || data?.endTimezone);
+    }, [formState?.values?.useTimezone, data?.startTimezone, data?.endTimezone]);
+
+    const showTimezoneControls: boolean = getUseTimezone();
+
+    const getUseTimezoneField: (overrides?: Partial<SchedulerEditorField>) => JSX.Element =
+        useCallback((overrides: Partial<SchedulerEditorField> = {}) => {
+            const extraProps: Record<string, any> = overrides.props ?? {};
+            if (data?.isAllDay) { return null; }
+            return (
+                <FormField name="useTimezone">
+                    <Checkbox
+                        label={extraProps.label ?? getString('timezone')}
+                        className={`${extraProps.className ?? CSS_CLASSES.TIMEZONE} ${formState?.errors?.useTimezone ? 'sf-error' : ''}`}
+                        checked={extraProps.checked ?? showTimezoneControls}
+                        onChange={(args: CheckboxChangeEvent) => {
+                            formState?.onChange('useTimezone', { value: args.value });
+                            (extraProps.onChange ?? handleUseTimezoneChange)?.(args);
+                            if (!args.value) {
+                                formState?.onChange('startTimezone', { value: undefined });
+                                formState?.onChange('endTimezone', { value: undefined });
+                                (extraProps.onChange ?? handleStartTimezoneChange)?.({ value: undefined } as ChangeEvent);
+                                (extraProps.onChange ?? handleEndTimezoneChange)?.({ value: undefined } as ChangeEvent);
+                            } else {
+                                const defaultStart: string = (formState?.values?.startTimezone as string)
+                                    ?? data?.startTimezone ?? timezone ?? Timezone.getLocalTimezoneName();
+                                const defaultEnd: string = (formState?.values?.endTimezone as string)
+                                    ?? data?.endTimezone ?? timezone ?? Timezone.getLocalTimezoneName();
+                                formState?.onChange('startTimezone', { value: defaultStart });
+                                formState?.onChange('endTimezone', { value: defaultEnd });
+                                (extraProps.onChange ?? handleStartTimezoneChange)?.({ value: defaultStart } as ChangeEvent);
+                                (extraProps.onChange ?? handleEndTimezoneChange)?.({ value: defaultEnd } as ChangeEvent);
+                            }
+                        }}
+                        {...extraProps}
+                    />
+                </FormField>
+            );
+        }, [formState, data?.isAllDay, data?.startTimezone, data?.endTimezone, handleUseTimezoneChange,
+            handleStartTimezoneChange, handleEndTimezoneChange, getString, timezone]);
+
     const getRepeatModeField: (overrides?: Partial<SchedulerEditorField>) => JSX.Element = useCallback((
         overrides: Partial<SchedulerEditorField> = {}) => {
         const extraProps: Record<string, any> = overrides.props ?? {};
@@ -281,6 +389,116 @@ export const EditorPopupFields: FC<EditorPopupFieldsProps> = ({ fields }: Editor
             </FormField>
         );
     }, [formState, repeatModeValue, handleRepeatModeChange]);
+
+    const getStartTimezoneField: (overrides?: Partial<SchedulerEditorField>) => JSX.Element = useCallback((
+        overrides: Partial<SchedulerEditorField> = {}) => {
+        const extraProps: Record<string, any> = overrides.props ?? {};
+        if (!showTimezoneControls || data?.isAllDay) {
+            return null;
+        }
+        const { options: dropdownOptions, current: currentValue } = getDropDownOption('start');
+
+        return (
+            <FormField name='startTimezone'>
+                <DropDownList
+                    dataSource={dropdownOptions}
+                    fields={{ text: 'text', value: 'value' }}
+                    value={extraProps.value ?? currentValue}
+                    placeholder={extraProps.placeholder ?? getString('startTimezone')}
+                    labelMode='Always'
+                    filterable={true}
+                    filterPlaceholder={getString('searchTimezone')}
+                    filterType='Contains'
+                    onChange={(args: ChangeEvent) => {
+                        formState?.onChange('startTimezone', { value: args?.value as string });
+                        formState?.onChange('endTimezone', { value: args?.value as string });
+                        (extraProps.onChange ?? handleStartTimezoneChange)?.(args);
+                    }}
+                    disabled={data?.isAllDay}
+                    aria-label={getString('startTimezone')}
+                    {...extraProps}
+                />
+            </FormField>
+        );
+    }, [formState, data?.startTimezone, data?.isAllDay, timezone,
+        handleStartTimezoneChange, getString, getUseTimezoneField]);
+
+    const getEndTimezoneField: (overrides?: Partial<SchedulerEditorField>) => JSX.Element = useCallback((
+        overrides: Partial<SchedulerEditorField> = {}) => {
+        const extraProps: Record<string, any> = overrides.props ?? {};
+        if (!showTimezoneControls || data?.isAllDay) {
+            return null;
+        }
+        const { options: dropdownOptions, current: currentValue } = getDropDownOption('end');
+
+        return (
+            <FormField name='endTimezone'>
+                <DropDownList
+                    dataSource={dropdownOptions}
+                    fields={{ text: 'text', value: 'value' }}
+                    value={extraProps.value ?? currentValue}
+                    placeholder={extraProps.placeholder ?? getString('endTimezone')}
+                    labelMode='Always'
+                    filterable={true}
+                    filterPlaceholder={getString('searchTimezone')}
+                    filterType='Contains'
+                    onChange={(args: ChangeEvent) => {
+                        formState?.onChange('endTimezone', { value: args?.value as string });
+                        (extraProps.onChange ?? handleEndTimezoneChange)?.(args);
+                    }}
+                    disabled={data?.isAllDay}
+                    aria-label={getString('endTimezone')}
+                    {...extraProps}
+                />
+            </FormField>
+        );
+    }, [formState, data?.endTimezone, data?.isAllDay, timezone,
+        handleEndTimezoneChange, getString, getUseTimezoneField]);
+
+    const getResourceField: (resourceIndex: number, overrides?: Partial<SchedulerEditorField>) => JSX.Element | null =
+        useCallback((resourceIndex: number, overrides: Partial<SchedulerEditorField> = {}) => {
+            if (!resources || resources.length === 0 || resourceIndex >= resources.length) {
+                return null;
+            }
+            const resource: SchedulerResource = resources[parseInt(resourceIndex.toString(), 10)];
+            const fieldName: string = resource.field;
+            const extraProps: Record<string, any> = overrides.props ?? {};
+            const filteredData: Record<string, unknown>[] = getFilteredResourceData(resourceIndex);
+            const currentValue: string | number | (string | number)[] = resourceValues[`${fieldName}`];
+            if (resource.multiple) {
+                return (
+                    <FormField name={fieldName}>
+                        <MultiSelect
+                            placeholder={extraProps.placeholder ?? resource.title}
+                            className={extraProps.className ?? `sf-${fieldName} ${CSS_CLASSES.EVENT_RESOURCE}`}
+                            labelMode={extraProps.labelMode ?? 'Always'}
+                            dataSource={extraProps.dataSource ?? filteredData}
+                            fields={{ text: resource.textField, value: resource.idField }}
+                            value={extraProps.value ?? (Array.isArray(currentValue) ? currentValue : (currentValue ? [currentValue] : []))}
+                            onChange={extraProps.onChange ?? handleResourceChange(resourceIndex)}
+                            key={`${fieldName}-${resourceIndex}-${Array.isArray(currentValue) ? currentValue.join(',') : currentValue}`}
+                            {...extraProps}
+                        />
+                    </FormField>
+                );
+            } else {
+                return (
+                    <FormField name={fieldName}>
+                        <DropDownList
+                            placeholder={extraProps.placeholder ?? resource.title}
+                            className={extraProps.className ?? `sf-${fieldName} ${CSS_CLASSES.EVENT_RESOURCE}`}
+                            labelMode={extraProps.labelMode ?? 'Always'}
+                            dataSource={extraProps.dataSource ?? filteredData}
+                            fields={{ text: resource.textField, value: resource.idField }}
+                            value={extraProps.value ?? (currentValue as string | number)}
+                            onChange={extraProps.onChange ?? handleResourceChange(resourceIndex)}
+                            key={`${fieldName}-${resourceIndex}-${currentValue}`}
+                            {...extraProps}
+                        />
+                    </FormField>
+                );
+            }
+        }, [resources, resourceValues, getFilteredResourceData, handleResourceChange]);
 
     const getDescriptionField: (overrides?: Partial<SchedulerEditorField>) => JSX.Element =
         useCallback((overrides: Partial<SchedulerEditorField> = {}) => {
@@ -308,6 +526,21 @@ export const EditorPopupFields: FC<EditorPopupFieldsProps> = ({ fields }: Editor
             );
         }, [formState, data?.description, handleDescriptionChange]);
 
+    const getResourceFields: (overrides?: Partial<SchedulerEditorField>) => JSX.Element | null =
+        useCallback((overrides: Partial<SchedulerEditorField> = {}) => {
+            if (!resources || resources.length === 0) { return null; }
+
+            return (
+                <>
+                    {resources.map((_resource: SchedulerResource, index: number) => (
+                        <div key={`resource-field-${_resource.field}`} className={`${CSS_CLASSES.RESOURCE_CONTAINER}`}>
+                            {getResourceField(index, overrides)}
+                        </div>
+                    ))}
+                </>
+            );
+        }, [resources, getResourceField]);
+
     const fieldComponents: Record<string, (o: Partial<SchedulerEditorField>) => ReactNode> = useMemo(() => ({
         subject: getSubjectField,
         location: getLocationField,
@@ -316,10 +549,14 @@ export const EditorPopupFields: FC<EditorPopupFieldsProps> = ({ fields }: Editor
         endDate: getEndDateField,
         endTime: getEndTimeField,
         isAllDay: getAllDayField,
+        startTimezone: getStartTimezoneField,
+        endTimezone: getEndTimezoneField,
         repeatMode: getRepeatModeField,
+        resource: getResourceFields,
         description: getDescriptionField
     }), [getSubjectField, getLocationField, getStartDateField, getStartTimeField, getEndDateField,
-        getEndTimeField, getAllDayField, getRepeatModeField, getDescriptionField]);
+        getEndTimeField, getAllDayField, getStartTimezoneField, getEndTimezoneField, getRepeatModeField, getResourceFields,
+        getDescriptionField]);
 
     /**
      * Return the visible fields of default fields.
@@ -368,7 +605,7 @@ export const EditorPopupFields: FC<EditorPopupFieldsProps> = ({ fields }: Editor
         }
         const getField: (o: Partial<SchedulerEditorField>) => ReactNode = fieldComponents[field.name];
         if (getField) {
-            if ((field.name === 'startTime' || field.name === 'endTime') && data?.isAllDay) {
+            if ((field.name === 'startTime' || field.name === 'endTime' || field.name === 'startTimezone' || field.name === 'endTimezone') && data?.isAllDay) {
                 return null;
             }
             if (field.name === 'repeatMode' && action === 'EditOccurrence') {
@@ -424,13 +661,35 @@ export const EditorPopupFields: FC<EditorPopupFieldsProps> = ({ fields }: Editor
                         <div className={`${CSS_CLASSES.ALL_DAY_CONTAINER}`}>
                             {getAllDayField()}
                         </div>
+                        <div className={`${CSS_CLASSES.TIMEZONE_CONTAINER}`}>
+                            {getUseTimezoneField()}
+                        </div>
                     </div>
+
+                    {!data?.isAllDay && showTimezoneControls && (
+                        <div className={`${CSS_CLASSES.EDITOR_FIELDS_ROW} ${CSS_CLASSES.DISPLAY_FLEX}`}>
+                            <div className={`${CSS_CLASSES.START_TIMEZONE_CONTAINER} ${CSS_CLASSES.EDITOR_FIELD_CONTAINER}`}>
+                                {getStartTimezoneField()}
+                            </div>
+                            <div className={`${CSS_CLASSES.END_TIMEZONE_CONTAINER} ${CSS_CLASSES.EDITOR_FIELD_CONTAINER}`}>
+                                {getEndTimezoneField()}
+                            </div>
+                        </div>
+                    )}
 
                     {action !== 'EditOccurrence' && (
                         <div className={`${CSS_CLASSES.EDITOR_FIELDS_ROW} ${CSS_CLASSES.DISPLAY_FLEX}`}>
                             {getRepeatModeField()}
                         </div>
                     )}
+
+                    {resources && resources.length > 0 && resources.map((_resource: SchedulerResource, index: number) => (
+                        <div key={`resource-row-${index}`} className={`${CSS_CLASSES.RESOURCE_ROW} ${CSS_CLASSES.DISPLAY_FLEX} ${CSS_CLASSES.EDITOR_FIELDS_ROW}`}>
+                            <div className={`${CSS_CLASSES.RESOURCE_CONTAINER} ${CSS_CLASSES.EDITOR_FIELD_CONTAINER}`}>
+                                {getResourceField(index)}
+                            </div>
+                        </div>
+                    ))}
 
                     <div className={CSS_CLASSES.DESCRIPTION_ROW}>
                         <div className={CSS_CLASSES.DESCRIPTION_CONTAINER}>

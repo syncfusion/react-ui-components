@@ -44,35 +44,53 @@ const DEFAULT_TABLE_STYLE: CSSProperties = {
 };
 
 /**
- * ContentPanelBase component renders the scrollable grid content area
+ * ContentPanelBase component renders the scrollable grid content area with virtual scrolling support.
+ * Manages virtual row and column scrollbars, content visibility, and layout measurements.
+ * Supports both fixed and auto height modes with configurable virtual scrolling.
  *
  * @component
  * @private
+ * @template T - Data type for grid rows
  * @param {Partial<IContentPanelBase>} props - Component properties
- * @param {object} props.panelAttributes - Attributes to apply to the content panel container
- * @param {object} props.scrollContentAttributes - Attributes to apply to the scrollable content container
- * @param {RefObject<ContentPanelRef>} ref - Forwarded ref to expose internal elements and methods
- * @returns {JSX.Element} The rendered grid content wrapper
+ * @param {object} props.panelAttributes - DOM attributes for the content panel container (className, role, etc.)
+ * @param {object} props.scrollContentAttributes - DOM attributes for the scrollable content area (style, aria-busy, etc.)
+ * @param {object} props.virtualRowScrollContentAttributes - DOM attributes for virtual row scrollbar container
+ * @param {object} props.virtualColumnScrollContentAttributes - DOM attributes for virtual column scrollbar container
+ * @param {RefObject<ContentPanelRef<T>>} ref - Forwarded ref exposing panel elements and measured dimensions
+ * @returns {JSX.Element} The rendered grid content wrapper with virtual scroll support
+ * @example
+ * ```tsx
+ * const panelRef = useRef<ContentPanelRef>(null);
+ * return (
+ *   <ContentPanelBase
+ *     ref={panelRef}
+ *     panelAttributes={{ className: 'content-panel' }}
+ *     scrollContentAttributes={{ style: { overflow: 'auto' } }}
+ *   />
+ * );
+ * ```
  */
 const ContentPanelBase: <T>(props: Partial<IContentPanelBase> & RefAttributes<ContentPanelRef<T>>) => ReactElement =
     memo(forwardRef<ContentPanelRef, Partial<IContentPanelBase>>(
         <T, >(props: Partial<IContentPanelBase>, ref: RefObject<ContentPanelRef<T>>) => {
             const { panelAttributes, scrollContentAttributes, virtualRowScrollContentAttributes, virtualColumnScrollContentAttributes } =
                 props;
-            const { id, height, rowHeight, getRowHeight, scrollModule } = useGridComputedProvider<T>();
-            const { currentViewData, offsetY, offsetX, totalVirtualColumnWidth, totalRecordsCount, virtualSettings, scrollMode } =
-                useGridMutableProvider<T>();
+            const { id, height, rowHeight, detailRowHeight, isMasterDetail,
+                getRowHeight, scrollModule, groupSettings } = useGridComputedProvider<T>();
+            const { currentViewData, offsetY, offsetX, totalVirtualColumnWidth, totalRecordsCount, virtualSettings, scrollMode,
+                expansionState, expandedGroupCountRef, editModule } = useGridMutableProvider<T>();
             const [columnClientWidth, setColumnClientWidth] = useState<number>(0);
 
             // Refs for DOM elements and child components
             const contentPanelRef: RefObject<HTMLDivElement> = useRef<HTMLDivElement>(null);
             const contentScrollRef: RefObject<HTMLDivElement> = useRef<HTMLDivElement>(null);
-            const virtualContentRowScrollRef: RefObject<HTMLDivElement> = useRef<HTMLDivElement>(null);
-            const virtualContentColumnScrollRef: RefObject<HTMLDivElement> = useRef<HTMLDivElement>(null);
+            const virtualContentRowScrollRef: RefObject<HTMLDivElement> =
+                    useRef<HTMLDivElement>(null);
+            const virtualContentColumnScrollRef: RefObject<HTMLDivElement> =
+                    useRef<HTMLDivElement>(null);
             const contentTableRef: RefObject<ContentTableRef<T>> = useRef<ContentTableRef<T>>(null);
             const contentVirtualTableRef: RefObject<HTMLDivElement> = useRef<HTMLDivElement>(null);
             const [rowsClientHeight, setRowsClientHeight] = useState<number>(contentTableRef.current?.totalRenderedRowHeight.current ?? 0);
-
             const virtualHeight: number = useMemo(() => {
                 if (height === 'auto') {
                     return rowsClientHeight || (contentTableRef.current?.totalRenderedRowHeight.current +
@@ -80,7 +98,9 @@ const ContentPanelBase: <T>(props: Partial<IContentPanelBase> & RefAttributes<Co
                         contentTableRef.current?.contentSectionRef?.clientHeight;
                 }
 
-                const totalRows: number = (scrollMode === ScrollMode.Virtual ? totalRecordsCount : currentViewData?.length) || 0;
+                const totalRows: number = (groupSettings.enabled && groupSettings.columns?.length && expandedGroupCountRef?.current ?
+                    expandedGroupCountRef?.current : (scrollMode === ScrollMode.Virtual || scrollMode === ScrollMode.Infinite ?
+                        totalRecordsCount : currentViewData?.length)) || 0;
                 const cache: Map<string | number, IRow<ColumnProps<T>>> = contentTableRef.current?.cachedRowObjects.current;
                 const addFormHeight: number = contentTableRef.current?.totalAddFormRenderedRowHeight.current || 0;
 
@@ -123,6 +143,9 @@ const ContentPanelBase: <T>(props: Partial<IContentPanelBase> & RefAttributes<Co
                             scrollModule.virtualRowInfo.browserLimitStretchedRowOffset = 0;
                         }
                     }
+                    if (isMasterDetail && detailRowHeight) {
+                        calculatedHeight += (expansionState.size * detailRowHeight);
+                    }
 
                     return calculatedHeight;
                 }
@@ -156,12 +179,16 @@ const ContentPanelBase: <T>(props: Partial<IContentPanelBase> & RefAttributes<Co
                     }
                 }
 
+                if (isMasterDetail && detailRowHeight) {
+                    calculatedHeight += (expansionState.size * detailRowHeight);
+                }
+
                 return calculatedHeight;
 
             }, [currentViewData, contentTableRef.current?.totalRenderedRowHeight.current, scrollMode, totalRecordsCount,
                 contentTableRef.current?.cachedRowObjects.current.size, getRowHeight, height, rowHeight,
                 contentTableRef.current?.totalAddFormRenderedRowHeight.current, rowsClientHeight,
-                scrollModule?.virtualRowInfo?.maxDivHeight]);
+                scrollModule?.virtualRowInfo?.maxDivHeight, expansionState]);
 
             /**
              * Expose internal elements and methods through the forwarded ref
@@ -179,19 +206,36 @@ const ContentPanelBase: <T>(props: Partial<IContentPanelBase> & RefAttributes<Co
                 columnClientWidth: columnClientWidth
             }), [contentPanelRef.current, contentScrollRef.current, contentTableRef.current, columnClientWidth]);
 
+            /**
+             * Synchronize layout measurements with component state
+             * Handles both column width and row height updates in a single effect
+             * to prevent cascading re-renders and race conditions
+             */
             useLayoutEffect(() => {
-                setColumnClientWidth(contentTableRef.current?.columnClientWidth);
-            }, [offsetX, contentTableRef.current?.columnClientWidth]);
-
-            useLayoutEffect(() => {
-                if (height !== 'auto' && rowsClientHeight !== contentTableRef.current?.totalRenderedRowHeight.current +
-                    contentTableRef.current?.totalAddFormRenderedRowHeight.current) {
-                    setRowsClientHeight(contentTableRef.current?.totalRenderedRowHeight.current +
-                    contentTableRef.current?.totalAddFormRenderedRowHeight.current);
-                } else if (height === 'auto' && rowsClientHeight !== contentTableRef.current?.contentSectionRef?.clientHeight) {
-                    setRowsClientHeight(contentTableRef.current?.contentSectionRef?.clientHeight);
+                const newColumnWidth: number = contentTableRef.current?.columnClientWidth;
+                if (columnClientWidth !== newColumnWidth) {
+                    setColumnClientWidth(newColumnWidth);
                 }
-            }, [contentTableRef.current?.contentSectionRef?.clientHeight]);
+
+                // Update row height based on rendering mode
+                let newRowsHeight: number = rowsClientHeight;
+                if (height !== 'auto') {
+                    const calculatedHeight: number = (contentTableRef.current?.totalRenderedRowHeight.current ?? 0) +
+                        (contentTableRef.current?.totalAddFormRenderedRowHeight.current ?? 0);
+                    if (rowsClientHeight !== calculatedHeight) {
+                        newRowsHeight = calculatedHeight;
+                    }
+                } else if (contentTableRef.current?.contentSectionRef?.getBoundingClientRect().height !== rowsClientHeight) {
+                    newRowsHeight = contentTableRef.current?.contentSectionRef?.getBoundingClientRect().height;
+                }
+
+                if (newRowsHeight !== rowsClientHeight) {
+                    setRowsClientHeight(newRowsHeight);
+                }
+            }, [offsetX, contentTableRef.current?.columnClientWidth, height,
+                contentTableRef.current?.totalRenderedRowHeight.current,
+                contentTableRef.current?.totalAddFormRenderedRowHeight.current,
+                contentTableRef.current?.contentSectionRef?.clientHeight, editModule?.editRowIndex]);
 
             /**
              * Memoized content table component to prevent unnecessary re-renders
@@ -215,12 +259,13 @@ const ContentPanelBase: <T>(props: Partial<IContentPanelBase> & RefAttributes<Co
                     ...(virtualSettings.enableColumn && totalVirtualColumnWidth > contentScrollRef.current?.clientWidth &&
                         totalVirtualColumnWidth > columnClientWidth ? { width: columnClientWidth } : {})
                 };
-            }, [height, offsetY, offsetX, contentScrollRef.current?.clientWidth, columnClientWidth, totalVirtualColumnWidth]);
+            }, [height, offsetY, offsetX, expansionState, contentScrollRef.current?.clientWidth,
+                columnClientWidth, totalVirtualColumnWidth]);
 
             const virtualTrackStyle: CSSProperties = useMemo(() => ({
                 height: virtualHeight || formatUnit(height),
                 width: totalVirtualColumnWidth
-            }), [virtualHeight, totalVirtualColumnWidth, height, columnClientWidth]);
+            }), [virtualHeight, totalVirtualColumnWidth, expansionState, height, columnClientWidth]);
 
             return (
                 <div
@@ -267,16 +312,20 @@ const ContentPanelBase: <T>(props: Partial<IContentPanelBase> & RefAttributes<Co
         }
     ), (prevProps: Partial<IContentPanelBase>, nextProps: Partial<IContentPanelBase>) => {
         // Custom comparison function for memo to prevent unnecessary re-renders
-        // Only re-render if styles have changed
+        // Pure comparison without side effects - only re-render if relevant props change
         const prevStyle: CSSProperties = prevProps.scrollContentAttributes?.style;
         const nextStyle: CSSProperties = nextProps.scrollContentAttributes?.style;
-        const isBusyEqual: boolean = prevProps.scrollContentAttributes?.['aria-busy'] === nextProps.scrollContentAttributes?.['aria-busy'];
-        prevProps.panelAttributes.className = nextProps.panelAttributes.className;
+        const prevBusy: string | boolean = prevProps.scrollContentAttributes?.['aria-busy'];
+        const nextBusy: string | boolean = nextProps.scrollContentAttributes?.['aria-busy'];
+        const prevPanelClass: string = prevProps.panelAttributes?.className;
+        const nextPanelClass: string = nextProps.panelAttributes?.className;
 
         // Deep comparison of style objects
         const stylesEqual: boolean = JSON.stringify(prevStyle) === JSON.stringify(nextStyle);
+        const busyEqual: boolean = prevBusy === nextBusy;
+        const classNameEqual: boolean = prevPanelClass === nextPanelClass;
 
-        return stylesEqual && isBusyEqual;
+        return stylesEqual && busyEqual && classNameEqual;
     }) as <T>(props: Partial<IContentPanelBase> & RefAttributes<ContentPanelRef<T>>) => ReactElement;
 
 /**

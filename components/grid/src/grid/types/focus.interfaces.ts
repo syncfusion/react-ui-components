@@ -383,6 +383,7 @@ export interface FocusStrategyResult {
      * @returns {FocusedCellInfo} The focused cell information.
      */
     getFocusedCell: () => FocusedCellInfo;
+    getLastFocusedCell: () => FocusedCellInfo;
 
     /**
      * A React RefObject holding the current focused cell information in the Data Grid.

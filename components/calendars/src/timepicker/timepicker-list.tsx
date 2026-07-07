@@ -67,8 +67,7 @@ React.forwardRef<TimeListRef, TimeListProps>((props: TimeListProps, ref: React.R
         );
     }, [times, selected]);
 
-    const scrollItemIntoView: (index: number | null)
-    => void = useCallback((index: number | null): void => {
+    const scrollItemIntoView: (index: number | null) => void = useCallback((index: number | null): void => {
         if (index == null || index < 0) {
             return;
         }
@@ -77,11 +76,12 @@ React.forwardRef<TimeListRef, TimeListProps>((props: TimeListProps, ref: React.R
         if (!el || !listEl) {
             return;
         }
-        const itemTop: number = el.offsetTop;
-        const itemHeight: number = el.offsetHeight || 32;
-        const listHeight: number = listEl.clientHeight || 0;
-        const targetScrollTop: number = Math.max(0, itemTop - Math.max(0, (listHeight - itemHeight) / 2));
-        listEl.scrollTop = targetScrollTop;
+        if (typeof el.scrollIntoView === 'function') {
+            el.scrollIntoView({
+                block: 'nearest',
+                behavior: 'auto'
+            });
+        }
     }, []);
 
     const ensureSelectedVisible: () => void = useCallback((): void => {

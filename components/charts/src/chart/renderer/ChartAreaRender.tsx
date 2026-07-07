@@ -12,7 +12,7 @@ import { Chart, Rect } from '../chart-area/chart-interfaces';
  *
  * @param {ChartAreaProps} props - The properties required for rendering the chart area,
  * including background, border, and layout-related settings.
- * @returns {React.JSX.Element | null} The rendered chart area or null if not applicable.
+ * @returns {Element | null} The rendered chart area or null if not applicable.
  */
 export const ChartAreaRenderer: React.FC<ChartAreaProps> = (props: ChartAreaProps) => {
     const { layoutRef, phase, setLayoutValue, reportMeasured, triggerRemeasure } = useLayout();

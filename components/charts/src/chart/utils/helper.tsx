@@ -1,5 +1,5 @@
-import { LabelPosition } from '../base/enum';
-import { ChartBorderProps, ChartSeriesProps, ChartFontProps, ChartLocationProps, ChartDataLabelTemplateProps, ChartIndexesProps, PointRenderProps} from '../base/interfaces';
+import { LabelPosition, BoxPlotMode } from '../base/enum';
+import { ChartBorderProps, ChartSeriesProps, ChartFontProps, ChartLocationProps, ChartDataLabelTemplateProps, ChartIndexesProps, PointRenderProps, ChartRangeColorProps} from '../base/interfaces';
 import { getNumberFormat, HorizontalAlignment, isNullOrUndefined, merge, NumberFormatOptions } from '@syncfusion/react-base';
 import { AxisTextStyle } from '../chart-axis/base';
 import { extend } from '@syncfusion/react-base';
@@ -8,6 +8,8 @@ import { JSX } from 'react';
 import { PointData } from '../renderer/TooltipRenderer';
 import { AxisModel, Chart, ColumnProps, MarginModel, PathOptions, Points, Rect, RowProps, SeriesProperties, ChartSizeProps, TextOption, TextStyleModel, VisibleRangeProps, RenderOptions } from '../chart-area/chart-interfaces';
 import { TextAnchor, TextOverflow, TitlePosition } from '../../common';
+import { sortAsc, percentileExclusive, percentileInclusive, quartilesAuto, median } from '../renderer/SeriesRenderer/BoxAndWhiskerSeriesRenderer';
+import { colorNameToHex } from '../renderer/SeriesRenderer/DataLabelRender';
 
 /**
  * Measures the size of the given text using the specified font and theme font style.
@@ -15,7 +17,7 @@ import { TextAnchor, TextOverflow, TitlePosition } from '../../common';
  * @param {string} text - The text to measure.
  * @param {TextStyleModel} font - The font style used for measuring the text.
  * @param {TextStyleModel} themeFontStyle - Additional theme font styles that could influence text rendering.
- * @returns {Size} The calculated size of the text, including width and height dimensions.
+ * @returns {ChartSizeProps} The calculated size of the text, including width and height dimensions.
  * @private
  */
 export function measureText(text: string, font: TextStyleModel, themeFontStyle: TextStyleModel): ChartSizeProps {
@@ -51,7 +53,7 @@ export function measureText(text: string, font: TextStyleModel, themeFontStyle: 
  * Calculates the horizontal position of a chart title based on the alignment setting.
  *
  * @param {Rect} rect - The rectangle object representing the position and size of the container.
- * @param {Alignment} textAlignment - The settings for the title's style, including text alignment.
+ * @param {HorizontalAlignment} textAlignment - The settings for the title's style, including text alignment.
  * @returns {number} The x-coordinate for the title position.
  * @private
  */
@@ -336,7 +338,7 @@ export function firstToLowerCase(str: string): string {
  * @returns {Points[]} An array of visible points cloned from the series.
  * @private
  */
-export function useVisiblePoints(series: SeriesProperties): Points[] {
+export function calculateVisiblePoints(series: SeriesProperties): Points[] {
 
     const points: Points[] = [];
     series.points.map((point: Points) => {
@@ -408,7 +410,7 @@ export function inside(value: number, range: VisibleRangeProps): boolean {
  * @param {TextStyleModel} font - The font settings to be used for the text.
  * @param {number} angle - The angle at which the text is rotated.
  * @param {TextStyleModel} themeFont - The theme font settings to apply.
- * @returns {Size} The dimensions of the rotated text.
+ * @returns {ChartSizeProps} The dimensions of the rotated text.
  * @private
  */
 export function getRotatedTextSize(text: string, font: TextStyleModel, angle: number, themeFont: TextStyleModel): ChartSizeProps {
@@ -562,13 +564,13 @@ function approximateBezierCurveLength(d: string): number {
 /**
  * Parse SVG path data into command segments
  *
- * @param {string} d - SVG path data
+ * @param {string} direction - SVG path data
  * @returns {Array<{command: string, params: number[]}>} - Parsed segments
  * @private
  */
-function parsePathSegments(d: string): Array<{command: string; params: number[]}> {
-    const segments: Array<{command: string; params: number[]}> = [];
-    const commands: RegExpMatchArray | [] = d.match(/([MLCc])([^MLCc]*)/g) || [];
+function parsePathSegments(direction: string): Array<{ command: string; params: number[] }> {
+    const segments: Array<{ command: string; params: number[] }> = [];
+    const commands: RegExpMatchArray | [] = direction.match(/([MLCc])([^MLCc]*)/g) || [];
 
     for (const cmd of commands) {
         const command: string = cmd[0];
@@ -828,7 +830,7 @@ export function setPointColor(
 export function setBorderColor(point: Points, border: ChartBorderProps): ChartBorderProps {
     border.width = point && point.isEmpty ? ((point.series as SeriesProperties)?.emptyPointSettings?.border?.width || border.width) :
         border.width;
-    border.width = Math.max(0, border.width!);
+    border.width = Math.max(0, border.width as number);
     border.color = point && point.isEmpty ? ((point.series as SeriesProperties)?.emptyPointSettings?.border?.color || border.color) :
         border.color;
     border.color = border.color || 'transparent';
@@ -839,7 +841,7 @@ export function setBorderColor(point: Points, border: ChartBorderProps): ChartBo
  * Calculates the shapes based on the specified parameters.
  *
  * @param {ChartLocationProps} location - The location for the shape.
- * @param {Size} size - The size of the shape.
+ * @param {ChartSizeProps} size - The size of the shape.
  * @param {string} shape - The type of shape.
  * @param {PathOptions} options - Additional options for the path.
  * @param {string} url - A URL for the shape if applicable.
@@ -983,7 +985,7 @@ export const calculateShapes: (
  * Calculates the legend shapes based on the provided parameters.
  *
  * @param {ChartLocationProps} location - The location for the shape.
- * @param {Size} size - The size of the shape.
+ * @param {ChartSizeProps} size - The size of the shape.
  * @param {string} shape - The type of shape.
  * @param {PathOptions} options - Additional options for the path.
  * @returns {PathOptions} - The calculated legend shape.
@@ -1115,6 +1117,7 @@ export const calculateLegendShapes: (
             case 'StackingArea':
             case 'StackingArea100':
             case 'RangeArea':
+            case 'RangeStepArea':
                 dir = 'M' + ' ' + (lx - (width / 2) - (padding / 4)) + ' ' + (ly + (height / 2))
                         + ' ' + 'L' + ' ' + (lx + (-width / 4) + (-padding / 8)) + ' ' + (ly - (height / 2))
                         + ' ' + 'L' + ' ' + (lx) + ' ' + (ly + (height / 4)) + ' ' + 'L' + ' ' + (lx
@@ -1140,7 +1143,7 @@ export const calculateLegendShapes: (
  *
  * @param {ChartLocationProps} location - The location to draw the symbol.
  * @param {string} shape - The shape of the symbol.
- * @param {Size} size - The size of the symbol.
+ * @param {ChartSizeProps} size - The size of the symbol.
  * @param {string} url - The URL of the image symbol.
  * @param {PathOptions} options - The options for drawing the symbol.
  * @returns {Element} - The element representing the drawn symbol.
@@ -1155,18 +1158,18 @@ export function drawSymbol(
 /**
  * Compares two data sources for equality.
  *
- * @param {any} a - The first data source to compare.
- * @param {any} b - The second data source to compare.
+ * @param {any} firstDataSource - The first data source to compare.
+ * @param {any} secondDataSource - The second data source to compare.
  * @returns {boolean} True if the data sources are equal, false otherwise.
  * @private
  */
-export function areDataSourcesEqual(a: any, b: any): any {
-    if (!a || !b || a.length !== b.length) {
+export function areDataSourcesEqual(firstDataSource: any, secondDataSource: any): boolean {
+    if (!firstDataSource || !secondDataSource || firstDataSource.length !== secondDataSource.length) {
         return false;
     }
 
-    return a.every((firstPoint: Points, i: number) => {
-        const secondPoint: Points = b[i as number];
+    return firstDataSource.every((firstPoint: Points, i: number) => {
+        const secondPoint: Points = secondDataSource[i as number];
 
         if (firstPoint.x !== secondPoint.x) {
             return false;
@@ -1177,9 +1180,9 @@ export function areDataSourcesEqual(a: any, b: any): any {
             (firstPoint?.open !== undefined || firstPoint?.close !== undefined ||
                 firstPoint?.high !== undefined || firstPoint?.low !== undefined)) {
             return firstPoint.open === secondPoint.open &&
-                   firstPoint.high === secondPoint.high &&
-                   firstPoint.low === secondPoint.low &&
-                   firstPoint.close === secondPoint.close;
+                firstPoint.high === secondPoint.high &&
+                firstPoint.low === secondPoint.low &&
+                firstPoint.close === secondPoint.close;
         } else {
             return firstPoint.y === secondPoint.y;
         }
@@ -1271,7 +1274,7 @@ export function isZoomSet(axis: AxisModel): boolean {
  * Calculates the minimum points delta between data points on the provided axis.
  *
  * @param {AxisModel} axis - The axis for which to calculate the minimum points delta.
- * @param {Series[]} seriesCollection - The collection of series in the chart.
+ * @param {SeriesProperties[]} seriesCollection - The collection of series in the chart.
  * @returns {number} The minimum points delta.
  * @private
  */
@@ -1353,12 +1356,12 @@ export function logWithIn(value: number, axis: AxisModel): number {
  * @param {Points} previousPoint - The previous point in the series.
  * @param {Points} currentPoint - The current point to check.
  * @param {Points} nextPoint - The next point in the series.
- * @param {Series} series - The series to which the points belong.
+ * @param {SeriesProperties} series - The series to which the points belong.
  * @returns {boolean} - A boolean indicating if the point is within the range.
  * @private
  */
 export function withInRange(previousPoint: Points, currentPoint: Points, nextPoint: Points, series: SeriesProperties): boolean {
-    if (series.chart.delayRedraw && series.chart.enableAnimation) {
+    if (series.chart.delayRedraw) {
         return true;
     }
     const mX2: number = logWithIn(currentPoint.xValue || 0, series.xAxis);
@@ -1390,7 +1393,7 @@ Rect = (x: number, y: number, width: number, height: number): Rect => ({
  * considering location, text size, and margin.
  *
  * @param {ChartLocationProps} location - The location object containing x and y coordinates.
- * @param {Size} textSize - The size of the text as a Size object (width and height).
+ * @param {ChartSizeProps} textSize - The size of the text as a Size object (width and height).
  * @param {MarginModel} margin - The margin values as a MarginModel object (left, right, top, bottom).
  * @returns {Rect} The computed rectangle based on given parameters.
  * @private
@@ -1410,7 +1413,6 @@ export function calculateRect(location: ChartLocationProps, textSize: ChartSizeP
  * @param {Points} currentPoint - The current data point.
  * @param {SeriesProperties} series - The properties of the series to which the point belongs.
  * @param {Chart} chart - The chart object for accessing locale and formatting options.
- * @param {boolean} dataLabelTemplate - Indicates if a data label template is used.
  * @returns {string[]} An array of text strings for the data label(s) of the point.
  * @private
  */
@@ -1471,6 +1473,18 @@ export function getDataLabelText(currentPoint: Points, series: SeriesProperties,
     case 'HighLow':
         text.push(currentPoint.text || Math.max(currentPoint.high as number, currentPoint.low as number).toString());
         text.push(currentPoint.text || Math.min(currentPoint.high as number, currentPoint.low as number).toString());
+        break;
+    case 'BoxPlot':
+        text.push(currentPoint.maximum?.toFixed(2) as string);
+        text.push(currentPoint.upperQuartile?.toFixed(2) as string);
+        text.push(currentPoint.median?.toFixed(2) as string);
+        text.push(currentPoint.lowerQuartile?.toFixed(2) as string);
+        text.push(currentPoint.minimum?.toFixed(2) as string);
+        if (currentPoint.outliers?.length) {
+            for (let i: number = 0; i < currentPoint.outliers.length; i++) {
+                text.push((currentPoint.outliers[i as number]?.toFixed(2)));
+            }
+        }
         break;
     default:
         // Add default case to ensure all code paths return a value
@@ -1569,12 +1583,12 @@ export function isDataLabelOverlapWithChartBound(rectCoordinates: ChartLocationP
 /**
  * Rotates the size of text based on the provided angle.
  *
- * @param {Font} font - The font style of the text.
+ * @param {ChartFontProps} font - The font style of the text.
  * @param {string} text - The text to be rotated.
  * @param {number} angle - The angle of rotation.
- * @param {Chart | Chart3D} chart - The chart instance.
- * @param {Font} themeFontStyle - The font style based on the theme.
- * @returns {Size} - The rotated size of the text.
+ * @param {Chart} chart - The chart instance.
+ * @param {ChartFontProps} themeFontStyle - The font style based on the theme.
+ * @returns {ChartSizeProps} - The rotated size of the text.
  * @private
  */
 export function rotateTextSize(
@@ -1691,7 +1705,7 @@ interface TextElementResult {
  * Creates and returns the rendering options and actual text content for an SVG/text label in the chart.
  *
  * @param {TextOption} option - The text element configuration, including position, id, text, anchor, etc.
- * @param {Font} font - The font style options to apply (size, family, style, weight, opacity).
+ * @param {ChartFontProps} font - The font style options to apply (size, family, style, weight, opacity).
  * @param {string} color - The color to use for the text fill.
  * @param {boolean} isMinus - If true and text is an array, selects the last element; otherwise, uses the first. Used for special minus handling.
  * @param {Rect} [seriesClipRect] - Optional clipping rectangle, used for calculating translated X/Y coordinates for the text.
@@ -1718,7 +1732,7 @@ export function textElement(
 
     const maxWidth: number = 0;
 
-    const dx: number = (option.text!.length > 1 && isDataLabelWrap) ? (option.x! + maxWidth / 2 - width / 2) : option.x as number;
+    const dx: number = (option.text?.length > 1 && isDataLabelWrap) ? (option.x + maxWidth / 2 - width / 2) : option.x as number;
     renderOptions = {
         'id': option.id,
         'x': dx,
@@ -1734,7 +1748,7 @@ export function textElement(
         'opacity': font.opacity,
         'dominant-baseline': option.baseLine
     };
-    const text: string = typeof option.text === 'string' ? option.text : isMinus ? option.text![option.text!.length - 1] : option.text![0];
+    const text: string = typeof option.text === 'string' ? option.text : isMinus ? option.text[option.text.length - 1] : option.text[0];
     const transX: number = seriesClipRect?.x as number;
     const transY: number = seriesClipRect?.y as number;
     return {renderOptions, text, transX, transY};
@@ -1759,10 +1773,10 @@ export interface StackValuesType {
 /**
  * Finds the collection of series based on the column, row, and stack status.
  *
- * @param {Column} column - The column object containing axes details.
- * @param {Row} row - The row object containing axes details.
+ * @param {ColumnProps} column - The column object containing axes details.
+ * @param {RowProps} row - The row object containing axes details.
  * @param {boolean} isStack - Specifies whether the series are stacked.
- * @returns {Series[]} - Returns a collection of series.
+ * @returns {SeriesProperties[]} - Returns a collection of series.
  * @private
  */
 export function findSeriesCollection(column: ColumnProps, row: RowProps, isStack: boolean): SeriesProperties[] {
@@ -1786,7 +1800,7 @@ export function findSeriesCollection(column: ColumnProps, row: RowProps, isStack
 /**
  * Checks if the series in the chart are rectangular.
  *
- * @param {Series} series - The series to be checked.
+ * @param {SeriesProperties} series - The series to be checked.
  * @param {boolean} isStack - Specifies whether the series are stacked.
  * @returns {boolean} - Returns true if the series in the chart are rectangular, otherwise false.
  * @private
@@ -1795,7 +1809,8 @@ export function isRectangularSeriesType(series: SeriesProperties, isStack: boole
     const type: string = (series.type ?? '').toLowerCase();
     return (
         type.includes('column') || type.includes('bar') || type.includes('candle') || type.includes('hilo') ||
-        type.includes('hiloopenclose') || type.includes('waterfall') || type.includes('histogram') || type.includes('pareto') || isStack
+        type.includes('hiloopenclose') || type.includes('waterfall') || type.includes('histogram') || type.includes('pareto') ||
+        type.includes('boxandwhisker') || isStack
     );
 }
 
@@ -1964,6 +1979,8 @@ export function getCommonXValues(visibleSeries: SeriesProperties[]): number[] {
 
 /**
  * Finds the point closest to the current X position in the series.
+ * For polar/radar series, finds the closest point based on visual distance.
+ * For regular series, finds the closest point based on X-axis value.
  *
  * @param {Chart} chart - The chart object containing layout and data details.
  * @param {SeriesProperties} series - The series within the chart to find the point in.
@@ -1972,22 +1989,62 @@ export function getCommonXValues(visibleSeries: SeriesProperties[]): number[] {
  * @private
  */
 export function getClosestX(chart: Chart, series: SeriesProperties, xvalues?: number[]): PointData | null {
-    let value: number = 0;
     const rect: Rect = series.clipRect as Rect;
 
-    // Determine value based on axis inversion and mouse position
-    void (chart.mouseX <= rect.x + rect.width && chart.mouseX >= rect.x &&
-        (value = chart.requireInvertedAxis ?
-            getValueYByPoint(chart.mouseY - rect.y, rect.height, series.xAxis) :
-            getValueXByPoint(chart.mouseX - rect.x, rect.width, series.xAxis)));
-    // Get closest x value
-    const closest: number | null = getClosest(series, value, xvalues);
+    // Check if this is a polar or radar series
+    const isPolarRadar: boolean = chart.chartAreaType === 'PolarRadar';
 
-    // Find the point with this X value using the closest result
-    const point: Points | undefined = closest !== null ? series.visiblePoints?.find((p: Points) => p.xValue === closest && p.visible)
-        : undefined;
-    // Return the point and series only if a point is found; otherwise, return null
-    return point ? { point, series } : null;
+    if (isPolarRadar) {
+        // For polar/radar series, find the point closest to the mouse cursor based on visual distance
+        let closestPoint: Points | undefined;
+        let closestDistance: number = Infinity;
+
+        if (series.visiblePoints) {
+            for (const point of series.visiblePoints) {
+                if (!point.visible || !point.symbolLocations || point.symbolLocations.length === 0) {
+                    continue;
+                }
+
+                // Calculate absolute coordinates from relative symbolLocations
+                const absoluteX: number = rect.x + point.symbolLocations[0].x;
+                const absoluteY: number = rect.y + point.symbolLocations[0].y;
+
+                // Calculate distance to mouse cursor
+                const dx: number = absoluteX - chart.mouseX;
+                const dy: number = absoluteY - chart.mouseY;
+                const distance: number = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestPoint = point;
+                }
+            }
+        }
+
+        return closestPoint ? { point: closestPoint, series } : null;
+    } else {
+        // Original logic for regular (cartesian) series
+        let value: number = 0;
+
+        // Determine value based on axis inversion and mouse position
+        void (chart.mouseX <= rect.x + rect.width && chart.mouseX >= rect.x &&
+            (value = chart.requireInvertedAxis ?
+                getValueYByPoint(chart.mouseY - rect.y, rect.height, series.xAxis) :
+                getValueXByPoint(chart.mouseX - rect.x, rect.width, series.xAxis)));
+        // Get closest x value
+        const closest: number | null = getClosest(series, value, xvalues);
+
+        // Find the point with this X value using the closest result
+        const point: Points | undefined = closest !== null ? series.visiblePoints?.find((p: Points) => p.xValue === closest && p.visible)
+            : undefined;
+        if (!(chart.chartAreaType === 'Cartesian' && ((series.category === 'Indicator' && series.name === 'Histogram') ||
+            (point?.symbolLocations && point?.symbolLocations.length > 0 && point?.symbolLocations[0].x >= 0 &&
+                point?.symbolLocations[0].x <= rect.width)))) {
+            return null;
+        }
+        // Return the point and series only if a point is found; otherwise, return null
+        return point ? { point, series } : null;
+    }
 }
 
 /**
@@ -2047,4 +2104,146 @@ export function applyPointRenderCallback(pointsProps: PointRenderProps, chart: C
         }
     }
     return defaultProps.color;
+}
+
+/**
+ * Finds box plot values from the given y-values.
+ * * Calculates box-and-whisker statistics using Tukey's method.
+ *
+ * Outliers are defined as values > Q3 + 1.5×IQR or < Q1 - 1.5×IQR,
+ * where IQR = Q3 - Q1 (interquartile range).
+ *
+ *
+ * @param {number[]} yValues - Values used for box plot calculation.
+ * @param {BoxPlotMode} boxPlotMode - Quartile calculation mode.
+ * @param {boolean} showOutliers - Indicates whether outliers should be included.
+ * @returns {Object} Calculated minimum, maximum, quartiles, median, outliers, and average.
+ *
+ * @private
+ */
+export function findBoxPlotValues(yValues: number[], boxPlotMode: BoxPlotMode, showOutliers: boolean | undefined):
+{   minimum: number;
+    maximum: number;
+    lowerQuartile: number;
+    upperQuartile: number;
+    median: number;
+    outliers: number[];
+    average: number;
+}
+{
+    const sorted: number[] = sortAsc(yValues);
+    const valueCount: number = sorted.length;
+
+    let firstQuartile: number = 0;
+    let thirdQuartile: number = 0;
+    let medianValue: number = 0;
+    if (boxPlotMode === 'Exclusive') {
+        firstQuartile = percentileExclusive(sorted, 0.25);
+        thirdQuartile = percentileExclusive(sorted, 0.75);
+        medianValue = percentileExclusive(sorted, 0.5);
+    } else if (boxPlotMode === 'Inclusive') {
+        firstQuartile = percentileInclusive(sorted, 0.25);
+        thirdQuartile = percentileInclusive(sorted, 0.75);
+        medianValue = percentileInclusive(sorted, 0.5);
+    } else {
+        medianValue = median(sorted);
+        ({ firstQuartile, thirdQuartile } = quartilesAuto(sorted));
+    }
+
+    const averageValue: number = sorted.reduce((sum: number, value: number) => sum + value, 0) / (valueCount || 1);
+    const interQuartileRange: number = thirdQuartile - firstQuartile;
+    const outlierFence: number = 1.5 * interQuartileRange;
+    const lowerFence: number = firstQuartile - outlierFence;
+    const upperFence: number = thirdQuartile + outlierFence;
+    const outliers: number[] = [];
+    const inliers: number[] = [];
+    for (let i: number = 0; i < valueCount; i++) {
+        const currentValue: number = sorted[i as number];
+
+        if (currentValue < lowerFence || currentValue > upperFence) {
+            outliers.push(currentValue);
+        } else {
+            inliers.push(currentValue);
+        }
+
+    }
+    const minimum: number = inliers.length ? inliers[0] : sorted[0];
+    const maximum: number = inliers.length ? inliers[inliers.length - 1] : sorted[valueCount - 1];
+
+    return { minimum, maximum, lowerQuartile: firstQuartile, upperQuartile: thirdQuartile,
+        median: medianValue, outliers: showOutliers ? outliers : [], average: averageValue };
+}
+
+/**
+ * Determines whether range color mapping is enabled on the provided chart.
+ *
+ * @param {Chart} chart - The chart instance to inspect.
+ * @returns {boolean} True when any range color module contains one or more colors; otherwise false.
+ * @private
+ */
+export function isRangeColorEnabled(chart: Chart | null | undefined): boolean {
+    if (!chart) {
+        return false;
+    }
+    const chartRangeColor: ChartRangeColorProps[] = chart.rangeColorModule ?? [];
+    for (let index: number = 0; index < chartRangeColor.length; index++) {
+        const mapping: ChartRangeColorProps | undefined = chartRangeColor[index as number];
+        if (mapping?.fill && mapping.fill !== '') {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Extracts range color signature data for change detection.
+ * Creates a lightweight representation of range color configurations.
+ *
+ * @param {ChartRangeColorProps[]} rangeColors - Array of range color configs
+ * @returns {any[]} Array of range color signature objects
+ *
+ * @private
+ */
+export function extractRangeColorSignature(
+    rangeColors: ChartRangeColorProps[]
+): ChartRangeColorProps[] {
+
+    return rangeColors.map(
+        (range: ChartRangeColorProps, idx: number) => {
+            return {
+                index: idx,
+                start: range.start,
+                end: range.end,
+                fill: range.fill,
+                label: range.label
+            };
+        }
+    ).filter(Boolean);
+}
+
+/**
+ * Gets the color with adjusted saturation.
+ *
+ * @param {string} color - The input color string.
+ * @param {number} factor - The factor by which to adjust the saturation.
+ * @returns {string} - The modified color string.
+ *
+ * @private
+ */
+export function getSaturationColor(color: string, factor: number): string {
+    color = colorNameToHex(color);
+    color = color.replace(/[^0-9a-f]/gi, '');
+    if (color.length < 6) {
+        color = color[0] + color[0] + color[1] + color[1] + color[2] + color[2];
+    }
+    factor = factor || 0;
+    // convert to decimal and change luminosity
+    let rgb: string = '#';
+    let colorCode: number;
+    for (let i: number = 0; i < 3; i++) {
+        colorCode = parseInt(color.substr(i * 2, 2), 16);
+        colorCode = Math.round(Math.min(Math.max(0, colorCode + (colorCode * factor)), 255));
+        rgb += ('00' + colorCode.toString(16)).substr(colorCode.toString(16).length);
+    }
+    return rgb;
 }

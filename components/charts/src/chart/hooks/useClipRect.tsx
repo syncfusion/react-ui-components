@@ -275,6 +275,17 @@ export function registerZoomRectSetter(setter: (rect: JSX.Element | null) => voi
 }
 
 /**
+ * Unregisters the zoom rectangle setter if currently registered.
+ * Useful for cleanup when a component unmounts to avoid retaining closures.
+ *
+ * @returns {void} Nothing — clears the registered zoom rectangle setter.
+ * @private
+ */
+export function unregisterZoomRectSetter(): void {
+    zoomRectSetter = null;
+}
+
+/**
  * Returns the current zoom rectangle setter
  *
  * @returns {Function|null} The current zoom rectangle setter or null
@@ -385,7 +396,11 @@ let axisOutsideListeres: ((v: number) => void)[] = [];
 export const useRegisterAxieOutsideRender: () => () => void = () => {
     return () => {
         axisOutSideVersion++;
-        axisOutsideListeres.forEach((fn: (v: number) => void) => fn(axisOutSideVersion));
+        setTimeout(() => {
+            axisOutsideListeres.forEach((fn: (v: number) => void) =>
+                fn(axisOutSideVersion)
+            );
+        }, 0);
     };
 };
 

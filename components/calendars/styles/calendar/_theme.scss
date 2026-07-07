@@ -21,12 +21,17 @@
     border: $calendar-border-style;
     box-shadow: $calendar-box-shadow;
 
-    .sf-in-range:not(.sf-other-month) { 
+    .sf-in-range:not(.sf-other-month):not(.sf-selected) { 
       background: $calendar-range-color; 
     }
 
     .sf-day {
       color: $calendar-text-color;
+    }
+
+    .sf-other-year .sf-day,
+    .sf-other-month:not(.sf-selected) .sf-day {
+      color: $calendar-other-month-date;
     }
 
     .sf-focused-date {
@@ -55,10 +60,27 @@
         border: $calendar-focus-border-color;
         border-radius: $calendar-border-radius;
       }
+
+      &:active .sf-day {
+        background: $calendar-active-bg-color;
+        color: $calendar-active-text-color;
+        border: $calendar-focus-border-color;
+        border-radius: $calendar-border-radius;
+      }
     }
 
     .sf-today {
       .sf-day {
+        background: $calendar-today-bg-color;
+        border: $calendar-today-border-color;
+        border-radius: $calendar-border-radius;
+        box-shadow: $calendar-today-box-shadow;
+        color: $calendar-today-color;
+      }
+
+      &:hover .sf-day,
+      &:focus .sf-day,
+      &.sf-focused-date:not(.sf-selected) .sf-day {
         background: $calendar-focused-today-bg-style;
         border: $calendar-today-border-color;
         border-radius: $calendar-border-radius;
@@ -66,23 +88,35 @@
         color: $calendar-today-color;
       }
 
-      &:hover .sf-day {
-        background: $calendar-focused-today-bg-style;
-        border: $calendar-today-border-color;
+      &:active .sf-day {
+        background: $calendar-active-today-bg-style;
+        color: $calendar-active-today-text-color;
         border-radius: $calendar-border-radius;
-        box-shadow: $calendar-today-box-shadow;
-        color: $calendar-today-color;
       }
     }
 
-    .sf-selected,
-    .sf-selected:hover {
+    .sf-selected {
       .sf-day {
-        background: $calendar-active-bg-color;
+        background: $calendar-selected-bg-color;
         border: $calendar-today-border-color;
         border-radius: $calendar-border-radius;
         box-shadow: $calendar-today-box-shadow;
         color: $calendar-active-font-color;
+      }
+
+      &:hover .sf-day,
+      &.sf-focused-date .sf-day {
+        background: $calendar-selected-hover-bg-color;
+        color: $calendar-active-font-color;
+        border: $calendar-today-border-color;
+        box-shadow: $calendar-today-box-shadow;
+      }
+
+      &:active .sf-day {
+        background: $calendar-selected-active-bg-color;
+        color: $calendar-active-font-color;
+        border: $calendar-today-border-color;
+        box-shadow: $calendar-today-box-shadow;
       }
     }
 
@@ -94,13 +128,31 @@
       color: $calendar-week-header-font-color;
     }
 
-    .sf-other-year .sf-day,
-    .sf-other-month:not(.sf-selected) .sf-day {
-      color: $calendar-other-month-date;
-    }
-
     .sf-zoomin {
       animation: ZoomIn .3s;
+    }
+
+    .sf-calendar-footer {
+      background: $calendar-footer-bg-color;
+      border-top: $calendar-footer-border-top;
+    }
+
+    .sf-disabled {
+      opacity: 1;
+      &.sf-cell .sf-day, &.sf-other-month .sf-day, &.sf-focused-date .sf-day {
+        color: $calendar-disable-text-color;
+      }
+      &.sf-today .sf-day {
+        border: $calendar-today-disabled-border-color;
+      }
+    }
+
+    .sf-calendar-title {
+      color: $calendar-title-text-color;
+
+      &:hover, &:active, &:focus ,&:focus-visible {
+        color: $calendar-title-hover-text-color;
+      }
     }
   }
 }

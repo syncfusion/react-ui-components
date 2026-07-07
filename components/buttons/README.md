@@ -202,6 +202,41 @@ export default function App() {
 - [RadioButton Demo/Docs](https://react.syncfusion.com/react-ui/radio-button)
 - [RadioButton API](https://react.syncfusion.com/api/radio-button/overview)
 
+## React Switch
+
+The Switch component offers a flexible and user-friendly way to allow users to toggle between two states. It supports various configurations and customization options to accommodate different use cases in applications.
+
+**Key features**
+
+- **Toggle Functionality:** The Switch component allows users to toggle between ON and OFF states, providing immediate visual feedback through the handle animation and track color changes.
+
+- **Color Variants:** Customize the appearance with predefined color options including `Primary`, `Secondary`, `Warning`, `Success`, `Error`, and `Info` to match your application's design language.
+
+- **Size Options:** Choose from multiple size presets (`Small`, `Medium`, `Large`) to accommodate different UI contexts and maintain visual consistency across your application.
+
+- **Label Support:** Display informative text alongside the switch to clearly convey its purpose. Configure label placement with the `labelPlacement` prop for left, right, top, or bottom positioning.
+
+- **Icon Customization:** Add custom icons or visual indicators inside the handle for checked and unchecked states, or display labels directly on the track for enhanced visual cues.
+
+- **Controlled & Uncontrolled Modes:** Supports both controlled and uncontrolled component patterns, allowing flexible state management depending on your application's requirements.
+
+**Usage**
+
+```tsx
+import { Switch } from "@syncfusion/react-buttons";
+
+export default function App() {
+    return (
+      <Switch checked={true} label="Dark mode" />
+    );
+}
+```
+
+**Resources**
+
+- [Switch Demo/Docs](https://react.syncfusion.com/react-ui/switch)
+- [Switch API](https://react.syncfusion.com/api/switch/overview)
+
 ## Support
 
 Product support is available through following mediums.

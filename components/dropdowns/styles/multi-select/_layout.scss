@@ -24,7 +24,7 @@
       justify-content: normal;
 
       &.sf-outline .sf-label-top {
-        background: $multiselect-float-label-bg center / auto $multiselect-float-bg-size no-repeat;
+        background: $multiselect-label-bg;
       }
     }
 
@@ -45,15 +45,90 @@
     margin-inline-start: auto;
   }
 
+  .sf-group-checkbox {
+    .sf-list-group-item {
+      padding: $multiselect-group-item-padding;
+
+      .sf-dd-checkbox-item-wrapper {
+        padding: $multiselect-medium-list-item-padding;
+        width: 100%;
+      }
+
+      &:hover .sf-dd-checkbox-item-wrapper {
+        background: $multiselect-list-item-hover-bg;
+        color: $multiselect-list-item-text-hover-color;
+        border-color: $multiselect-list-item-hover-border-color;
+      }
+
+      &:active .sf-dd-checkbox-item-wrapper {
+        background-color: $multiselect-list-item-select-bg;
+        color: $multiselect-list-item-text-select-color;
+      }
+
+      &.sf-item-focus .sf-dd-checkbox-item-wrapper {
+        background: $multiselect-list-focus-bg-color;
+        color: $multiselect-list-item-text-hover-color;
+      }
+    }
+
+    .sf-small {
+      .sf-list-group-item .sf-dd-checkbox-item-wrapper {
+        padding: $multiselect-small-list-item-padding;
+      }
+    }
+
+    .sf-large {
+      .sf-list-group-item .sf-dd-checkbox-item-wrapper {
+        padding: $multiselect-large-list-item-padding;
+      }
+    }
+
+  }
+
   .sf-dd-checkbox-item-wrapper {
     display: flex;
     align-items: center;
+
+    .sf-checkbox-ripple {
+      padding: $multiselect-checkbox-padding;
+    }
+  }
+
+  .sf-group-checkbox .sf-list-group-item {
+    cursor: pointer;
   }
 
   .sf-dd-separator {
     border-bottom: 1px solid;
     margin: $multiselect-separator-margin;
     border-bottom-color: $multiselect-separator-color;
+  }
+
+  .sf-list-item {
+    &.sf-dd-separator {
+      margin: 0;
+    }
+
+    &:has(.sf-dd-checkbox-item-wrapper).sf-active {
+      background-color: $multiselect-list-item-bg;
+      color: $multiselect-list-item-text-color;
+    }
+
+    &:has(.sf-dd-checkbox-item-wrapper):hover {
+      background: $multiselect-list-item-hover-bg;
+      color: $multiselect-list-item-text-hover-color;
+      border-color: $multiselect-list-item-hover-border-color;
+    }
+
+    &:has(.sf-dd-checkbox-item-wrapper):active {
+      background-color: $multiselect-list-item-select-bg;
+      color: $multiselect-list-item-text-select-color;
+    }
+
+    &:has(.sf-dd-checkbox-item-wrapper).sf-item-focus {
+      background: $multiselect-list-focus-bg-color;
+      color: $multiselect-list-item-text-hover-color;
+    }
   }
 
   .sf-multiselect-values {

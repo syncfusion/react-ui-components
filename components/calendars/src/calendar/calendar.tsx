@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef, Ref, useCallback, useMemo } from 'react';
-import { formatDate, IL10n, L10n, Orientation, useProviderContext, preRender } from '@syncfusion/react-base';
+import { formatDate, IL10n, L10n, Orientation, useProviderContext, preRender, useStableId } from '@syncfusion/react-base';
 import * as React from 'react';
 import { CalendarProps, CalendarView, WeekDaysFormats, WeekRule } from './types';
-import { createCalendarSystem, CalendarSystem } from '../calendar-core';
-import { WEEK_LENGTH } from '../calendar-core/engine/gregorian';
+import { createCalendarSystem, CalendarSystem, WEEK_LENGTH } from '../calendar-core';
 import { DecadeView } from './components/decade-view';
 import { YearView } from './components/year-view';
 import { MonthView } from './components/month-view';
@@ -31,6 +30,14 @@ export interface ICalendar extends CalendarProps {
      * @default -
      */
     focusGrid?(date?: Date): void;
+
+    /**
+     * Programmatically navigates to a specific view and optionally a specific date.
+     *
+     * @private
+     * @default -
+     */
+    navigateTo?: (view: CalendarView, date?: Date) => void;
 }
 
 /**
@@ -77,10 +84,14 @@ export const Calendar: React.ForwardRefExoticComponent<ICalendarProps & React.Re
             orientation = Orientation.Vertical,
             disableOtherMonthNavigation = false,
             onOutOfRangeNavigation,
+            focusTodayOnOtherMonth = false,
+            suppressRangeSelection = false,
+            isRangePreview = false,
             onCellHover,
             ...otherProps
         } = props;
 
+        const baseId: string = useStableId('sf-calendar-grid');
         const { locale, dir } = useProviderContext();
         const l10n: IL10n = useMemo<IL10n>(() => L10n('calendar', { today: 'Today' }, locale || 'en-US'), [locale]);
         const todayLabel: string = useMemo(() => l10n.getConstant('today'), [l10n]);
@@ -254,10 +265,8 @@ export const Calendar: React.ForwardRefExoticComponent<ICalendarProps & React.Re
             view: string
         ): void => {
             if (view === CalendarView.Year) {
-                const year: number = date.getFullYear();
-                const month: number = date.getMonth();
-                const firstDay: Date = new Date(year, month, 1);
-                const lastDay: Date = new Date(year, month + 1, 0);
+                const firstDay: Date = calendarSystem.startOfMonth(date);
+                const lastDay: Date = calendarSystem.endOfMonth(date);
                 const firstValidDay: Date = new Date(firstDay);
                 while (firstValidDay <= lastDay) {
                     if (firstValidDay >= minDate && firstValidDay <= maxDate) {
@@ -312,7 +321,7 @@ export const Calendar: React.ForwardRefExoticComponent<ICalendarProps & React.Re
             ...publicAPI as ICalendar,
             element: calendarElement.current,
             focusGrid,
-            navigateTo: (view: CalendarView, date?: Date) => navigateTo({} as any, view, date)
+            navigateTo: (view: CalendarView, date?: Date) => navigateTo({} as React.SyntheticEvent, view, date)
         }), [publicAPI]);
 
         const navigateTo: (
@@ -419,10 +428,10 @@ export const Calendar: React.ForwardRefExoticComponent<ICalendarProps & React.Re
         const tryMoveFocus: (delta: number, view: CalendarView) => void = useCallback((delta: number, view: CalendarView): void => {
             const candidate: Date = stepByCell(focusedDate, view, delta, calendarSystem);
             if (view === CalendarView.Month && onOutOfRangeNavigation) {
-                const currentMonth: number = currentDate.getMonth();
-                const currentYear: number = currentDate.getFullYear();
-                const candidateMonth: number = candidate.getMonth();
-                const candidateYear: number = candidate.getFullYear();
+                const currentMonth: number = calendarSystem.getMonth(currentDate);
+                const currentYear: number = calendarSystem.getYear(currentDate);
+                const candidateMonth: number = calendarSystem.getMonth(candidate);
+                const candidateYear: number = calendarSystem.getYear(candidate);
 
                 if (candidateMonth !== currentMonth || candidateYear !== currentYear) {
                     const direction: 'left' | 'right' | 'up' | 'down' =
@@ -445,22 +454,22 @@ export const Calendar: React.ForwardRefExoticComponent<ICalendarProps & React.Re
             setFocusedDateSafe(candidate);
             if (view === CalendarView.Month) {
                 const monthChanged: boolean =
-                    candidate.getFullYear() !== currentDate.getFullYear() ||
-                    candidate.getMonth() !== currentDate.getMonth();
+                    calendarSystem.getYear(candidate) !== calendarSystem.getYear(currentDate) ||
+                    calendarSystem.getMonth(candidate) !== calendarSystem.getMonth(currentDate);
 
                 if (monthChanged) {
                     setCurrentDateSafe(candidate);
                     onViewChange?.({ event: undefined, view: CalendarView.Month, date: candidate });
                 }
             } else if (view === CalendarView.Year) {
-                const yearChanged: boolean = candidate.getFullYear() !== currentDate.getFullYear();
+                const yearChanged: boolean = calendarSystem.getYear(candidate) !== calendarSystem.getYear(currentDate);
                 if (yearChanged) {
                     setCurrentDateSafe(candidate);
                     onViewChange?.({ event: undefined, view: CalendarView.Year, date: candidate });
                 }
             } else if (view === CalendarView.Decade) {
-                const curDecadeStart: number = calendarSystem.startOfDecade(currentDate).getFullYear();
-                const candDecadeStart: number = calendarSystem.startOfDecade(candidate).getFullYear();
+                const curDecadeStart: number = calendarSystem.getYear(calendarSystem.startOfDecade(currentDate));
+                const candDecadeStart: number = calendarSystem.getYear(calendarSystem.startOfDecade(candidate));
                 if (curDecadeStart !== candDecadeStart) {
                     setCurrentDateSafe(candidate);
                     onViewChange?.({ event: undefined, view: CalendarView.Decade, date: candidate });
@@ -515,12 +524,14 @@ export const Calendar: React.ForwardRefExoticComponent<ICalendarProps & React.Re
                 }
                 case 'Home': {
                     const yStart: Date = calendarSystem.startOfYear(focusedDate);
+                    setFocusedDateSafe(yStart);
                     navigateTo(e, CalendarView.Month, yStart);
                     e.preventDefault();
                     return;
                 }
                 case 'End': {
                     const yEnd: Date = calendarSystem.endOfYear(focusedDate);
+                    setFocusedDateSafe(yEnd);
                     navigateTo(e, CalendarView.Month, yEnd);
                     e.preventDefault();
                     return;
@@ -586,6 +597,7 @@ export const Calendar: React.ForwardRefExoticComponent<ICalendarProps & React.Re
                     navigateTo(e, nextView, focusedDate);
                 }
                 e.preventDefault();
+                e.stopPropagation();
                 return;
             }
             }
@@ -607,6 +619,21 @@ export const Calendar: React.ForwardRefExoticComponent<ICalendarProps & React.Re
             }
         }, [selectedAnchor, setCurrentDateSafe, setFocusedDateSafe]);
 
+        const cellHoverHandlers: Partial<Record<CalendarView, (date: Date) => void>> = useMemo(() => {
+            if (!onCellHover) {
+                return {};
+            }
+            const createCellHoverHandler: (view: CalendarView) => ((date: Date) => void) = (view: CalendarView): ((date: Date) => void) =>
+                (date: Date): void => {
+                    onCellHover(date, view);
+                };
+            return {
+                [CalendarView.Month]: createCellHoverHandler(CalendarView.Month),
+                [CalendarView.Year]: createCellHoverHandler(CalendarView.Year),
+                [CalendarView.Decade]: createCellHoverHandler(CalendarView.Decade)
+            };
+        }, [onCellHover]);
+
         const viewToRender: React.ReactNode =
             currentView === CalendarView.Month ? (
                 <MonthView
@@ -614,6 +641,9 @@ export const Calendar: React.ForwardRefExoticComponent<ICalendarProps & React.Re
                     minDate={minDate}
                     maxDate={maxDate}
                     firstDayOfWeek={firstDayOfWeek}
+                    focusTodayOnOtherMonth={focusTodayOnOtherMonth}
+                    suppressRangeSelection={suppressRangeSelection}
+                    isRangePreview={isRangePreview}
                     locale={locale as string}
                     weekNumber={weekNumber}
                     weekRule={weekRule}
@@ -630,7 +660,7 @@ export const Calendar: React.ForwardRefExoticComponent<ICalendarProps & React.Re
                     currentView={currentView}
                     showDaysOutsideCurrentMonth={showDaysOutsideCurrentMonth}
                     animate={isAnimate}
-                    onCellHover={(d: Date) => onCellHover?.(d, CalendarView.Month)}
+                    onCellHover={cellHoverHandlers[CalendarView.Month]}
                     disablePastDays={disablePastDays}
                     disableFutureDays={disableFutureDays}
                     range={range}
@@ -653,6 +683,9 @@ export const Calendar: React.ForwardRefExoticComponent<ICalendarProps & React.Re
                     animate={isAnimate}
                     disablePastDays={disablePastDays}
                     disableFutureDays={disableFutureDays}
+                    range={range}
+                    onCellHover={cellHoverHandlers[CalendarView.Year]}
+                    suppressRangeSelection={suppressRangeSelection}
                 />
             ) : (
                 <DecadeView
@@ -672,6 +705,11 @@ export const Calendar: React.ForwardRefExoticComponent<ICalendarProps & React.Re
                     animate={isAnimate}
                     disablePastDays={disablePastDays}
                     disableFutureDays={disableFutureDays}
+                    range={range}
+                    onCellHover={cellHoverHandlers[CalendarView.Decade]}
+                    suppressRangeSelection={suppressRangeSelection}
+                    isRangePreview={isRangePreview}
+                    focusTodayOnOtherMonth={focusTodayOnOtherMonth}
                 />
             );
 
@@ -681,7 +719,7 @@ export const Calendar: React.ForwardRefExoticComponent<ICalendarProps & React.Re
                 const formattedDate: string = formatDate(currentDate, {
                     format: 'MMMM yyyy',
                     locale: lc,
-                    calendar: 'gregorian'
+                    calendar: calendarType
                 });
                 return formattedDate;
             }
@@ -689,15 +727,15 @@ export const Calendar: React.ForwardRefExoticComponent<ICalendarProps & React.Re
                 return String(calendarSystem.getYear(currentDate));
             }
             const start: Date = calendarSystem.startOfDecade(currentDate);
-            const end: Date = new Date(start.getFullYear() + 9, 0, 1);
+            const end: Date = calendarSystem.addYears(start, 9);
             const startYear: number = calendarSystem.getYear(start);
             const endYear: number = calendarSystem.getYear(end);
             return `${startYear} - ${endYear}`;
-        }, [currentDate, currentView, locale]);
+        }, [currentDate, currentView, locale, calendarType, calendarSystem]);
 
         const { prevDisabled, nextDisabled }: { prevDisabled: boolean; nextDisabled: boolean } = useMemo(() => {
             const canNavigateTo: (target: Date) => boolean = (target: Date) => {
-                const dates: Date[] = getVisibleDates(target, currentView);
+                const dates: Date[] = getVisibleDates(target, currentView, calendarSystem);
                 for (const d of dates) {
                     if (!isInViewRange(d, currentView, minDate, maxDate, calendarSystem)) {
                         continue;
@@ -745,11 +783,9 @@ export const Calendar: React.ForwardRefExoticComponent<ICalendarProps & React.Re
             if (readOnly) {
                 return;
             }
-            setCurrentDate((prev: Date) => {
-                const nextDate: Date = stepByView(prev, currentView, step, calendarSystem);
-                onViewChange?.({ event: e as React.SyntheticEvent, view: currentView, date: nextDate });
-                return nextDate;
-            });
+            const nextDate: Date = stepByView(currentDate, currentView, step, calendarSystem);
+            setCurrentDate(nextDate);
+            onViewChange?.({ event: e as React.SyntheticEvent, view: currentView, date: nextDate });
             refocusAfterNav(e);
         }, [currentView, refocusAfterNav, currentDate, calendarSystem, onViewChange, readOnly]);
 
@@ -846,9 +882,9 @@ export const Calendar: React.ForwardRefExoticComponent<ICalendarProps & React.Re
                 locale: locale || 'en-US',
                 type: 'date',
                 format: 'EEE, dd MMM',
-                calendar: 'gregorian'
+                calendar: calendarType
             });
-        }, [currentValue, locale]);
+        }, [currentValue, locale, calendarType]);
 
         const [isKeyboardNavigation, setIsKeyboardNavigation] = useState(false);
 
@@ -857,7 +893,6 @@ export const Calendar: React.ForwardRefExoticComponent<ICalendarProps & React.Re
                 setIsKeyboardNavigation(true);
             }
             onKeyDown(e);
-            e.stopPropagation();
         }, [onKeyDown]);
 
         const onGridFocus: () => void = useCallback((): void => {
@@ -899,6 +934,7 @@ export const Calendar: React.ForwardRefExoticComponent<ICalendarProps & React.Re
                             : headerTemplate)
                         : (
                             <CalendarHeader
+                                titleId={baseId}
                                 currentView={currentView}
                                 headerTitle={headerTitleText}
                                 disabled={disabled || isImproperDateRange}
@@ -918,7 +954,7 @@ export const Calendar: React.ForwardRefExoticComponent<ICalendarProps & React.Re
                             aria-disabled={disabled || isImproperDateRange}
                             aria-multiselectable={!!multiSelect}
                             aria-activedescendant={activeDescendantId}
-                            aria-labelledby={headerTitleText}
+                            aria-labelledby={baseId}
                             tabIndex={tabIndex}
                             onKeyDown={onKeyDownWrapper}
                             onFocus={onGridFocus}

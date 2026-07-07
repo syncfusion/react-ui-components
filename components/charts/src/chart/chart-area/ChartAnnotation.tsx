@@ -11,15 +11,15 @@ import { ChartAnnotationProps } from '../base/interfaces';
  * This component does not render any DOM. It is intended to be used as a child of
  * ChartAnnotationCollection to declare annotation configuration in JSX.
  *
- * @param {ChartAnnotationProps} _props - Annotation configuration props.
- * @returns {null} Returns null; this component is declarative and does not render any DOM.
+ * @returns {null} - It is used only to pass the annotation configuration to the chart through the React context.
  */
-export const ChartAnnotation: React.FC<ChartAnnotationProps> = (_props: ChartAnnotationProps): null => {
+export const ChartAnnotation: React.FC<ChartAnnotationProps> = (): null => {
     return null;
 };
 
 /**
  * Props for ChartAnnotationCollection.
+ *
  * @private
  */
 export interface AnnotationCollectionProps {
@@ -41,7 +41,7 @@ export interface AnnotationCollectionProps {
  * - Pushes the merged list into the chart context via setChartAnnotation.
  *
  * @param {React.ReactNode} children - One or more ChartAnnotation nodes.
- * @returns {null} Returns null; this component is declarative and does not render any DOM.
+ * @returns {null} - It is used only to pass the annotation collection configuration to the chart through the React context.
  */
 export const ChartAnnotationCollection: React.FC<AnnotationCollectionProps> = (
     { children }: AnnotationCollectionProps

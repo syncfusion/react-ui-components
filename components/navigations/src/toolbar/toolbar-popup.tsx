@@ -6,9 +6,9 @@ import { ChevronUpIcon, ChevronDownIcon } from '@syncfusion/react-icons';
 import { isVisible, closest, useProviderContext } from '@syncfusion/react-base';
 import { Popup, IPopup, CollisionType } from '@syncfusion/react-popups';
 import { OverflowMode, Orientation } from './toolbar';
-import { ToolbarItem, IToolbarItem } from './toolbar-item';
-import { ToolbarSeparator, IToolbarSeparator } from './toolbar-separator';
-import { ToolbarSpacer, IToolbarSpacer } from './toolbar-spacer';
+import { ToolbarItem, ToolbarItemProps } from './toolbar-item';
+import { ToolbarSeparator, ToolbarSeparatorProps } from './toolbar-separator';
+import { ToolbarSpacer, ToolbarSpacerProps } from './toolbar-spacer';
 
 const CLS_ITEMS: string = 'sf-toolbar-items';
 const CLS_POPUPICON: string = 'sf-popup-up-icon';
@@ -113,9 +113,9 @@ export interface ToolbarPopupRef {
 }
 
 type IToolbarPopupProps = ToolbarPopupProps & HTMLAttributes<HTMLDivElement>;
-type IToolbarSeparatorProps = IToolbarSeparator & HTMLAttributes<HTMLDivElement>;
-type IToolbarSpacerProps = IToolbarSpacer & HTMLAttributes<HTMLDivElement>;
-type IToolbarItemProps = IToolbarItem & HTMLAttributes<HTMLDivElement>;
+type IToolbarSeparatorProps = ToolbarSeparatorProps & HTMLAttributes<HTMLDivElement>;
+type IToolbarSpacerProps = ToolbarSpacerProps & HTMLAttributes<HTMLDivElement>;
+type IToolbarItemProps = ToolbarItemProps & HTMLAttributes<HTMLDivElement>;
 type IToolbarItems = ReactElement<IToolbarItemProps | IToolbarSeparatorProps | IToolbarSpacerProps>;
 
 /**

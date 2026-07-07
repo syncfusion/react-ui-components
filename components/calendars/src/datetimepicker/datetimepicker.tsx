@@ -1,10 +1,10 @@
-import { forwardRef, JSX, useCallback, useEffect, useId, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { forwardRef, JSX, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { InputBase, renderFloatLabelElement } from '@syncfusion/react-inputs';
-import { Browser, Color, IL10n, L10n, preRender, Size, useProviderContext, Variant } from '@syncfusion/react-base';
+import { InputBase, HelperText, renderFloatLabelElement } from '@syncfusion/react-inputs';
+import { Browser, Color, IL10n, L10n, preRender, Size, useProviderContext, Variant, useStableId } from '@syncfusion/react-base';
 import { Popup, CollisionType, type IPopup } from '@syncfusion/react-popups';
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, TimelineTodayIcon } from '@syncfusion/react-icons';
-import { Calendar } from '../calendar';
+import { Calendar, InputPrefix, InputSuffix } from '../calendar';
 import type { CalendarProps, CalendarChangeEvent, CalendarHeaderProps } from '../calendar';
 import { CalendarView } from '../calendar';
 import type { ICalendar } from '../calendar';
@@ -15,14 +15,15 @@ import { clampTimeToRange, getTimeValue, isTimeWithinRange } from '../timepicker
 import * as React from 'react';
 import { createIsDateDisabledByCellTemplate, getFocusableElementsInRoot } from '../datepicker/utils';
 import { PickerVariant } from '../datepicker/types';
-import { GregorianCalendar } from '../calendar-core';
+import { CalendarSystem, createCalendarSystem } from '../calendar-core';
 import usePickerInput, { UsePickerInputResult } from '../hooks/usePickerInputs';
+import usePickerInputKeyDown from '../hooks/usePickerInputKeyDown';
 import usePickerPopup from '../hooks/usePickerPopup';
 import useTimePanel from '../hooks/useTimePanel';
 import useDateFormatting from '../hooks/useDateFormatting';
 import { Button } from '@syncfusion/react-buttons';
 
-type IDateTimePickerProps = IDateTimePicker & Omit<React.HTMLAttributes<HTMLDivElement>, 'defaultValue' | 'value' | 'onChange'>;
+type IDateTimePickerProps = IDateTimePicker & Omit<React.InputHTMLAttributes<HTMLInputElement>, keyof IDateTimePicker>;
 
 export interface IDateTimePicker extends DateTimePickerProps {
     /**
@@ -44,12 +45,13 @@ export interface IDateTimePicker extends DateTimePickerProps {
  * export default function App() {
  *   return <DateTimePicker />;
  * }
+ * ```
  */
 export const DateTimePicker: React.ForwardRefExoticComponent<IDateTimePickerProps & React.RefAttributes<IDateTimePicker>> =
     forwardRef<IDateTimePicker, IDateTimePickerProps>((props: IDateTimePickerProps, ref: React.Ref<IDateTimePicker>) => {
         const {
             className = '',
-            id = `datetimepicker_${useId()}`,
+            id,
             placeholder = 'Select a date and time',
             disabled = false,
             readOnly = false,
@@ -80,12 +82,13 @@ export const DateTimePicker: React.ForwardRefExoticComponent<IDateTimePickerProp
             showDaysOutsideCurrentMonth,
             disablePastDays,
             disableFutureDays,
-            zIndex = 1000,
             required = false,
             valid,
             validationMessage = '',
             validityStyles = true,
             pickerIcon = true,
+            prefix,
+            suffix,
             itemTemplate,
             cellTemplate,
             headerTemplate,
@@ -93,9 +96,19 @@ export const DateTimePicker: React.ForwardRefExoticComponent<IDateTimePickerProp
             onOpen,
             onClose,
             onViewChange,
+            inputProps,
+            popupSettings,
+            helperText,
+            helperTextOnFocus = false,
+            helperTextDirection = 'Left',
+            calendarType,
+            inputMask = false,
+            maskPlaceholder,
             ...otherProps
         } = props;
 
+        const generatedId: string = useStableId('sf-datetimepicker');
+        const dateTimePickerId: string = id ?? generatedId;
         const { locale, dir } = useProviderContext();
         const l10n: IL10n = useMemo<IL10n>(() => L10n('datetimepicker', {
             date: 'Date',
@@ -109,7 +122,7 @@ export const DateTimePicker: React.ForwardRefExoticComponent<IDateTimePickerProp
             previous: 'Previous',
             next: 'Next'
         }, locale || 'en-US'), [locale]);
-        const calendarSystem: GregorianCalendar = useMemo<GregorianCalendar>(() => new GregorianCalendar(), []);
+        const calendarSystem: CalendarSystem = useMemo<CalendarSystem>(() => createCalendarSystem(calendarType || 'gregorian'), [calendarType]);
         const containerRef: React.RefObject<HTMLSpanElement | null> = useRef<HTMLSpanElement | null>(null);
         const inputRef: React.RefObject<HTMLInputElement | null> = useRef<HTMLInputElement | null>(null);
         const popupRef: React.RefObject<IPopup | null> = useRef<IPopup | null>(null);
@@ -132,7 +145,8 @@ export const DateTimePicker: React.ForwardRefExoticComponent<IDateTimePickerProp
             locale,
             type: 'dateTime',
             format,
-            inputFormats
+            inputFormats,
+            calendarType
         });
 
         const deriveTimeFormat: string = useMemo(() => {
@@ -183,7 +197,7 @@ export const DateTimePicker: React.ForwardRefExoticComponent<IDateTimePickerProp
                 return false;
             }
             if (!date) {
-                return  false;
+                return false;
             }
             if (minTime || maxTime) {
                 return isTimeWithinRange(date, minTime || null, maxTime || null);
@@ -259,7 +273,7 @@ export const DateTimePicker: React.ForwardRefExoticComponent<IDateTimePickerProp
             }
         }, [currentOpen, isOpenControlled, onClose]);
 
-        const { zIndexPopup } = usePickerPopup({
+        const { resolvedPopupSettings } = usePickerPopup({
             open: currentOpen,
             disabled,
             readOnly,
@@ -270,7 +284,7 @@ export const DateTimePicker: React.ForwardRefExoticComponent<IDateTimePickerProp
             containerRef,
             contentRefs: [popupRef as unknown as React.RefObject<HTMLElement | null>],
             inputRef,
-            baseZIndex: zIndex,
+            popupSettings,
             onAltDownGlobal: () => {
                 if (!currentOpen) {
                     openPopup();
@@ -386,13 +400,14 @@ export const DateTimePicker: React.ForwardRefExoticComponent<IDateTimePickerProp
             disablePastDays,
             disableFutureDays,
             weekDaysFormat,
+            calendarType,
             cellTemplate,
             headerTemplate: customHeaderTemplate,
             onChange: onCalendarChange,
             onViewChange: onViewChange
         }), [
             tempValue, minDate, maxDate, start, depth, firstDayOfWeek, weekNumber, weekRule,
-            weekDaysFormat, cellTemplate, customHeaderTemplate,
+            weekDaysFormat, cellTemplate, customHeaderTemplate, calendarType,
             onCalendarChange, onViewChange, showDaysOutsideCurrentMonth, disablePastDays, disableFutureDays
         ]);
 
@@ -407,7 +422,6 @@ export const DateTimePicker: React.ForwardRefExoticComponent<IDateTimePickerProp
             readOnly,
             open,
             clearButton,
-            zIndex,
             strictMode,
             pickerVariant,
             value: currentValue,
@@ -425,18 +439,26 @@ export const DateTimePicker: React.ForwardRefExoticComponent<IDateTimePickerProp
             valid,
             validationMessage,
             validityStyles,
+            prefix,
+            suffix,
             cellTemplate,
             headerTemplate,
             showDaysOutsideCurrentMonth,
             disablePastDays,
             disableFutureDays,
+            inputProps,
+            popupSettings,
+            helperText,
+            helperTextOnFocus,
+            helperTextDirection,
+            calendarType,
             element: containerRef.current
         } as IDateTimePicker), [
             placeholder, editable, inputFormats, openOnFocus, format, labelMode, disabled, readOnly, open, clearButton,
-            zIndex, strictMode, pickerVariant, currentValue, minDate, maxDate, minTime, maxTime, step, firstDayOfWeek,
+            strictMode, pickerVariant, currentValue, minDate, maxDate, minTime, maxTime, step, firstDayOfWeek,
             start, depth, weekNumber, weekRule, showTodayButton, pickerIcon, weekDaysFormat, required, valid, validationMessage,
             validityStyles, cellTemplate, headerTemplate, showDaysOutsideCurrentMonth,
-            disablePastDays, disableFutureDays
+            disablePastDays, disableFutureDays, calendarType
         ]);
 
         useEffect(() => {
@@ -462,7 +484,10 @@ export const DateTimePicker: React.ForwardRefExoticComponent<IDateTimePickerProp
             parseInput,
             isValid: isDateTimeValid,
             commitValue,
-            onOpen: openPopup
+            onOpen: openPopup,
+            inputMask,
+            format,
+            maskPlaceholder
         });
 
         const onPopupOpen: () => void = useCallback((): void => {
@@ -481,10 +506,6 @@ export const DateTimePicker: React.ForwardRefExoticComponent<IDateTimePickerProp
                 openPopup();
             }
         }, [currentOpen, openPopup, closePopup]);
-
-        const handleInputBlurWrapper: () => void = useCallback((): void => {
-            pickerInput.handleInputBlur();
-        }, [pickerInput]);
 
         const handleIconClick: () => void = useCallback((): void => {
             togglePopup();
@@ -578,6 +599,11 @@ export const DateTimePicker: React.ForwardRefExoticComponent<IDateTimePickerProp
             pickerInput.setIsInputValid(validFlag);
         }, [pickerInput, commitValue, formatDateTime, required]);
 
+        const handleInputKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void = usePickerInputKeyDown({
+            maskOnKeyDown: pickerInput.maskInputProps?.onKeyDown,
+            pickerOnKeyDown: handleKeyDown
+        });
+
         const handleOutOfRangeDateTime: (candidate: Date, e?: React.SyntheticEvent)
         => void = useCallback((candidate: Date, e?: React.SyntheticEvent): void => {
             const clamped: Date | null = clampTimeToRange(candidate, minTime ?? null, maxTime ?? null);
@@ -654,6 +680,12 @@ export const DateTimePicker: React.ForwardRefExoticComponent<IDateTimePickerProp
             className
         ].filter(Boolean).join(' ');
 
+        const iconClassNames: string = [
+            'sf-input-icon', 'sf-icons',
+            isIconActive ? 'sf-active' : '',
+            (disabled || inputProps?.disabled) ? 'sf-disabled' : ''
+        ].filter(Boolean).join(' ');
+
         const getCurrentTimeString: () => string = useCallback((): string => {
             if (tempValue) {
                 return formatTime(tempValue);
@@ -681,19 +713,24 @@ export const DateTimePicker: React.ForwardRefExoticComponent<IDateTimePickerProp
             }
         }, [nowClicked]);
 
-        const handleTimeListRef: (node: TimeListRef) => void = useCallback((node: TimeListRef) => {
-            (timeListRef as React.RefObject<TimeListRef>).current = node;
-            if (node && activePanel === 'time' && currentOpen) {
-                node.focus();
-            }
-        }, [activePanel, currentOpen]);
-
         const handleCalendarRef: (node: ICalendar) => void = useCallback((node: ICalendar) => {
             (calendarRef as React.RefObject<ICalendar>).current = node;
-            if (node && activePanel === 'date' && currentOpen) {
-                node.focusGrid?.();
+        }, []);
+
+        const handleTimeListRef: (node: TimeListRef) => void = useCallback((node: TimeListRef) => {
+            (timeListRef as React.RefObject<TimeListRef>).current = node;
+        }, []);
+
+        useEffect(() => {
+            if (!currentOpen) {
+                return;
             }
-        }, [activePanel, currentOpen]);
+            if (activePanel === 'date') {
+                calendarRef.current?.focusGrid?.();
+            } else if (activePanel === 'time') {
+                timeListRef.current?.focus?.();
+            }
+        }, [currentOpen, activePanel]);
 
         const timeListNode: JSX.Element = useMemo(() => (
             <>
@@ -714,7 +751,7 @@ export const DateTimePicker: React.ForwardRefExoticComponent<IDateTimePickerProp
                     onSelect={handleTimeSelect}
                     formatter={formatTime}
                     itemTemplate={itemTemplate}
-                    idBase={`${id}_time`}
+                    idBase={`${dateTimePickerId}_time`}
                     className="sf-timepicker-list"
                     sizeClass="sf-timepicker-list-la"
                     isOpen={currentOpen && activePanel === 'time'}
@@ -730,7 +767,8 @@ export const DateTimePicker: React.ForwardRefExoticComponent<IDateTimePickerProp
             activePanel,
             dir,
             handleTimeSelect,
-            handleTimeListRef
+            handleTimeListRef,
+            dateTimePickerId
         ]);
 
         const handleSetClick: () => void = useCallback((): void => {
@@ -806,33 +844,51 @@ export const DateTimePicker: React.ForwardRefExoticComponent<IDateTimePickerProp
             </div>
         );
 
+        const handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void = (
+            e: React.ChangeEvent<HTMLInputElement>
+        ) => {
+            if (!pickerInput.maskInputProps && (!editable || readOnly || disabled)) {
+                return;
+            }
+            if (pickerInput.maskInputProps?.onChange) {
+                pickerInput.maskInputProps.onChange(e);
+            } else {
+                pickerInput.handleInputChange(e);
+            }
+        };
+
         return (
-            <span ref={containerRef} className={classNames} {...otherProps}>
+            <><span ref={containerRef} className={classNames} {...otherProps}>
+                <InputPrefix prefix={prefix} />
                 <InputBase
                     ref={inputRef}
-                    id={id}
-                    placeholder={labelMode === 'Never' ? pickerInput.getPlaceholder : ''}
-                    disabled={disabled}
-                    readOnly={readOnly || !editable}
+                    id={dateTimePickerId}
+                    placeholder={labelMode === 'Never' && !pickerInput.showMaskSegments ? pickerInput.getPlaceholder : ''}
+                    disabled={disabled || (inputProps && inputProps.disabled)}
+                    readOnly={readOnly || (inputProps && inputProps.readOnly) || (!editable && !inputMask) || !editable}
                     onFocus={pickerInput.handleInputFocus}
-                    onBlur={handleInputBlurWrapper}
-                    value={pickerInput.inputValue}
-                    onChange={editable && !readOnly && !disabled ? pickerInput.handleInputChange : undefined}
+                    onBlur={pickerInput.handleInputBlur}
+                    value={pickerInput.maskInputProps ? pickerInput.maskInputProps?.value : pickerInput.inputValue}
+                    onChange={handleChange}
+                    onKeyDown={handleInputKeyDown}
+                    onClick={pickerInput.maskInputProps ? pickerInput.maskInputProps?.onClick : undefined}
+                    onPaste={pickerInput.maskInputProps ? pickerInput.maskInputProps?.onPaste : undefined}
                     role="combobox"
                     aria-haspopup="dialog"
                     autoComplete='off'
                     aria-autocomplete="none"
                     aria-expanded={!!currentOpen}
-                    aria-controls={currentOpen ? `${id}_popup` : undefined}
-                    aria-disabled={disabled}
-                    onKeyDown={handleKeyDown}
-                    tabIndex={0}
+                    aria-controls={currentOpen ? `${dateTimePickerId}_popup` : undefined}
+                    aria-disabled={disabled || (inputProps && inputProps.disabled)}
+                    tabIndex={inputProps?.disabled ? -1 : 0}
                     required={required}
+                    {...inputProps}
                 />
+                <InputSuffix suffix={suffix} />
                 {labelMode !== 'Never' && renderFloatLabelElement(
-                    labelMode, false, pickerInput.inputValue, placeholder, id
+                    labelMode, false, pickerInput.inputValue, placeholder, dateTimePickerId
                 )}
-                {clearButton && !!pickerInput.inputValue && (pickerInput.isFocused || currentOpen)
+                {clearButton && (!!pickerInput.inputValue || !!pickerInput.hasPartialInput) && (pickerInput.isFocused || currentOpen)
                 && !readOnly && (
                     <span
                         className="sf-clear-icon sf-input-icon"
@@ -844,7 +900,7 @@ export const DateTimePicker: React.ForwardRefExoticComponent<IDateTimePickerProp
                     </span>
                 )}
                 <span
-                    className={`sf-input-icon sf-icons ${isIconActive ? 'sf-active' : ''}`}
+                    className={iconClassNames}
                     aria-label={l10n.getConstant('toggleDateTime')}
                     role="button"
                     onMouseDown={handleIconClick}
@@ -854,13 +910,13 @@ export const DateTimePicker: React.ForwardRefExoticComponent<IDateTimePickerProp
                 {currentOpen && createPortal(
                     <>
                         {useDialog && (
-                            <div className="sf-picker-popup" style={{ zIndex: zIndexPopup.toString() }}>
+                            <div className="sf-picker-popup" style={{ zIndex: resolvedPopupSettings?.zIndex?.toString() }}>
                                 <div className="sf-overlay"></div>
                                 <Popup
                                     ref={popupRef}
+                                    id={`${dateTimePickerId}_popup`}
                                     className="sf-datetimepicker sf-popup sf-content-center"
                                     open={currentOpen}
-                                    zIndex={zIndexPopup}
                                     onClose={closePopup}
                                     onOpen={onPopupOpen}
                                     onKeyDown={handleKeyDown}
@@ -869,6 +925,7 @@ export const DateTimePicker: React.ForwardRefExoticComponent<IDateTimePickerProp
                                     position={{ X: 'center', Y: 'center' }}
                                     collision={{ X: CollisionType.Fit, Y: CollisionType.Fit }}
                                     role="dialog"
+                                    {...resolvedPopupSettings}
                                 >
                                     {renderHeaderTabs()}
                                     {activePanel === 'date' ? (
@@ -883,9 +940,9 @@ export const DateTimePicker: React.ForwardRefExoticComponent<IDateTimePickerProp
                         {useInline && (
                             <Popup
                                 ref={popupRef}
+                                id={`${dateTimePickerId}_popup`}
                                 className="sf-datetimepicker sf-popup"
                                 open={currentOpen}
-                                zIndex={zIndexPopup}
                                 onClose={closePopup}
                                 onOpen={onPopupOpen}
                                 onKeyDown={handleKeyDown}
@@ -894,6 +951,7 @@ export const DateTimePicker: React.ForwardRefExoticComponent<IDateTimePickerProp
                                 collision={{ X: CollisionType.Flip, Y: CollisionType.Flip }}
                                 offsetY={4}
                                 role="dialog"
+                                {...resolvedPopupSettings}
                             >
                                 {renderHeaderTabs()}
                                 {activePanel === 'date' ? (
@@ -908,6 +966,14 @@ export const DateTimePicker: React.ForwardRefExoticComponent<IDateTimePickerProp
                     document.body
                 )}
             </span>
+            <HelperText
+                helperText={helperText}
+                helperTextOnFocus={helperTextOnFocus}
+                isFocused={pickerInput.isFocused || currentOpen}
+                helperTextDirection={helperTextDirection}
+            />
+            </>
+
         );
     });
 

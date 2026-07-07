@@ -1,5 +1,5 @@
 import { CalendarBaseProps, CalendarHeaderProps } from '../../calendar';
-import { InputBaseProps, PickerVariant } from '../datepicker';
+import { InputProps, PickerVariant } from '../datepicker';
 
 
 export interface DateRangePreset {
@@ -13,7 +13,7 @@ export interface DateRangePreset {
     end: Date;
 }
 
-export interface DateRangePickerProps  extends CalendarBaseProps , InputBaseProps {
+export interface DateRangePickerProps  extends CalendarBaseProps , InputProps {
     /**
      * Specifies the selected date range in controlled mode.
      *
@@ -75,12 +75,14 @@ export interface DateRangePickerProps  extends CalendarBaseProps , InputBaseProp
 
     /**
      * Specifies the minimum span (in days) allowed for the range.
+     *
      * @default -
      */
     minRangeDays?: number | null;
 
     /**
      * Specifies the maximum span (in days) allowed for the range.
+     *
      * @default -
      */
     maxRangeDays?: number | null;

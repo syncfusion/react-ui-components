@@ -58,7 +58,7 @@
 
   @keyframes SlideTopIn {
     from {
-      transform: translate3d(0, calc(var(--slide-height, -100%) * -1), 0);
+      transform: translate3d(0, var(--slide-height, -100%), 0);
     }
     to {
       transform: translate3d(0, 0, 0);
@@ -70,7 +70,7 @@
       transform: translate3d(0, 0, 0);
     }
     to {
-      transform: translate3d(0, calc(var(--slide-height, -100%) * -1), 0);
+      transform: translate3d(0, var(--slide-height, -100%), 0);
     }
   }
 

@@ -11,9 +11,10 @@ import { ErrorTreeviewIcon } from '@syncfusion/react-icons';
 import { CSS_CLASSES } from '../common/constants';
 import { MoreIndicator } from './more-indicator';
 import useCellInteraction from '../hooks/useCellInteraction';
+import { ResourceLevel } from '../services/ResourceGroupingService';
 
 export const MonthCells: FC<MonthCellsProps> = (props: MonthCellsProps) => {
-    const { weekRenderDates, hideOtherMonths, rowIndex, onHeightCalculated } = props;
+    const { weekRenderDates, hideOtherMonths, rowIndex, onHeightCalculated, resourceWorkCells } = props;
 
     const {
         maxEventsPerRow = 2,
@@ -24,14 +25,13 @@ export const MonthCells: FC<MonthCellsProps> = (props: MonthCellsProps) => {
     } = useSchedulerPropsContext();
 
     const {
-        workCells,
+        workCells: defaultCells,
         handleMoreClick
     } = useMonthCells(props);
 
+    const workCells: MonthCell[] = resourceWorkCells || defaultCells;
     const { handleCellClick, handleCellDoubleClick, handleKeyDown } = useCellInteraction();
-
     const { handleDateClick } = useNavigate();
-
     const {
         getVisibleEvents,
         getAlldayBlockEvent,
@@ -42,51 +42,56 @@ export const MonthCells: FC<MonthCellsProps> = (props: MonthCellsProps) => {
         calculatedRowHeight
     } = useMonthEvents(weekRenderDates, maxEventsPerRow);
 
-    const renderMoreIndicator: (date: Date) => ReactNode = (date: Date): ReactNode => {
-        return (
-            <MoreIndicator
-                date={date}
-                count={getHiddenEventCount(DateService.generateDateKey(date))}
-                onMoreClick={handleMoreClick}
-            />
-        );
-    };
+    const renderMoreIndicator: (date: Date, resourceLeaf: ResourceLevel) => ReactNode =
+        (date: Date, resourceLeaf: ResourceLevel): ReactNode => {
+            return (
+                <MoreIndicator
+                    date={date}
+                    count={getHiddenEventCount(DateService.generateDateKey(date), resourceLeaf)}
+                    onMoreClick={handleMoreClick}
+                    resource={resourceLeaf}
+                />
+            );
+        };
 
-    const renderEvents: (date: Date) => ReactNode = (date: Date): ReactNode => {
-        const dateKey: string = DateService.generateDateKey(date);
-        const visibleEvents: ProcessedEventsData[] = getVisibleEvents(dateKey);
+    const renderEvents: (date: Date, resourceLeaf?: ResourceLevel, groupIndex?: number) => ReactNode =
+        (date: Date, resourceLeaf?: ResourceLevel, groupIndex?: number): ReactNode => {
+            const dateKey: string = DateService.generateDateKey(date);
+            const visibleEvents: ProcessedEventsData[] = getVisibleEvents(dateKey, resourceLeaf);
 
-        if (hasAllDayBlock(dateKey)) {
-            const event: ProcessedEventsData = getAlldayBlockEvent(dateKey);
-            if (event && ((event.totalSegments && event.totalSegments > 1 && event.isFirstSegmentInRenderRange) ||
-                (!event.totalSegments || event.totalSegments <= 1))) {
-                return (
-                    <DayEvent
-                        key={event.eventKey || event.event.guid}
-                        {...event}
-                        weekRenderDates={weekRenderDates}
-                        isBlockedEvent={true}
-                    />
-                );
+            if (hasAllDayBlock(dateKey, resourceLeaf)) {
+                const event: ProcessedEventsData = getAlldayBlockEvent(dateKey, resourceLeaf);
+                if (event && ((event.totalSegments && event.totalSegments > 1 && event.isFirstSegmentInRenderRange) ||
+                    (!event.totalSegments || event.totalSegments <= 1))) {
+                    return (
+                        <DayEvent
+                            key={event.eventKey || event.event.guid}
+                            {...event}
+                            weekRenderDates={weekRenderDates}
+                            isBlockedEvent={true}
+                            groupIndex={groupIndex}
+                        />
+                    );
+                }
             }
-        }
 
-        return visibleEvents.map((eventInfo: ProcessedEventsData) => {
-            const { totalSegments, isFirstSegmentInRenderRange, event, eventKey } = eventInfo;
+            return visibleEvents.map((eventInfo: ProcessedEventsData) => {
+                const { totalSegments, isFirstSegmentInRenderRange, event, eventKey } = eventInfo;
 
-            if (!event.isBlock && ((totalSegments && totalSegments > 1 && isFirstSegmentInRenderRange) ||
-                (!totalSegments || totalSegments <= 1))) {
-                return (
-                    <DayEvent
-                        key={eventKey || eventInfo.event.guid}
-                        {...eventInfo}
-                        weekRenderDates={weekRenderDates}
-                    />
-                );
-            }
-            return null;
-        });
-    };
+                if (!event.isBlock && ((totalSegments && totalSegments > 1 && isFirstSegmentInRenderRange) ||
+                    (!totalSegments || totalSegments <= 1))) {
+                    return (
+                        <DayEvent
+                            key={eventKey || eventInfo.event.guid}
+                            {...eventInfo}
+                            weekRenderDates={weekRenderDates}
+                            groupIndex={groupIndex}
+                        />
+                    );
+                }
+                return null;
+            });
+        };
 
     const renderBlockIndicator: () => ReactNode = (): ReactNode => {
         return (
@@ -108,14 +113,15 @@ export const MonthCells: FC<MonthCellsProps> = (props: MonthCellsProps) => {
                         <div key={monthCell.key} className={monthCell.className} />
                     );
                 }
-
                 const dateKey: string = DateService.generateDateKey(monthCell.date);
+                const resourceLeaf: ResourceLevel | undefined = monthCell?.resource;
                 const isDayViewAvailable: boolean = ViewService.isDayViewAvailable(getAvailableViews);
                 return (
                     <div
                         key={monthCell.key}
                         className={monthCell.className}
                         data-date={monthCell.dateTimestamp}
+                        data-group-index={monthCell.groupIndex}
                         onClick={(e: MouseEvent<HTMLElement>) => handleCellClick(e, monthCell.date, true)}
                         onDoubleClick={(e: MouseEvent<HTMLElement>) => handleCellDoubleClick(e, monthCell.date, true)}
                         onKeyDown={(e: React.KeyboardEvent<HTMLElement>) => { handleKeyDown(e, monthCell.date); }}
@@ -133,11 +139,11 @@ export const MonthCells: FC<MonthCellsProps> = (props: MonthCellsProps) => {
                                     </span>
                                 )}
                             </div>
-                            {hasBlockIndicator(dateKey) && renderBlockIndicator()}
+                            {hasBlockIndicator(dateKey, resourceLeaf) && renderBlockIndicator()}
                         </div>
                         <div className={CSS_CLASSES.APPOINTMENT_WRAPPER}>
-                            {renderEvents(monthCell.date)}
-                            {!rowAutoHeight && hasMoreIndicator(dateKey) && renderMoreIndicator(monthCell.date)}
+                            {renderEvents(monthCell.date, resourceLeaf, monthCell.groupIndex)}
+                            {!rowAutoHeight && hasMoreIndicator(dateKey, resourceLeaf) && renderMoreIndicator(monthCell.date, resourceLeaf)}
                         </div>
                         {cell && cell({ date: monthCell.date, type: 'monthCell' })}
                     </div>

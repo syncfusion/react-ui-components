@@ -108,21 +108,21 @@
 
       &.sf-input-focus {
         border-color: $input-outlined-focus-border-color;
-        box-shadow: inset 1px 1px $input-outlined-focus-border-color, inset -1px 0 $input-outlined-focus-border-color, inset 0 -1px $input-outlined-focus-border-color;
+        box-shadow: $input-outlined-focus-border-shadow;
 
         &.sf-success {
           border-color: $input-success-border-color;
-          box-shadow: inset 1px 1px $input-success-border-color, inset -1px 0 $input-success-border-color, inset 0 -1px $input-success-border-color;
+          box-shadow: $input-success-border-shadow;
         }
 
         &.sf-warning {
           border-color: $input-warning-border-color;
-          box-shadow: inset 1px 1px $input-warning-border-color, inset -1px 0 $input-warning-border-color, inset 0 -1px $input-warning-border-color;
+          box-shadow: $input-warning-border-shadow;
         }
 
         &.sf-error {
           border-color: $input-error-border-color;
-          box-shadow: inset 1px 1px $input-error-border-color, inset -1px 0 $input-error-border-color, inset 0 -1px $input-error-border-color;
+          box-shadow: $input-error-border-shadow;
         }
       }
     }
@@ -130,15 +130,94 @@
     &.sf-filled {
       background: $input-filled-background;
       transition: $input-filled-background-transition;
+      border-color: $input-filled-border-color;
+      box-shadow: $input-filled-box-shadow;
+
+      &:hover{
+        background-color: $input-filled-hover-active-bg-color;
+        border-color: $input-filled-hover-border-color;
+      }
+
+      &:active {
+        background-color: $input-filled-hover-active-bg-color;
+      }
+
+      &.sf-success {
+        border-color: $input-success-border-color;
+        &::before,
+        &::after {
+          background: $input-filled-success-line-background;
+        }
+      }
+
+      &.sf-warning {
+        border-color: $input-warning-border-color;
+        &::before,
+        &::after {
+          background: $input-filled-warning-line-background;
+        }
+      }
+
+      &.sf-error {
+        border-color: $input-error-border-color;
+        &::before,
+        &::after {
+          background: $input-filled-error-line-background;
+        }
+      }
+
+      &::before,
+      &::after {
+        background: $input-filled-line-background;
+      }
+
+      &.sf-input-focus {
+        border-color: $input-filled-focus-border-color;
+        box-shadow: $input-filled-focus-border-shadow;
+
+        &.sf-success {
+          border-color: $input-success-border-color;
+          box-shadow: $input-filled-success-border-shadow;
+        }
+
+        &.sf-warning {
+          border-color: $input-warning-border-color;
+          box-shadow: $input-filled-warning-border-shadow;
+        }
+
+        &.sf-error {
+          border-color: $input-error-border-color;
+          box-shadow: $input-filled-error-border-shadow;
+        }
+      }
     }
 
     &.sf-disabled {
       opacity: 1;
       border-bottom-color: $input-border-disabled-color;
       color: $input-content-disabled-color;
+      background: $input-disabled-bg-color;
 
       & ::placeholder {
         color: $input-placeholder-disabled-color;
+      }
+
+      &.sf-outline {
+        background-color: $input-outlined-disabled-bg-color;
+      }
+      &.sf-filled {
+        background-color: $input-filled-disabled-bg-color;
+      }
+    }
+
+    &.sf-readonly {
+      background: $input-readonly-bg-color;
+
+      &.sf-outline {
+        background-color: $input-outlined-readonly-bg-color;
+      }
+      &.sf-filled {
+        background-color: $input-filled-disabled-bg-color;
       }
     }
   }

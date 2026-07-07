@@ -14,7 +14,7 @@ The React ListView component renders a flexible, accessible list UI that support
 - **Grouping & Sorting:** Group items by a field and control sort behavior with `sortOrder` and `fields.sortBy`.
 - **Virtualization & Performance:** Windowed rendering with `virtualization` props and scroll request callback for very large data sets.
 - **Data Events:** `onDataRequest` and `onDataLoad` hooks for request/response lifecycle; `onScroll` for virtualization-aware scrolling.
-- **Accessibility & RTL:** Honors provider `dir` (RTL) and includes focus/interaction-friendly structure.
+- **Accessibility & RTL:** Supports provider `dir` (RTL) and includes focus/interaction-friendly structure.
 - **Disabled State:** Disable user interactions via the `disabled` prop.
 
 Explore the demo <a href="https://react.syncfusion.com/listview" target="_blank" rel="noopener noreferrer">here</a>

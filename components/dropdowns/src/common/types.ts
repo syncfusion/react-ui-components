@@ -1,11 +1,13 @@
-import * as React from 'react';
+import { InputHTMLAttributes, ReactElement, ReactNode } from 'react';
 import { DataManager, Query } from '@syncfusion/react-data';
-import { Size, LabelMode, Variant, SortOrder } from '@syncfusion/react-base';
+import { LabelMode, SortOrder } from '@syncfusion/react-base';
 import { ScrollEvent } from '@syncfusion/react-lists';
 import { ResizeEvent } from '@syncfusion/react-popups';
 import { T, FieldSettingsModel, FilterType, PopupSettings, DropdownVirtualProps, FilterEvent, DataRequestEvent, DataLoadEvent, PopupEvent, ChangeEvent } from '../drop-down-list/types';
+import { MultiSelectCommonProps } from '../multi-select/types';
+import { inputBaseProps, validationProps } from '@syncfusion/react-inputs';
 
-export interface InputProps {
+export interface InputProps extends inputBaseProps {
     /**
      * Specifies the placeholder text that appears in the dropdown component when no item is selected.
      *
@@ -14,18 +16,11 @@ export interface InputProps {
     placeholder?: string;
 
     /**
-     * Specifies the size style of the dropdown component. Options include 'Small', 'Medium' and 'Large'.
-     *
-     * @default Size.Medium
-     */
-    size?: Size;
-
-    /**
      * Specifies whether to show a clear button in the dropdown component. When enabled, a clear icon appears when a value is selected, allowing users to clear the selection.
      *
      * @default false
      */
-    clearButton?: boolean | React.ReactNode;
+    clearButton?: boolean | ReactNode;
 
     /**
      * Specifies the behavior of the floating label associated with the dropdown component input. Determines when and how the label appears.
@@ -35,17 +30,10 @@ export interface InputProps {
     labelMode?: LabelMode;
 
     /**
-     * Specifies the variant style of the dropdown component. Options include 'Outlined', 'Filled', and 'Standard'.
-     *
-     * @default Variant.Standard
-     */
-    variant?: Variant;
-
-    /**
      * Specifies additional HTML attributes to apply to the underlying input element. Values provided here can override default aria-* attributes set by the component.
      *
      */
-    inputProps?: React.InputHTMLAttributes<HTMLInputElement>;
+    inputProps?: InputHTMLAttributes<HTMLInputElement>;
 }
 
 export interface DropDownProps {
@@ -187,42 +175,42 @@ export interface DropDownProps {
      *
      * @default -
      */
-    itemTemplate?: Function | React.ReactNode;
+    itemTemplate?: Function | ReactNode;
 
     /**
      * Specifies a custom template for rendering group header sections when items are categorized into groups in the dropdown component.
      *
      * @default -
      */
-    groupTemplate?: Function | React.ReactNode;
+    groupTemplate?: Function | ReactNode;
 
     /**
      * Specifies a custom template for rendering the header section of the dropdown popup, enabling additional content above the item list.
      *
      * @default -
      */
-    headerTemplate?: React.ReactNode;
+    headerTemplate?: ReactNode;
 
     /**
      * Specifies a custom template for rendering the footer section of the dropdown popup, enabling additional content below the item list.
      *
      * @default -
      */
-    footerTemplate?: React.ReactNode;
+    footerTemplate?: ReactNode;
 
     /**
      * Specifies a custom template for the message displayed when no items match the search criteria or when the data source is empty.
      *
      * @default 'No Records Found'
      */
-    noRecordsTemplate?: React.ReactNode;
+    noRecordsTemplate?: ReactNode;
 
     /**
      * Specifies a custom template to render when an error occurs in the dropdown component.
      *
      * @default -
      */
-    onErrorTemplate?: React.ReactNode;
+    onErrorTemplate?: ReactNode;
 
     /**
      * Specifies an event that triggers when data fetching fails
@@ -288,7 +276,7 @@ export interface DropDownFilterIconProps {
      *
      * @default -
      */
-    dropdownIcon?: React.ReactNode;
+    dropdownIcon?: ReactNode;
 }
 
 export interface DropDownSelectionProps {
@@ -314,33 +302,53 @@ export interface DropDownSelectionProps {
     onChange?: (event: ChangeEvent) => void;
 }
 
-export interface DropDownPopupProps extends DropDownProps, DropDownFilterIconProps, DropDownSelectionProps, InputProps {
+/**
+ * Specifies the list item data before opening the popup in dropdown list component.
+ *
+ * @private
+ */
+export interface ListItemData {
+    item: T;
+    isDisabled: boolean;
+    isHeader?: boolean;
+}
+
+/**
+ * Props for the Dropdown component.
+ *
+ * @private
+ */
+export interface DropdownProps extends DropDownProps, DropDownFilterIconProps, DropDownSelectionProps,
+    validationProps, InputProps, MultiSelectCommonProps {
 
     /**
-     * Specifies an event that triggers after data is fetched successfully.
-     *
-     * @event onPopupDataLoad
-     */
-    onPopupDataLoad?: (event: DataLoadEvent, FromFilter?: boolean) => void;
-
-    /**
-     * Specifies whether filtering is enabled in the dropdown base.
-     * When enabled, a search box appears at the top of the popup that allows users to filter items.
+     *Specifies whether the input field automatically fills with the first matching
+     * suggestion during typing. The auto-filled portion appears highlighted.
      *
      * @default false
-     * @private
      */
-    isDropdownFiltering?: boolean;
+    autofill?: boolean;
 
     /**
-     * Defines the cached remote data.
+     * Specifies whether to highlight the matched search text within each suggestion.
+     *
+     * @default false
      */
-    remoteCacheRef?: React.RefObject<T[] | null>;
+    autoHighlight?: boolean;
+
+    /** Specifies whether users can commit custom text values (not in the suggestion list) by pressing Enter.
+     * When enabled, free-form input is accepted as a valid selection.
+     *
+     *@default false
+     */
+    customValue?: boolean;
 
     /**
-     * Specifies the data item corresponding to the selected value.
+     * Specifies a custom template for rendering the selected value in the input element, allowing for customized appearance of the selection.
+     *
+     * @default -
      */
-    itemData?: (string | number | boolean | { [key: string]: unknown })[] | null;
+    valueTemplate?: Function | ReactNode;
 
     /**
      * Specifies the placeholder text to be shown in the filter bar of the dropdown component.
@@ -350,16 +358,11 @@ export interface DropDownPopupProps extends DropDownProps, DropDownFilterIconPro
     filterPlaceholder?: string;
 
     /**
-     * Specifies the external filter input element reference.
+     * Specifies the minimum number of characters required before suggestions appear.
      *
-     * @default -
+     * @default 0
      */
-    externalFilterInputRef?: React.RefObject<HTMLInputElement | null>;
-
-    /**
-     * Specifies the focused item.
-     */
-    focusedItem?: ListItemData | null;
+    minLength?: number;
 
     /**
      *Specifies the maximum number of suggestions to display.
@@ -369,139 +372,77 @@ export interface DropDownPopupProps extends DropDownProps, DropDownFilterIconPro
     maxSuggestions?: number;
 
     /**
+     * Specifies additional CSS class(es) to apply to the input element.
+     *
+     * @private
+     * @default -
+     */
+    inputClassName?: string;
+
+    /**
+     * Localization component name used to resolve localized strings (e.g., placeholder).
+     * When provided, L10n will use this key to lookup localized resources.
+     *
+     * @private
+     * @default -
+     */
+    localeComponentName?: string;
+
+    /**
+     * Accessible label for the input element (mapped to aria-label).
+     *
+     * @private
+     * @default -
+     */
+    ariaLabel?: string;
+
+    /**
+     * Specifies the component-specific CSS class(es) to apply to the root container of the dropdown.
+     *
+     * @private
+     * @default -
+     */
+    componentClassName?: string;
+
+    /**
+     * Specifies whether clicking the span toggles/opens the popup.
+     * When true, the input behaves like a span-click driven dropdown (input becomes readOnly for direct typing).
+     *
+     * @private
+     * @default false
+     */
+    spanClickable?: boolean;
+
+    /**
      * When true, force a filter call after the popup is actually mounted (useful for Autocomplete).
      * This avoids calling filter inside onOpen where DropDownPopup may not be mounted yet.
      *
-     * @internal
+     * @private
      */
     forceFilterOnOpen?: boolean;
 
     /**
-     * Specifies whether to hide selected items from the suggestion list.
-     *
-     *
-     */
-    hideSelectedItem?: boolean;
-
-    /**
-     * Specifies custom React node used for rendering the value.
+     * Specifies whether dropdown is multi selectable
      *
      * @private
      */
-    customValueNode?: React.ReactNode
+    multiSelectable?: boolean
 
-    /**
-     * Specifies the Select All UI node to render above the header.
+    /** Specifies the callback invoked when a custom value (not in the suggestion list)
+     * is committed via Enter key. Receives the custom string value as a parameter.
      *
-     * @private
+     * @event onCustomValueSelect
      */
-    selectAllNode?: React.ReactNode;
+    onCustomValueSelect?: (value: string) => void;
 
     /**
-     * Triggers when an item is clicked
+     * Specifies the value template multi selectable component.
      */
-    onItemClick?: (event: React.MouseEvent<HTMLLIElement>, index: number) => void;
+    multiSelectValueTemplate?: ((SelectedItems: T[]) => ReactNode);
 
     /**
-     * Handles keyboard actions
+     * Specifies the value template for editable dropdown components.
      */
-    keyActionHandler?: (event: React.KeyboardEvent<HTMLElement>) => void;
-
-    /**
-     * Specifies an event that triggers when the virtual scrolled.
-     *
-     * @event onScroll
-     */
-    onScroll?: (event: ScrollEvent) => void;
+    inputValueRenderer?: (rendering: ReactElement<HTMLInputElement>) => ReactNode;
 }
 
-/**
- * Specifies the base methods for dropdown components.
- */
-export interface IDropDownPopup extends DropDownPopupProps {
-
-    /**
-     * Gets formatted value based on type
-     */
-    getFormattedValue(value: string | number | boolean): string | number | boolean;
-
-    /**
-     * Gets data object by value
-     */
-    getDataByValue(
-        value: string | number | boolean | null
-    ): { [key: string]: object } | string | number | boolean | undefined;
-
-    /**
-     * Gets index by value
-     */
-    getIndexByValue(value: string | number | boolean): number;
-
-    /**
-     * Gets text by value
-     */
-    getTextByValue(value: string | number | boolean): string;
-
-    /**
-     * Gets all list items
-     */
-    getListItems(): HTMLLIElement[];
-
-    /**
-     * Gets the scroll container.
-     */
-    getScrollContainer():  HTMLElement | null ;
-
-    /**
-     * Gets all filtered list data
-     *
-     * @private
-     *
-     */
-    getFilteredListData(): { [key: string]: object }[] | boolean[] | string[] | number[];
-
-    /**
-     * Checks if an item is disabled due to maximum selection length
-     *
-     * @private
-     */
-    isItemDisabledByMaxSelection(item: string | number | boolean | { [key: string]: unknown }): boolean;
-
-    /**
-     * To filter the data from given data source by using query
-     */
-    filter(
-        dataSource: { [key: string]: unknown }[] | DataManager | string[] | number[] | boolean[],
-        query?: Query,
-        e?: React.ChangeEvent<HTMLInputElement>,
-        clearEvent?: React.MouseEvent
-    ): void;
-}
-
-/**
- * Specifies the class names to be applied to the root element of the DropDownPopup component.
- *
- * @private
- */
-export interface DropDownPopupClassList {
-    root: string;
-    content: string;
-    selected: string;
-    focus: string;
-    li: string;
-    disabled: string;
-    grouping: string;
-    hover: string;
-    noData: string;
-}
-
-/**
- * Specifies the list item data before opening the popup in dropdown list component.
- *
- * @private
- */
-export interface ListItemData {
-    item: string | number | { [key: string]: unknown };
-    isDisabled: boolean;
-    isHeader?: boolean;
-}

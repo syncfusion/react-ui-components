@@ -4,6 +4,8 @@ import { Button, Variant } from '@syncfusion/react-buttons';
 import { useProviderContext } from '@syncfusion/react-base';
 import { useSchedulerLocalization } from '../../common/locale';
 import { AlertAction, CrudAction } from '../../types/enums';
+import { useSchedulerPropsContext } from '../..';
+import { CSS_CLASSES } from '../../common/constants';
 
 interface ConfirmationDialogProps {
     visible: boolean;
@@ -26,6 +28,7 @@ interface ConfirmationDialogProps {
 export const ConfirmationDialog: FC<ConfirmationDialogProps> = (props: ConfirmationDialogProps): ReactNode => {
     const { visible, onConfirm, onCancel, title, message, confirmText, showCancel = true, action = 'delete' } = props;
     const { locale } = useProviderContext();
+    const { eventSettings } = useSchedulerPropsContext();
     const { getString } = useSchedulerLocalization(locale || 'en-US');
     const isRecurrenceAction: boolean = action === AlertAction.RecurrenceEdit || action === AlertAction.RecurrenceDelete;
     const isDeleteAction: boolean = action === AlertAction.RecurrenceDelete;
@@ -34,25 +37,28 @@ export const ConfirmationDialog: FC<ConfirmationDialogProps> = (props: Confirmat
         <Dialog
             header={title || getString('deleteEvent')}
             open={visible}
-            style={{ maxWidth: '400px' }}
+            className={`${CSS_CLASSES.CONFIRMATION_DIALOG}`}
+            style={{ maxWidth: '470px' }}
             animation={{effect: 'Zoom', duration: 400, delay: 1}}
             footer={
                 <>
                     {isRecurrenceAction ? (
                         <>
-                            <Button onClick={() => onConfirm('EditOccurrence')} variant={Variant.Standard}>
+                            <Button onClick={() => onConfirm(isDeleteAction ? 'DeleteOccurrence' : 'EditOccurrence')} variant={Variant.Standard}>
                                 {isDeleteAction ? getString('deleteEvent') : getString('editThisEvent')}
                             </Button>
-                            <Button onClick={() => onConfirm('EditSeries')} variant={Variant.Standard}>
+                            {eventSettings?.editFollowingEvents && (
+                                <Button onClick={() => onConfirm(isDeleteAction ? 'DeleteFollowingEvents' : 'EditFollowingEvents')} variant={Variant.Standard}>
+                                    {getString('followingEvents')}
+                                </Button>
+                            )}
+                            <Button onClick={() => onConfirm(isDeleteAction ? 'DeleteSeries' : 'EditSeries')} variant={Variant.Standard}>
                                 {getString('editEntireSeries')}
                             </Button>
-                            {/* <Button onClick={() => onConfirm(RecurrenceEditAction.Following)} variant={Variant.Standard}>
-                                {getString('editFollowingEvents')}
-                            </Button> */}
                         </>
                     ) : action === AlertAction.SeriesChange ? (
                         <>
-                            <Button onClick={() => onConfirm('EditSeries')} variant={Variant.Standard}>
+                            <Button onClick={() => onConfirm(isDeleteAction ? 'DeleteSeries' : 'EditSeries')} variant={Variant.Standard}>
                                 {getString('yes')}
                             </Button>
                             <Button onClick={() => onConfirm('EditCurrentSeries')} variant={Variant.Standard}>

@@ -541,7 +541,7 @@ export function renderLegend(legendBounds: Rect, chart: Chart, legend: BaseLegen
             };
             legendOption = legend.legendCollections[i as number];
             legendIndex = !legend.isReverse ? count : (legend.legendCollections.length - 1) - count;
-            legend.accessbilityText = 'Click to show or hide the ' + legendOption.text + ' series';
+            legend.accessibilityText = 'Click to show or hide the ' + legendOption.text + ' series';
             getRenderPoint(legendOption, start, textPadding, previousLegend, requireLegendBounds, count,
                            firstLegend, legend);
             renderSymbol(legendOption, legendIndex, chart, legend);
@@ -647,7 +647,7 @@ export function renderLegendTitle(legend: BaseLegend, legendBounds: Rect): void 
     x = alignment === 'Left' ? (x + padding) : alignment === 'Right' ? (x - padding) : x;
     const y: number = legendBounds.y +
         ((legend.legendTitleSize?.height as Required<number>) / (legend.legendTitleCollections as Required<string[]>).length);
-    legend.legendTitleLoction = { x: x, y: y };
+    legend.legendTitleLocation = { x: x, y: y };
 }
 
 // === PAGING & NAVIGATION ===

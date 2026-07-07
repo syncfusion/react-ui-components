@@ -8,7 +8,8 @@ import {
     JSX,
     RefObject,
     MemoExoticComponent,
-    ReactElement
+    ReactElement,
+    ReactNode
 } from 'react';
 import {
     CellType,
@@ -19,9 +20,13 @@ import {
     SelectionMode,
     WrapMode,
     ActionType,
-    FilterDialogBeforeOpenEvent
+    FilterDialogBeforeOpenEvent,
+    RowSelectableParams,
+    ThemeDefaults,
+    Theme,
+    GroupType
 } from '../types';
-import { IGrid } from '../types/grid.interfaces';
+import { GridRef, IGrid } from '../types/grid.interfaces';
 import { SortDescriptor } from '../types/sort.interfaces';
 import { MutableGridSetter } from '../types/interfaces';
 import {
@@ -31,11 +36,12 @@ import {
 import { useColumn } from '../hooks';
 import { IL10n, isNullOrUndefined, SanitizeHtmlHelper } from '@syncfusion/react-base';
 import { Checkbox, CheckboxChangeEvent } from '@syncfusion/react-buttons';
-import { ArrowUpIcon, ArrowDownIcon, FilterIcon, FilterActiveIcon } from '@syncfusion/react-icons';
+import { ArrowUpIcon, ArrowDownIcon, FilterIcon, FilterActiveIcon, ChevronDownIcon, ChevronRightIcon, ChevronUpIcon } from '@syncfusion/react-icons';
 import { ColumnProps, IColumnBase, ColumnRef, CellClassProps } from '../types/column.interfaces';
 import { CommandColumnBase } from './CommandColumn';
 import { ExcelFilterArgs, ExcelFilter } from '../views/common/Excel-CheckBox-filter';
 import { DataManager, DataResult } from '@syncfusion/react-data';
+import { refreshFilteredColsUid } from '../utils/utils';
 
 // CSS class constants following enterprise naming convention
 const CSS_HEADER_CELL_DIV: string = 'sf-grid-header-cell';
@@ -45,9 +51,12 @@ const CSS_FILTER_ICON: string = 'sf-grid-filter-container sf-icons';
 const CSS_SORT_NUMBER: string = 'sf-grid-sort-order';
 const CSS_DESCENDING_SORT: string = 'sf-descending sf-icon-descending';
 const CSS_ASENDING_SORT: string = 'sf-ascending sf-icon-ascending';
+const CSS_GROUP_ASENDING_DESCENDING_SORT: string = 'sf-ascending-descending sf-icon-ascending-descending';
 const CSS_COMMAND_CELL: string = 'sf-grid-command-cell';
 const CSS_FIXED_HEIGHT_TEMPLATE_CELL: string = 'sf-templatecell';
 const CSS_FIXED_HEIGHT_TEMPLATE_WRAPPER: string = 'fixed-height-wrapper';
+const CSS_DETAIL_TOGGLE_ICON: string = 'sf-detail-toggle-icon';
+const CSS_GROUP_EXPAND_BTN: string = 'sf-group-togglebtn';
 
 /**
  * ColumnBase component renders a table cell (th or td) with appropriate content
@@ -60,10 +69,10 @@ const CSS_FIXED_HEIGHT_TEMPLATE_WRAPPER: string = 'fixed-height-wrapper';
  */
 const ColumnBase: <T>(props: Partial<IColumnBase<T>>) => JSX.Element = memo(<T, >(props: Partial<IColumnBase<T>>) => {
     const grid: Partial<IGrid<T>> & Partial<MutableGridSetter<T>> = useGridComputedProvider<T>();
-    const { onHeaderCellRender, onCellRender, onAggregateCellRender, enableHtmlSanitizer, getColumnByField,
-        textWrapSettings, clipMode, serviceLocator, selectionSettings } = grid;
+    const { onHeaderCellRender, onCellRender, onAggregateCellRender, enableHtmlSanitizer, getColumnByField, getVisibleColumns,
+        isMasterDetail, textWrapSettings, clipMode, serviceLocator, selectionSettings, theme, groupSettings } = grid;
     const { isInitialBeforePaint, cssClass, evaluateTooltipStatus, isInitialLoad, currentViewData,
-        selectionModule, getParentElement, filterModule } = useGridMutableProvider<T>();
+        selectionModule, getParentElement, filterModule, expansionState, groupCaptionAggregateType } = useGridMutableProvider<T>();
     const localization: IL10n = serviceLocator?.getService<IL10n>('localization');
     const filterType: boolean = grid.filterSettings?.type === 'Excel' || grid.filterSettings?.type === 'CheckBox';
 
@@ -92,6 +101,7 @@ const ColumnBase: <T>(props: Partial<IColumnBase<T>>) => JSX.Element = memo(<T, 
         allowFilter,
         disableHtmlEncode,
         allowSort,
+        allowGroup,
         customAttributes,
         cellClass
     } = column;
@@ -101,6 +111,16 @@ const ColumnBase: <T>(props: Partial<IColumnBase<T>>) => JSX.Element = memo(<T, 
     const cellRef: RefObject<ColumnRef> = useRef<ColumnRef>({
         cellRef: useRef<HTMLTableCellElement>(null)
     });
+
+    // Validate allowGroup property - warn if field is undefined but grouping is enabled
+    useEffect(() => {
+        if (column?.allowGroup && !column?.field && grid.enableDevMode) {
+            console.warn(
+                '[Grid Column Validation] Column with allowGroup=true must have a \'field\' property defined for grouping to work correctly. ' +
+                `Column: ${column?.headerText || '(unnamed)'}`
+            );
+        }
+    }, [column?.allowGroup, column?.field, column?.headerText]);
 
     // Filter dialog open/close state and handlers
     const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -114,12 +134,25 @@ const ColumnBase: <T>(props: Partial<IColumnBase<T>>) => JSX.Element = memo(<T, 
         setIsFilterOpen(false);
     }, []);
 
+    /**
+     * Handle filter icon keyboard interaction (Enter or Space)
+     */
+    type FilterKeyHandler = (e: React.KeyboardEvent<HTMLSpanElement>) => void;
+    const handleFilterIconKeyDown: FilterKeyHandler = useCallback((e: React.KeyboardEvent<HTMLSpanElement>): void => {
+        if ((e as React.KeyboardEvent<HTMLInputElement>).key === 'Enter' || (e as React.KeyboardEvent<HTMLInputElement>).key === ' ') {
+            openFilterDialog();
+        }
+    }, [openFilterDialog]);
+
     const updateFilterModel: (cell: React.RefObject<HTMLElement>) => ExcelFilterArgs = (
         cell: React.RefObject<HTMLElement>): ExcelFilterArgs => {
         const dataSource: Object = grid.dataSource as DataManager | DataResult;
         const gridDataManager: DataManager = grid?.dataSource instanceof DataManager ? grid.dataSource :
             new DataManager(grid?.dataSource as DataManager);
         const updateColumn: ColumnProps =  grid.getColumns().find((col: ColumnProps) => col.field === column.field);
+        if (grid.filterSettings?.columns.length) {
+            refreshFilteredColsUid(grid as GridRef<T>, grid.filterSettings?.columns);
+        }
         const option: ExcelFilterArgs = {
             filterType: updateColumn.filter.type ?? grid.filterSettings.type, type: updateColumn.type, field: updateColumn.field,
             column: updateColumn, dataSource: dataSource, format: updateColumn.format, height: 800, columns: grid.getColumns(),
@@ -137,7 +170,9 @@ const ColumnBase: <T>(props: Partial<IColumnBase<T>>) => JSX.Element = memo(<T, 
             disableSortOption: false,
             isCustomDataSource: false,
             formatFn: updateColumn.formatFn,
-            enableHtmlSanitizer : enableHtmlSanitizer
+            enableHtmlSanitizer : enableHtmlSanitizer,
+            mode: grid.filterSettings?.mode,
+            immediateModeDelay: grid.filterSettings?.immediateModeDelay
         };
         const args: FilterDialogBeforeOpenEvent = {
             cancel: false, requestType: ActionType.FilterDialogBeforeOpen, columnType: option.type,
@@ -173,7 +208,7 @@ const ColumnBase: <T>(props: Partial<IColumnBase<T>>) => JSX.Element = memo(<T, 
     const handleAggregateCellInfo: Function = useCallback(() => {
         if (onAggregateCellRender && cellRef.current?.cellRef.current) {
             onAggregateCellRender({
-                data: props.row.data,
+                data: props.row.data as T,
                 cell: cellRef.current.cellRef.current,
                 column: props.cell.aggregateColumn
             });
@@ -188,7 +223,7 @@ const ColumnBase: <T>(props: Partial<IColumnBase<T>>) => JSX.Element = memo(<T, 
             onCellRender({
                 cell: cellRef.current.cellRef.current,
                 column: column,
-                data: props.row.data,
+                data: props.row.data as T,
                 colSpan: props.cell.colSpan,
                 rowSpan: props.cell.rowSpan
             });
@@ -211,7 +246,7 @@ const ColumnBase: <T>(props: Partial<IColumnBase<T>>) => JSX.Element = memo(<T, 
                 cellRef.current?.cellRef.current?.classList?.add?.('sf-ellipsistooltip');
             }
         }
-    }, [column.clipMode, clipMode]);
+    }, [column.clipMode, clipMode, props.row?.isSelected]);
 
     /**
      * Trigger appropriate cell info events based on cell type
@@ -241,11 +276,20 @@ const ColumnBase: <T>(props: Partial<IColumnBase<T>>) => JSX.Element = memo(<T, 
         let cssSortClassName: string = '';
         let direction: string = 'none';
         for (let i: number = 0, len: number = sortedColumn?.length; i < len; i++) {
-            if (column.field === sortedColumn?.[parseInt(i.toString(), 10)].field) {
-                index = sortedColumn?.length > 1 ? i + 1 : null;
+            const sortedColumnField: string | undefined = sortedColumn?.[parseInt(i.toString(), 10)].field;
+            const isGroupColumn: boolean = column?.type === ColumnType.SingleGroup &&
+                grid.groupSettings?.columns?.indexOf(sortedColumnField) >= 0;
+            const isColumnMatch: boolean = column.field === sortedColumnField || isGroupColumn;
+            if (isColumnMatch) {
+                index = sortedColumn?.length > 1 && column?.type !== ColumnType.SingleGroup ? i + 1 : null;
+                const tempDirection: string = direction;
                 direction = sortedColumn?.[parseInt(i.toString(), 10)].direction;
-                cssSortClassName = sortedColumn?.[parseInt(i.toString(), 10)].direction === 'Ascending' ? CSS_ASENDING_SORT :
-                    sortedColumn?.[parseInt(i.toString(), 10)].direction === 'Descending' ? CSS_DESCENDING_SORT : '';
+                if (column?.type === ColumnType.SingleGroup && tempDirection !== 'none' && (direction !== tempDirection || direction === 'Both')) {
+                    direction = 'Both';
+                    index = null;
+                }
+                cssSortClassName = direction === 'Both' ? CSS_GROUP_ASENDING_DESCENDING_SORT : (sortedColumn?.[parseInt(i.toString(), 10)].direction === 'Ascending' ? CSS_ASENDING_SORT :
+                    sortedColumn?.[parseInt(i.toString(), 10)].direction === 'Descending' ? CSS_DESCENDING_SORT : '');
             }
         }
         return { index: index, className: cssSortClassName, direction: direction };
@@ -328,11 +372,13 @@ const ColumnBase: <T>(props: Partial<IColumnBase<T>>) => JSX.Element = memo(<T, 
                         <div className={CSS_HEADER_CELL_DIV} data-mappinguid={props.cell.column.uid} key={`header-cell-${props.cell?.column?.uid}`}>
                             <Checkbox
                                 className="sf-grid-checkselectall"
-                                checked={props.row?.isSelected && (currentViewData?.length ?? 0) > 0}
+                                checked={props.row?.isSelected}
                                 indeterminate={props.row?.isIntermediateState}
                                 onChange={selectionModule.headerCheckBoxOnChange.bind(null, props.row)}
                                 aria-label={localization?.getConstant('SelectAllRows')}
-                                disabled={!currentViewData?.length || selectionSettings.mode === SelectionMode.Single}
+                                disabled={props.row?.isDisabled || selectionSettings.mode === SelectionMode.Single ||
+                                    currentViewData.length === 0}
+                                aria-disabled={props.row?.isDisabled ? 'true' : 'false'}
                             />
                         </div>
                     </div>
@@ -367,28 +413,34 @@ const ColumnBase: <T>(props: Partial<IColumnBase<T>>) => JSX.Element = memo(<T, 
                             { children: content } :
                             { dangerouslySetInnerHTML: { __html: content } })}
                         />
-                        {allowSort && grid?.sortSettings?.enabled && (
-                            headerSortProperties.direction === 'Ascending' ? (
-                                <span className={`${CSS_SORT_ICON} ${headerSortProperties.className}`}>
-                                    <ArrowUpIcon />
-                                </span>
-                            ) : headerSortProperties.direction === 'Descending' ? (
-                                <span className={`${CSS_SORT_ICON} ${headerSortProperties.className}`}>
-                                    <ArrowDownIcon />
-                                </span>
-                            ) : null
-                        )}
+                        {(() => {
+                            const isSortEnabled: boolean = allowSort && grid?.sortSettings?.enabled;
+                            const isGroupColumn: boolean = (allowGroup || column?.type === ColumnType.SingleGroup);
+                            const isGroupEnabled: boolean = grid.groupSettings.enabled && !!grid.groupSettings?.columns?.length;
+                            const shouldShowSortIcon: boolean = isSortEnabled || (isGroupColumn && isGroupEnabled);
+                            return shouldShowSortIcon ? (
+                                headerSortProperties.direction === 'Ascending' ? (
+                                    <span className={`${CSS_SORT_ICON} ${headerSortProperties.className}`}>
+                                        <ArrowUpIcon />
+                                    </span>
+                                ) : headerSortProperties.direction === 'Descending' ? (
+                                    <span className={`${CSS_SORT_ICON} ${headerSortProperties.className}`}>
+                                        <ArrowDownIcon />
+                                    </span>
+                                ) : (headerSortProperties.direction === 'Both' ? (
+                                    <span className={`${CSS_SORT_ICON} ${headerSortProperties.className}`}>
+                                        <ChevronUpIcon width={12} height={12} /><ChevronDownIcon width={12} height={12} />
+                                    </span>
+                                ) : null)
+                            ) : <></>;
+                        })()}
                         {headerSortProperties.index && <span className={CSS_SORT_NUMBER}>{headerSortProperties.index}</span>}
                         {column.type !== 'checkbox' && column.type !== 'command' && allowFilter && filterType && (
                             <>
                                 <span
                                     className={CSS_FILTER_ICON}
                                     onClick={openFilterDialog}
-                                    onKeyDown={(e: React.KeyboardEvent<HTMLSpanElement>) => {
-                                        if ((e as React.KeyboardEvent<HTMLInputElement>).key === 'Enter' || (e as React.KeyboardEvent<HTMLInputElement>).key === ' ') {
-                                            openFilterDialog();
-                                        }
-                                    }}
+                                    onKeyDown={handleFilterIconKeyDown}
                                 >
                                     {filterColumn.length ? <FilterActiveIcon color='#4285F4'/> : <FilterIcon />}
                                 </span>
@@ -422,7 +474,9 @@ const ColumnBase: <T>(props: Partial<IColumnBase<T>>) => JSX.Element = memo(<T, 
         column?.autoHeight,
         currentViewData,
         grid.filterSettings,
-        isFilterOpen
+        grid.selectionSettings.mode,
+        isFilterOpen,
+        handleFilterIconKeyDown
     ]);
 
     /**
@@ -447,39 +501,139 @@ const ColumnBase: <T>(props: Partial<IColumnBase<T>>) => JSX.Element = memo(<T, 
 
         // Add custom content cell class.
         classNames.push(!isNullOrUndefined(cellClass) ? (typeof cellClass === 'function' ?
-            cellClass({data: props.row.data, rowIndex: props.row.rowIndex, column, cellType: CellType.Content}) : cellClass) : '');
+            cellClass({data: props.row.data as T, rowIndex: props.row.rowIndex, column, cellType: CellType.Content}) : cellClass) : '');
         classNames.push(!isNullOrUndefined(props.cell.column.template) ? CSS_FIXED_HEIGHT_TEMPLATE_CELL : '');
 
+        const groupCaptionAggregateTypeSafe: Map<string, string[]> = groupCaptionAggregateType as Map<string, string[]>;
+        const hasAggregateField: boolean = !groupCaptionAggregateTypeSafe.get(column?.field);
+        const isCaptionRowWithData: boolean = props.row?.isCaptionRow && props?.row?.data?.[field as string];
+        const CaptionRowExpandCollapseButton: JSX.Element = (isCaptionRowWithData && hasAggregateField) ? (
+            <button
+                type="button"
+                className={CSS_GROUP_EXPAND_BTN}
+                aria-expanded={props.row?.isExpand}
+            >
+                {props.row?.isExpand
+                    ? <ChevronDownIcon aria-hidden="true" width={20} height={20} />
+                    : <ChevronRightIcon aria-hidden="true" width={20} height={20} />
+                }
+            </button>
+        ) : <></>;
         const content: string | JSX.Element = !isNullOrUndefined(props.cell.column.template) || isMaskCell ?
             (column?.autoHeight || (textWrapSettings?.enabled && textWrapSettings?.wrapMode !== WrapMode.Header) || isMaskCell ?
                 formattedValue : <div className={CSS_FIXED_HEIGHT_TEMPLATE_WRAPPER} style={{height: props?.row?.height}}>
                     {formattedValue as ReactElement}</div>) as ReactElement
             : sanitizeContent(formattedValue as string);
+        const visiblePositionColumn: ColumnProps = getVisibleColumns?.()?.find((column: ColumnProps) =>
+            column.type !== ColumnType.Checkbox && !column.getCommandItems);
+        const isSingleGroupOrFirstOrGroupRows: boolean = column?.type === ColumnType.SingleGroup ||
+            groupSettings?.type === GroupType.GroupRows || (groupSettings?.type === GroupType.SingleColumn &&
+                column?.uid === visiblePositionColumn?.uid);
+        const hasNotCommandAndCheckboxColumn: boolean = column.type !== ColumnType.Checkbox && !column.getCommandItems;
+        const shouldShowCaptionIndent: boolean = props.row?.isCaptionRow && isSingleGroupOrFirstOrGroupRows &&
+            hasNotCommandAndCheckboxColumn && hasAggregateField;
+        const groupCaptionCellStyle: React.CSSProperties | undefined = (props?.row?.indent - 1) > 0 ? {
+            paddingLeft: `${(props?.row?.indent - 1) * ThemeDefaults?.[theme as Theme].groupingIndent}px`
+        } : {};
         classNames.push((column?.type !== ColumnType.Checkbox) && (content === '' || isNullOrUndefined(content) &&
             !props.cell.column.getCommandItems) ? 'sf-empty-cell' : '');
         // Remove duplicates and join
         const finalClassName: string = [...new Set(classNames)].filter((cls: string) => cls).join(' ');
 
+        let checkboxNode: ReactNode;
         // Special rendering for checkbox selection column (row checkbox)
-        if (column.type === ColumnType.Checkbox) {
-            return (
-                <td
+        if (column.type === ColumnType.Checkbox || (groupSettings?.type === GroupType.GroupRows && props.row?.isCaptionRow)) {
+            let isSelectable: boolean = true;
+            let showDisabled: boolean = true;
+            const primaryKeys: string[] = grid.getPrimaryKeyFieldNames?.() ?? [];
+            const rowKey: string = props.row?.data?.[primaryKeys[0]];
+            const selectableParams: RowSelectableParams = !grid.pageSettings.enabled ? selectionModule?.nonSelectableRows.get(rowKey) :
+                selectionModule?.currentViewNonSelectableRows?.get(rowKey);
+            if (selectableParams) {
+                isSelectable = selectableParams.selectable;
+                showDisabled = selectableParams.showDisabledCheckboxes;
+            }
+            const checkboxClassName: string = ['sf-grid-checkselect', !isSelectable && !showDisabled ? 'sf-grid-checkbox-hidden' : '']
+                .filter(Boolean).join(' ');
+            checkboxNode = <Checkbox
+                className={checkboxClassName}
+                checked={props.row?.isSelected}
+                disabled={!isSelectable}
+                aria-disabled={!isSelectable ? 'true' : 'false'}
+                aria-label={localization?.getConstant('SelectRow')}
+                {...(grid.selectionSettings?.checkboxOnly ? { onChange: rowCheckBoxOnChange } : {})}
+            />;
+            if (column.type === ColumnType.Checkbox) {
+                return <td
                     ref={cellRef.current.cellRef}
                     {...customAttributes}
                     className={finalClassName}
                 >
-                    <Checkbox
-                        className="sf-grid-checkselect"
-                        checked={props.row?.isSelected}
-                        aria-label={localization?.getConstant('SelectRow')}
-                        {...(grid.selectionSettings?.checkboxOnly ? { onChange: rowCheckBoxOnChange } : {})}
-                    />
-                </td>
-            );
+                    {checkboxNode}
+                </td>;
+            }
+        }
+        const CaptionIndentIncludedElement: JSX.Element | undefined = shouldShowCaptionIndent ? (
+            <div
+                className={'sf-grid-groupcaptioncell'}
+                style={groupCaptionCellStyle}
+            >
+                {CaptionRowExpandCollapseButton}
+                {checkboxNode && getVisibleColumns?.()?.find((column: ColumnProps) => column.type === ColumnType.Checkbox) && checkboxNode}
+                {content}
+            </div>
+        ) : undefined;
+
+        // Determine if this is the first column and master-detail is enabled
+        const isFirstColumn: boolean = index === 0 || column?.uid === visiblePositionColumn?.uid;
+        let isExpanded: boolean = false;
+        const isMasterRow: boolean = isFirstColumn && isMasterDetail && !props.row?.isDetailRow;
+        if (isMasterRow) {
+            const rowIndex: number = props.row?.rowIndex;
+            isExpanded = isMasterRow && !isNullOrUndefined(rowIndex) ?
+                (expansionState?.has(rowIndex) && expansionState?.get(rowIndex)) : false;
         }
 
+
+        // Render expander icon for first column of master rows
+        const expanderElement: ReactNode = isMasterRow ? (
+            <button
+                type="button"
+                className={CSS_DETAIL_TOGGLE_ICON}
+                aria-label={localization?.getConstant(isExpanded ? 'Expanded' : 'Collapsed')}
+                aria-expanded={isExpanded}
+            >
+                {isExpanded
+                    ? <ChevronDownIcon aria-hidden="true" width={20} height={20} />
+                    : <ChevronRightIcon aria-hidden="true" width={20} height={20} />
+                }
+            </button>
+        ) : null;
+
+        const groupCaptionCellContent: ReactNode =
+            <>
+                {
+                    // Case 1: Caption row with indent wrapper
+                    CaptionIndentIncludedElement ? (
+                        CaptionIndentIncludedElement
+                    ) : (
+                        <>
+                            {CaptionRowExpandCollapseButton}
+
+                            {
+                                disableHtmlEncode || isNullOrUndefined(disableHtmlEncode) ? (
+                                    content
+                                ) : (
+                                    <span dangerouslySetInnerHTML={{ __html: content as string }} />
+                                )
+                            }
+                        </>
+                    )
+                }
+            </>;
+
         return (
-            props.cell.column.type === ColumnType.Command ?
+            props.cell.column.type === ColumnType.Command && !props.row?.isCaptionRow ?
                 <td
                     ref={cellRef.current.cellRef}
                     {...customAttributes}
@@ -488,13 +642,35 @@ const ColumnBase: <T>(props: Partial<IColumnBase<T>>) => JSX.Element = memo(<T, 
                     <CommandColumnBase row={props.row} column={props.cell.column} />
                 </td>
                 :
-                <td
-                    ref={cellRef.current.cellRef}
-                    {...customAttributes}
-                    className={finalClassName}
-                    {...(disableHtmlEncode || isNullOrUndefined(disableHtmlEncode) ?
-                        { children: content } :
-                        { dangerouslySetInnerHTML: { __html: content } })} />
+                (isMasterRow && !props.row.isDetailRow ?
+                    <td
+                        ref={cellRef.current.cellRef}
+                        {...customAttributes}
+                        className={finalClassName}
+                    >
+                        {expanderElement}
+                        <span
+                            {...(disableHtmlEncode || isNullOrUndefined(disableHtmlEncode) ?
+                                { children: content } :
+                                { dangerouslySetInnerHTML: { __html: content } })} />
+
+                    </td>
+                    : (groupSettings?.enabled && groupSettings?.columns?.length && isCaptionRowWithData ? <td
+                        ref={cellRef.current.cellRef}
+                        {...customAttributes}
+                        className={finalClassName}
+                    >
+                        {groupCaptionCellContent}
+                    </td>
+                        : <td
+                            ref={cellRef.current.cellRef}
+                            {...customAttributes}
+                            className={finalClassName}
+                            {...(disableHtmlEncode || isNullOrUndefined(disableHtmlEncode) ?
+                                { children: content } :
+                                { dangerouslySetInnerHTML: { __html: content } })} />
+                    )
+                )
         );
     }, [
         cellType,
@@ -507,7 +683,8 @@ const ColumnBase: <T>(props: Partial<IColumnBase<T>>) => JSX.Element = memo(<T, 
         index,
         disableHtmlEncode,
         props.row?.rowIndex,
-        props.row?.isSelected
+        props.row?.isSelected,
+        expansionState
     ]);
 
     /**
@@ -530,7 +707,7 @@ const ColumnBase: <T>(props: Partial<IColumnBase<T>>) => JSX.Element = memo(<T, 
 
         // Add custom aggregate class.
         classNames.push(!isNullOrUndefined(aggregateCellClass) ? (typeof aggregateCellClass === 'function' ?
-            aggregateCellClass({data: props.row.data, rowIndex: props.row.rowIndex, column, cellType: CellType.Aggregate}) : aggregateCellClass) : '');
+            aggregateCellClass({data: props.row.data as T, rowIndex: props.row.rowIndex, column, cellType: CellType.Aggregate}) : aggregateCellClass) : '');
         classNames.push(!isNullOrUndefined(props.cell.isTemplate) ? CSS_FIXED_HEIGHT_TEMPLATE_CELL : '');
 
         const content: string | JSX.Element = props.cell.isTemplate ? (column?.autoHeight ? formattedValue :

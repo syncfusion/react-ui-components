@@ -228,14 +228,12 @@ export const SanitizeHtmlHelper: ISanitize = (() => {
      * @returns {void}
      */
     function removeElement(): void {
-        if (props.wrapElement) {
-            // Removes an element's attibute to avoid html tag validation
-            const nodes: HTMLCollection = props.wrapElement.children;
-            for (let j: number = 0; j < nodes.length; j++) {
-                const attribute: NamedNodeMap = nodes[parseInt(j.toString(), 10)].attributes;
-                for (let i: number = 0; i < attribute.length; i++) {
-                    nodes[parseInt(j.toString(), 10)].removeAttribute(attribute[parseInt(i.toString(), 10)].localName);
-                }
+        // Removes an element's attibute to avoid html tag validation
+        const nodes: HTMLCollection = props.wrapElement.children;
+        for (let j: number = 0; j < nodes.length; j++) {
+            const attribute: NamedNodeMap = nodes[parseInt(j.toString(), 10)].attributes;
+            for (let i: number = 0; i < attribute.length; i++) {
+                nodes[parseInt(j.toString(), 10)].removeAttribute(attribute[parseInt(i.toString(), 10)].localName);
             }
         }
     }
@@ -246,12 +244,10 @@ export const SanitizeHtmlHelper: ISanitize = (() => {
      * @returns {void}
      */
     function removeXssTags(): void {
-        if (props.wrapElement) {
-            const elements: NodeListOf<HTMLElement> = props.wrapElement.querySelectorAll(props.removeTags.join(','));
-            elements.forEach((element: Element) => {
-                detach(element);
-            });
-        }
+        const elements: NodeListOf<HTMLElement> = props.wrapElement.querySelectorAll(props.removeTags.join(','));
+        elements.forEach((element: Element) => {
+            detach(element);
+        });
     }
 
     /**
@@ -260,16 +256,14 @@ export const SanitizeHtmlHelper: ISanitize = (() => {
      * @returns {void}
      */
     function removeJsEvents(): void {
-        if (props.wrapElement) {
-            const elements: NodeListOf<HTMLElement> = props.wrapElement.querySelectorAll('[' + jsEvents.join('],[') + ']');
-            elements.forEach((element: Element) => {
-                jsEvents.forEach((attr: string) => {
-                    if (element.hasAttribute(attr)) {
-                        element.removeAttribute(attr);
-                    }
-                });
+        const elements: NodeListOf<HTMLElement> = props.wrapElement.querySelectorAll('[' + jsEvents.join('],[') + ']');
+        elements.forEach((element: Element) => {
+            jsEvents.forEach((attr: string) => {
+                if (element.hasAttribute(attr)) {
+                    element.removeAttribute(attr);
+                }
             });
-        }
+        });
     }
 
     /**
@@ -278,21 +272,19 @@ export const SanitizeHtmlHelper: ISanitize = (() => {
      * @returns {void}
      */
     function removeXssAttrs(): void {
-        if (props.wrapElement) {
-            props.removeAttrs.forEach((item: SanitizeRemoveAttrs) => {
-                const elements: NodeListOf<HTMLElement> = props.wrapElement.querySelectorAll(item.selector);
-                elements.forEach((element: Element) => {
-                    if (item.selector === 'a[href]') {
-                        const attrValue: string = element.getAttribute(item.attribute || '');
-                        if (attrValue && attrValue.replace(/\t|\s|&/, '').includes('javascript:alert')) {
-                            element.removeAttribute(item.attribute || '');
-                        }
-                    } else {
-                        element.removeAttribute(item.attribute || '');
+        props.removeAttrs.forEach((item: SanitizeRemoveAttrs) => {
+            const elements: NodeListOf<HTMLElement> = props.wrapElement.querySelectorAll(item.selector);
+            elements.forEach((element: Element) => {
+                if (item.selector === 'a[href]') {
+                    const attrValue: string = element.getAttribute(item.attribute || '');
+                    if (attrValue && attrValue.replace(/\t|\s|&/, '').includes('javascript:alert')) {
+                        element.removeAttribute(item.attribute);
                     }
-                });
+                } else {
+                    element.removeAttribute(item.attribute || '');
+                }
             });
-        }
+        });
     }
 
     return props;

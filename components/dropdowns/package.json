@@ -1,6 +1,6 @@
 {
   "name": "@syncfusion/react-dropdowns",
-  "version": "33.1.44",
+  "version": "34.1.29",
   "description": "Syncfusion React Dropdown package is a feature-rich UI collection for dynamic dropdown interactions in React apps.",
   "author": "Syncfusion Inc.",
   "license": "SEE LICENSE IN license",
@@ -20,12 +20,12 @@
   "module": "./index.js",
   "readme": "README.md",
   "dependencies": {
-    "@syncfusion/react-base": "~33.1.44",
-    "@syncfusion/react-buttons": "~33.1.44",
-    "@syncfusion/react-data": "~33.1.44",
-    "@syncfusion/react-inputs": "~33.1.44",
-    "@syncfusion/react-lists": "~33.1.44",
-    "@syncfusion/react-popups": "~33.1.44"
+    "@syncfusion/react-base": "~34.1.29",
+    "@syncfusion/react-buttons": "~34.1.29",
+    "@syncfusion/react-data": "~34.1.29",
+    "@syncfusion/react-inputs": "~34.1.29",
+    "@syncfusion/react-lists": "~34.1.29",
+    "@syncfusion/react-popups": "~34.1.29"
   },
   "devDependencies": {
     "gulp": "4.0.2",

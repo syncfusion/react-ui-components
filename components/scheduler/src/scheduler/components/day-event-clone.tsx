@@ -14,7 +14,7 @@ export const DayEventClone: FC<ProcessedEventsData> = (props: ProcessedEventsDat
         isOverflowRight
     });
 
-    const content: ReactNode = getEventContent(props);
+    const content: ReactNode = getEventContent();
 
     return (
         <div

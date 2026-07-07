@@ -24,14 +24,31 @@ Ideal for react applications requiring structured data presentation, real-time i
 - **[Paging](https://react.syncfusion.com/react-ui/data-grid/paging):**
   Manages large volumes of data using built-in pagination. Supports both client-side and server-side paging strategies to ensure scalable performance and efficient data navigation in distributed environments.
 
+- **[Grouping](https://react.syncfusion.com/react-ui/data-grid/grouping/configuration):** Organizes data into hierarchical groups for better analysis.
+
+- **[Row & Column Spanning](https://react.syncfusion.com/react-ui/data-grid/row/row-spanning):** Supports merging cells across rows and columns for advanced layouts.
+
+- **[Master-Detail](https://react.syncfusion.com/react-ui/data-grid/master-detail/detail-grid):** Displays hierarchical data using expandable detail rows.
+
 - **[DOM Virtualization & Virtual Scrolling](https://react.syncfusion.com/react-ui/data-grid/scrolling/virtual-scroll/):**
   Enables efficient rendering of large datasets with improved performance and responsiveness through intelligent DOM virtualization and virtual scrolling techniques.
+
+- **[Infinite Scrolling](https://react.syncfusion.com/react-ui/data-grid/scrolling/infinite-scroll/):**
+  Enables continuous data loading during scroll actions without pagination. Designed for scenarios where the total record count is unknown, it dynamically retrieves additional data from the server data source as the user scrolls, ensuring a seamless and uninterrupted browsing experience.
 
 - **[Excel Mode & CheckBox Filtering](https://react.syncfusion.com/react-ui/data-grid/filtering/checkbox-filtering/):**
   Provides advanced filtering options with intuitive, checkbox-based selection for precise data segmentation. Includes Excel-mode filtering for enhanced user experience.
 
+- **[PDF Export](https://react.syncfusion.com/react-ui/data-grid/pdf-export):** Exports Grid data to PDF while preserving layout and styling.
+
+- **[Print](https://react.syncfusion.com/react-ui/data-grid/print):** Supports direct printing of Grid content with structured formatting.
+
 - **[Checkbox Selection](https://react.syncfusion.com/react-ui/data-grid/selection/checkbox-selection/):**
   Supports multi-row selection, allowing users to select multiple rows efficiently using checkboxes integrated within the grid interface.
+
+- **[Column Chooser](https://react.syncfusion.com/react-ui/data-grid/columns/column-chooser/):** Allows users to dynamically show or hide columns.
+
+- **[Context Menu](https://react.syncfusion.com/react-ui/data-grid/context-menu):** Provides customizable right-click actions for enhanced interaction.
 
 - **[Customization](https://react.syncfusion.com/react-ui/data-grid/columns/cell-customization):**
   Allows custom cell rendering, conditional styling, and layout adjustments. Enables integration with design systems and branding guidelines, supporting tailored visual experiences and functional enhancements.
@@ -43,7 +60,7 @@ Ideal for react applications requiring structured data presentation, real-time i
   Displays summary values such as totals, averages, minimums, and maximums using built-in aggregate functions. Aggregation logic can be customized to support analytical dashboards and reporting interfaces.
 
 - **[Interactivity](https://react.syncfusion.com/react-ui/data-grid/accessibility#keyboard-shortcuts):**
-  Supports clickable headers, row selection, and keyboard navigation. Enhances engagement through responsive UI behavior and intuitive controls, suitable for complex data exploration scenarios.
+  Supports clickable headers, row & cell selection, and keyboard navigation. Enhances engagement through responsive UI behavior and intuitive controls, suitable for complex data exploration scenarios.
 
 - **[Accessibility](https://react.syncfusion.com/react-ui/data-grid/accessibility):**
   Compliant with WCAG 2.1 standards, ensuring compatibility with screen readers, keyboard navigation, and assistive technologies. Designed to meet accessibility requirements for public sector and regulated environments.

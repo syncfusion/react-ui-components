@@ -68,7 +68,7 @@
   }
 
   .sf-chip-image {
-    @include chip-specific-properties($chip-leading-icon-border-radius, null, $chip-leading-icon-margin);
+    @include chip-specific-properties($chip-leading-icon-border-radius, null, $chip-avatar-margin);
   }
 
   .sf-chip-trailing-url {
@@ -97,7 +97,7 @@
 
   .sf-chip {
     & .sf-chip-selectable-icon {
-      height: $chip-leading-icon-size;
+      height: $chip-avatar-size;
       overflow: hidden;
       transition: $chip-multi-selection-icon-transition;
       width: 0;
@@ -113,6 +113,93 @@
 
     &:focus-visible {
       box-shadow: $chip-keyboard-focus-box-shadow;
+    }
+  }
+
+  // Size variants
+  .sf-chip-small {
+    font-size: $chip-small-font-size;
+    line-height: $chip-small-line-height;
+    padding: $chip-small-padding;
+
+    & .sf-chip-selectable-icon,
+    .sf-chip-delete svg,
+    .sf-chip-selectable-icon svg {
+      font-size: $chip-small-selectable-icon-font-size;
+    }
+
+    & .sf-chip-selectable-icon {
+      height: $chip-small-avatar-size;
+
+      &.sf-active {
+        width: $chip-small-avatar-size;
+      }
+    }
+
+    .sf-chip-avatar,
+    .sf-chip-icon,
+    .sf-chip-image {
+      @include icon-style-size($chip-small-avatar-size, $chip-small-avatar-size);
+    }
+
+    .sf-chip-avatar,
+    .sf-chip-image {
+      @include chip-specific-properties($chip-avatar-border-radius, null, $chip-small-avatar-margin);
+    }
+
+    .sf-chip-delete {
+      margin-inline: $chip-small-delete-icon-margin;
+    }
+
+    .sf-chip-trailing-url {
+      margin-inline: $chip-small-trailing-url-margin;
+    }
+
+    &.sf-chip-has-icon {
+      padding-block: $chip-small-has-icon-padding-block;
+    }
+  }
+
+  .sf-chip-large {
+    font-size: $chip-large-font-size;
+    line-height: $chip-large-line-height;
+    padding: $chip-large-padding;
+
+    & .sf-chip-selectable-icon,
+    .sf-chip-delete svg,
+    .sf-chip-selectable-icon svg {
+      font-size: $chip-large-selct-icon-font-size;
+    }
+
+    & .sf-chip-selectable-icon {
+      height: $chip-large-avatar-size;
+
+      &.sf-active {
+        width: $chip-large-avatar-size;
+      }
+    }
+
+    .sf-chip-avatar,
+    .sf-chip-icon,
+    .sf-chip-image {
+      @include icon-style-size($chip-large-avatar-size, $chip-large-avatar-size);
+    }
+
+    .sf-chip-delete {
+      @include chip-specific-properties($chip-delete-icon-border-radius, $chip-delete-icon-font-size, $chip-large-delete-icon-margin);
+    }
+
+    .sf-chip-avatar,
+    .sf-chip-image {
+      @include chip-specific-properties($chip-leading-icon-border-radius, null, $chip-large-avatar-margin);
+    }
+
+    .sf-chip-trailing-url {
+      margin-inline: $chip-large-trailing-url-margin;
+    }
+
+    &.sf-chip-has-icon {
+      padding-block: $chip-large-has-icon-padding-block;
     }
   }
 }

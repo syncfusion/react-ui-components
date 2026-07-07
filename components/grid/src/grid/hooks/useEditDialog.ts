@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { IL10n } from '@syncfusion/react-base';
 import { ServiceLocator } from '../types/interfaces';
 import { DialogState, ConfirmDialogConfig, UseConfirmDialogResult } from '../types/edit.interfaces';
@@ -20,7 +20,17 @@ export const useConfirmDialog: (serviceLocator: ServiceLocator) => UseConfirmDia
             onConfirm: null,
             onCancel: null
         });
-        const localization: IL10n = serviceLocator?.getService<IL10n>('localization');
+
+        const localization: IL10n | undefined = serviceLocator.getService<IL10n>('localization');
+
+        const l10nConstants: { okButtonLabel: string; cancelButtonLabel: string; confirmDeleteMessage: string } = useMemo(
+            () => ({
+                okButtonLabel: localization?.getConstant('okButtonLabel'),
+                cancelButtonLabel: localization?.getConstant('cancelButtonLabel'),
+                confirmDeleteMessage: localization?.getConstant('confirmDeleteMessage')
+            }),
+            [localization]
+        );
         /**
          * Show a confirmation dialog
          *
@@ -33,8 +43,8 @@ export const useConfirmDialog: (serviceLocator: ServiceLocator) => UseConfirmDia
                     setDialogState({
                         isOpen: true,
                         config: {
-                            confirmText: localization?.getConstant('okButtonLabel'),
-                            cancelText: localization?.getConstant('cancelButtonLabel'),
+                            confirmText: l10nConstants.okButtonLabel,
+                            cancelText: l10nConstants.cancelButtonLabel,
                             type: 'Confirm',
                             ...config
                         },
@@ -48,7 +58,7 @@ export const useConfirmDialog: (serviceLocator: ServiceLocator) => UseConfirmDia
                         }
                     });
                 });
-            }, [localization]);
+            }, [l10nConstants]);
 
         /**
          * Show a delete confirmation dialog
@@ -57,16 +67,14 @@ export const useConfirmDialog: (serviceLocator: ServiceLocator) => UseConfirmDia
          */
         const confirmOnDelete: () => Promise<boolean> =
             useCallback((): Promise<boolean> => {
-                const message: string = localization?.getConstant('confirmDeleteMessage');
-
                 return confirmOnEdit({
                     title: '',
-                    message,
-                    confirmText: localization?.getConstant('okButtonLabel'),
-                    cancelText: localization?.getConstant('cancelButtonLabel'),
+                    message: l10nConstants.confirmDeleteMessage,
+                    confirmText: l10nConstants.okButtonLabel,
+                    cancelText: l10nConstants.cancelButtonLabel,
                     type: 'Delete'
                 });
-            }, [confirmOnEdit, localization]);
+            }, [confirmOnEdit, l10nConstants]);
 
         return {
             // Dialog state

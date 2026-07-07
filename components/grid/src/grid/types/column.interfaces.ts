@@ -1,20 +1,47 @@
-import { TextAlign, ClipMode, ColumnType, CellType } from '../types/enum';
+import { TextAlign, ClipMode, ColumnType, CellType, ContextMenuItem, AggregateType } from '../types/enum';
 import { CSSProperties, ReactElement, ReactNode, TdHTMLAttributes, ThHTMLAttributes, RefObject, JSX, ComponentType } from 'react';
 import { DateFormatOptions, NumberFormatOptions } from '@syncfusion/react-base';
 import { ValueType, IRow, ICell } from '../types/interfaces';
-import { FilterType, FilterBarType, FilterTemplateProps } from './index';
+import { FilterType, FilterBarType, FilterTemplateProps, ContextMenuItemProps } from './index';
 import { ColumnEditParams, EditTemplateProps } from '../types/edit.interfaces';
 import { FormValueType } from '@syncfusion/react-inputs';
 import { NumericTextBoxProps, TextBoxProps } from '@syncfusion/react-inputs';
 import { DatePickerProps } from '@syncfusion/react-calendars';
 import { DropDownListProps } from '@syncfusion/react-dropdowns';
-import { CommandColumnProps } from './command.interfaces';
+import { GroupedData, CommandColumnProps } from './';
 
 /**
  * Defines the properties for configuring a column in the grid, including layout, behavior, and data binding options.
  * Specifies comprehensive column settings that control appearance, functionality, and user interaction capabilities.
  * Enables customization of sorting, filtering, editing, and display characteristics for individual grid columns.
  */
+export interface CellSpanArgs<T = unknown> {
+    /**
+     * The row data for the current cell.
+     */
+    data?: T;
+
+    /**
+     * The field name associated with the current column.
+     */
+    field?: string;
+
+    /**
+     * The zero-based index of the current row.
+     */
+    rowIndex?: number;
+
+    /**
+     * The zero-based index of the current column.
+     */
+    colIndex?: number;
+
+    /**
+     * The full column configuration object.
+     */
+    column?: ColumnProps<T>;
+}
+
 export interface ColumnProps<T = unknown> extends CommandColumnProps {
     /**
      * Defines the field name that maps the column to a specific data source property for data binding operations.
@@ -77,7 +104,7 @@ export interface ColumnProps<T = unknown> extends CommandColumnProps {
     headerTextAlign?: TextAlign | string;
 
     /**
-     * Defines the cell content's overflow mode. The available modes are
+     * Defines the cell content's overflow mode. The available modes are:
      * * `Clip` -  Truncates the cell content when it overflows its area.
      * * `Ellipsis` -  Displays ellipsis when the cell content overflows its area.
      * * `EllipsisWithTooltip` - Applies an ellipsis to overflowing cell content and displays a tooltip on hover for enhanced readability.
@@ -122,6 +149,15 @@ export interface ColumnProps<T = unknown> extends CommandColumnProps {
     visible?: boolean;
 
     /**
+     * Controls whether the column appears in the column chooser dialog.
+     * Set to false to hide the column from the chooser. By default (true), the column is shown.
+     * Useful for columns that should always be visible or hidden from user control.
+     *
+     * @default true
+     */
+    showInColumnChooser?: boolean;
+
+    /**
      * Renders custom content in data cells using a template string, function, or HTML element ID.
      * Enables complex or dynamic cell layouts.
      *
@@ -160,6 +196,27 @@ export interface ColumnProps<T = unknown> extends CommandColumnProps {
      * @default true
      */
     allowEdit?: boolean;
+
+    /**
+     * If false, disables grouping for this specific column.
+     * Defaults to true, allowing the column to be used in group operations.
+     * When false, the column cannot be dragged to the `GroupDropArea` and is excluded from group-by operations.
+     *
+     * @default true
+     */
+    allowGroup?: boolean;
+
+    /**
+     * Defines the aggregate function (e.g., `sum`, `average`) to apply for group captions when this column is used in grouping.
+     * When grouping by this column, the specified aggregate function calculates summary values for each group and displays them in the group caption.
+     * For example, setting `groupCaptionAggregateType` to `sum` will display the total sum of the grouped values in the group caption when this column is used for grouping.
+     * This property enhances the grouping feature by providing summary information directly in the group headers, improving data analysis and readability when working with grouped data.
+     *
+     * Note: This property is only applicable when the column is used in grouping operations and an aggregate function is specified. It does not affect columns that are not grouped or do not have an aggregate function defined. Not applicable for `groupSettings.type` set to `groupRows`.
+     *
+     * @default null
+     */
+    groupCaptionAggregateType?: AggregateType | AggregateType[] | string | string[];
 
     /**
      * Applies custom CSS styles or attributes (e.g., `class`, `style`) to the column's cells.
@@ -358,6 +415,26 @@ export interface ColumnProps<T = unknown> extends CommandColumnProps {
     allowSearch?: boolean;
 
     /**
+     * Specifies the number of columns the cell should span.
+     * When set to a number greater than 1, the cell merges horizontally.
+     * When set to true, the grid may automatically span adjacent matching cells if `enableAutoSpan` allows it.
+     * When set to false, the cell is never auto-spanned.
+     *
+     * @default 1
+     */
+    colSpan?: number | boolean | ((args?: CellSpanArgs<T>) => number | boolean);
+
+    /**
+     * Specifies the number of rows the cell should span.
+     * When set to a number greater than 1, the cell merges vertically.
+     * When set to true, the grid may automatically span matching cells in subsequent rows if `enableAutoSpan` allows it.
+     * When set to false, the cell is never auto-spanned.
+     *
+     * @default 1
+     */
+    rowSpan?: number | boolean | ((args?: CellSpanArgs<T>) => number | boolean);
+
+    /**
      * Configures the `aria-label` behavior for cells rendered using column templates.
      * Improves accessibility by providing screen readers with meaningful labels when templates are used in grid columns.
      *
@@ -368,7 +445,7 @@ export interface ColumnProps<T = unknown> extends CommandColumnProps {
     /**
      * Enables automatic row height adjustment based on the rendered content of this column.
      *
-     * When set to `true`, the grid measures the actual height of the column’s rendered
+     * When set to true, the grid measures the actual height of the column’s rendered
      * content (including template output) and expands the corresponding row so that no
      * content is clipped.
      *
@@ -479,11 +556,20 @@ export interface ColumnProps<T = unknown> extends CommandColumnProps {
      * Specifies whether the header checkbox is displayed in the checkbox column.
      * By default, it is enabled when the column type is set to `Checkbox` in the column definition.
      * The header checkbox allows users to select or deselect all rows at once.
-     * To disable the select‑all or deselect‑all functionality, set `headerCheckbox` to false in the checkbox column definition.
+     * To disable the select‑all or deselect‑all functionality, set `headerCheckbox` to `false` in the checkbox column definition.
      *
      * @default true
      */
     headerCheckbox?: boolean;
+
+    /**
+     * Defines context menu items to display when right-clicking on cells in the column.
+     * Supports default items such as Edit, Delete, Save, Cancel, SortAscending, etc.
+     * Also supports customized items through the ContextMenuItemProps configuration object for application-specific actions or commands.
+     *
+     * @default undefined
+     */
+    contextMenuItems?: (ContextMenuItem | ContextMenuItemProps)[];
 }
 
 /**
@@ -539,7 +625,7 @@ export interface ColumnTemplateProps<T = unknown> {
      *
      * @default {}
      */
-    data: T;
+    data: T | GroupedData<T>;
 
     /**
      * The column configuration object containing metadata such as field name, data type, and formatting options.
@@ -634,7 +720,7 @@ export interface ValueAccessorProps<T = unknown> {
      *
      * @default -
      */
-    data: T;
+    data: T | GroupedData<T>;
 
     /**
      * Defines the column configuration object, including metadata such as field, type, headerText, and other column-specific properties.
@@ -963,6 +1049,7 @@ export interface PrepareColumns<T = unknown> {
      * @default []
      */
     columns: ColumnProps<T>[];
+    groupCaptionAggregateType?: Map<string, string[]>;
     /**
      * Depth level for nested columns.
      *
@@ -1010,6 +1097,13 @@ export interface PrepareColumns<T = unknown> {
     columnOffsets?: {[key: number]: number};
     isCommandEditEnabled?: boolean;
     isAutoHeightEnabled?: boolean;
+    /**
+     * Flag indicating if any column has rowSpan or colSpan properties.
+     *
+     * @default false
+     */
+    isSpannedColumns?: boolean;
+    singleGroupColumn?: ColumnProps<T> | undefined;
 }
 
 /**

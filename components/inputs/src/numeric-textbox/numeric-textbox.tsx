@@ -1,10 +1,11 @@
-import { useRef, useState, useCallback, useEffect, forwardRef, Ref, useImperativeHandle, useMemo, useId } from 'react';
-import { InputBase, renderFloatLabelElement, renderClearButton, LabelMode, CLASS_NAMES, inputBaseProps } from '../common/inputbase';
-import { IL10n, isNullOrUndefined, L10n, preRender, RippleEffect, useProviderContext, useRippleEffect } from '@syncfusion/react-base';
+import { useRef, useState, useCallback, useEffect, forwardRef, Ref, useImperativeHandle, useMemo } from 'react';
+import { InputBase, renderFloatLabelElement, renderClearButton, LabelMode, CLASS_NAMES, inputBaseProps, renderAdornmentElement } from '../common/inputbase';
+import { IL10n, isNullOrUndefined, L10n, preRender, RippleEffect, useProviderContext, useRippleEffect, useStableId } from '@syncfusion/react-base';
 import { ChevronDownFillIcon, ChevronUpFillIcon } from '@syncfusion/react-icons';
 import { formatUnit } from '@syncfusion/react-base';
 import { getNumberFormat, getNumberParser } from '@syncfusion/react-base';
 import { getValue, getNumericObject, Variant, Size } from '@syncfusion/react-base';
+import { HelperText } from '../common/helper-text';
 export { LabelMode, Variant, Size };
 
 const ROOT: string = 'sf-numeric';
@@ -133,6 +134,22 @@ export interface NumericTextBoxProps extends inputBaseProps {
     labelMode?: LabelMode;
 
     /**
+     * Specifies whether the mouse wheel interaction is enabled for incrementing or decrementing the value.
+     * When enabled, scrolling up increases and scrolling down decreases the value based on the configured `step`.
+     *
+     * @default true
+     */
+    mouseWheel?: boolean;
+
+    /**
+     * Specifies whether the mouse wheel scroll direction is inverted for value adjustment.
+     * When enabled, scrolling down increments and scrolling up decrements the value.
+     *
+     * @default false
+     */
+    invertMouseWheel?: boolean;
+
+    /**
      * Specifies the callback function that triggers when the value of the NumericTextBox changes.
      * The change event of the NumericTextBox component will be triggered in the following scenarios:
      * * Changing the previous value using keyboard interaction and then focusing out of the component.
@@ -180,7 +197,7 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
         step = 1,
         value,
         defaultValue = null,
-        id = `numeric_${useId()}`,
+        id,
         placeholder = '',
         spinButton = true,
         clearButton = false,
@@ -201,11 +218,18 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
         onFocus,
         onBlur,
         onKeyDown,
+        prefix,
+        suffix,
+        helperText,
+        helperTextOnFocus = false,
+        helperTextDirection = 'Left',
+        mouseWheel = true,
+        invertMouseWheel = false,
         ...otherProps
     } = props;
 
     const isControlled: boolean = value !== undefined;
-    const uniqueId: string = useRef(id).current;
+    const numericId: string = id ?? useStableId('sf-numeric');
     const currentValueRef: React.RefObject<number | null> = useRef<number | null>(defaultValue);
 
     const [isFocused, setIsFocused] = useState(false);
@@ -230,7 +254,12 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
         validateOnType,
         labelMode,
         disabled,
-        readOnly
+        readOnly,
+        helperText,
+        helperTextOnFocus,
+        helperTextDirection,
+        mouseWheel,
+        invertMouseWheel
     };
 
     const { effectiveMin, effectiveMax, ariaMin, ariaMax } = useMemo(() => {
@@ -265,9 +294,12 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
             className,
             (dir === 'rtl') ? CLASS_NAMES.RTL : '',
             disabled ? CLASS_NAMES.DISABLE : '',
+            readOnly ? CLASS_NAMES.READONLY : '',
             isFocused ? CLASS_NAMES.TEXTBOX_FOCUS : '',
             (!isNullOrUndefined(currentValueRef.current) && labelMode !== 'Always') ? CLASS_NAMES.VALIDINPUT : '',
             size && size.toLowerCase() !== 'small' ? `sf-${size.toLowerCase()}` : '',
+            prefix ? 'sf-has-prefix' : '',
+            suffix ? 'sf-has-suffix' : '',
             'sf-control',
             variant && variant.toLowerCase() !== 'standard'  ? variant.toLowerCase() === 'outlined' ? 'sf-outline' : `sf-${variant.toLowerCase()}` : ''
         );
@@ -276,9 +308,12 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
         className,
         dir,
         disabled,
+        readOnly,
         isFocused,
         currentValueRef.current,
-        size
+        size,
+        prefix,
+        suffix
     ]);
 
     const { incrementText, decrementText } = useMemo(() => {
@@ -316,6 +351,9 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
             currentValueRef.current = clampedValue as number | null;
 
             if (!isFocused) {
+                if (strictMode && clampedValue !== null && clampedValue !== value  && onChange) {
+                    onChange({ value: clampedValue });
+                }
                 if (clampedValue) {
                     const formattedValue: string = formatValue(clampedValue);
                     setInputString(formattedValue);
@@ -430,7 +468,7 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
              onChange({ event: e as React.ChangeEvent<HTMLInputElement>, value: newValue });
          }
 
-     }, [inputValue, onChange, isControlled, formatNumber]);
+     }, [onChange, isControlled, formatNumber]);
 
     const parseNumericInput: (text: string) => number = useCallback((text: string): number => {
         let str: string = text;
@@ -572,7 +610,7 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
         if (strictMode) {
             newValue = trimValue(newValue);
         }
-        if (newValue) {
+        if (newValue !== null && newValue !== undefined) {
             const formattedValue: string = formatValue(newValue);
             setInputString(formattedValue);
         }
@@ -673,6 +711,30 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
         }
     }, [increment, decrement, strictMode, trimValue, updateValue, readOnly, format, onKeyDown, parseNumericInput]);
 
+    const handleWheel: (e: WheelEvent) => void = useCallback((e: WheelEvent) => {
+        if (!mouseWheel || disabled || readOnly || !isFocused) {
+            return;
+        }
+        e.preventDefault();
+        setIsArrowKeyPressed(true);
+        const isScrollUp: boolean = e.deltaY < 0;
+        const shouldIncrement: boolean = invertMouseWheel ? !isScrollUp : isScrollUp;
+        if (shouldIncrement) {
+            increment();
+        } else {
+            decrement();
+        }
+    }, [mouseWheel, invertMouseWheel, disabled, readOnly, isFocused, increment, decrement]);
+
+    useEffect(() => {
+        const inputEl: HTMLInputElement | null = inputRef.current;
+        if (!inputEl) { return; }
+        inputEl.addEventListener('wheel', handleWheel, { passive: false });
+        return () => {
+            inputEl.removeEventListener('wheel', handleWheel);
+        };
+    }, [handleWheel]);
+
     const clearValue: () => void = useCallback(() => {
         updateValue(null);
         setInputString('');
@@ -691,75 +753,85 @@ forwardRef<INumericTextBox, INumericTextBoxProps>((props: INumericTextBoxProps, 
     ]);
 
     return (
-        <span className={containerClassNames} style={{ width: width ? formatUnit(width) : undefined }}>
-            <InputBase
-                id={uniqueId}
-                type="text"
-                ref={inputRef as React.RefObject<HTMLInputElement>}
-                className={'sf-numerictextbox sf-lib sf-input'}
-                onChange={handleChange}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-                {...otherProps}
-                role="spinbutton"
-                onKeyDown={handleKeyDown}
-                floatLabelType={labelMode}
-                placeholder={placeholder}
-                aria-valuemin={ariaMin}
-                aria-valuemax={ariaMax}
-                value={displayValue}
-                aria-valuenow={currentValueRef.current || undefined}
-                autoComplete={autoComplete}
-                tabIndex={0}
-                disabled={disabled}
-                readOnly={readOnly}
+        <>
+            <span className={containerClassNames} style={{ width: width ? formatUnit(width) : undefined }}>
+                {renderAdornmentElement(prefix)}
+                <InputBase
+                    id={numericId}
+                    type="text"
+                    ref={inputRef as React.RefObject<HTMLInputElement>}
+                    className={'sf-numerictextbox sf-lib sf-input sf-ellipsis'}
+                    onChange={handleChange}
+                    onFocus={handleFocus}
+                    onBlur={handleBlur}
+                    {...otherProps}
+                    role="spinbutton"
+                    onKeyDown={handleKeyDown}
+                    floatLabelType={labelMode}
+                    placeholder={placeholder}
+                    aria-valuemin={ariaMin}
+                    aria-valuemax={ariaMax}
+                    value={displayValue}
+                    aria-valuenow={currentValueRef.current ?? undefined}
+                    autoComplete={autoComplete}
+                    tabIndex={0}
+                    disabled={disabled}
+                    readOnly={readOnly}
+                />
+                {renderFloatLabelElement(
+                    labelMode,
+                    isFocused,
+                    displayValue || '',
+                    placeholder,
+                    numericId
+                )}
+                {clearButton && renderClearButton(
+                    currentValueRef.current && isFocused ? currentValueRef.current.toString() : '',
+                    clearValue, clearButton, 'numericTextbox', locale
+                )}
+                {renderAdornmentElement(suffix)}
+                {spinButton && (
+                    <>
+                        <button
+                            className={`${SPINICON} ${SPINDOWN}`}
+                            onMouseDown={(e: React.MouseEvent<HTMLSpanElement>) => {
+                                rippleRef1.rippleMouseDown(e);
+                                e.preventDefault();
+                            }}
+                            type='button'
+                            aria-label={decrementText}
+                            onClick={() => handleSpinClick(false)}
+                            title={decrementText}
+                            tabIndex={-1}
+                        >
+                            <ChevronDownFillIcon />
+                            {ripple && <rippleRef1.Ripple />}
+                        </button>
+                        <button
+                            className={`${SPINICON} ${SPINUP}`}
+                            onMouseDown={(e: React.MouseEvent<HTMLSpanElement>) => {
+                                rippleRef2.rippleMouseDown(e);
+                                e.preventDefault();
+                            }}
+                            type='button'
+                            aria-label={incrementText}
+                            onClick={() => handleSpinClick(true)}
+                            title={incrementText}
+                            tabIndex={-1}
+                        >
+                            <ChevronUpFillIcon />
+                            {ripple && <rippleRef2.Ripple />}
+                        </button>
+                    </>
+                )}
+            </span>
+            <HelperText
+                helperText={helperText}
+                helperTextOnFocus={helperTextOnFocus}
+                isFocused={isFocused}
+                helperTextDirection={helperTextDirection}
             />
-            {renderFloatLabelElement(
-                labelMode,
-                isFocused,
-                displayValue || '',
-                placeholder,
-                uniqueId
-            )}
-            {clearButton && renderClearButton(
-                currentValueRef.current && isFocused ? currentValueRef.current.toString() : '',
-                clearValue, clearButton, 'numericTextbox', locale
-            )}
-            {spinButton && (
-                <>
-                    <button
-                        className={`${SPINICON} ${SPINDOWN}`}
-                        onMouseDown={(e: React.MouseEvent<HTMLSpanElement>) => {
-                            rippleRef1.rippleMouseDown(e);
-                            e.preventDefault();
-                        }}
-                        type='button'
-                        aria-label={decrementText}
-                        onClick={() => handleSpinClick(false)}
-                        title={decrementText}
-                        tabIndex={-1}
-                    >
-                        <ChevronDownFillIcon />
-                        {ripple && <rippleRef1.Ripple />}
-                    </button>
-                    <button
-                        className={`${SPINICON} ${SPINUP}`}
-                        onMouseDown={(e: React.MouseEvent<HTMLSpanElement>) => {
-                            rippleRef2.rippleMouseDown(e);
-                            e.preventDefault();
-                        }}
-                        type='button'
-                        aria-label={incrementText}
-                        onClick={() => handleSpinClick(true)}
-                        title={incrementText}
-                        tabIndex={-1}
-                    >
-                        <ChevronUpFillIcon />
-                        {ripple && <rippleRef2.Ripple />}
-                    </button>
-                </>
-            )}
-        </span>
+        </>
     );
 });
 

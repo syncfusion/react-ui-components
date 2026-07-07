@@ -1,10 +1,11 @@
 import {
     forwardRef, useImperativeHandle, ReactElement, useCallback, ReactNode,
-    ForwardRefExoticComponent, RefAttributes, ForwardedRef, MouseEvent, KeyboardEvent
+    ForwardRefExoticComponent, RefAttributes, ForwardedRef, MouseEvent, KeyboardEvent, Fragment
 } from 'react';
 import { Popup, CollisionType } from '@syncfusion/react-popups';
 import { CSS_CLASSES } from '../../common/constants';
 import { EventModel } from '../../types/scheduler-types';
+import { RecurrenceIcon } from '../recurrence-icon';
 import { renderPopupCloseButton } from './quick-info-popup';
 import { useMorePopup } from '../../hooks/useMorePopup';
 import { useOutsideClick } from '../../hooks/useScheduler';
@@ -13,7 +14,8 @@ import { useSchedulerLocalization } from '../../common/locale';
 import { createPortal } from 'react-dom';
 import { useSchedulerPropsContext } from '../../context/scheduler-context';
 import { ViewService } from '../../services/ViewService';
-
+import { EventService } from '../../services/EventService';
+import { useSchedulerPopupContext } from '../../context/scheduler-popup-state-context';
 /**
  * Interface for the MorePopup component
  *
@@ -35,7 +37,6 @@ export const MorePopup: ForwardRefExoticComponent<RefAttributes<IMorePopup>
     const {
         date,
         events,
-        visible,
         target,
         popupElement,
         schedulerElement,
@@ -46,8 +47,9 @@ export const MorePopup: ForwardRefExoticComponent<RefAttributes<IMorePopup>
         open
     } = useMorePopup();
 
-    const { eventTemplate, getAvailableViews } = useSchedulerPropsContext();
+    const { eventTemplate, getAvailableViews, resources, eventSettings } = useSchedulerPropsContext();
     const isDayViewAvailable: boolean = ViewService.isDayViewAvailable(getAvailableViews);
+    const { morePopupVisible } = useSchedulerPopupContext();
 
     const { getString } = useSchedulerLocalization(locale || 'en-US');
     useImperativeHandle(ref, () => ({
@@ -55,18 +57,21 @@ export const MorePopup: ForwardRefExoticComponent<RefAttributes<IMorePopup>
         open
     }));
 
-    useOutsideClick(popupElement, visible, handleClose);
+    useOutsideClick(popupElement, morePopupVisible, handleClose);
 
     const renderEventContent: (event: EventModel) => ReactNode = useCallback((event: EventModel) => {
         if (eventTemplate) {
             return eventTemplate(event);
         }
         return (
-            <div className={`${CSS_CLASSES.SUBJECT} ${CSS_CLASSES.ELLIPSIS}`}>
-                {event.subject || getString('addTitle')}
-            </div>
+            <Fragment>
+                <div className={`${CSS_CLASSES.SUBJECT} ${CSS_CLASSES.ELLIPSIS}`}>
+                    {event.subject || getString('addTitle')}
+                </div>
+                <RecurrenceIcon event={event} />
+            </Fragment>
         );
-    }, [eventTemplate]);
+    }, [eventTemplate, getString]);
 
     /**
      * Render the more popup content
@@ -84,30 +89,35 @@ export const MorePopup: ForwardRefExoticComponent<RefAttributes<IMorePopup>
                 </div>
             </div>
             <div className={CSS_CLASSES.MORE_EVENT_CONTENT}>
-                {events.map((event: EventModel): ReactElement => (
-                    <div
-                        className={CSS_CLASSES.APPOINTMENT}
-                        onClick={(e: MouseEvent<HTMLDivElement>) => handleEventClick(event, e.currentTarget as HTMLElement)}
-                        onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                handleEventClick(event, e.currentTarget as HTMLElement);
-                            }
-                        }}
-                        data-id={`Appointment_${event.id}`}
-                        data-guid={event.guid}
-                        role="button"
-                        tabIndex={0}
-                        key={`eventId-${event.id}`}
-                    >
-                        {renderEventContent(event)}
-                    </div>
-                ))}
+                {events.map((event: EventModel): ReactElement => {
+                    const resourceColor: string | undefined =
+                        EventService.getResourceColor(event, resources, eventSettings?.resourceColorField);
+                    return (
+                        <div
+                            className={CSS_CLASSES.APPOINTMENT}
+                            style={resourceColor ? { backgroundColor: resourceColor } : undefined}
+                            onClick={(e: MouseEvent<HTMLDivElement>) => handleEventClick(event, e.currentTarget as HTMLElement)}
+                            onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    handleEventClick(event, e.currentTarget as HTMLElement);
+                                }
+                            }}
+                            data-id={`Appointment_${event.id}`}
+                            data-guid={event.guid}
+                            role="button"
+                            tabIndex={0}
+                            key={`eventId-${event.id}`}
+                        >
+                            {renderEventContent(event)}
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );
 
-    if (!visible || !target) {
+    if (!morePopupVisible || !target) {
         return null;
     }
 
@@ -122,7 +132,7 @@ export const MorePopup: ForwardRefExoticComponent<RefAttributes<IMorePopup>
 
     return (
         <Popup
-            open={visible}
+            open={morePopupVisible}
             relateTo={target}
             position={{ X: 'right', Y: 'top' }}
             collision={{

@@ -1,5 +1,4 @@
-import * as React from 'react';
-import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
+import { useRef, useEffect, useCallback, useState, useMemo, RefObject } from 'react';
 import type {ScrollEvent, DataRequestEvent, DataLoadEvent } from '../list-view/list-view';
 import { FieldsMapping, SortOrder, DataSource, VirtualizationProps } from './types';
 import { addSorting, groupDataSource, getData } from './utils';
@@ -39,7 +38,7 @@ export const useData: (params: UseDataProps) => UseDataResult
         onScroll
     } = params;
 
-    const inFlightRef: React.RefObject<boolean> = useRef<boolean>(false);
+    const inFlightRef: RefObject<boolean> = useRef<boolean>(false);
 
     const [items, setItems] = useState<DataSource[]>([]);
     const [count, setCount] = useState<number | undefined>(virtualization?.totalCount);

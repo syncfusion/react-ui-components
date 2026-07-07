@@ -2,6 +2,48 @@ import { FieldValidationRules, FormValueType, ValidationRules } from '@syncfusio
 import { useMemo } from 'react';
 import { ColumnProps, ColumnValidationParams } from '../types';
 
+type ValidationMessageTemplatesType = {
+    readonly required: string;
+    readonly minLength: (value: number) => string;
+    readonly maxLength: (value: number) => string;
+    readonly min: (value: number | string) => string;
+    readonly max: (value: number | string) => string;
+    readonly range: (min: number | string, max: number | string) => string;
+    readonly rangeLength: (min: number, max: number) => string;
+    readonly regex: string;
+    readonly email: string;
+    readonly url: string;
+    readonly digits: string;
+    readonly creditCard: string;
+    readonly tel: string;
+    readonly equalTo: (field: string) => string;
+    readonly customValidatorError: (message: string) => string;
+    readonly number: string;
+    readonly date: string;
+};
+
+const validationMessageTemplates: ValidationMessageTemplatesType = {
+    required: 'This field is required.',
+    minLength: (value: number): string => `Please enter at least ${value} characters.`,
+    maxLength: (value: number): string => `Please enter no more than ${value} characters.`,
+    min: (value: number | string): string => `Please enter a value greater than or equal to ${value}.`,
+    max: (value: number | string): string => `Please enter a value less than or equal to ${value}.`,
+    range: (min: number | string, max: number | string): string =>
+        `Please enter a value in between ${min} and ${max}.`,
+    rangeLength: (min: number, max: number): string =>
+        `Please enter between ${min} and ${max} characters.`,
+    regex: 'This field format is invalid.',
+    email: 'Please enter a valid email.',
+    url: 'Please enter a valid url.',
+    digits: 'Please enter digits(0-9) only.',
+    creditCard: 'Please enter a valid creditcard number.',
+    tel: 'Please enter a valid telephone number.',
+    equalTo: (field: string): string => `This field value not matches with ${field} field value.`,
+    customValidatorError: (message: string): string => `Validation error: ${message}`,
+    number: 'Please enter a valid number.',
+    date: 'Please enter a valid date.'
+};
+
 /**
  * Hook to generate FormValidator validation rules from column.
  * These rules are used by the Form component to validate user input during add/edit operations.
@@ -24,66 +66,78 @@ export const useFormValidationRules: <T>(columns: ColumnProps<T>[]) => { rules: 
 
                     // Convert column validation rules to FormValidator format
                     if (validationRules.required !== undefined && validationRules.required !== false) {
-                        columnRules.required = [validationRules.required, 'This field is required.'];
+                        columnRules.required = [validationRules.required, validationMessageTemplates.required];
                     }
 
                     if (validationRules.minLength !== undefined) {
-                        columnRules.minLength = [validationRules.minLength, `Please enter at least ${validationRules.minLength} characters.`];
+                        columnRules.minLength = [
+                            validationRules.minLength,
+                            validationMessageTemplates.minLength(validationRules.minLength)
+                        ];
                     }
 
                     if (validationRules.maxLength !== undefined) {
-                        columnRules.maxLength = [validationRules.maxLength, `Please enter no more than ${validationRules.maxLength} characters.`];
+                        columnRules.maxLength = [
+                            validationRules.maxLength,
+                            validationMessageTemplates.maxLength(validationRules.maxLength)
+                        ];
                     }
 
                     if (validationRules.min !== undefined) {
-                        columnRules.min = [validationRules.min, `Please enter a value greater than or equal to ${validationRules.min}.`];
+                        columnRules.min = [validationRules.min, validationMessageTemplates.min(validationRules.min)];
                     }
 
                     if (validationRules.max !== undefined) {
-                        columnRules.max = [validationRules.max, `Please enter a value less than or equal to ${validationRules.max}.`];
+                        columnRules.max = [validationRules.max, validationMessageTemplates.max(validationRules.max)];
                     }
 
                     // Enhanced range validation support
-                    if (validationRules.range && Array.isArray(validationRules.range) && validationRules.range.length === 2) {
-                        columnRules.range = [validationRules.range, `Please enter a value in between ${validationRules.range[0]} and ${validationRules.range[1]}.`];
+                    if (validationRules.range && Array.isArray(validationRules.range) &&
+                        validationRules.range.length === 2) {
+                        columnRules.range = [
+                            validationRules.range,
+                            validationMessageTemplates.range(
+                                validationRules.range[0],
+                                validationRules.range[1]
+                            )
+                        ];
                     }
 
                     // Enhanced range length validation support
                     if (validationRules.rangeLength && Array.isArray(validationRules.rangeLength) &&
                         validationRules.rangeLength.length === 2) {
                         columnRules.rangeLength = [validationRules.rangeLength,
-                            `Please enter between ${validationRules.rangeLength[0]
-                            } and ${validationRules.rangeLength[1]} characters.`];
+                            validationMessageTemplates.rangeLength(validationRules.rangeLength[0], validationRules.rangeLength[1])];
                     }
 
                     // Enhanced regex validation support
                     if (validationRules.regex) {
-                        columnRules.regex = [validationRules.regex, 'This field format is invalid.'];
+                        columnRules.regex = [validationRules.regex, validationMessageTemplates.regex];
                     }
 
                     if (validationRules.email) {
-                        columnRules.email = [validationRules.email, 'Please enter a valid email.'];
+                        columnRules.email = [validationRules.email, validationMessageTemplates.email];
                     }
 
                     if (validationRules.url) {
-                        columnRules.url = [validationRules.url, 'Please enter a valid url.'];
+                        columnRules.url = [validationRules.url, validationMessageTemplates.url];
                     }
 
                     if (validationRules.digits) {
-                        columnRules.digits = [validationRules.digits, 'Please enter digits(0-9) only.'];
+                        columnRules.digits = [validationRules.digits, validationMessageTemplates.digits];
                     }
 
                     if (validationRules.creditCard) {
-                        columnRules.creditCard = [validationRules.creditCard, 'Please enter a valid creditcard number.'];
+                        columnRules.creditCard = [validationRules.creditCard, validationMessageTemplates.creditCard];
                     }
 
                     if (validationRules.tel) {
-                        columnRules.tel = [validationRules.tel, 'Please enter a valid telephone number.'];
+                        columnRules.tel = [validationRules.tel, validationMessageTemplates.tel];
                     }
 
                     if (validationRules.equalTo) {
                         columnRules.equalTo = [validationRules.equalTo,
-                            `This field value not matches with ${validationRules.equalTo} field value.`];
+                            validationMessageTemplates.equalTo(validationRules.equalTo)];
                     }
 
                     // Enhanced custom validation with proper error handling
@@ -93,17 +147,17 @@ export const useFormValidationRules: <T>(columns: ColumnProps<T>[]) => { rules: 
                                 const result: string | null = validationRules.customValidator(value);
                                 return result || null;
                             } catch (error) {
-                                return `Validation error: ${(error as Error).message}`;
+                                return validationMessageTemplates.customValidatorError((error as Error).message);
                             }
                         };
                     }
 
                     if (column.type === 'number') {
-                        columnRules.number = [validationRules.number, 'Please enter a valid number.'];
+                        columnRules.number = [validationRules.number, validationMessageTemplates.number];
                     }
 
                     if (column.type === 'date') {
-                        columnRules.date = [validationRules.date, 'Please enter a valid date.'];
+                        columnRules.date = [validationRules.date, validationMessageTemplates.date];
                     }
 
                     // Only add rules if there are actual validation rules defined

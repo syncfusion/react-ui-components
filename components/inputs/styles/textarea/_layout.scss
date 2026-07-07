@@ -1,6 +1,42 @@
 @use 'theme-variables' as *;
 
 @include export-module('textarea-layout-and-theme') {
+  .sf-medium.sf-input-group.sf-multi-line-input {
+    .sf-input {
+      padding: $input-multiline-medium-padding;
+    }
+
+    &.sf-outline {
+      .sf-input {
+        padding: $input-multiline-medium-outlined-padding;
+      }
+    }
+
+    &.sf-filled {
+      .sf-input {
+        padding: $input-multiline-medium-filled-padding;
+      }
+    }
+  }
+
+  .sf-large.sf-input-group.sf-multi-line-input {
+    .sf-input {
+      padding: $input-multiline-large-padding;
+    }
+
+    &.sf-outline {
+      .sf-input {
+        padding: $input-multiline-large-outlined-padding;
+      }
+    }
+
+    &.sf-filled {
+      .sf-input {
+        padding: $input-multiline-large-filled-padding;
+      }
+    }
+  }
+
   .sf-input-group.sf-multi-line-input {
     align-items: flex-end;
 
@@ -24,8 +60,19 @@
       }
     }
 
-    &.sf-filled .sf-input {
-      min-height: $input-multiline-filled-min-height;
+    &.sf-filled {
+      .sf-input {
+        min-height: $input-multiline-filled-min-height;
+      }
+
+      .sf-float-text {
+        background-color: inherit;
+      }
+
+      &.sf-float-input:has(.sf-label-top) .sf-float-text {
+        inset-inline-end: $input-multiline-filled-label-mask-inline-end;
+        width: auto;
+      }
     }
 
     & .sf-clear-icon.sf-clear-icon-hide {

@@ -1,6 +1,10 @@
-import { ChangeEvent, useCallback, JSX, FocusEvent, KeyboardEvent as ReactKeyboardEvent, forwardRef, ReactNode } from 'react';
+import { ChangeEvent, useCallback, JSX, FocusEvent, KeyboardEvent as ReactKeyboardEvent, forwardRef, ReactNode,
+    useMemo, InputHTMLAttributes, ForwardRefExoticComponent, RefAttributes, ForwardedRef, ReactElement,
+    type MouseEvent
+} from 'react';
 import { LabelMode, IL10n, L10n, Variant, Size } from '@syncfusion/react-base';
 import { CloseIcon } from '@syncfusion/react-icons';
+import { HelperTextProps } from './helper-text';
 export { LabelMode, Variant, Size };
 /**
  * Constant object containing CSS class names used throughout the component.
@@ -9,6 +13,7 @@ export { LabelMode, Variant, Size };
 export const CLASS_NAMES: {
     RTL: string;
     DISABLE: string;
+    READONLY: string;
     WRAPPER: string;
     INPUT: string;
     INPUTGROUP: string;
@@ -23,6 +28,7 @@ export const CLASS_NAMES: {
 } = {
     RTL: 'sf-rtl',
     DISABLE: 'sf-disabled',
+    READONLY: 'sf-readonly',
     WRAPPER: 'sf-control-wrapper',
     INPUT: 'sf-input',
     INPUTGROUP: 'sf-input-group',
@@ -77,7 +83,7 @@ export interface validationProps {
     validityStyles?: boolean;
 }
 
-export interface inputBaseProps {
+export interface inputBaseProps extends HelperTextProps {
     /**
      * Specifies the visual style variant of the component.
      *
@@ -91,13 +97,26 @@ export interface inputBaseProps {
      * @default Size.Medium
      */
     size?: Size;
+
+    /**
+     * Specifies the icon or element to display at the beginning of the input.
+     *
+     * @default -
+     */
+    prefix?: ReactNode;
+
+    /**
+     * Specifies the icon or element to display at the end of the input.
+     *
+     * @default -
+     */
+    suffix?: ReactNode;
 }
 
 /**
  * Interface for input arguments.
  */
 export interface IInputArgs {
-    customTag?: string;
     floatLabelType?: LabelMode;
     placeholder?: string;
     width?: number | string;
@@ -113,16 +132,16 @@ export interface IInputArgs {
     onKeyDown?: any;
 }
 
-export type InputArgs = IInputArgs & Omit<React.InputHTMLAttributes<HTMLInputElement>, keyof IInputArgs>;
-export const InputBase: React.ForwardRefExoticComponent<InputArgs & React.RefAttributes<HTMLInputElement>> =
+export type InputArgs = IInputArgs & Omit<InputHTMLAttributes<HTMLInputElement>, keyof IInputArgs>;
+export const InputBase: ForwardRefExoticComponent<InputArgs & RefAttributes<HTMLInputElement>> =
  forwardRef<HTMLInputElement, InputArgs>(({
      type, readOnly = false, disabled = false, floatLabelType = 'Never', onFocus, className = '',
      onBlur, placeholder, onKeyDown, value, defaultValue, onChange, ...rest
- }: InputArgs, ref: React.ForwardedRef<HTMLInputElement>) => {
-     const inputClassNames: () => string = () => {
-         return classArray.join(' ');
-     };
-     const classArray: string[] = [CLASS_NAMES.INPUT, className];
+ }: InputArgs, ref: ForwardedRef<HTMLInputElement>) => {
+     const inputClassNames: string = useMemo(
+         () => [CLASS_NAMES.INPUT, className].filter(Boolean).join(' '),
+         [className]
+     );
 
      const handleFocus: (event: FocusEvent) => void = useCallback((event: FocusEvent<Element, Element>) => {
          if (onFocus) {
@@ -136,11 +155,11 @@ export const InputBase: React.ForwardRefExoticComponent<InputArgs & React.RefAtt
          }
      }, [onBlur]);
 
-     const handleKeyDown: (event: ReactKeyboardEvent<HTMLInputElement>) => void = (event: ReactKeyboardEvent<HTMLInputElement>) => {
-         if (onKeyDown) {
-             onKeyDown(event);
-         }
-     };
+     const handleKeyDown: (event: ReactKeyboardEvent<HTMLInputElement>) => void = useCallback(
+         (event: ReactKeyboardEvent<HTMLInputElement>) => {
+             if (onKeyDown) { onKeyDown(event); }
+         }, [onKeyDown]
+     );
 
      const handleChange: (event: ChangeEvent<HTMLInputElement>) => void = useCallback((event: ChangeEvent<HTMLInputElement>) => {
          if (onChange) {
@@ -161,7 +180,7 @@ export const InputBase: React.ForwardRefExoticComponent<InputArgs & React.RefAtt
          <input
              ref={ref}
              type={type || 'text'}
-             className={inputClassNames()}
+             className={inputClassNames}
              readOnly={readOnly}
              disabled={disabled}
              placeholder={floatLabelType === 'Never' ? placeholder : ''}
@@ -183,17 +202,17 @@ export const InputBase: React.ForwardRefExoticComponent<InputArgs & React.RefAtt
  * @param {string} inputValue - The current input value.
  * @param {string} placeholder - The placeholder text.
  * @param {any} id - The reference to the input element.
- * @returns {React.ReactElement | null} A React element representing the float label, or null if not applicable.
+ * @returns {ReactElement | null} A React element representing the float label, or null if not applicable.
  */
 export const renderFloatLabelElement: (floatLabelType: LabelMode,
     isFocused: boolean, inputValue: string | number, placeholder: string | undefined,
-    id: string) => React.ReactElement | null = (
+    id: string) => ReactElement | null = (
     floatLabelType: LabelMode,
     isFocused: boolean,
     inputValue: string | number,
     placeholder: string = '',
     id: string
-): React.ReactElement | null => {
+): ReactElement | null => {
     if (floatLabelType === 'Never') {return null; }
     return (
         <>
@@ -209,26 +228,37 @@ export const renderFloatLabelElement: (floatLabelType: LabelMode,
 };
 
 /**
+ * Renders a adornment element inside the input.
+ *
+ * @param {ReactNode} adornment - The ReactNode to render as an input adornment.
+ * @returns {JSX.Element | null} A span element wrapping the adornment, or null if adornment is null/undefined.
+ */
+export const renderAdornmentElement: (adornment: ReactNode) => JSX.Element | null = (
+    adornment: ReactNode
+): JSX.Element | null => {
+    if (adornment == null) { return null; }
+    return <span className="sf-no-hover sf-input-icon sf-input-adornment-icon">{adornment}</span>;
+};
+
+/**
  * Renders a clear button for an input field that allows the user to clear the input.
  *
  * @param {string} inputValue - The current value of the input field.
- * @param {() => void} clearInput - The function to call when the clear button is clicked.
- * @param {boolean | ReactNode} clearButton - Determines how the clear button is rendered:
- *   - If `true` (default): Shows the default clear icon.
- *   - If `false`: Doesn't render anything.
- *   - If a ReactNode: Renders the provided ReactNode instead of the default icon.
- * @returns {JSX.Element | null} The clear button element or null if clearButton is false.
+ * @param {Function} clearInput - The function to call when the clear button is clicked.
+ * @param {boolean|ReactNode} [clearIcon] - If true shows default icon, if false renders nothing, if ReactNode renders the provided node.
+ * @param {string} [componentName] - The name of the component for localization.
+ * @param {string} [locale] - The locale to use for localization.
+ * @returns {JSX.Element|null} The clear button element or null if clearIcon is false.
  */
-
 export const renderClearButton: (
     inputValue: string,
-    clearInput: (event: React.MouseEvent) => void,
+    clearInput: (event: MouseEvent) => void,
     clearIcon?: boolean | ReactNode,
     componentName?: string,
     locale?: string
 ) => JSX.Element | null = (
     inputValue: string,
-    clearInput: (event: React.MouseEvent) => void,
+    clearInput: (event: MouseEvent) => void,
     clearIcon: boolean | ReactNode = true,
     componentName?: string,
     locale?: string

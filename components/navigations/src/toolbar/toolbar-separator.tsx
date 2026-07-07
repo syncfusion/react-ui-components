@@ -6,17 +6,6 @@ import {
 const CLS_ITEM: string = 'sf-toolbar-item';
 const CLS_SEPARATOR: string = 'sf-toolbar-separator';
 
-export interface IToolbarSeparator {
-    /**
-     * Separator element within the toolbar.
-     *
-     * @default null
-     */
-    element?: HTMLElement | null;
-}
-
-type IToolbarSeparatorProps = IToolbarSeparator & HTMLAttributes<HTMLDivElement>;
-
 /**
  * The ToolbarSeparator component is used for rendering a visual separation between items in a Toolbar.
  *
@@ -28,9 +17,30 @@ type IToolbarSeparatorProps = IToolbarSeparator & HTMLAttributes<HTMLDivElement>
  * </Toolbar>
  * ```
  */
-export const ToolbarSeparator: ForwardRefExoticComponent<IToolbarSeparatorProps & RefAttributes<IToolbarSeparator>> = memo(forwardRef<
-IToolbarSeparator, IToolbarSeparatorProps
->((props: IToolbarSeparatorProps, ref: Ref<IToolbarSeparator>) => {
+export interface ToolbarSeparatorProps {
+
+    /**
+     * Specifies an optional CSS class to apply to the toolbar separator.
+     * This is useful for reusing styling in a custom template.
+     *
+     * @default -
+     */
+    className?: string;
+
+    /**
+     * Separator element within the toolbar.
+     *
+     * @private
+     * @default -
+     */
+    element?: HTMLElement | null;
+}
+
+type IToolbarSeparatorProps = ToolbarSeparatorProps & HTMLAttributes<HTMLDivElement>;
+
+export const ToolbarSeparator: ForwardRefExoticComponent<IToolbarSeparatorProps & RefAttributes<ToolbarSeparatorProps>> = memo(forwardRef<
+ToolbarSeparatorProps, IToolbarSeparatorProps
+>((props: IToolbarSeparatorProps, ref: Ref<ToolbarSeparatorProps>) => {
     const {
         className = '',
         ...eleAttr

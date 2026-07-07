@@ -1,9 +1,7 @@
 import { CalendarBaseProps, CalendarHeaderProps } from '../calendar';
-import { Variant } from '@syncfusion/react-base';
-import { InputBaseProps, PickerVariant } from '../datepicker';
-export { Variant };
+import { InputProps, PickerVariant } from '../datepicker';
 
-export interface DateTimePickerProps extends CalendarBaseProps , InputBaseProps {
+export interface DateTimePickerProps extends CalendarBaseProps , InputProps {
     /**
      * Specifies the controlled date-time value of the picker. When provided, the component operates in controlled mode and relies on `onChange` to notify updates.
      *

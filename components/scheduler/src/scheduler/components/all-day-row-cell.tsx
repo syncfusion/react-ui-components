@@ -15,6 +15,11 @@ interface AllDayRowCellProps {
     date: Date;
 
     /**
+     * Unique index identifying the resource group.
+     */
+    groupIndex?: number;
+
+    /**
      * Visible events for this cell
      */
     visibleEvents: ProcessedEventsData[];
@@ -33,6 +38,7 @@ interface AllDayRowCellProps {
 export const AllDayRowCell: FC<AllDayRowCellProps> = (props: AllDayRowCellProps): ReactNode => {
     const {
         date,
+        groupIndex,
         visibleEvents,
         hiddenEventCount,
         onMoreIndicatorClick
@@ -67,12 +73,14 @@ export const AllDayRowCell: FC<AllDayRowCellProps> = (props: AllDayRowCellProps)
                     }
                 }}
             >
-                {!Browser.isDevice ? `+${hiddenEventCount} ${getString('more')}` : `+${hiddenEventCount}`}
+                <div className={CSS_CLASSES.ELLIPSIS}>
+                    {!Browser.isDevice ? `+${hiddenEventCount} ${getString('more')}` : `+${hiddenEventCount}`}
+                </div>
             </div>
         );
     };
 
-    const renderEvents: () => ReactNode = (): ReactNode => {
+    const renderEvents: (groupIndex?: number) => ReactNode = (groupIndex?: number): ReactNode => {
         return visibleEvents.map((eventInfo: ProcessedEventsData) => {
             const { totalSegments, isFirstSegmentInRenderRange, event, eventKey } = eventInfo;
 
@@ -82,6 +90,7 @@ export const AllDayRowCell: FC<AllDayRowCellProps> = (props: AllDayRowCellProps)
                     <DayEvent
                         key={eventKey}
                         {...eventInfo}
+                        groupIndex={groupIndex}
                     />
                 );
             }
@@ -94,6 +103,7 @@ export const AllDayRowCell: FC<AllDayRowCellProps> = (props: AllDayRowCellProps)
             className={CSS_CLASSES.ALL_DAY_CELL}
             key={DateService.generateDateKey(date)}
             data-date={date.getTime()}
+            data-group-index={groupIndex}
             onClick={(e: React.MouseEvent<HTMLDivElement>) => handleCellClick(e, date, true)}
             onDoubleClick={(e: React.MouseEvent<HTMLDivElement>) => handleCellDoubleClick(e, date, true)}
             onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -105,7 +115,7 @@ export const AllDayRowCell: FC<AllDayRowCellProps> = (props: AllDayRowCellProps)
         >
             {timeScale.enable && (
                 <>
-                    {renderEvents()}
+                    {renderEvents(groupIndex)}
                     {renderMoreIndicator()}
                 </>
             )}

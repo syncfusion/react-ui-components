@@ -1,31 +1,28 @@
-@use "sass:map";
-@use 'material-definition' as *;
-
-@mixin fab-button-styles($border-radius, $min-height, $min-width, $padding) {
-  border-radius: $border-radius;
-  min-height: $min-height;
-  min-width: $min-width;
-  padding: $padding;
-}
-
-@mixin fab-size-variant($size-class) {
-  $size: map.get($fab-sizes, $size-class);
-
+@mixin fab-size-variant(
+  $size-class,
+  $border-radius,
+  $gap,
+  $padding,
+  $font-size,
+  $line-height,
+  $svg-font-size,
+  $icon-padding
+) {
   &.sf-btn-#{$size-class}{
-    border-radius: map.get($size, 'border-radius');
-    gap: map.get($size, 'gap')
+    border-radius: $border-radius;
+    gap: $gap;
   }
   &.sf-btn-#{$size-class}:not(.sf-icon-btn):not(.sf-btn-vertical) {
-    padding: map.get($size, 'padding');
-    font-size: map.get($size, 'font-size');
+    padding: $padding;
+    font-size: $font-size;
   }
   &.sf-btn-#{$size-class}:not(.sf-btn-vertical) {
-    line-height: map.get($size, 'line-height');
+    line-height: $line-height;
   }
   &.sf-btn-#{$size-class} svg {
-    font-size: map.get($size, 'svg-font-size');
+    font-size: $svg-font-size;
   }
   &.sf-icon-btn.sf-icon-btn-#{$size-class} {
-    padding: map.get($size, 'icon-padding');
+    padding: $icon-padding;
   }
 }

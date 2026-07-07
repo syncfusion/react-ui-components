@@ -740,7 +740,7 @@ export const updateAnimationReferences: (state: AnimationState, index: number, s
  * @param {number} index The series index
  * @param {AnimationState} state Animation state including references and animation progress
  * @param {boolean} enableAnimation Whether animation is enabled for this series
- * @param {Series[]} [visibleSeries] The visible series for the chart
+ * @param {SeriesProperties[]} [visibleSeries] The visible series for the chart
  * @returns {Object} Object with animation properties (strokeDasharray, strokeDashoffset, interpolatedD)
  */
 export const calculatePathAnimation: (pathOptions: RenderOptions, index: number,
@@ -840,7 +840,7 @@ export const calculatePathAnimation: (pathOptions: RenderOptions, index: number,
  * Handles animation for rectangle-based series elements (columns/bars)
  *
  * @param {RenderOptions} pathOption - The rendering options for the current path
- * @param {Series} currentSeries - The series that contains the point being animated
+ * @param {SeriesProperties} currentSeries - The series that contains the point being animated
  * @param {number} index - The index of the series in the chart
  * @param {Points} currentPoint - The data point being animated
  * @param {number} pointIndex - The index of the point within the series
@@ -853,7 +853,7 @@ export function handleRectAnimation(pathOption: RenderOptions, currentSeries:
 SeriesProperties, index: number, currentPoint: Points | undefined
 , pointIndex: number, state: AnimationState, enableAnimation: boolean): { animatedDirection?: string; animatedTransform?: string; } {
     // Always resolve the true point/index from the element id (avoids empty-point skew)
-    const resolvedPointAndIndex: { point?: Points; index: number; } = (currentSeries?.type === 'RangeColumn')
+    const resolvedPointAndIndex: { point?: Points; index: number; } = (currentSeries?.type === 'RangeColumn' || currentSeries?.type === 'BoxAndWhisker')
         ? resolveRectPointFromId(pathOption, currentSeries, currentPoint, pointIndex)
         : { point: currentPoint, index: pointIndex };
     const { point: resolvedPoint, index: resolvedIndex } = resolvedPointAndIndex;
@@ -887,7 +887,8 @@ SeriesProperties, index: number, currentPoint: Points | undefined
             direction = calculateRectPathDirection(
                 previousSeriesOptionsRef.current[index as number][resolvedIndex as number].d,
                 pathOption.d,
-                animationProgress
+                animationProgress,
+                currentSeries
             );
             return { animatedTransform: '', animatedDirection: direction };
         }
@@ -899,7 +900,7 @@ SeriesProperties, index: number, currentPoint: Points | undefined
 /**
  * Calculates the transform string for animating a column/bar rect element.
  *
- * @param {Series} series - The series containing the point.
+ * @param {SeriesProperties} series - The series containing the point.
  * @param {Points} point - The data point to animate.
  * @param {number} progress - Animation progress (0-1).
  * @returns {string} The SVG transform string.
@@ -919,7 +920,7 @@ export const animateRect: (series: SeriesProperties, point: Points, progress?: n
     let elementWidth: number = +point.regions[0].width;
     let centerX: number;
     let centerY: number;
-    if (series.type === 'Candle' || series.type === 'Hilo' || series.type === 'HiloOpenClose' || series.type === 'RangeColumn' || series.type === 'Waterfall' ) {
+    if (series.type === 'Candle' || series.type === 'Hilo' || series.type === 'HiloOpenClose' || series.type === 'RangeColumn' || series.type === 'Waterfall' || series.type === 'BoxAndWhisker') {
         const rect: Rect = point.regions[0];
         const centerX: number = rect.x + rect.width / 2;
         const centerY: number = rect.y + rect.height / 2;
@@ -963,13 +964,15 @@ export const animateRect: (series: SeriesProperties, point: Points, progress?: n
  * @param {string} startDirection - Starting path direction
  * @param {string} endDirection - Ending path direction
  * @param {number} progress - Animation progress (0-1)
+ * @param {series} series - The series that contains the point being animated
  * @returns {string} Interpolated path direction
  * @private
  */
 export function calculateRectPathDirection(
     startDirection: string,
     endDirection: string,
-    progress: number
+    progress: number,
+    series?: SeriesProperties
 ): string {
     if (!startDirection || !endDirection) {
         return endDirection || startDirection || '';
@@ -977,6 +980,10 @@ export function calculateRectPathDirection(
     const startCommands: PathCommand[] = parsePathCommands(startDirection);
     const endCommands: PathCommand[] = parsePathCommands(endDirection);
     if (!startCommands.length || !endCommands.length) {
+        return endDirection;
+    }
+    const isCylinder: boolean = series?.columnFacet === 'Cylinder';
+    if (isCylinder && (startDirection.includes('A') || endDirection.includes('A'))) {
         return endDirection;
     }
     let result: string = '';

@@ -250,7 +250,7 @@ function renderSubTitleElement(chart: Chart, titleProps: ChartTitleProps, ref: F
             fontStyle={titleProps.fontStyle || chart.themeStyle.chartSubTitleFont.fontStyle}
             transform={subTitleOptions.rotation}
             opacity={titleProps.opacity}
-            aria-label={titleProps.accessibility?.ariaLabel}
+            aria-label={titleProps.accessibility?.ariaLabel || titleProps.text}
             role={titleProps.accessibility?.role}
             tabIndex={titleProps.accessibility?.focusable ? titleProps.accessibility?.tabIndex : -1}
             style={{ outline: 'none' }}

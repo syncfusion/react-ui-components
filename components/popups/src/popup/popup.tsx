@@ -1,68 +1,9 @@
-import * as React from 'react';
-import { useRef, useEffect, useState, forwardRef, useImperativeHandle } from 'react';
+import { useRef, useEffect, useState, forwardRef, useImperativeHandle, useCallback, useMemo, RefObject, ForwardRefExoticComponent, RefAttributes, Ref, CSSProperties, memo, InputHTMLAttributes } from 'react';
 import { calculatePosition, OffsetPosition, calculateRelativeBasedPosition } from '../common/position';
 import { AnimationOptions, IAnimation, preRender, useProviderContext } from '@syncfusion/react-base';
 import { Animation } from '@syncfusion/react-base';
 import { flip, fit, isCollide, CollisionCoordinates, getFixedScrollableParent, getZindexPartial, getElementReact, getTransformElement, getZoomValue } from '../common/collision';
-
-/**
- * PositionAxis type.
- */
-export interface PositionAxis {
-    /**
-     * Specifies position on the X-Axis, accepts string or number.
-     *
-     * @default 'left'
-     */
-    X?: string | number;
-
-    /**
-     * Specifies position on the Y-Axis, accepts string or number.
-     *
-     * @default 'top'
-     */
-    Y?: string | number;
-}
-/**
- * Collision Axis.
- */
-export interface CollisionAxis {
-    /**
-     * specify the collision handler for a X-Axis.
-     *
-     * @default CollisionType.None
-     */
-    X?: CollisionType;
-    /**
-     * specify the collision handler for a Y-Axis.
-     *
-     * @default CollisionType.None
-     */
-    Y?: CollisionType;
-}
-
-/**
- * Defines the available collision handling types for popup positioning.
- */
-export enum CollisionType {
-    /**
-     * No collision handling - the popup will maintain its original position
-     * regardless of viewport boundaries.
-     */
-    None = 'None',
-
-    /**
-     * Flip collision handling - the popup will flip to the opposite side of its
-     * anchor element when it would otherwise extend beyond viewport boundaries.
-     */
-    Flip = 'Flip',
-
-    /**
-     * Fit collision handling - the popup will be adjusted to fit within the viewport
-     * boundaries while maintaining its original side relative to the anchor element.
-     */
-    Fit = 'Fit'
-}
+import { CollisionAxis, CollisionType, PositionAxis } from '../';
 
 /**
  * Defines how the popup should behave when scroll events occur in the parent container.
@@ -122,7 +63,7 @@ export interface PopupProps {
     open?: boolean;
 
     /** Reference to the target element to which the popup is anchored. */
-    targetRef?: React.RefObject<HTMLElement>;
+    targetRef?: RefObject<HTMLElement>;
 
     /** Defines the X and Y position of the popup relative to the target element.
      *
@@ -167,7 +108,7 @@ export interface PopupProps {
      *
      * @default null
      */
-    viewPortElementRef?: React.RefObject<HTMLElement | null>;
+    viewPortElementRef?: RefObject<HTMLElement | null>;
 
     /** Defines the popup relate's element when opening the popup.
      *
@@ -271,7 +212,7 @@ export interface IPopup extends IPopupProps {
 const CLASSNAME_OPEN: string = 'sf-popup-open';
 const CLASSNAME_CLOSE: string = 'sf-popup-close';
 
-type IPopupProps = PopupProps & Omit<React.InputHTMLAttributes<HTMLDivElement>, keyof PopupProps>;
+type IPopupProps = PopupProps & Omit<InputHTMLAttributes<HTMLDivElement>, keyof PopupProps>;
 
 /**
  * Popup component for displaying content in a floating container positioned relative to a target element.
@@ -286,8 +227,8 @@ type IPopupProps = PopupProps & Omit<React.InputHTMLAttributes<HTMLDivElement>, 
  * </Popup>
  * ```
  */
-export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttributes<IPopup>> =
-    forwardRef<IPopup, IPopupProps>((props: IPopupProps, ref: React.Ref<IPopup>) => {
+export const Popup: ForwardRefExoticComponent<IPopupProps & RefAttributes<IPopup>> =
+    forwardRef<IPopup, IPopupProps>((props: IPopupProps, ref: Ref<IPopup>) => {
         const {
             children,
             open = false,
@@ -324,18 +265,18 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
             style,
             ...rest
         } = props;
-        const popupRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
-        const initialOpenState: React.RefObject<boolean> = useRef(open);
+        const popupRef: RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
+        const initialOpenState: RefObject<boolean> = useRef(open);
         const [leftPosition, setLeftPosition] = useState<number>(0);
         const [topPosition, setTopPosition] = useState<number>(0);
         const [popupClass, setPopupClass] = useState<string>(CLASSNAME_CLOSE);
         const [popupZIndex, setPopupZIndex] = useState<number>(1000);
         const { dir } = useProviderContext();
         const [currentRelatedElement, setRelativeElement] = useState<HTMLElement | null>(relativeElement);
-        const scrollParents: React.RefObject<Element | null> = useRef<Element | null>(null);
-        const resizeObserverRef: React.RefObject<ResizeObserver | null> = useRef<ResizeObserver | null>(null);
-        const fixedParent: React.RefObject<boolean> = useRef<boolean>(false);
-        const targetInvisibleRef: React.RefObject<boolean> = React.useRef<boolean>(false);
+        const scrollParents: RefObject<Element | null> = useRef<Element | null>(null);
+        const resizeObserverRef: RefObject<ResizeObserver | null> = useRef<ResizeObserver | null>(null);
+        const fixedParent: RefObject<boolean> = useRef<boolean>(false);
+        const targetInvisibleRef: RefObject<boolean> = useRef<boolean>(false);
 
         useImperativeHandle(
             ref,
@@ -706,10 +647,10 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
             }
         };
 
-        const getRelateToElement: () => HTMLElement = (): HTMLElement => {
+        const getRelateToElement: () => HTMLElement = useCallback((): HTMLElement => {
             const relateToElement: HTMLElement | string = relateTo === '' || relateTo === null || relateTo === 'body' ? document.body : relateTo;
             return relateToElement as HTMLElement;
-        };
+        }, [relateTo]);
 
         const isPartiallyVisibleInContainer: (element: HTMLElement, container: HTMLElement | Window) => boolean
             = (element: HTMLElement, container: HTMLElement | Window): boolean => {
@@ -766,11 +707,6 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
             }
         };
 
-        const getScrollableParent: (element: HTMLElement) => Element[] = (element: HTMLElement): Element[] => {
-            checkFixedParent(element);
-            return getFixedScrollableParent(element, fixedParent.current);
-        };
-
         const checkFixedParent: (element: HTMLElement) => void = (element: HTMLElement): void => {
             let parent: HTMLElement | null = element.parentElement;
             while (parent && parent.tagName !== 'HTML') {
@@ -788,7 +724,12 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
             }
         };
 
-        const popupStyle: React.CSSProperties = {
+        const getScrollableParent: (element: HTMLElement) => Element[] = useCallback((element: HTMLElement): Element[] => {
+            checkFixedParent(element);
+            return getFixedScrollableParent(element, fixedParent.current);
+        }, [checkFixedParent]);
+
+        const popupStyle: CSSProperties = useMemo(() => ({
             position: 'absolute',
             left: `${leftPosition}px`,
             top: `${topPosition}px`,
@@ -796,16 +737,14 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
             width: width,
             height: height,
             ...style
-        };
+        }), [leftPosition, topPosition, popupZIndex, width, height, style]);
 
-        const popupClasses: string = [
+        const popupClasses: string = useMemo(() => [
             'sf-popup sf-control sf-lib',
-            (dir === 'rtl') ? 'sf-rtl' : '',
+            dir === 'rtl' ? 'sf-rtl' : '',
             popupClass,
             className
-        ]
-            .filter(Boolean)
-            .join(' ');
+        ].filter(Boolean).join(' '), [dir, popupClass, className]);
 
         return (
             <div
@@ -819,7 +758,7 @@ export const Popup: React.ForwardRefExoticComponent<IPopupProps & React.RefAttri
         );
     });
 
-export default React.memo(Popup);
+export default memo(Popup);
 
 export {
     calculatePosition,

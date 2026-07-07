@@ -1,12 +1,14 @@
 import { useMemo, useCallback } from 'react';
 import { EventModel } from '../types/scheduler-types';
-import { ProcessedEventsData } from '../types/internal-interface';
+import { ProcessedEventsData, CellData } from '../types/internal-interface';
 import { EventService, ALL_DAY_EVENT_HEIGHT, EVENTS_GAP } from '../services/EventService';
+import { ResourceLevel } from '../services/ResourceGroupingService';
 import { DateService } from '../services/DateService';
 import { PositioningService } from '../services/PositioningService';
 import { useSchedulerPropsContext } from '../context/scheduler-context';
 import { useSchedulerRenderDatesContext } from '../context/scheduler-render-dates-context';
 import { useSchedulerEventsContext } from '../context/scheduler-events-context';
+import { useResourceGroupingContext } from '../context/resource-grouping-context';
 
 /**
  * Custom hook to process all-day events and provide related functionalities
@@ -51,21 +53,24 @@ interface AllDayEventsResult {
     calculateHeight: () => number;
 
     /**
-     * Get visible events for a specific date
+     * Get visible events for a specific date and optional resource leaf
+     * When resource leaf is provided, filters events by that resource
      *
      * @param {string} dateKey - The date key
+     * @param {CellData|ResourceLevel} [resourceLeaf] - The resource leaf object (optional, for resource grouping)
      * @returns {ProcessedEventsData[]} Array of visible events
      */
-    getVisibleEvents: (dateKey: string) => ProcessedEventsData[];
+    getVisibleEvents: (dateKey: string, resourceLeaf?: CellData | ResourceLevel) => ProcessedEventsData[];
 
     /**
-     * Get hidden event count for a specific date
+     * Get hidden event count for a specific date and optional resource leaf
+     * When resource leaf is provided, counts only events for that resource
      *
      * @param {string} dateKey - The date key
+     * @param {CellData|ResourceLevel} [resourceLeaf] - The resource leaf object (optional, for resource grouping)
      * @returns {number} Count of hidden events
      */
-    getHiddenEventCount: (dateKey: string) => number;
-
+    getHiddenEventCount: (dateKey: string, resourceLeaf?: CellData | ResourceLevel) => number;
 }
 
 /**
@@ -129,9 +134,10 @@ export const useAllDayEvents: (
     maxEventsPerRow: number = 2
 ): AllDayEventsResult => {
 
-    const { eventSettings } = useSchedulerPropsContext();
+    const { eventSettings, resources } = useSchedulerPropsContext();
     const { renderDates } = useSchedulerRenderDatesContext();
     const { eventsData } = useSchedulerEventsContext();
+    const { leafResources, isGroupingEnabled } = useResourceGroupingContext();
 
     // Process all-day events - exported so that it can be used directly from the component if needed
     const allDayRowEvents: ProcessedEventsData[] = useMemo((): ProcessedEventsData[] => {
@@ -163,12 +169,7 @@ export const useAllDayEvents: (
             }
         });
 
-        // Create position map for all render dates
-        let sharedPositionMap: Map<string, boolean[]> = new Map<string, boolean[]>();
-        renderDates.forEach((date: Date) => {
-            const dateKey: string = DateService.generateDateKey(date);
-            sharedPositionMap.set(dateKey, []);
-        });
+        const { sharedPositionMap, positionMapsPerResource } = PositioningService.initializePositionMaps(renderDates, isGroupingEnabled);
 
         const processedEvents: ProcessedEventsData[] = [];
         const allEventsTogether: EventModel[] = [...allDayOnlyEvents, ...multiDayEvents];
@@ -183,10 +184,15 @@ export const useAllDayEvents: (
             const endDate: Date = DateService.normalizeDate(event.endTime);
             const isMultiDay: boolean = EventService.isMultiDayEvent(event);
             const totalSegments: number = isMultiDay ? DateService.getDaysCount(startDate, endDate) + 1 : 1;
+            const resourceColor: string = EventService.getResourceColor(event, resources, eventSettings?.resourceColorField);
+
+            const positionMapForEvent: Map<string, boolean[]> = PositioningService.getPositionMapForEvent(
+                event, resources, positionMapsPerResource, renderDates, sharedPositionMap
+            );
 
             // Find a non-conflicting position for the event
             const positionIndex: number = findNonConflictingPosition(
-                renderDates, startDate, endDate, sharedPositionMap
+                renderDates, startDate, endDate, positionMapForEvent
             );
 
             const eventClasses: string[] = ['sf-appointment'];
@@ -205,7 +211,7 @@ export const useAllDayEvents: (
                     const currentDate: Date = DateService.normalizeDate(date);
 
                     if (currentDate >= startDate && currentDate <= endDate) {
-                        sharedPositionMap = PositioningService.setIndexPosition(sharedPositionMap, date, positionIndex);
+                        PositioningService.setIndexPosition(positionMapForEvent, date, positionIndex);
 
                         const isFirstDay: boolean = currentDate.getTime() === startDate.getTime();
                         const isLastDay: boolean = currentDate.getTime() === endDate.getTime();
@@ -243,12 +249,13 @@ export const useAllDayEvents: (
                             totalSegments: totalSegments,
                             positionIndex: positionIndex,
                             eventClasses,
-                            eventKey
+                            eventKey,
+                            eventStyle: resourceColor ? { backgroundColor: resourceColor } : undefined
                         });
                     }
                 }
             } else {
-                sharedPositionMap = PositioningService.setIndexPosition(sharedPositionMap, startDate, positionIndex);
+                PositioningService.setIndexPosition(positionMapForEvent, startDate, positionIndex);
                 const eventKey: string = `${startDate.toISOString()}-${event.id}`;
 
                 processedEvents.push({
@@ -257,7 +264,8 @@ export const useAllDayEvents: (
                     endDate: event.endTime,
                     positionIndex: positionIndex,
                     eventClasses,
-                    eventKey
+                    eventKey,
+                    eventStyle: resourceColor ? { backgroundColor: resourceColor } : undefined
                 });
             }
         });
@@ -268,7 +276,7 @@ export const useAllDayEvents: (
             const bIndex: number = b.positionIndex ?? 0;
             return aIndex - bIndex;
         });
-    }, [eventsData, renderDates, eventSettings.spannedEventPlacement, eventSettings.fields]);
+    }, [eventsData, renderDates, eventSettings.spannedEventPlacement, eventSettings.fields, resources]);
 
     // Group events by date
     const eventsByDate: Map<string, ProcessedEventsData[]> = useMemo((): Map<string, ProcessedEventsData[]> => {
@@ -282,8 +290,27 @@ export const useAllDayEvents: (
 
     // Get the maximum number of events in any column
     const maxEventsInAnyColumn: number = useMemo((): number => {
-        return EventService.getMaxEventsInCell(eventsByDate, renderDates);
-    }, [eventsByDate, renderDates]);
+        if (!isGroupingEnabled) {
+            return EventService.getMaxEventsInCell(eventsByDate, renderDates);
+        }
+        let maxPerResource: number = 0;
+
+        renderDates?.forEach((date: Date) => {
+            const dateKey: string = DateService.generateDateKey(date);
+            const dateEvents: ProcessedEventsData[] = eventsByDate.get(dateKey) || [];
+            if (leafResources) {
+                leafResources.forEach((resourceLeaf: ResourceLevel) => {
+                    const resourceEventCount: number = dateEvents.filter(
+                        (eventData: ProcessedEventsData) =>
+                            !eventData.event.isBlock &&
+                            EventService.matchesResource(eventData.event, resourceLeaf, resources)
+                    ).length;
+                    maxPerResource = Math.max(maxPerResource, resourceEventCount);
+                });
+            }
+        });
+        return maxPerResource;
+    }, [eventsByDate, renderDates, resources, leafResources]);
 
     // Calculate the limit for visible events based on collapsed state
     const visibleEventLimit: number = useMemo((): number => {
@@ -298,26 +325,52 @@ export const useAllDayEvents: (
 
     // Calculate height based on events and collapsed state
     const calculateHeight: () => number = useCallback((): number => {
-        const maxEventsCount: number = EventService.getMaxEventsInCell(eventsByDate, renderDates);
-        if (maxEventsCount > 3 && !isCollapsed) {
-            return maxEventsCount * (ALL_DAY_EVENT_HEIGHT + EVENTS_GAP);
+        if (maxEventsInAnyColumn > 3 && !isCollapsed) {
+            return maxEventsInAnyColumn * (ALL_DAY_EVENT_HEIGHT + EVENTS_GAP);
         } else {
-            return Math.min(3, maxEventsCount) * (ALL_DAY_EVENT_HEIGHT + EVENTS_GAP);
+            return Math.min(3, maxEventsInAnyColumn) * (ALL_DAY_EVENT_HEIGHT + EVENTS_GAP);
         }
-    }, [isCollapsed, eventsByDate, renderDates]);
+    }, [isCollapsed, maxEventsInAnyColumn]);
 
-    const getVisibleEvents: (dateKey: string) => ProcessedEventsData[] = useCallback((dateKey: string): ProcessedEventsData[] => {
-        const dateEvents: ProcessedEventsData[] = eventsByDate.get(dateKey) || [];
-        const sortedEvents: ProcessedEventsData[] = [...dateEvents].sort(
-            (a: ProcessedEventsData, b: ProcessedEventsData) => (a.positionIndex ?? 0) - (b.positionIndex ?? 0)
-        );
-        return sortedEvents.slice(0, visibleEventLimit);
-    }, [eventsByDate, visibleEventLimit]);
+    const getVisibleEvents: (dateKey: string, resourceLeaf?: CellData | ResourceLevel) => ProcessedEventsData[] = useCallback(
+        (dateKey: string, resourceLeaf?: CellData | ResourceLevel): ProcessedEventsData[] => {
+            const dateEvents: ProcessedEventsData[] = eventsByDate.get(dateKey) || [];
 
-    const getHiddenEventCount: (dateKey: string) => number = useCallback((dateKey: string): number => {
-        const dateEvents: ProcessedEventsData[] = eventsByDate.get(dateKey) || [];
-        return Math.max(0, dateEvents.length - visibleEventLimit);
-    }, [eventsByDate, visibleEventLimit]);
+            if (!resourceLeaf) {
+                const sortedEvents: ProcessedEventsData[] = [...dateEvents].sort(
+                    (a: ProcessedEventsData, b: ProcessedEventsData) => (a.positionIndex ?? 0) - (b.positionIndex ?? 0)
+                );
+                return sortedEvents.slice(0, visibleEventLimit);
+            }
+
+            const filteredEvents: ProcessedEventsData[] = dateEvents.filter((eventData: ProcessedEventsData) =>
+                EventService.matchesResource(eventData.event, resourceLeaf, resources)
+            );
+
+            const sortedEvents: ProcessedEventsData[] = [...filteredEvents].sort(
+                (a: ProcessedEventsData, b: ProcessedEventsData) => (a.positionIndex ?? 0) - (b.positionIndex ?? 0)
+            );
+            return sortedEvents.slice(0, visibleEventLimit);
+        },
+        [eventsByDate, visibleEventLimit, resources]
+    );
+
+    const getHiddenEventCount: (dateKey: string, resourceLeaf?: CellData | ResourceLevel) => number = useCallback(
+        (dateKey: string, resourceLeaf?: CellData | ResourceLevel): number => {
+            const dateEvents: ProcessedEventsData[] = eventsByDate.get(dateKey) || [];
+
+            if (!resourceLeaf) {
+                return Math.max(0, dateEvents.length - visibleEventLimit);
+            }
+
+            const filteredEvents: ProcessedEventsData[] = dateEvents.filter((eventData: ProcessedEventsData) =>
+                EventService.matchesResource(eventData.event, resourceLeaf, resources)
+            );
+
+            return Math.max(0, filteredEvents.length - visibleEventLimit);
+        },
+        [eventsByDate, visibleEventLimit, resources]
+    );
 
 
     return {

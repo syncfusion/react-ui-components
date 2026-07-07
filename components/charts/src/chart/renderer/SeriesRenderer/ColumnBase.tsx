@@ -9,6 +9,17 @@ const DEFAULT_COLUMN_WIDTH: number = 0.7; // default column width ratio
 const MAX_COLUMN_WIDTH: number = 1; // maximum column width
 const HALF_POSITION_OFFSET: number = 0.5; // offset for centering position calculation
 
+// Cylindrical rendering constants
+const CYLINDER_ELLIPSE_RATIO_MAIN: number = 0.5; // Main ellipse ratio (vertical: width, horizontal: height)
+const CYLINDER_ELLIPSE_RATIO_SMALL: number = 1 / 6; // Small ellipse ratio for perpendicular axis
+const CYLINDER_ELLIPSE_RATIO_LARGE: number = 1 / 4; // Large ellipse ratio for perpendicular axis
+
+// Cylindrical color adjustment constants for 3D effect
+// These values create a lighting effect: body (darker), baseline cap (medium), value cap (lighter)
+const CYLINDER_BODY_LUMINANCE_DELTA: number = -0.15; // Darken body by 15%
+const CYLINDER_BASELINE_CAP_LUMINANCE_DELTA: number = -0.10; // Darken baseline cap by 10%
+const CYLINDER_VALUE_CAP_LUMINANCE_DELTA: number = +0.18; // Lighten value cap by 18%
+
 /**
  * Interface for Bar Series renderer functionality
  *
@@ -69,7 +80,8 @@ export interface StackingColumnSeriesRendererType {
 }
 
 /**
- * Interface for the StackingBarSeriesRenderer object
+ * Interface for the StackingBarSeriesRenderer object.
+ *
  * @interface StackingBarSeriesRendererType
  * @private
  */
@@ -95,7 +107,7 @@ export interface StackingBarSeriesRendererType {
      *
      * @param {RenderOptions} pathOptions - Current render options for the path
      * @param {number} index - Index of the current series
-     * @param {AnimationState} animationState - Complete animation state including refs and progress
+     * @param {Function} animationState - Complete animation state including refs and progress
      * @param {boolean} enableAnimation - Flag to enable/disable animations
      * @param {SeriesProperties} currentSeries - Series being animated
      * @param {Points | undefined} currentPoint - Point being animated (optional)
@@ -159,11 +171,14 @@ export type ColumnBaseReturnType = {
         bottomRight: number
     ) => string;
     drawRectangle: (series: SeriesProperties, point: Points, rect: Rect, argsData: PointRenderingEvent, name: string) => RenderOptions;
+    drawCylinder: (series: SeriesProperties, point: Points, rect: Rect, argsData: PointRenderingEvent, name: string) => RenderOptions[];
+
     triggerEvent: Function;
 };
 
 /**
- * Helper function to find rectangle positions for series collection
+ * Helper function to find rectangle positions for series collection.
+ *
  * @param {SeriesProperties[]} seriesCollection - Collection of series properties
  * @returns {void}
  */
@@ -202,7 +217,8 @@ const findRectPositionHelper: (seriesCollection: SeriesProperties[]) => void
     };
 
 /**
- * Helper function for getting region information for a data point
+ * Helper function for getting region information for a data point.
+ *
  * @param {Points} point - The data point
  * @param {Rect} rect - The rectangle bounds
  * @param {SeriesProperties} series - The series properties
@@ -248,7 +264,8 @@ const updateXRegionHelper: (point: Points, rect: Rect, series: SeriesProperties)
     };
 
 /**
- * Helper function for updating Y region symbol location
+ * Helper function for updating Y region symbol location.
+ *
  * @param {Points} point - The data point
  * @param {Rect} rect - The rectangle bounds
  * @param {SeriesProperties} series - The series properties
@@ -266,20 +283,22 @@ const updateYRegionHelper: (point: Points, rect: Rect, series: SeriesProperties)
     };
 
 /**
- * Provides base functionality for column and bar series types
+ * Provides base functionality for column and bar series types.
+ *
  * @returns {ColumnBaseReturnType} Object with column series rendering methods
  * @private
  */
 export function ColumnBase(): ColumnBaseReturnType {
 
     /**
-     * Gets the rectangle bounds based on two points.
+     * Calculates and returns the rectangle bounds for the given points.
+     *
      * @param {number} x1 - The x-coordinate of the first point
      * @param {number} y1 - The y-coordinate of the first point
      * @param {number} x2 - The x-coordinate of the second point
      * @param {number} y2 - The y-coordinate of the second point
      * @param {SeriesProperties} series - The series associated with the rectangle
-     * @returns {Rect} The rectangle bounds
+     * @returns {Rect} Rectangle bounds with width, height, x, y coordinates
      */
     const getRectangle: (x1: number, y1: number, x2: number, y2: number, series: SeriesProperties) => Rect
         = (x1: number, y1: number, x2: number, y2: number, series: SeriesProperties): Rect => {
@@ -294,7 +313,8 @@ export function ColumnBase(): ColumnBaseReturnType {
         };
 
     /**
-     * Updates symbol location for a data point based on chart orientation
+     * Updates symbol location for a data point based on chart orientation.
+     *
      * @param {Points} point - The data point
      * @param {Rect} rect - The rectangle bounds
      * @param {SeriesProperties} series - The series properties
@@ -392,13 +412,13 @@ export function ColumnBase(): ColumnBaseReturnType {
         };
 
     /**
-     * Calculates the SVG path for a rounded rectangle
+     * Calculates the SVG path for a rounded rectangle.
+     *
      * @param {Rect} rect - The rectangle bounds
      * @param {number} topLeft - Top-left corner radius
      * @param {number} topRight - Top-right corner radius
      * @param {number} bottomLeft - Bottom-left corner radius
      * @param {number} bottomRight - Bottom-right corner radius
-     * @param {boolean} [inverted=false] - Whether the chart is inverted
      * @returns {string} SVG path string for the rounded rectangle
      */
     const calculateRoundedRectPath: (
@@ -507,6 +527,197 @@ export function ColumnBase(): ColumnBaseReturnType {
     };
 
     /**
+     *Generates SVG path data for cylindrical shapes.
+     *Creates three separate paths representing:
+     * 1. Body: The main cylindrical surface (side)
+     * 2. Value cap: Front elliptical cap (end at data value)
+     * 3. Baseline cap: Back elliptical cap (end at baseline/origin)
+     * The cylinder orientation changes based on chart type:
+     * - Vertical: for Column series (Y-axis is vertical)
+     * - Horizontal: for Bar series (X-axis is horizontal)
+     *
+     * @param {Rect} rect - The rectangle bounds containing the cylinder
+     * @param {boolean} isValueAtPositiveEnd - True if data value is at positive end of axis
+     * @param {boolean} isInverted - True if the value axis is inverted
+     * @param {'vertical' | 'horizontal'} orientation - Cylinder orientation based on series type
+     * @returns {Object} Object with bodyPath, valueCapPath, and baselineCapPath SVG strings
+     * @private
+     */
+    const generateCylinderPaths: (
+        rect: Rect,
+        isValueAtPositiveEnd: boolean,
+        isInverted: boolean,
+        orientation: 'vertical' | 'horizontal'
+    ) => {
+        bodyPath: string;
+        valueCapPath: string;
+        baselineCapPath: string;
+    } = (
+        rect: Rect,
+        isValueAtPositiveEnd: boolean,
+        isInverted: boolean,
+        orientation: 'vertical' | 'horizontal'
+    ): {
+        bodyPath: string;
+        valueCapPath: string;
+        baselineCapPath: string;
+    } => {
+        const { x, y, width, height } = rect;
+        const left: number = x;
+        const right: number = x + width;
+        const top: number = y;
+        const bottom: number = y + height;
+        const radiusX: number = orientation === 'vertical' ? width * CYLINDER_ELLIPSE_RATIO_MAIN : Math.min(height * CYLINDER_ELLIPSE_RATIO_SMALL, width * CYLINDER_ELLIPSE_RATIO_LARGE);
+        const radiusY: number = orientation === 'vertical' ? Math.min(width * CYLINDER_ELLIPSE_RATIO_SMALL, height * CYLINDER_ELLIPSE_RATIO_LARGE) : height * CYLINDER_ELLIPSE_RATIO_MAIN;
+        const frontArc: string = isInverted ? '0 0 0' : '0 1 1';
+        const backArc: string = isInverted ? '0 1 1' : '0 0 0';
+
+        if (orientation === 'vertical') {
+            const leftX: number = left;
+            const rightX: number = right;
+            const topY: number = isValueAtPositiveEnd ? top : bottom;
+            const bottomY: number = isValueAtPositiveEnd ? bottom - radiusY : top + radiusY;
+
+            return {
+                bodyPath:
+                    'M ' + leftX + ' ' + topY +
+                    ' A ' + radiusX + ' ' + radiusY + ' ' + frontArc + ' ' + rightX + ' ' + topY +
+                    ' A ' + radiusX + ' ' + radiusY + ' ' + frontArc + ' ' + leftX + ' ' + topY +
+                    ' L ' + leftX + ' ' + bottomY +
+                    ' A ' + radiusX + ' ' + radiusY + ' ' + backArc + ' ' + rightX + ' ' + bottomY +
+                    ' L ' + rightX + ' ' + topY + ' Z',
+
+                valueCapPath:
+                    'M ' + leftX + ' ' + topY +
+                    ' A ' + radiusX + ' ' + radiusY + ' ' + frontArc + ' ' + rightX + ' ' + topY +
+                    ' A ' + radiusX + ' ' + radiusY + ' ' + frontArc + ' ' + leftX + ' ' + topY + ' Z',
+
+                baselineCapPath:
+                    'M ' + leftX + ' ' + bottomY +
+                    ' A ' + radiusX + ' ' + radiusY + ' ' + backArc + ' ' + rightX + ' ' + bottomY +
+                    ' A ' + radiusX + ' ' + radiusY + ' ' + backArc + ' ' + leftX + ' ' + bottomY + ' Z'
+            };
+        }
+
+        const topY: number = top;
+        const bottomY: number = bottom;
+        const leftX: number = isValueAtPositiveEnd ? left + radiusX : right - radiusX;
+        const rightX: number = isValueAtPositiveEnd ? right : left;
+
+        return {
+            bodyPath:
+                'M ' + leftX + ' ' + topY +
+                ' A ' + radiusX + ' ' + radiusY + ' ' + frontArc + ' ' + leftX + ' ' + bottomY +
+                ' A ' + radiusX + ' ' + radiusY + ' ' + frontArc + ' ' + leftX + ' ' + topY +
+                ' L ' + rightX + ' ' + topY +
+                ' A ' + radiusX + ' ' + radiusY + ' ' + backArc + ' ' + rightX + ' ' + bottomY +
+                ' L ' + leftX + ' ' + bottomY + ' Z',
+
+            valueCapPath:
+                'M ' + rightX + ' ' + topY +
+                ' A ' + radiusX + ' ' + radiusY + ' ' + frontArc + ' ' + rightX + ' ' + bottomY +
+                ' A ' + radiusX + ' ' + radiusY + ' ' + frontArc + ' ' + rightX + ' ' + topY + ' Z',
+
+            baselineCapPath:
+                'M ' + leftX + ' ' + topY +
+                ' A ' + radiusX + ' ' + radiusY + ' ' + backArc + ' ' + leftX + ' ' + bottomY +
+                ' A ' + radiusX + ' ' + radiusY + ' ' + backArc + ' ' + leftX + ' ' + topY + ' Z'
+        };
+    };
+
+    /**
+     * Renders a cylindrical shape for a single data point.
+     *
+     * 1. **Body Path**: The main surface of the cylinder, connecting the two elliptical caps
+     * 2. **Baseline Cap Path**: The ellipse at the baseline/origin (rear in visual space)
+     * 3. **Value Cap Path**: The ellipse at the data value end (front in visual space)
+     *
+     * **Backward Compatibility**: This function is only called when series.columnFacet === 'Cylinder'.
+     *Existing series with undefined columnFacet will use drawRectangle() instead, ensuring no breaking changes.
+     *
+     * @param {SeriesProperties} series - The owning chart series (must have columnFacet property)
+     * @param {Points} point - The individual data point being rendered
+     * @param {Rect} rect - Rectangle bounds calculated from axis coordinates
+     * @param {PointRenderingEvent} argsData - Final styling arguments (fill, stroke, opacity)
+     * @param {string} name - Base identifier for SVG elements (creates: name_Cylinder_Body, etc.)
+     * @returns {RenderOptions[]} Array of three render options (body, baseline cap, value cap)
+     *
+     */
+    const drawCylinder: (
+        series: SeriesProperties,
+        point: Points,
+        rect: Rect,
+        argsData: PointRenderingEvent,
+        name: string
+    ) => RenderOptions[] = (
+        series: SeriesProperties,
+        point: Points,
+        rect: Rect,
+        argsData: PointRenderingEvent,
+        name: string
+    ): RenderOptions[] => {
+        const chart: SeriesProperties['chart'] = series.chart;
+        const isHorizontal: boolean = (series.type ?? '').toLowerCase().includes('bar');
+        const orientation: 'vertical' | 'horizontal' = isHorizontal ? 'horizontal' : 'vertical';
+        const isValueAtPositiveEnd: boolean = ((point.yValue ?? 0) >= 0) === !series.yAxis.isAxisInverse;
+        const paths: {
+            bodyPath: string;
+            valueCapPath: string;
+            baselineCapPath: string;
+        } = generateCylinderPaths(rect, isValueAtPositiveEnd, series.yAxis.isAxisInverse, orientation );
+        const resolvedFillColor : string = applyPointRenderCallback(
+            {
+                seriesIndex: series.index as number,
+                color: argsData.fill as string,
+                xValue: point.xValue as number | Date | string | null,
+                yValue: point.yValue as number | Date | string | null
+            },
+            chart
+        );
+
+        const strokeColor: string = argsData.border?.color ?? 'transparent';
+        const strokeWidth: number = argsData.border?.width ?? 0;
+        const dashArray: string = series.border?.dashArray ?? 'none';
+
+        // Apply color adjustments for 3D cylindrical effect
+        // This creates depth by darkening the body and baseline, and lightening the value cap
+        const bodyFill: string = adjustHexColorLuminance(resolvedFillColor, CYLINDER_BODY_LUMINANCE_DELTA);
+        const baselineCapFill: string = adjustHexColorLuminance(resolvedFillColor, CYLINDER_BASELINE_CAP_LUMINANCE_DELTA);
+        const valueCapFill: string = adjustHexColorLuminance(resolvedFillColor, CYLINDER_VALUE_CAP_LUMINANCE_DELTA);
+
+        return [
+            {
+                id: `${name}_Cylinder_Body`,
+                fill: bodyFill,
+                stroke: strokeColor,
+                strokeWidth,
+                opacity: series.opacity,
+                dashArray,
+                d: paths.bodyPath
+            },
+            {
+                id: `${name}_Cylinder_BaselineCap`,
+                fill: baselineCapFill,
+                stroke: strokeColor,
+                strokeWidth,
+                opacity: series.opacity,
+                dashArray,
+                d: paths.baselineCapPath
+            },
+            {
+                id: `${name}_Cylinder_ValueCap`,
+                fill: valueCapFill,
+                stroke: strokeColor,
+                strokeWidth,
+                opacity: series.opacity,
+                dashArray,
+                d: paths.valueCapPath
+            }
+        ];
+    };
+
+
+    /**
      * Triggers the point render event.
      *
      * @param {SeriesProperties} series - The series associated with the point
@@ -539,6 +750,7 @@ export function ColumnBase(): ColumnBaseReturnType {
         getSideBySideInfo,
         calculateRoundedRectPath,
         drawRectangle,
+        drawCylinder,
         triggerEvent
     };
 }
@@ -595,6 +807,46 @@ export interface FinacialSeriesType {
         animatedDirection?: string;
         animatedTransform?: string;
     };
+}
+
+/**
+ * Adjusts the luminance of a hexadecimal color.
+ *
+ * @param {string} hexColor - The hex color value to be adjusted.
+ * @param {number} delta - The luminance adjustment factor (positive to lighten, negative to darken).
+ * @returns {string} The hex color with the adjusted luminance.
+ * @private
+ */
+export function adjustHexColorLuminance(
+    hexColor: string,
+    delta: number
+): string {
+
+    if (!hexColor || hexColor.charAt(0) !== '#') {
+        return hexColor;
+    }
+    const hexWithoutHash: string = hexColor.slice(1);
+    const expandedHex: string = hexWithoutHash.length === 3 ? hexWithoutHash.split('').map((char: string): string => char + char).join('') : hexWithoutHash;
+    if (expandedHex.length !== 6) {
+        return hexColor;
+    }
+    const rgbValue: number = parseInt(expandedHex, 16);
+    if (Number.isNaN(rgbValue)) {
+        return hexColor;
+    }
+    const red: number = (rgbValue >> 16) & 255;
+    const green: number = (rgbValue >> 8) & 255;
+    const blue: number = rgbValue & 255;
+    const clampToByte: (value: number) => number = (value: number): number => {
+        return Math.max(0, Math.min(255, value));
+    };
+    const luminanceTarget: number = delta >= 0 ? 255 : 0;
+    const adjustmentRatio: number = Math.min(1, Math.max(0, Math.abs(delta)));
+    const newRed: number = clampToByte(Math.round((luminanceTarget - red) * adjustmentRatio + red));
+    const newGreen: number = clampToByte(Math.round((luminanceTarget - green) * adjustmentRatio + green));
+    const newBlue: number = clampToByte(Math.round((luminanceTarget - blue) * adjustmentRatio + blue));
+    const finalColorValue: number = (1 << 24) + (newRed << 16) + (newGreen << 8) + newBlue;
+    return `#${finalColorValue.toString(16).slice(1).toUpperCase()}`;
 }
 
 // Using only named export for consistency

@@ -1,5 +1,4 @@
-import * as React from 'react';
-import { forwardRef, useRef, useImperativeHandle, useLayoutEffect, HTMLAttributes, useMemo } from 'react';
+import { forwardRef, useRef, useImperativeHandle, useLayoutEffect, HTMLAttributes, useMemo, ReactNode, ForwardRefExoticComponent, RefAttributes, Ref, RefObject } from 'react';
 import { defaultMappedFields, ListItems } from '../common/listItems';
 import { FieldsMapping, SortOrder, DataSource, VirtualizationProps } from '../common/types';
 import { DataManager, Query } from '@syncfusion/react-data';
@@ -102,27 +101,27 @@ export interface ListViewProps {
      *
      * @default -
      */
-    headerTemplate?: React.ReactNode;
+    headerTemplate?: ReactNode;
 
     /**
      * Specifies a custom template for rendering each item in the ListView, allowing for customized appearance of list items.
      *
      * @default -
      */
-    itemTemplate?: Function | React.ReactNode;
+    itemTemplate?: Function | ReactNode;
 
     /**
      * Specifies a custom template for rendering group header sections when items are categorized into groups.
      *
      */
-    groupTemplate?: Function | React.ReactNode;
+    groupTemplate?: Function | ReactNode;
 
     /**
      * Specifies content to be rendered at the bottom of the list, serving as a footer.
      *
      * @default -
      */
-    footerTemplate?: React.ReactNode;
+    footerTemplate?: ReactNode;
 
     /**
      * Specifies whether user interactions with the ListView (e.g., clicks, key presses) are disabled.
@@ -174,8 +173,21 @@ export interface IListView extends ListViewProps {
 
 type IListViewProps = ListViewProps & Omit<HTMLAttributes<HTMLDivElement>, keyof ListViewProps>;
 
-export const ListView: React.ForwardRefExoticComponent<IListViewProps & React.RefAttributes<IListView>> =
-    forwardRef<IListView, IListViewProps>((props: IListViewProps, ref: React.Ref<IListView>) => {
+/**
+ * The React ListView component renders a data-driven list with support for templates, grouping, sorting, and virtualization.
+ * - Accepts array or DataManager datasource with customizable field mappings and provides header/footer/item/group templates and events (data load, data request, scroll).
+ * - Optimized for large data via virtualization and exposes props for sorting, disabling, and query-based fetching.
+ *
+ * ```typescript
+ * import { ListView } from '@syncfusion/react-lists';
+ * export default function App() {
+ *  const data = [{ id: '1', text: 'Artwork' }, { id: '2', text: 'Abstract' }, { id: '3', text: 'Modern Painting' }];
+ *  <ListView dataSource={data} fields={{ id: 'id', text: 'text' }} />;
+ * }
+ * ```
+ */
+export const ListView: ForwardRefExoticComponent<IListViewProps & RefAttributes<IListView>> =
+    forwardRef<IListView, IListViewProps>((props: IListViewProps, ref: Ref<IListView>) => {
 
         const { dir } = useProviderContext();
         const {
@@ -197,7 +209,7 @@ export const ListView: React.ForwardRefExoticComponent<IListViewProps & React.Re
             ...additionalAttrs
         } = props;
 
-        const listviewRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
+        const listviewRef: RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
 
         const fieldOptions: FieldsMapping = useMemo<FieldsMapping>(() => ({ ...defaultMappedFields, ...fields }), [fields]);
 

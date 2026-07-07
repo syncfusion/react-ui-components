@@ -1,4 +1,4 @@
-import { PieChartTooltipProps, PieChartBorderProps, PieChartCenterLabelProps, PieChartMarginProps, PieChartTitleProps, PieChartDataLabelProps, PieChartSelectionProps, PieChartHighlightProps } from './interfaces';
+import { PieChartTooltipProps, PieChartBorderProps, PieChartCenterLabelProps, PieChartMarginProps, PieChartTitleProps, PieChartDataLabelProps, PieChartSelectionProps, PieChartHighlightProps, PieChartAnnotationProps } from './interfaces';
 import { BaseLegend, Chart, SeriesProperties } from './internal-interfaces';
 
 /**
@@ -20,6 +20,7 @@ interface ChartConfig {
     ChartDataLabel: PieChartDataLabelProps;
     ChartSelection: PieChartSelectionProps;
     ChartHighlight: PieChartHighlightProps;
+    PieChartAnnotation: PieChartAnnotationProps;
 }
 
 /**
@@ -77,7 +78,7 @@ export const defaultChartConfigs: ChartConfig = {
         accessibility: {
             ariaLabel: '',
             role: 'img',
-            focusable: false,
+            focusable: true,
             tabIndex: 0
         }
     },
@@ -136,7 +137,7 @@ export const defaultChartConfigs: ChartConfig = {
         currentPage: 1,
         backwardArrowOpacity: 0,
         forwardArrowOpacity: 1,
-        accessbilityText: '',
+        accessibilityText: '',
         arrowWidth: 26,
         arrowHeight: 26,
         chartRowCount: 1,
@@ -245,5 +246,19 @@ export const defaultChartConfigs: ChartConfig = {
         mode: 'Point',
         fill: '',
         pattern: 'None'
+    },
+    PieChartAnnotation: {
+        x: '0',
+        y: '0',
+        content: '',
+        coordinateUnit: 'Point',
+        hAlign: 'Center',
+        vAlign: 'Center',
+        accessibility: {
+            ariaLabel: '',
+            role: 'img',
+            focusable: false,
+            tabIndex: 0
+        }
     }
 };

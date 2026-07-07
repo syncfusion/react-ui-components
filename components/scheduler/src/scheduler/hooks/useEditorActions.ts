@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
-import { useProviderContext } from '@syncfusion/react-base';
-import { EventModel, SchedulerEditorSubmitEvent } from '../types/scheduler-types';
+import { isNullOrUndefined, useProviderContext } from '@syncfusion/react-base';
+import { EventModel, SchedulerEditorSubmitEvent, SchedulerResource } from '../types/scheduler-types';
 import { EventService } from '../services/EventService';
 import { DateService } from '../services/DateService';
 import { useSchedulerPropsContext } from '../context/scheduler-context';
@@ -11,6 +11,10 @@ import { CrudAction, AlertAction, AlertType } from '../types/enums';
 import { getRecurrenceStringFromDate } from '../../recurrence-editor';
 import { editOccurrenceValidation, showAlertDialog, showRecurrenceAlert } from '../utils/event-base';
 import { AlertDialog } from '../types/internal-interface';
+import { getEventMaxID } from '../utils/actions';
+import { EVENT_MODEL_KEYS } from '../utils/default-props';
+import { makeExternalRecord, makeInternalRecord } from '../utils/record-mapper';
+import { validateRecurrencePattern, getRecurrenceEditAction, getActionBasedDeleteAction, getActionBasedSaveAction } from '../utils/recurrence-util';
 
 /** @private */
 export interface UseEditorActionsResult {
@@ -40,7 +44,9 @@ export const useEditorActions: (onClose: () => void) => UseEditorActionsResult =
         eventSettings,
         eventOverlap,
         confirmationDialog,
-        onEditorSubmit, enableRecurrenceValidation
+        onEditorSubmit,
+        enableRecurrenceValidation,
+        resources
     } = useSchedulerPropsContext();
     const { eventsData, eventsProcessed } = useSchedulerEventsContext();
 
@@ -60,10 +66,11 @@ export const useEditorActions: (onClose: () => void) => UseEditorActionsResult =
     /**
      * Builds the event data object from editor state.
      * Merges default fields with custom fields and preserves extra fields on edit.
+     * Converts display times from selected timezone.
      *
      * @returns {EventModel} Complete event object ready for save
      */
-    const buildEventData: () => EventModel = useCallback((): EventModel => {
+    const buildEventData: (internalData?: EventModel | null) => EventModel = useCallback((internalData?: EventModel | null): EventModel => {
         let computedStart: Date | undefined;
         let computedEnd: Date | undefined;
 
@@ -85,40 +92,66 @@ export const useEditorActions: (onClose: () => void) => UseEditorActionsResult =
         }
 
         const baseData: EventModel = {
-            [eventSettings?.fields?.subject || 'subject']: data?.subject || getString('newEvent'),
-            [eventSettings?.fields?.startTime || 'startTime']: computedStart,
-            [eventSettings?.fields?.endTime || 'endTime']: computedEnd,
-            [eventSettings?.fields?.isAllDay || 'isAllDay']: !!data?.isAllDay,
-            [eventSettings?.fields?.location || 'location']: data?.location || '',
-            [eventSettings?.fields?.description || 'description']: data?.description || '',
-            [eventSettings?.fields?.recurrenceRule || 'recurrenceRule']: data?.recurrenceRule || ''
+            subject: data?.subject || getString('newEvent'),
+            startTime: computedStart,
+            endTime: computedEnd,
+            isAllDay: !!data?.isAllDay,
+            location: data?.location || '',
+            description: data?.description || '',
+            recurrenceRule: data?.recurrenceRule || '',
+            recurrenceException: internalData?.recurrenceException,
+            startTimezone: data?.startTimezone,
+            endTimezone: data?.endTimezone
         };
 
-        if (action === 'Edit' && originalData) {
-            const INTERNAL_KEYS: Set<string> = new Set([
-                'id', 'subject', 'startTime', 'endTime', 'isAllDay', 'location', 'description', 'isReadonly', 'isBlock'
-            ]);
+        if (resources?.length) {
+            for (let i: number = 0; i < resources.length; i++) {
+                const resource: SchedulerResource = resources[parseInt(i.toString(), 10)];
+                const resourceFieldName: string = resource.field;
+                const dataValue: string | number | (string | number)[] = data
+                    ? (Reflect.get(data as Record<string, unknown>, resourceFieldName) as string | number | (string | number)[])
+                    : undefined;
+                if (!isNullOrUndefined(dataValue)) {
+                    Object.assign(baseData, { [resourceFieldName]: dataValue });
+                } else {
+                    const firstResourceData: Record<string, unknown> = (resource.dataSource as Record<string, unknown>[])?.[0];
+                    if (firstResourceData) {
+                        const defaultValue: string | number = firstResourceData[resource.idField] as string | number;
+                        Object.assign(baseData, {
+                            [resourceFieldName]: resource.multiple ? [defaultValue] : defaultValue
+                        });
+                    }
+                }
+            }
+        }
+
+        if (action === 'Edit' && internalData) {
+            const INTERNAL_KEYS: Set<string> = new Set(EVENT_MODEL_KEYS);
             const mappedFieldKeys: Set<string> = new Set(
                 Object.values(eventSettings?.fields).filter((k: string) => k !== eventSettings?.fields?.id) as string[]
             );
+            if (resources && resources.length > 0) {
+                resources.forEach((resource: SchedulerResource) => mappedFieldKeys.add(resource.field));
+            }
             const preservedExtras: Record<string, unknown> = Object.fromEntries(
-                Object.entries(originalData as Record<string, unknown>).filter(
+                Object.entries(internalData as Record<string, unknown>).filter(
                     ([k]: [string, unknown]) => !INTERNAL_KEYS.has(k) && !mappedFieldKeys.has(k)
                 )
             );
             return {
                 ...preservedExtras,
                 ...baseData,
-                [eventSettings.fields.id]: originalData.id
+                id: internalData.id
             } as unknown as EventModel;
         } else {
             return {
                 ...baseData,
-                [eventSettings.fields.id]: EventService.generateEventGuid()
+                id: EventService.generateEventGuid()
             };
         }
     }, [data?.isAllDay, startDateOnly, startTimeOnly, endDateOnly, endTimeOnly, slotDuration, data?.startTime,
-        data?.endTime, eventSettings, data?.subject, data?.location, data?.description, action, originalData]);
+        data?.endTime, eventSettings, data?.subject, data?.location, data?.description, data?.startTimezone,
+        data?.endTimezone, action, originalData, resources]);
 
     /**
      * Checks for overlapping events and block ranges.
@@ -128,7 +161,7 @@ export const useEditorActions: (onClose: () => void) => UseEditorActionsResult =
      * @returns {boolean} True if event can be saved, false if conflicts exist
      */
     const validateEventConflicts: (eventData: EventModel) => boolean = useCallback((eventData: EventModel): boolean => {
-        if (!eventOverlap && EventService.checkEventOverlap(eventData, eventsData, false, eventSettings.fields)) {
+        if (!eventOverlap && EventService.checkEventOverlap(eventData, eventsData)) {
             confirmationDialog?.show({
                 title: getString('eventOverlap'),
                 message: getString('overlapAlert'),
@@ -139,7 +172,7 @@ export const useEditorActions: (onClose: () => void) => UseEditorActionsResult =
             return false;
         }
 
-        if (EventService.isBlockRange(eventData, eventsData, false, eventSettings.fields)) {
+        if (EventService.isBlockRange(eventData, eventsData)) {
             confirmationDialog?.show({
                 title: getString('alert'),
                 message: getString('blockAlert'),
@@ -172,47 +205,68 @@ export const useEditorActions: (onClose: () => void) => UseEditorActionsResult =
             return;
         }
 
+        let internalData: EventModel | null = makeInternalRecord(originalData, eventSettings?.fields);
         // Build event data
-        let eventData: EventModel = buildEventData();
+        let eventData: EventModel = buildEventData(internalData);
 
         if (onEditorSubmit) {
             const saveArgs: SchedulerEditorSubmitEvent = {
-                data: eventData,
+                data: makeExternalRecord(eventData, eventSettings?.fields),
                 cancel: false,
                 requestType: action,
                 originalData: action === 'Add' ? undefined : originalData
             };
             onEditorSubmit(saveArgs);
             if (saveArgs.cancel) { return; }
-            eventData = saveArgs.data;
-            const startTime: Date = eventData[eventSettings.fields.startTime] as Date;
-            const endTime: Date = eventData[eventSettings.fields.endTime] as Date;
+            eventData = makeInternalRecord(saveArgs.data, eventSettings?.fields);
+            internalData = originalData ? makeInternalRecord(originalData, eventSettings?.fields) : undefined;
+            const startTime: Date = eventData.startTime;
+            const endTime: Date = eventData.endTime;
             if (!startTime || !endTime) {
                 showAlertDialog(getString('alert'), getString('invalidDateValue'), getString('ok'), confirmationDialog);
                 return;
             }
-            if (!eventData[eventSettings.fields.isAllDay] && startTime && endTime && endTime <= startTime) {
+            if (!eventData.isAllDay && startTime && endTime && endTime <= startTime) {
                 showAlertDialog(getString('alert'), getString('invalidDateRange'), getString('ok'), confirmationDialog);
                 return;
             }
         }
 
         if (!validateEventConflicts(eventData)) { return; }
-
-        if (originalData) {
-            eventData[eventSettings.fields.id] = originalData.id;
-            eventData[eventSettings.fields.recurrenceID] = originalData.recurrenceID;
-            eventData[eventSettings.fields.guid] = originalData.guid;
+        const recurrenceValidationError: string | null = validateRecurrencePattern(eventData);
+        if (recurrenceValidationError) {
+            showAlertDialog(getString('alert'), getString(recurrenceValidationError), getString('ok'), confirmationDialog);
+            return;
         }
-        if (action === 'Edit' && originalData) {
-            schedulerRef?.current?.saveEvent?.(eventData);
-        } else if (action === 'EditOccurrence' && originalData) {
-            eventData[eventSettings.fields.recurrenceException] = getRecurrenceStringFromDate(originalData.startTime);
-            if (originalData.recurrenceRule) {
-                const newStartTime: Date = eventData[eventSettings.fields.startTime] as Date;
-                const newEndTime: Date = eventData[eventSettings.fields.endTime] as Date;
+
+        if (internalData) {
+            eventData.id = internalData.id;
+            eventData.recurrenceID = internalData.recurrenceID;
+            eventData.guid = internalData.guid;
+        }
+        if (action === 'Edit' && internalData) {
+            const eventsToSave: EventModel[] = EventService.splitEventForMultipleResources(eventData, resources, eventsData);
+            if (eventsToSave.length > 1) {
+                const originalEvent: EventModel = { ...eventsToSave[0], id: internalData.id, guid: internalData.guid };
+                schedulerRef?.current?.saveEvent?.(originalEvent);
+
+                const newEvents: EventModel[] = eventsToSave.slice(1);
+                newEvents.forEach((event: EventModel, index: number) => {
+                    event.id = getEventMaxID(eventsData, index);
+                });
+                if (newEvents.length > 0) {
+                    schedulerRef?.current?.addEvent?.(newEvents);
+                }
+            } else {
+                schedulerRef?.current?.saveEvent?.(eventData);
+            }
+        } else if (action === 'EditOccurrence' && internalData) {
+            eventData.recurrenceException = getRecurrenceStringFromDate(internalData.startTime);
+            if (internalData.recurrenceRule) {
+                const newStartTime: Date = eventData.startTime;
+                const newEndTime: Date = eventData.endTime;
                 const recurrenceValidation: AlertDialog = enableRecurrenceValidation ?
-                    editOccurrenceValidation(originalData, newStartTime, newEndTime, eventsProcessed, eventsData) :
+                    editOccurrenceValidation(internalData, newStartTime, newEndTime, eventsProcessed, eventsData) :
                     { isValid: true, shouldAlert: false, messageKey: AlertType.SameDayAlert };
                 if (!recurrenceValidation.isValid) {
                     showAlertDialog(getString('alert'), getString(recurrenceValidation.messageKey), getString('ok'), confirmationDialog);
@@ -220,30 +274,36 @@ export const useEditorActions: (onClose: () => void) => UseEditorActionsResult =
                 }
             }
             schedulerRef?.current?.saveEvent?.(eventData, 'EditOccurrence');
-        } else if (action === 'EditSeries') {
+        } else if (action === 'EditSeries' || action === 'EditFollowingEvents') {
             let isSeriesEventChanged: boolean = false;
             for (const e of eventsProcessed) {
-                if ((e.recurrenceID && e.recurrenceID === originalData.recurrenceID && e.id !== originalData.recurrenceID) ||
-                    (!e.recurrenceID && e.recurrenceRule && e.id === originalData.recurrenceID && e.recurrenceException)) {
-                    isSeriesEventChanged = true;
-                    break;
+                if ((e.recurrenceID && e.recurrenceID === internalData.recurrenceID && e.id !== internalData.recurrenceID) ||
+                    (!e.recurrenceID && e.recurrenceRule && e.id === internalData.recurrenceID && e.recurrenceException)) {
+                    if (action === 'EditSeries' || e.startTime.getTime() > internalData.startTime.getTime()) {
+                        isSeriesEventChanged = true;
+                        break;
+                    }
                 }
             }
             if (isSeriesEventChanged) {
                 showRecurrenceAlert(AlertAction.SeriesChange, confirmationDialog, getString, (selectOption: CrudAction) => {
+                    selectOption = getRecurrenceEditAction(selectOption, action);
                     schedulerRef?.current?.saveEvent?.(eventData, selectOption);
                     onClose();
                 });
                 return;
             } else {
-                schedulerRef?.current?.saveEvent?.(eventData, 'EditSeries');
+                const currentAction: CrudAction = getActionBasedSaveAction(action, eventData.id, eventData.recurrenceID);
+                schedulerRef?.current?.saveEvent?.(eventData, currentAction);
             }
         } else {
-            schedulerRef?.current?.addEvent?.(eventData);
+            let eventsToAdd: EventModel[] | EventModel = EventService.splitEventForMultipleResources(eventData, resources, eventsData);
+            eventsToAdd = eventsToAdd.length > 1 ? eventsToAdd : eventData;
+            schedulerRef?.current?.addEvent?.(eventsToAdd);
         }
         onClose();
 
-    }, [validateRequiredFields, buildEventData, validateEventConflicts, action, originalData,
+    }, [validateRequiredFields, buildEventData, validateEventConflicts, validateRecurrencePattern, action, originalData,
         schedulerRef, onClose, confirmationDialog]);
 
     /**
@@ -251,10 +311,10 @@ export const useEditorActions: (onClose: () => void) => UseEditorActionsResult =
      */
     const handleDelete: () => void = useCallback((): void => {
         if (!originalData) { return; }
+        const internalData: EventModel | null = makeInternalRecord(originalData, eventSettings?.fields);
         const performDelete: () => void = (): void => {
-            const deleteAction: CrudAction = (action === 'EditSeries' && originalData.recurrenceID) ?
-                'DeleteSeries' : 'DeleteOccurrence';
-            schedulerRef?.current?.deleteEvent?.(originalData, deleteAction);
+            const deleteAction: CrudAction = getActionBasedDeleteAction(action, !!internalData.recurrenceID);
+            schedulerRef?.current?.deleteEvent?.(internalData, deleteAction);
         };
         onClose();
         showDeleteAlert?.(performDelete);

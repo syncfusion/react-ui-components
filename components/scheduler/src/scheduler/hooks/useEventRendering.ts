@@ -108,15 +108,22 @@ interface TimeSlotEventRenderingResult extends CommonEventHandlers {
  * - `'timeSlot'` → TimeSlotEvent / TimeSlotEventClone: functions accept `eventInfo` per call,
  *                  so a single hook call serves all events rendered in a loop without
  *                  violating the Rules of Hooks.
+ * - `undefined`  → Only returns event handlers (handleClick, handleDoubleClick).
  *
  * Internally reads locale, timeFormat, eventTemplate and timescale settings from context,
  * and delegates to pure utility functions in eventRenderingUtils.
  *
- * @param {UseEventRenderingProps} props - Rendering parameters for the selected variant.
- * @returns {DayEventRenderingResult|TimeSlotEventRenderingResult} Memoized rendering functions.
+ * @param {UseEventRenderingProps} [props] - Rendering parameters for the selected variant.
+ * @returns {DayEventRenderingResult|TimeSlotEventRenderingResult|CommonEventHandlers} Memoized rendering functions or handlers.
  * @private
  */
-export function useEventRendering(props: UseEventRenderingProps): DayEventRenderingResult | TimeSlotEventRenderingResult {
+/* eslint-disable no-redeclare */
+export function useEventRendering(props: DayEventRenderingProps): DayEventRenderingResult;
+export function useEventRendering(props: TimeSlotEventRenderingProps): TimeSlotEventRenderingResult;
+export function useEventRendering(): CommonEventHandlers;
+export function useEventRendering(props?: UseEventRenderingProps):
+DayEventRenderingResult | TimeSlotEventRenderingResult | CommonEventHandlers {
+/* eslint-enable no-redeclare */
 
     const {
         timeFormat,
@@ -129,21 +136,6 @@ export function useEventRendering(props: UseEventRenderingProps): DayEventRender
         readOnly,
         quickPopupRef
     } = useSchedulerPropsContext();
-    const { locale } = useProviderContext();
-    const { getString } = useSchedulerLocalization(locale || 'en-US');
-    const { renderDates } = useSchedulerRenderDatesContext();
-
-    const addTitleLabel: string = getString('addTitle');
-    // ─── Variant discriminator and bound values ──────────────────────────────
-    const isDayVariant: boolean = props.variant === 'day';
-
-    const dayProps: DayEventRenderingProps | undefined = isDayVariant ? (props as DayEventRenderingProps) : undefined;
-    const boundEvent: EventModel = dayProps?.event ?? ({} as EventModel);
-    const boundTotalSegments: number | undefined = dayProps?.totalSegments;
-    const boundOverflowLeft: boolean = dayProps?.isOverflowLeft ?? false;
-    const boundOverflowRight: boolean = dayProps?.isOverflowRight ?? false;
-
-    const timeScaleEnabled: boolean = !!(timeScale && timeScale.enable);
 
     // ─── Shared handlers (created once — used by both variants) ─────────────
     //
@@ -188,6 +180,28 @@ export function useEventRendering(props: UseEventRenderingProps): DayEventRender
                 onEventDoubleClick(eventClickArgs);
             }
         }, [onEventDoubleClick, readOnly, quickPopupRef]);
+
+    // ─── Early Return (Handlers Only) ────────────────────────────────────────
+
+    if (!props) {
+        return { handleClick, handleDoubleClick };
+    }
+
+    const { locale } = useProviderContext();
+    const { getString } = useSchedulerLocalization(locale || 'en-US');
+    const { renderDates } = useSchedulerRenderDatesContext();
+    const addTitleLabel: string = getString('addTitle');
+
+    // ─── Variant discriminator and bound values ──────────────────────────────
+    const isDayVariant: boolean = props.variant === 'day';
+
+    const dayProps: DayEventRenderingProps | undefined = isDayVariant ? (props as DayEventRenderingProps) : undefined;
+    const boundEvent: EventModel = dayProps?.event ?? ({} as EventModel);
+    const boundTotalSegments: number | undefined = dayProps?.totalSegments;
+    const boundOverflowLeft: boolean = dayProps?.isOverflowLeft ?? false;
+    const boundOverflowRight: boolean = dayProps?.isOverflowRight ?? false;
+
+    const timeScaleEnabled: boolean = !!(timeScale && timeScale.enable);
 
     // ── Builders: define rendering callbacks inside helper builders and call both
     // Builders are called unconditionally so hooks inside them remain stable.

@@ -1,8 +1,7 @@
 import * as React from 'react';
 import { formatDate } from '@syncfusion/react-base';
 import { CalendarCell, CalendarCellProps } from '../calendar-cell';
-import { CalendarCellData, CalendarSystem } from '../../calendar-core';
-import { WEEK_LENGTH } from '../../calendar-core/engine/gregorian';
+import { CalendarCellData, CalendarSystem, WEEK_LENGTH } from '../../calendar-core';
 import { WeekDaysFormats, CalendarView, WeekRule } from '../types';
 import { buildCellState, CellState, isDateDisabledByRule } from '../utils';
 
@@ -31,17 +30,21 @@ export interface MonthViewProps {
     range?: [Date | null, Date | null];
     disableFutureDays: boolean;
     onCellHover?: (date: Date) => void;
+    focusTodayOnOtherMonth?: boolean;
+    suppressRangeSelection?: boolean;
+    isRangePreview?: boolean;
 }
 
 interface WeekHeaderProps {
     shortNames: string[];
+    wideNames: string[];
     weekNumber: boolean;
 }
 
 export const WeekHeader: (
     props: WeekHeaderProps & { cellTemplate?: (props: CalendarCellProps) => React.ReactNode }
 ) => React.JSX.Element = (
-    { shortNames, weekNumber, cellTemplate }: WeekHeaderProps & {
+    { shortNames, wideNames, weekNumber, cellTemplate }: WeekHeaderProps & {
         cellTemplate?: (props: CalendarCellProps) => React.ReactNode;
     }
 ): React.JSX.Element => {
@@ -52,7 +55,7 @@ export const WeekHeader: (
                 {shortNames.slice(0, WEEK_LENGTH).map((day: string, index: number) => {
                     const props: CalendarCellProps = {
                         weekHeader: true,
-                        title: day,
+                        title: wideNames[`${index}`],
                         date: new Date()
                     };
 
@@ -93,15 +96,24 @@ export const MonthView: React.FC<MonthViewProps> = (props: MonthViewProps): Reac
         currentView,
         showDaysOutsideCurrentMonth = true,
         animate = false,
+        focusTodayOnOtherMonth = false,
         disablePastDays,
         disableFutureDays,
-        onCellHover
+        onCellHover,
+        suppressRangeSelection = false,
+        isRangePreview = false
     } = props;
 
     const shortNames: string[] = calendarSystem.getWeekDayNames(
         locale,
         firstDayOfWeek,
         weekDaysFormat as string
+    );
+
+    const wideNames: string[] = calendarSystem.getWeekDayNames(
+        locale,
+        firstDayOfWeek,
+        'Wide'
     );
 
     const isInRange: (date: Date) => boolean = React.useCallback((date: Date): boolean => {
@@ -123,19 +135,22 @@ export const MonthView: React.FC<MonthViewProps> = (props: MonthViewProps): Reac
         return dateTime >= actualStart && dateTime <= actualEnd;
     }, [range?.[0]?.getTime(), range?.[1]?.getTime()]);
 
-    const year: number = currentDate.getFullYear();
-    const month: number = currentDate.getMonth();
+    const year: number = calendarSystem.getYear(currentDate);
+    const month: number = calendarSystem.getMonth(currentDate);
 
     const matrix: CalendarCellData[][] = React.useMemo(() => {
-        return calendarSystem.getMonthMatrix(new Date(year, month, 1), {
-            firstDayOfWeek,
-            showDaysOutsideCurrentMonth
-        });
+        return calendarSystem.getMonthMatrix(
+            calendarSystem.startOfMonth(currentDate),
+            {
+                firstDayOfWeek,
+                showDaysOutsideCurrentMonth
+            }
+        );
     }, [calendarSystem, year, month, firstDayOfWeek, showDaysOutsideCurrentMonth]);
 
     return (
         <>
-            <WeekHeader shortNames={shortNames} weekNumber={weekNumber} cellTemplate={cellTemplate} />
+            <WeekHeader shortNames={shortNames} wideNames={wideNames} weekNumber={weekNumber} cellTemplate={cellTemplate} />
             <tbody
                 key="month"
                 className={`sf-calendar-month${animate ? ' sf-zoomin' : ''}`}
@@ -170,7 +185,6 @@ export const MonthView: React.FC<MonthViewProps> = (props: MonthViewProps): Reac
                             ) : (
                                 <CalendarCell
                                     key={`week-${wIdx}`}
-                                    className="sf-week-number"
                                     style={{ cursor: 'default' }}
                                     role={'gridcell'}
                                     aria-hidden="true"
@@ -192,7 +206,6 @@ export const MonthView: React.FC<MonthViewProps> = (props: MonthViewProps): Reac
                                     className="sf-cell sf-empty sf-outside-hidden"
                                     role="gridcell"
                                     aria-hidden="true"
-                                    tabIndex={-1}
                                 />
                             );
                             return;
@@ -208,7 +221,10 @@ export const MonthView: React.FC<MonthViewProps> = (props: MonthViewProps): Reac
                                 focusedDate,
                                 normalizedDates,
                                 multiSelect,
-                                range
+                                range,
+                                focusTodayOnOtherMonth,
+                                suppressRangeSelection,
+                                isRangePreview
                             },
                             calendarSystem
                         );
@@ -221,21 +237,20 @@ export const MonthView: React.FC<MonthViewProps> = (props: MonthViewProps): Reac
                         if (isInSelectedRange && !isRangeStart) {
                             rangeClass += ' sf-in-range';
                         }
-
                         const finalClassName: string = (state.className + rangeClass).trim();
-
                         const baseProps: CalendarCellProps = {
                             id: `${date.valueOf()}`,
                             role: 'gridcell',
                             className: finalClassName,
                             isDisabled: !!state.ariaDisabled || isdateDisabled,
+                            suppressDisabledClass: !!state.suppressDisabledClass && !isdateDisabled,
                             isOutOfRange: state.isOtherRange,
                             isToday: state.isToday,
-                            isSelected: state.isSelected,
+                            isSelected: suppressRangeSelection ? false : state.isSelected,
                             isFocused: state.isFocused,
                             isWeekend: state.isWeekend,
                             date: new Date(date),
-                            title: formatDate(date, { locale, type: 'date', skeleton: 'full' }),
+                            title: formatDate(date, { locale, type: 'date', skeleton: 'full', calendar: calendarSystem.name }),
                             view: currentView,
                             onClick: (e: React.SyntheticEvent) => {
                                 if (!disabled && !baseProps.isDisabled) {
@@ -276,7 +291,7 @@ export const MonthView: React.FC<MonthViewProps> = (props: MonthViewProps): Reac
                                         className="sf-day"
                                         aria-disabled={!!state.ariaDisabled || isdateDisabled || state.isOtherRange}
                                     >
-                                        {formatDate(date, { locale, format: 'd', type: 'date', skeleton: 'yMd' })}
+                                        {formatDate(date, { locale, format: 'd', type: 'date', skeleton: 'yMd', calendar: calendarSystem.name })}
                                     </span>
                                 </CalendarCell>
                             )

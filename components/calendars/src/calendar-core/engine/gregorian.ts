@@ -1,9 +1,8 @@
-import { cldrData, getDefaultDateObject, getValue, isNullOrUndefined, formatDate } from '@syncfusion/react-base';
+import { formatDate } from '@syncfusion/react-base';
 import { CalendarSystem, CalendarType, CalendarOptions, CalendarCellData } from '../types';
 import { CalendarView } from '../../calendar/types';
+import { DEFAULT_WEEKS, getCultureValues, shiftArray, trimOutsideRows, WEEK_LENGTH } from './utils';
 
-export const WEEK_LENGTH: number = 7;
-export const DEFAULT_WEEKS: number = 6;
 export const MS_PER_DAY: number = 86400000;
 export const MS_PER_MINUTE: number = 60000;
 
@@ -14,49 +13,15 @@ export class GregorianCalendar implements CalendarSystem {
         const fmt: string = (weekDaysFormat || 'short').toLowerCase();
         const fDow: number = ((firstDayOfWeek ?? 0) % WEEK_LENGTH + WEEK_LENGTH) % WEEK_LENGTH;
 
-        const values: string[] = this.getCultureValues(locale, fmt);
+        const values: string[] = getCultureValues(locale, fmt, 'gregorian');
         if (values.length === WEEK_LENGTH) {
-            return this.shiftArray(values, fDow);
+            return shiftArray(values, fDow);
         }
         const fallback: string[] = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-        return this.shiftArray(fallback, fDow);
+        return shiftArray(fallback, fDow);
     }
 
-    private getCultureValues(locale: string, weekDaysFormat: string): string[] {
-        const culShortNames: string[] = [];
-        let cldrObj: string[];
-        const dayFormat: string = 'days.stand-alone.' + weekDaysFormat?.toLowerCase();
-        if ((locale === 'en' || locale === 'en-US') && !isNullOrUndefined(dayFormat)) {
-            cldrObj = getValue(dayFormat, getDefaultDateObject()) as string[];
-        } else {
-            const gregorianFormat: string = weekDaysFormat
-                ? `.dates.calendars.gregorian.days.format.${weekDaysFormat.toLowerCase()}`
-                : '';
-            const mainVal: string = 'main.';
-            cldrObj = getValue(`${mainVal}${locale || 'en-US'}${gregorianFormat}`, cldrData);
-        }
-
-        if (!isNullOrUndefined(cldrObj)) {
-            for (const obj of Object.keys(cldrObj)) {
-                culShortNames.push(getValue(obj, cldrObj));
-            }
-        }
-        return culShortNames;
-    }
-
-    private shiftArray<T>(array: T[], places: number): T[] {
-        if (!Array.isArray(array) || array.length === 0) {
-            return array;
-        }
-        const n: number = array.length;
-        const p: number = ((places % n) + n) % n;
-        if (p === 0) {
-            return array.slice();
-        }
-        return array.slice(p).concat(array.slice(0, p));
-    }
-
-    private getMaxDays(date: Date): number {
+    public getMaxDays(date: Date): number {
         if (!(date instanceof Date)  || isNaN(date.getTime())) {
             return 31;
         }
@@ -152,22 +117,19 @@ export class GregorianCalendar implements CalendarSystem {
         return x;
     };
 
-    public trimOutsideRows(matrix: CalendarCellData[][]): CalendarCellData[][] {
-        if (!Array.isArray(matrix) || matrix.length === 0) {
-            return matrix;
-        }
-        const rowIsOut: (row: CalendarCellData[]) => boolean = (row: CalendarCellData[]): boolean => {
-            return row.every((c: CalendarCellData): boolean => !c.inRange);
-        };
-        let start: number = 0;
-        let end: number = matrix.length - 1;
-        while (start <= end && rowIsOut(matrix[start as number])) {
-            start++;
-        }
-        while (end >= start && rowIsOut(matrix[end as number])) {
-            end--;
-        }
-        return matrix.slice(Math.max(0, start), Math.max(start, end + 1));
+    public toDate(
+        year: number,
+        month: number,
+        day: number,
+        hour: number = 0,
+        minute: number = 0,
+        second: number = 0
+    ): Date {
+        return new Date(year, month, day, hour, minute, second);
+    }
+
+    public getDaysInMonth(year: number, month: number): number {
+        return new Date(year, month + 1, 0).getDate();
     }
 
     public getMonthMatrix(baseDate: Date, options?: CalendarOptions): CalendarCellData[][] {
@@ -217,7 +179,7 @@ export class GregorianCalendar implements CalendarSystem {
             }
             matrix.push(row);
         }
-        return showOutside ? matrix : this.trimOutsideRows(matrix);
+        return showOutside ? matrix : trimOutsideRows(matrix);
     }
 
     public getYearMatrix(baseDate: Date, options?: CalendarOptions): CalendarCellData[][] {

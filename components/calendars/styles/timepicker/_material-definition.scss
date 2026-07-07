@@ -19,6 +19,7 @@ $timepicker-item-height-me: $spacing-40 !default;
 $timepicker-item-height-la: calc(var(--sf-spacing) * 3) !default;
 
 $timepicker-popup-border-radius: $spacing-4 !default;
+$timepicker-popup-border-radius-la: $radius-4 !default;
 $timepicker-popup-shadow: $shadow-md !default;
 
 $timepicker-list-default-font-color: rgba($flyout-text-color) !default;
@@ -30,7 +31,9 @@ $timepicker-list-hover-bg-color: $flyout-bg-color-hover !default;
 $timepicker-list-hover-border-color: none !default;
 $timepicker-list-hover-font-color: rgba($flyout-text-color-hover) !default;
 
+$timepicker-list-active-bg-color: $flyout-bg-color-pressed !default;
 $timepicker-list-selected-bg-color: rgba($primary-container, 1) !default;
+$timepicker-list-selected-text-color: $flyout-text-color-selected !default;
 $timepicker-list-focus-bg-color: $flyout-bg-color-focus;
 $timepicker-list-active-hover-bg-color: rgba($primary) !default;
 

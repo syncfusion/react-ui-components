@@ -2,22 +2,26 @@ import { ComponentType, HTMLAttributes, ReactElement, ReactNode } from 'react';
 import { DataManager, DataResult, Query, ReturnType as DataReturnType, Aggregates } from '@syncfusion/react-data';
 import { IL10n } from '@syncfusion/react-base';
 import { HeaderCellRenderEvent, CellRenderEvent, RowRenderEvent, ServiceLocator } from '../types/interfaces';
-import { GridLine, SortDirection, WrapMode, Action, ClipMode, ValueType, RowType, ToolbarItems, Theme, LoadingIndicatorType } from './index';
+import { GridLine, SortDirection, WrapMode, Action, ClipMode, ValueType, RowType, ToolbarItems, Theme, LoadingIndicatorType, ContextMenuOpenEvent, ContextMenuSettings, DataResponse } from './index';
 import { FilterSettings, FilterEvent, FilterDialogBeforeOpenEvent, FilterDialogAfterOpenEvent } from '../types/filter.interfaces';
 import { ColumnProps } from '../types/column.interfaces';
 import { CellFocusEvent } from '../types/focus.interfaces';
-import { EditSettings, FormRenderEvent, RowEditEvent, DeleteEvent,
+import { EditSettings, FormRenderEvent, RowEditEvent, CellEditEvent, DeleteEvent,
     RowAddEvent, SaveEvent, FormCancelEvent, DeleteDialogEventArgs } from '../types/edit.interfaces';
 import { AggregateCellRenderEvent, AggregateRowRenderEvent, AggregateRowProps } from '../types/aggregate.interfaces';
+import { GroupedData, GroupSettings, OnGroupArgs, ShouldExpandGroupEvent } from '../types';
 import { ToolbarClickEvent, ToolbarItemProps } from '../types/toolbar.interfaces';
 import { RenderRef, MutableGridBase, DataChangeRequestEvent, DataRequestEvent, IRowBase, IValueFormatter } from '../types/interfaces';
-import { RowSelectEvent, RowSelectingEvent, SelectionSettings } from '../types/selection.interfaces';
+import { IsRowSelectable, RowSelectEvent, RowSelectingEvent, SelectionSettings } from '../types/selection.interfaces';
 import { PageEvent, PageSettings } from '../types/page.interfaces';
 import { SortEvent, SortSettings } from '../types/sort.interfaces';
 import { SearchEvent, SearchSettings } from '../types/search.interfaces';
 import { VirtualizationSettings } from './virtualization.interface';
 import { SpinnerProps } from '@syncfusion/react-popups';
 import { SkeletonProps } from '@syncfusion/react-notifications';
+import { CellSelectionModel, CellSelectEvent, CellSelectingEvent, CellDeselectEvent, CellDeselectingEvent, RowCellInfo, CellIdentifier } from '../types/cell-selection.interfaces';
+import { MenuSelectEvent } from '@syncfusion/react-navigations';
+import { DetailRowTemplate, RowExpandEvent, RowCollapseEvent } from './master-detail';
 
 /**
  * Defines settings for the loading indicator displayed during grid data operations.
@@ -77,6 +81,380 @@ export interface LoadingIndicatorSettings {
      * Shimmer: `{ width: '100%', height: '10px', variant: Variants.Text, animation: AnimationType.Wave }`
      */
     params?: SpinnerProps | SkeletonProps;
+}
+
+/**
+ * Configures the behavior and appearance of the `ColumnChooser` dialog.
+ * Provides options for search, column ordering, and template customization.
+ */
+export interface ColumnChooserSettings {
+    /**
+     * Enables or disables the search box in the `ColumnChooser` dialog.
+     *
+     * @default true
+     *
+     * @example
+     * ```tsx
+     * <Grid
+     *   columnChooserSettings={{ enableSearch: false }}
+     *   showColumnChooser={true}
+     * />
+     * ```
+     */
+    enableSearch?: boolean;
+
+    /**
+     * Specifies the search operator used to filter columns by name in the Column Chooser.
+     *
+     * Available operators:
+     *   * `startsWith` — Matches columns that start with the search term.
+     *   * `endsWith` — Matches columns that end with the search term.
+     *   * `contains` — Matches columns that contain the search term.
+     *   * `equal` — Exact match with the search term.
+     *   * `notEqual` — Columns that do not match the search term.
+     *
+     * @default 'startsWith'
+     *
+     * @example
+     * ```tsx
+     * <Grid
+     *   columnChooserSettings={{ operator: 'contains' }}
+     *   showColumnChooser={true}
+     * />
+     * ```
+     */
+    operator?: 'startsWith' | 'endsWith' | 'contains' | 'equal' | 'notEqual';
+
+    /**
+     * Enables diacritics-insensitive searching in the `ColumnChooser`.
+     * When true, accent marks and special characters are ignored during search.
+     *
+     * Example: Searching for `Resume` matches `Résumé`.
+     *
+     * @default false
+     *
+     * @example
+     * ```tsx
+     * <Grid
+     *   columnChooserSettings={{ ignoreAccent: true }}
+     *   showColumnChooser={true}
+     * />
+     * ```
+     */
+    ignoreAccent?: boolean;
+
+    /**
+     * Specifies the sort direction for columns displayed in the `ColumnChooser`.
+     *
+     * Available options:
+     *   * `None` — Display columns in their original order.
+     *   * `Ascending` — Sort columns alphabetically A-Z by `field`.
+     *   * `Descending` — Sort columns alphabetically Z-A by `field`.
+     * @default 'None'
+     *
+     * @example
+     * ```tsx
+     * <Grid
+     *   columnChooserSettings={{ sortDirection: 'Ascending' }}
+     *   showColumnChooser={true}
+     * />
+     * ```
+     */
+    sortDirection?: 'None' | 'Ascending' | 'Descending';
+
+    /**
+     * Ordered list of column field to display in the `ColumnChooser`.
+     * When provided, columns included in this array appear in the specified order.
+     * Columns not included retain their original position.
+     *
+     * @default []
+     *
+     * @example
+     * ```tsx
+     * <Grid
+     *   columnChooserSettings={{
+     *     selectedColumns: ['CustomerName', 'OrderID', 'Freight']
+     *   }}
+     *   showColumnChooser={true}
+     * />
+     * ```
+     */
+    selectedColumns?: string[];
+
+    /**
+     * Custom template for the `ColumnChooser` dialog header.
+     * Replaces the default header area above the search box.
+     *
+     * Template receives no props by default.
+     *
+     * @default null
+     *
+     * @example
+     * ```tsx
+     * const HeaderTemplate = () => (
+     *   <div style={{ padding: '10px', background: '#f0f0f0' }}>
+     *     <h3>Customize Columns</h3>
+     *     <p>Select columns to display</p>
+     *   </div>
+     * );
+     *
+     * <Grid
+     *   columnChooserSettings={{ headerTemplate: HeaderTemplate }}
+     *   showColumnChooser={true}
+     * />
+     * ```
+     */
+    headerTemplate?: ComponentType | ReactElement | string;
+
+    /**
+     * Custom template for the `ColumnChooser` dialog footer.
+     * Renders below the column list and receives `ColumnChooserFooterProps`.
+     *
+     * @default null
+     *
+     * @example
+     * ```tsx
+     * const FooterTemplate = ({ visibleCount, totalCount }) => (
+     *   <div style={{ padding: '10px', borderTop: '1px solid #ddd' }}>
+     *     <small>{visibleCount} of {totalCount} columns visible</small>
+     *   </div>
+     * );
+     *
+     * <Grid
+     *   columnChooserSettings={{ footerTemplate: FooterTemplate }}
+     *   showColumnChooser={true}
+     * />
+     * ```
+     */
+    footerTemplate?: ComponentType<ColumnChooserFooterProps> | ReactElement | string;
+
+    /**
+     * Custom template that replaces the default column list and dialog content.
+     * Receives `ColumnChooserTemplateProps` including columns data and utility functions
+     * such as `showColumns`, `hideColumns`, and `searchValue`.
+     *
+     * @default null
+     *
+     * @example
+     * ```tsx
+     * const ChooserTemplate = ({ columns, showColumns, hideColumns, searchValue }) => (
+     *   <div className="custom-chooser">
+     *     <h4>Columns ({columns.length})</h4>
+     *     {columns.map(col => (
+     *       <div key={col.field}>
+     *         <input type="checkbox" checked={col.visible} />
+     *         {col.headerText}
+     *       </div>
+     *     ))}
+     *   </div>
+     * );
+     *
+     * <Grid
+     *   columnChooserSettings={{ template: ChooserTemplate }}
+     *   showColumnChooser={true}
+     * />
+     * ```
+     */
+    template?: ComponentType<ColumnChooserTemplateProps> | ReactElement | string;
+}
+
+/**
+ * Props passed to the Column Chooser footer template.
+ */
+export interface ColumnChooserFooterProps {
+    /**
+     * Number of columns currently visible in the chooser.
+     */
+    visibleCount: number;
+
+    /**
+     * Total number of columns available in the chooser.
+     */
+    totalCount: number;
+
+    /**
+     * Array of currently visible column fields.
+     */
+    visibleColumns: string[];
+
+    /**
+     * Array of currently hidden column fields.
+     */
+    hiddenColumns: string[];
+    /**
+     * Called when the template requests applying changes (OK).
+     */
+    onApply?: () => void;
+    /**
+     * Called when the template requests closing or canceling the dialog.
+     */
+    onClose?: () => void;
+    /**
+     * Current visibility map keyed by `field` or `uid`.
+     */
+    columnVisibility?: Map<string, boolean>;
+}
+
+/**
+ * Props passed to the Column Chooser template.
+ */
+export interface ColumnChooserTemplateProps<T = unknown> {
+    /**
+     * Array of all columns available in the Column Chooser.
+     * Each item is a partial `ColumnProps<T>` object.
+     */
+    columns: Partial<ColumnProps<T>>[];
+
+    /**
+     * Array of currently visible column fields.
+     */
+    showColumns: string[];
+    /**
+     * Array of currently hidden column fields.
+     */
+    hideColumns: string[];
+
+    /**
+     * Current search value in the chooser search box.
+     */
+    searchValue?: string;
+
+    /**
+     * Toggle handler for individual columns. Receives the column `field` or `uid` and the target checked state.
+     */
+    onToggle?: (fieldOrUid: string, checked: boolean) => void;
+
+    /**
+     * Toggle handler for the "Select All" action. Receives the target checked state.
+     */
+    onSelectAll?: (checked: boolean) => void;
+
+    /**
+     * Apply/OK handler exposed to templates.
+     */
+    onApply?: () => void;
+
+    /**
+     * Close/Cancel handler exposed to templates.
+     */
+    onClose?: () => void;
+
+    /**
+     * Current visibility map keyed by `field` or `uid`.
+     */
+    columnVisibility?: Map<string, boolean>;
+}
+
+/**
+ * Event raised before the `ColumnChooser` dialog opens.
+ *
+ * Provides the effective `ColumnChooser` settings for the pending dialog.
+ * Allows modification of settings or cancellation of the dialog open action.
+ * Use this event to adjust search, ordering, or selected columns before display.
+ */
+export interface ColumnChooserBeforeOpenEvent extends GridActionEvent {
+    /**
+     * Enables or disables the search functionality in the `ColumnChooser` dialog.
+     *
+     * @type {boolean}
+     * @default true
+     */
+    enableSearch?: boolean;
+
+    /**
+     * Specifies the search operator for filtering columns.
+     *
+     * @type {'startsWith' | 'endsWith' | 'contains' | 'equal' | 'notEqual'}
+     * @default 'startsWith'
+     */
+    operator?: 'startsWith' | 'endsWith' | 'contains' | 'equal' | 'notEqual';
+
+    /**
+     * Enables diacritics-insensitive searching in the `ColumnChooser`.
+     *
+     * @type {boolean}
+     * @default false
+     */
+    ignoreAccent?: boolean;
+
+    /**
+     * Specifies the sort direction for columns in the `ColumnChooser` dialog.
+     *
+     * @type {'None' | 'Ascending' | 'Descending'}
+     * @default 'None'
+     */
+    sortDirection?: 'None' | 'Ascending' | 'Descending';
+
+    /**
+     * Specifies an ordered list of column fields to display in the `ColumnChooser`.
+     *
+     * @type {string[]}
+     * @default []
+     */
+    selectedColumns?: string[];
+
+    /**
+     * When true, prevents the `ColumnChooser` dialog from opening.
+     *
+     * @type {boolean}
+     * @default false
+     */
+    cancel?: boolean;
+}
+
+/**
+ * Event raised when column changes are applied in the `ColumnChooser` dialog.
+ *
+ * Fired when the user confirms changes (Apply/OK). Provides the final
+ * chooser settings and a visibility map for all columns.
+ */
+export interface ColumnChooserApplyEvent extends GridActionEvent {
+    /**
+     * Enables or disables the search functionality in the `ColumnChooser` dialog.
+     *
+     * @type {boolean}
+     * @default true
+     */
+    enableSearch?: boolean;
+
+    /**
+     * Specifies the search operator for filtering columns.
+     *
+     * @type {'startsWith' | 'endsWith' | 'contains' | 'equal' | 'notEqual'}
+     * @default 'startsWith'
+     */
+    operator?: 'startsWith' | 'endsWith' | 'contains' | 'equal' | 'notEqual';
+
+    /**
+     * Enables diacritics-insensitive searching in the `ColumnChooser`.
+     *
+     * @type {boolean}
+     * @default false
+     */
+    ignoreAccent?: boolean;
+
+    /**
+     * Specifies the sort direction for columns in the `ColumnChooser` dialog.
+     *
+     * @type {'None' | 'Ascending' | 'Descending'}
+     * @default 'None'
+     */
+    sortDirection?: 'None' | 'Ascending' | 'Descending';
+
+    /**
+     * Specifies the ordered list of column fields with their final visibility state after apply.
+     *
+     * @type {string[]}
+     * @default []
+     */
+    selectedColumns?: string[];
+
+    /**
+     * Map of column field names to visibility states for all columns in the dialog.
+     *
+     * @type {Map<string, boolean>}
+     */
+    columnVisibility?: Map<string, boolean>;
 }
 
 /**
@@ -214,6 +592,15 @@ export interface GridRef<T = unknown> extends Omit<RenderRef<T>, 'refresh'>, IGr
      * @default null
      */
     editData?: T | null;
+
+    /**
+     * Reference to the cell selection module for programmatic cell selection operations.
+     * Provides access to cell selection methods when cell selection is enabled.
+     * Only available when selectionSettings.type is 'Cell'.
+     *
+     * @default undefined
+     */
+    cellSelectionModule?: CellSelectionModel;
 }
 
 /**
@@ -243,7 +630,7 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
      * The data source can be provided as:
      * * An array of JavaScript objects
      * * A `DataManager` instance for local/remote data operations
-     * * A `DataResult` object with processed data
+     * * A `DataResponse` object with processed data
      *
      * The grid will automatically bind to this data and render rows based on the provided records.
      *
@@ -269,7 +656,7 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
      * };
      * ```
      */
-    dataSource?: T[] | DataManager | DataResult;
+    dataSource?: T[] | DataManager | DataResponse;
 
     /**
      * Defines the columns to be displayed in the grid.
@@ -325,6 +712,27 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
     height?: number | string;
 
     /**
+     * Specifies row indices that should be expanded by default when the grid loads.
+     * Applies only when the master-detail feature enabled using `isMasterDetail={true}` in the grid props.
+     * Rows at these indices automatically display their detail templates on initial render.
+     *
+     * @default []
+     * @example
+     * ```tsx
+     * <Grid
+     *   dataSource={employees}
+     *   columns={columns}
+     *   isMasterDetail={true}
+     *   defaultExpandedRows={[2, 4]}
+     *   detailRowTemplate={(params) => (
+     *     <div>Detail content for row {params.rowIndex}</div>
+     *   )}
+     * />
+     * ```
+     */
+    defaultExpandedRows?: number[];
+
+    /**
      * Sets the width of the grid component.
      *
      * Controls the horizontal size of the grid. Can be specified as:
@@ -371,6 +779,25 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
     gridLines?: GridLine | string;
 
     /**
+     * Enables automatic row and column span behavior for grid cells.
+     * When set to true, adjacent cells with matching values automatically merge using both row and column spanning.
+     * When set to false, automatic spanning is disabled and only explicit numeric span values are applied.
+     * Cells must have `rowSpan={true}` or `colSpan={true}` to participate in automatic spanning.
+     *
+     * @default false
+     *
+     * @example
+     * ```tsx
+     * <Grid
+     *   dataSource={employees}
+     *   columns={columns}
+     *   enableAutoSpan={true}
+     * />
+     * ```
+     */
+    enableAutoSpan?: boolean;
+
+    /**
      * Controls whether hover effect is applied to grid rows.
      *
      * By default, rows are visually highlighted on pointer hover.
@@ -390,10 +817,32 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
     enableHover?: boolean;
 
     /**
+     * Enables development-specific diagnostics for the grid component.
+     * When set to true, the grid outputs additional console warnings, validation messages,
+     * and debugging information to assist in identifying configuration issues and improving integration.
+     * When set to false, these development diagnostics are suppressed to reduce console noise
+     * and minimize runtime overhead.
+     * This is a non-reactive property and applies only during initial render.
+     *
+     * @default true
+     *
+     * @example
+     * ```tsx
+     * const isDev: boolean = process.env.NODE_ENV === 'development';
+     * <Grid
+     *   dataSource={data}
+     *   columns={columns}
+     *   enableDevMode={isDev ? true : false}
+     * />
+     * ```
+     */
+    enableDevMode?: boolean;
+
+    /**
      * Controls whether keyboard navigation is enabled for the Data Grid.
      *
      * By default, navigation and interaction with grid elements can be performed using keyboard shortcuts and arrow keys.
-     * When set to false, the grid's default focus navigation behavior is disable
+     * When set to false, the grid's default focus navigation behavior is disabled.
      *
      * @default true
      *
@@ -409,7 +858,7 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
     allowKeyboard?: boolean;
 
     /**
-     * Defines the cell content's overflow mode. The available modes are
+     * Defines the cell content's overflow mode. The available modes are:
      * * `Clip` -  Truncates the cell content when it overflows its area.
      * * `Ellipsis` -  Displays ellipsis when the cell content overflows its area.
      * * `EllipsisWithTooltip` - Applies an ellipsis to overflowing cell content and displays a tooltip on hover for enhanced readability.
@@ -486,6 +935,24 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
     selectionSettings?: SelectionSettings;
 
     /**
+     * Callback to determine whether a row is selectable and how its checkbox renders.
+     *
+     * @template T - Row data type
+     * @param rowData - The data object for the row being evaluated
+     * @returns true (row selectable) or false (row non-selectable with disabled checkbox shown),
+     *
+     * @example
+     * ```tsx
+     * <Grid
+     *   dataSource={employees}
+     *   columns={columns}
+     *   isRowSelectable={(row) => row.status !== 'Rejected'}
+     * />
+     * ```
+     */
+    isRowSelectable?: IsRowSelectable<T>;
+
+    /**
      * Specifies the sorting configuration for the grid, includes options to enable/disable sorting and controlling how data is ordered.
      * Used to customize sorting behavior for data presentation and user interactions.
      *
@@ -508,6 +975,30 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
      * ```
      */
     sortSettings?: SortSettings;
+
+    /**
+     * Specifies the grouping configuration for the grid, enabling hierarchical data organization by column values.
+     * Controls group expansion, drag-drop UI, caption formatting, and visibility of grouped columns.
+     * Used to organize data into collapsible groups for improved readability and analysis.
+     *
+     * @default { enabled: false, columns: [], defaultExpanded: false, captionFormat: 'compact', showDropArea: false, showGroupedColumn: false, showUngroupButton: false }
+     *
+     * @example
+     * ```tsx
+     * <Grid
+     *   dataSource={orders}
+     *   columns={columns}
+     *   groupSettings={{
+     *     enabled: true,
+     *     columns: ['ShipCountry', 'CustomerID'],
+     *     defaultExpanded: true,
+     *     showDropArea: true,
+     *     captionFormat: 'verbose'
+     *   }}
+     * />
+     * ```
+     */
+    groupSettings?: GroupSettings;
 
     /**
      * Specifies the filtering configuration for the grid, controlling the filter UI and behavior.
@@ -600,7 +1091,7 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
     /**
      * Makes the grid header remain visible during scrolling.
      *
-     * When enabled, column headers will "stick" to the top of the viewport and remain visible even when the user scrolls down through the grid data.
+     * When enabled, column headers will "sticky" to the top of the viewport and remain visible even when the user scrolls down through the grid data.
      * This improves usability by keeping column headers in view at all times.
      *
      * @default false
@@ -675,7 +1166,7 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
      * />
      * ```
      */
-    getRowHeight?: (props: Partial<RowInfo<T>>) => number;
+    getRowHeight?: (props: Partial<RowInfo<T | GroupedData<T>>>) => number;
 
     /**
      * Specifies the theme configuration for the Data Grid component.
@@ -842,7 +1333,7 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
      *
      * @example
      * ```tsx
-     * const CustomRowTemplate = (props: any) => {
+     * const CustomRowTemplate = (props: Employee) => {
      *   return (
      *     <tr>
      *       <td colSpan={3}>
@@ -868,7 +1359,7 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
      * Configures summary rows with aggregate functions.
      *
      * The aggregates property allows you to add summary rows to the grid, such as totals, averages, or counts.
-     * Each aggregate row can contain multiple aggregations that apply functions like sum, average, min, max, or count to specific columns.
+     * Each aggregate row can contain multiple aggregations that apply functions like `sum`, `average`, `min`, `max`, or `count` to specific columns.
      *
      * @default null
      *
@@ -926,6 +1417,103 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
     editSettings?: EditSettings;
 
     /**
+     * Enable master-detail (expandable rows) feature for this grid.
+     * When enabled, all data rows become expandable master rows.
+     *
+     * @default false
+     *
+     * @example
+     * ```tsx
+     * <Grid
+     *   isMasterDetail={true}
+     *   detailRowHeight={400}
+     *   detailRowTemplate={(params) => (
+     *     <div style={{ padding: '20px' }}>
+     *       <h4>Order {params.rowIndex} Details</h4>
+     *       <Grid
+     *         dataSource={getDetailData(params.row.id)}
+     *         columns={detailColumns}
+     *       />
+     *     </div>
+     *   )}
+     * />
+     * ```
+     */
+    isMasterDetail?: boolean;
+
+    /**
+     * Defines the height of the detail row.
+     * By default, the detail row height is set to "300px".
+     * A custom height can be applied when the master‑detail feature is enabled `isMasterDetail={true}` in the grid props.
+     *
+     * @default 300
+     *
+     * @example
+     * ```tsx
+     * <Grid isMasterDetail detailRowHeight={400} />
+     * ```
+     */
+    detailRowHeight?: number;
+
+    /**
+     * Template for rendering the content of a detail row.
+     * Invoked for each expanded master row, providing its row data.
+     * Commonly used to render a nested Grid or other custom components.
+     *
+     * @type {DetailRowTemplate<T>}
+     *
+     * @example
+     * ```tsx
+     * <Grid
+     *   isMasterDetail
+     *   detailRowTemplate={(params) => (
+     *     <div style={{ padding: '20px' }}>
+     *       <h4>Order {params.rowIndex} Details</h4>
+     *       <Grid
+     *         dataSource={detailData[params.row.id]}
+     *         columns={detailColumns}
+     *       />
+     *     </div>
+     *   )}
+     * />
+     * ```
+     */
+    detailRowTemplate?: DetailRowTemplate<T> | ReactElement | string;
+
+    /**
+     * Fires when a master row is expanded.
+     *
+     * @private
+     * @event onRowExpand
+     * ```tsx
+     * <Grid
+     *   isMasterDetail
+     *   onRowExpand={(args) => {
+     *     console.log('Row expanded:', args.rowIndex);
+     *   }}
+     * />
+     * ```
+     */
+    onRowExpand?: (event: RowExpandEvent<T>) => void;
+
+    /**
+     * Fires when a master row is collapsed.
+     *
+     * @private
+     * @event onRowCollapse
+     * ```tsx
+     * <Grid
+     *   isMasterDetail
+     *   onRowCollapse={(args) => {
+     *     console.log('Row collapsed:', args.rowIndex);
+     *   }}
+     * />
+     * ```
+     */
+    onRowCollapse?: (event: RowCollapseEvent<T>) => void;
+
+
+    /**
      * Configures the grid toolbar with predefined or custom items.
      *
      * The toolbar property allows you to add a toolbar to the grid with both predefined actions (add, edit, delete, update, cancel, search)
@@ -948,6 +1536,63 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
      * ```
      */
     toolbar?: Array<(string | ToolbarItems | ToolbarItemProps)>;
+
+    /**
+     * Determines whether the column chooser functionality is enabled.
+     * When set to false (default), the column chooser button will be disabled in the toolbar (but still visible if included in toolbar array).
+     * When set to true, the column chooser button will be enabled and the dialog can be opened.
+     *
+     * This property controls the enabled/disabled state of the column chooser feature, not its visibility.
+     * To show the column chooser button, you must include 'ColumnChooser' in the toolbar array.
+     *
+     * @default false
+     *
+     * @example
+     * ```tsx
+     * // Column Chooser button is visible but disabled (default behavior)
+     * <Grid
+     *   dataSource={data}
+     *   toolbar={['Add', 'Edit', 'ColumnChooser']}
+     * />
+     *
+     * // Column Chooser button is visible and enabled
+     * <Grid
+     *   dataSource={data}
+     *   toolbar={['Add', 'Edit', 'ColumnChooser']}
+     *   showColumnChooser={true}
+     * />
+     * ```
+     */
+    showColumnChooser?: boolean;
+
+    /**
+     * Defines the configuration for the Column Chooser dialog,
+     * controlling both its behavior and appearance. Enables customization of:
+     *
+     * - Search with customizable operators
+     * - Diacritics‑insensitive search
+     * - Column ordering and sorting
+     * - Custom templates for header, footer, and column items
+     *
+     * @default { enableSearch: true, operator: 'startsWith', ignoreAccent: false, sortDirection: 'None', selectedColumns: [] }
+     *
+     * @example
+     * ```tsx
+     * <Grid
+     *   dataSource={data}
+     *   toolbar={['ColumnChooser']}
+     *   showColumnChooser={true}
+     *   columnChooserSettings={{
+     *     enableSearch: true,
+     *     operator: 'contains',
+     *     ignoreAccent: true,
+     *     sortDirection: 'Ascending',
+     *     selectedColumns: ['OrderID', 'CustomerName']
+     *   }}
+     * />
+     * ```
+     */
+    columnChooserSettings?: ColumnChooserSettings;
 
     /**
      * Applies a CSS class to each grid row either globally or conditionally.
@@ -1009,21 +1654,153 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
     loadingIndicatorSettings?: LoadingIndicatorSettings;
 
     /**
-     * Fires at the start of grid initialization before data processing.
+     * Configures the context menu settings for the Data Grid component.
+     * Enables and customizes the context menu that appears on right‑click interactions.
+     * Provides options to:
+     *
+     * - Enable or disable the context menu
+     * - Define default or custom menu items
+     * @default { enabled: false, items: [], menuSettings: {} }
+     *
+     * @example
+     * ```tsx
+     * <Grid
+     *   dataSource={employees}
+     *   columns={columns}
+     *   contextMenuSettings={{
+     *     enabled: true,
+     *     items: ['Edit', 'Delete', 'SortAscending', 'SortDescending']
+     *   }}
+     * />
+     * ```
+     */
+    contextMenuSettings?: ContextMenuSettings;
+
+    /**
+     * Fires when the context menu is about to be opened or displayed on the grid.
+     * Allows customization, validation, or cancellation of the context menu before it appears.
+     * Provides access to the target element, menu items, and associated row/column data.
+     *
+     * Supports both synchronous and asynchronous menu item loading:
+     * - **Synchronous**: Return the modified ContextMenuOpenEvent object.
+     * - **Asynchronous**: Return a Promise that resolves to the modified ContextMenuOpenEvent object.
+     *
+     * @event onContextMenuOpen
+     * @param {ContextMenuOpenEvent} event - Event arguments containing menu configuration, target element, and row/column context.
+     * @returns {ContextMenuOpenEvent | Promise<ContextMenuOpenEvent>} The modified event object or a Promise resolving to the modified event object.
+     *
+     * @example
+     * ```tsx
+     * // Synchronous example
+     * const handleContextMenuOpen = (event: ContextMenuOpenEvent) => {
+     *   // Customize menu items based on context
+     *   if (event.data?.role === 'Admin') {
+     *     // Show additional menu items for admin users
+     *   }
+     *   return event; // Return the modified event
+     * };
+     *
+     * // Asynchronous example
+     * const handleContextMenuOpen = (args: ContextMenuOpenEvent) => {
+     *   return new Promise<ContextMenuOpenEvent>((res) => setTimeout(() => res(args), 2000));
+     * }
+     *
+     * return (
+     *   <Grid
+     *     dataSource={employees}
+     *     columns={columns}
+     *     contextMenuSettings={{ enabled: true }}
+     *     onContextMenuOpen={handleContextMenuOpen}
+     *   />
+     * );
+     * ```
+     */
+    onContextMenuOpen?: (event: ContextMenuOpenEvent) => ContextMenuOpenEvent | Promise<ContextMenuOpenEvent>;
+
+    /**
+     * Fires when the context menu is closed or hidden on the grid.
+     * Suitable for cleanup operations or resetting UI state after the context menu interaction completes.
+     * Triggered when the user dismisses the menu through selection, clicking outside, or pressing Escape.
+     *
+     * @event onContextMenuClose
+     * @returns {void}
+     *
+     * @example
+     * ```tsx
+     * const GridComponent = () => {
+     *   const handleContextMenuClose = () => {
+     *     // Perform cleanup or reset UI state
+     *     console.log('Context menu closed');
+     *   };
+     *
+     *   return (
+     *     <Grid
+     *       dataSource={employees}
+     *       columns={columns}
+     *       contextMenuSettings={{ enabled: true }}
+     *       onContextMenuClose={handleContextMenuClose}
+     *     />
+     *   );
+     * };
+     * ```
+     */
+    onContextMenuClose?: () => void;
+
+    /**
+     * Fires when a context menu item is selected or clicked by the user.
+     * Handles the action associated with the selected menu item, such as `Edit`, `Delete`, `Sort`, etc.
+     * Provides context about the selected item, target row/column, and triggering element.
+     *
+     * @event onContextMenuClick
+     * @param {MenuSelectEvent} event - Event arguments containing selected item details and grid context.
+     * @returns {void}
+     *
+     * @example
+     * ```tsx
+     * const GridComponent = () => {
+     *   const handleContextMenuClick = (event: MenuSelectEvent) => {
+     *     // Handle the selected context menu action
+     *   };
+     *
+     *   return (
+     *     <Grid
+     *       dataSource={employees}
+     *       columns={columns}
+     *       contextMenuSettings={{ enabled: true }}
+     *       onContextMenuClick={handleContextMenuClick}
+     *     />
+     *   );
+     * };
+     * ```
+     */
+    onContextMenuClick?: (event: MenuSelectEvent) => void;
+
+    /**
+     * Fires at the start of grid initialization before data processing. and component mount.
+     * This event is triggered during the React render phase, before the component is mounted to the DOM.
      * Useful for initial configurations or showing loading indicators.
+     * Do not perform state updates in this callback, as they will trigger React warnings
+     * about updating unmounted components. Use `onGridRenderComplete` instead for state updates.
      *
      * @event onGridRenderStart
      * @example
      * ```tsx
      * const GridComponent = () => {
-     *   const handleGridRender = () => {
-     *     // handle your action here
+     *   const handleGridRenderStart = () => {
+     *     // Safe: Logging only - no state updates
+     *     console.log('Grid render starting');
+     *   };
+     *
+     *   const handleGridRenderComplete = () => {
+     *     // Safe: State updates after mount (use this callback for state updates)
+     *     setGridReady(true);
      *   };
      *
      *   return (
      *     <Grid
      *       dataSource={data}
-     *       onGridRenderStart={handleGridRender}
+     *       onGridRenderStart={handleGridRenderStart}
+     *       onGridRenderComplete={handleGridRenderComplete}
      *     />
      *   );
      * };
@@ -1323,6 +2100,60 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
     onFilterDialogAfterOpen?: (event: FilterDialogAfterOpenEvent) => void;
 
     /**
+     * Fires before the Column Chooser dialog is displayed or opened.
+     * Allows customization of column visibility or cancellation before the dialog appears.
+     *
+     * @event onColumnChooserBeforeOpen
+     * @example
+     * ```tsx
+     * const GridComponent = () => {
+     *   const handleColumnChooserBeforeOpen = (event: ColumnChooserBeforeOpenEvent) => {
+     *     // handle your action here
+     *     if (someCondition) {
+     *       event.cancel = true; // prevent dialog from opening
+     *     }
+     *   };
+     *
+     *   return (
+     *     <Grid
+     *       dataSource={employeeData}
+     *       onColumnChooserBeforeOpen={handleColumnChooserBeforeOpen}
+     *       showColumnChooser={true}
+     *     />
+     *   );
+     * };
+     * ```
+     */
+    onColumnChooserBeforeOpen?: (event: ColumnChooserBeforeOpenEvent) => void;
+
+    /**
+     * Fires when column changes are applied in the Column Chooser dialog.
+     * Triggered when the user clicks OK/Apply button with the final column visibility configuration.
+     * Used to track which columns were shown/hidden and perform post-apply actions.
+     *
+     * @event onColumnChooserApply
+     * @example
+     * ```tsx
+     * const GridComponent = () => {
+     *   const handleColumnChooserApply = (event: ColumnChooserApplyEvent) => {
+     *     // handle column visibility changes
+     *     console.log('Columns:', event.selectedColumns);
+     *     console.log('Visibility:', event.columnVisibility);
+     *   };
+     *
+     *   return (
+     *     <Grid
+     *       dataSource={employeeData}
+     *       onColumnChooserApply={handleColumnChooserApply}
+     *       showColumnChooser={true}
+     *     />
+     *   );
+     * };
+     * ```
+     */
+    onColumnChooserApply?: (event: ColumnChooserApplyEvent) => void;
+
+    /**
      * Fires when a sorting operation begins on the grid.
      * Allows customization or cancellation of sort behavior.
      *
@@ -1354,6 +2185,49 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
      * ```
      */
     onSort?: (event: SortEvent) => void;
+
+    /**
+     * Fires when a grouping operation begins on the grid.
+     * Allows customization or cancellation of group behavior.
+     *
+     * @private
+     * @event onGroupStart
+     */
+    onGroupStart?: (args: OnGroupArgs) => void;
+
+    /**
+     * Fires when a grouping operation occurs on the grid.
+     * Triggered by add/remove column, expand/collapse, or reorder group operations.
+     * Provides current grouped columns and operation type for custom handling.
+     *
+     * @event onGroup
+     * @example
+     * ```tsx
+     * const GridComponent = () => {
+     *   const handleGroup = (args: OnGroupArgs) => {
+     *     console.log(`Operation: ${args.operation}, Columns: ${args.columns.join(', ')}`);
+     *   };
+     *   const [groupSettings] = useState<GroupSettings>({ enabled: true, showDropArea: true });
+     *
+     *   return (
+     *     <Grid
+     *       dataSource={orderData}
+     *       onGroup={handleGroup}
+     *       groupSettings={groupSettings}
+     *     />
+     *   );
+     * };
+     * ```
+     */
+    onGroup?: (args: OnGroupArgs) => void;
+
+    /**
+     * Fires before a group is expanded or collapsed.
+     * Allows validation or cancellation of group expand/collapse behavior.
+     *
+     * @event shouldExpandGroup
+     */
+    shouldExpandGroup?: (event: ShouldExpandGroupEvent) => boolean;
 
     /**
      * Fires when a searching operation begins on the grid.
@@ -1568,6 +2442,115 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
     onRowDeselect?: (event: RowSelectEvent<T>) => void;
 
     /**
+     * Fires before cells are selected in the grid.
+     * Allows validation or cancellation of cell selection.
+     * Only fires when selectionSettings.type is `Cell`.
+     *
+     * @private
+     * @event onCellSelecting
+     * @example
+     * ```tsx
+     * const GridComponent = () => {
+     *   const handleCellSelecting = (event: CellSelectingEvent) => {
+     *     // Prevent selection of specific cells
+     *     if (event.cells.some(cell => cell.rowIndex === 0)) {
+     *       event.cancel = true;
+     *     }
+     *   };
+     *
+     *   return (
+     *     <Grid
+     *       dataSource={orderData}
+     *       onCellSelecting={handleCellSelecting}
+     *       selectionSettings={{ type: 'Cell', cellSelection: { enabled: true } }}
+     *     />
+     *   );
+     * };
+     * ```
+     */
+    onCellSelecting?: (event: CellSelectingEvent<T>) => void;
+
+    /**
+     * Fires after cells are successfully selected in the grid.
+     * Provides details about the selected cells including data and positions.
+     * Only fires when selectionSettings.type is 'Cell'.
+     *
+     * @event onCellSelect
+     * @example
+     * ```tsx
+     * const GridComponent = () => {
+     *   const handleCellSelect = (event: CellSelectEvent) => {
+     *     console.log('Selected cells:', event.cells);
+     *     console.log('Cell data:', event.data);
+     *   };
+     *
+     *   return (
+     *     <Grid
+     *       dataSource={orderData}
+     *       onCellSelect={handleCellSelect}
+     *       selectionSettings={{ type: 'Cell', cellSelection: { enabled: true } }}
+     *     />
+     *   );
+     * };
+     * ```
+     */
+    onCellSelect?: (event: CellSelectEvent<T>) => void;
+
+    /**
+     * Fires before cells are deselected in the grid.
+     * Allows validation or cancellation of cell deselection.
+     * Only fires when selectionSettings.type is `Cell`.
+     *
+     * @private
+     * @event onCellDeselecting
+     * @example
+     * ```tsx
+     * const GridComponent = () => {
+     *   const handleCellDeselecting = (event: CellDeselectingEvent) => {
+     *     // Prevent deselection of specific cells
+     *     if (event.cells.length > 5) {
+     *       event.cancel = true;
+     *     }
+     *   };
+     *
+     *   return (
+     *     <Grid
+     *       dataSource={orderData}
+     *       onCellDeselecting={handleCellDeselecting}
+     *       selectionSettings={{ type: 'Cell', cellSelection: { enabled: true } }}
+     *     />
+     *   );
+     * };
+     * ```
+     */
+    onCellDeselecting?: (event: CellDeselectingEvent<T>) => void;
+
+    /**
+     * Fires after cells are successfully deselected in the grid.
+     * Provides details about the deselected cells.
+     * Only fires when selectionSettings.type is 'Cell'.
+     *
+     * @event onCellDeselect
+     * @example
+     * ```tsx
+     * const GridComponent = () => {
+     *   const handleCellDeselect = (event: CellDeselectEvent) => {
+     *     console.log('Deselected cells:', event.cells);
+     *   };
+     *
+     *   return (
+     *     <Grid
+     *       dataSource={orderData}
+     *       onCellDeselect={handleCellDeselect}
+     *       selectionSettings={{ type: 'Cell', cellSelection: { enabled: true } }}
+     *     />
+     *   );
+     * };
+     * ```
+     */
+    onCellDeselect?: (event: CellDeselectEvent<T>) => void;
+
+    /**
      * Event triggered before the paging operation start.
      *
      * @private
@@ -1623,6 +2606,35 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
      * ```
      */
     onRowEditStart?: (event: RowEditEvent<T>) => void;
+
+    /**
+     * Fires when cell editing begins in `Cell` edit mode.
+     * Provides an opportunity to validate the target cell or cancel the edit
+     * before the editor is presented.
+     *
+     * @event onCellEditStart
+     * @example
+     * ```tsx
+     * const GridComponent = () => {
+     *   const handleCellEdit = (event: CellEditEvent) => {
+     *     // Prevent editing for specific cells
+     *     if (event.field === 'id') {
+     *       event.cancel = true;
+     *     }
+     *   };
+     *
+     *   return (
+     *     <Grid
+     *       dataSource={orderData}
+     *       onCellEditStart={handleCellEdit}
+     *       editSettings={{ mode: 'Cell', allowEdit: true }}
+     *     />
+     *   );
+     * };
+     * ```
+     */
+    onCellEditStart?: (event: CellEditEvent<T>) => void;
+
     /**
      * Fires when the process of adding a new row starts.
      *
@@ -1802,7 +2814,7 @@ export interface RowClassProps<T = unknown> {
      *
      * @default -
      */
-    data?: T;
+    data?: T | GroupedData<T>;
 }
 
 /**
@@ -1878,10 +2890,10 @@ export interface IGrid<T = unknown> extends GridProps<T> {
      *
      * @param {boolean} skipPage - Optional. If true, excludes pagination information from the returned data.
      * @param {boolean} requiresCount - Optional. If true, includes the total record count in the response.
-     * @param {Object[] | DataManager | DataResult} dataSource - Defines the source of data, which can be a local array or a remote data manager.
+     * @param {Object[] | DataManager | DataResponse} dataSource - Defines the source of data, which can be a local array or a remote data manager.
      * @returns {Object[] | Promise<Response | DataReturnType>} An array of records or a promise for remote data.
      */
-    getData(skipPage?: boolean, requiresCount?: boolean, dataSource?: Object[] | DataManager | DataResult):
+    getData(skipPage?: boolean, requiresCount?: boolean, dataSource?: Object[] | DataManager | DataResponse):
     T[] | Promise<Response | DataReturnType>;
 
     /**
@@ -2018,9 +3030,9 @@ export interface IGrid<T = unknown> extends GridProps<T> {
      * Retrieves the selected row data or selection metadata from the grid.
      *
      * Returns different types based on configuration:
-     * - Local data: Array of selected row data objects (`T[]`)
-     * - Remote data with persistent selection: Object with `isSelectAll` (boolean) and `primaryKeys` (string[])
-     * - No selection: Empty array or null
+     * - Local data: Array of selected row data objects (`T[]`).
+     * - Remote data with persistent selection: Object with `isSelectAll` (boolean) and `primaryKeys` (string[]).
+     * - No selection: Empty array or null.
      *
      * @public
      * @returns {T[] | { isSelectAll: boolean; primaryKeys: string[] } | null} Selected records or selection metadata
@@ -2073,6 +3085,119 @@ export interface IGrid<T = unknown> extends GridProps<T> {
      * @returns {void}
      */
     clearSelection(): void;
+
+    /**
+     * Selects a single cell specified by row key and field name.
+     * When in this mode, selection persists across paging, sorting, and filtering.
+     * This is the primary method for programmatic single-cell selection.
+     *
+     * @param {string | number} rowKey - The primary key value of the row containing the cell.
+     * @param {string} fieldName - The field name (column identifier) of the cell.
+     * @returns {void}
+     *
+     * @example
+     * ```tsx
+     * // persistent across paging/sorting
+     * gridRef.current.cellSelectionModule.selectCell('123', 'OrderID');
+     * ```
+     */
+    selectCell(rowKey: string | number, fieldName: string): void;
+
+    /**
+     * Selects multiple cells specified by row keys and field names (data-based mode).
+     * When in data-based mode, selections persist across paging, sorting, and filtering.
+     * This is the primary method for programmatic cell selection.
+     *
+     * @param {RowCellInfo[]} cells - Array of objects specifying rows and their selected cells in data-based format.
+     * @returns {void}
+     *
+     * @example
+     * ```tsx
+     * // Data-based mode (persistent across paging/sorting)
+     * gridRef.current.cellSelectionModule.selectCells([
+     *   { rowKey: '123', fieldNames: ['OrderID', 'CustomerName'] },
+     *   { rowKey: '456', fieldNames: ['TotalAmount'] }
+     * ]);
+     * ```
+     */
+    selectCells(cells: RowCellInfo[]): void;
+
+    /**
+     * Selects a rectangular range of cells from start position to end position.
+     * Selection behavior depends on the configured type (`Flow`/`Box`/`BoxWithBorder`).
+     * Uses data-based position format to ensure selections persist across paging, sorting, and filtering.
+     * This is the primary method for programmatic range selection.
+     *
+     * @param {CellIdentifier} start - The starting cell position (top-left corner) in data-based format {rowKey, fieldName}.
+     * @param {CellIdentifier} end - The ending cell position (bottom-right corner) in data-based format {rowKey, fieldName}.
+     * @returns {void}
+     *
+     * @example
+     * ```tsx
+     * // Data-based range selection (persistent across paging/sorting)
+     * gridRef.current.cellSelectionModule.selectCellsByRange(
+     *   { rowKey: '123', fieldName: 'OrderID' },
+     *   { rowKey: '456', fieldName: 'TotalAmount' }
+     * );
+     * ```
+     */
+    selectCellsByRange(start: CellIdentifier, end: CellIdentifier): void;
+
+    /**
+     * Clears cell selections in the grid.
+     * If specific cells are provided, only those cells are cleared.
+     * If no cells are provided, all cell selections are cleared.
+     * Removes highlighting and resets the cell selection state.
+     *
+     * Uses data-based format for cell specification:
+     * - Data-based: `{ rowKey: string|number, fieldNames: string[] }`.
+     *
+     * @param {RowCellInfo[] | undefined} cells - Optional. Array of objects specifying rows and their cells to clear in data-based format.
+     *                                                If not provided, all cell selections are cleared.
+     * @returns {void}
+     *
+     * @example
+     * ```tsx
+     * // Clear all cell selections
+     * gridRef.current.cellSelectionModule.clearCellSelection();
+     *
+     * // Clear specific cells (data-based)
+     * gridRef.current.cellSelectionModule.clearCellSelection([
+     *   { rowKey: '123', fieldNames: ['OrderID'] },
+     *   { rowKey: '456', fieldNames: ['CustomerName', 'TotalAmount'] }
+     * ]);
+     * ```
+     */
+    clearCellSelection(cells?: RowCellInfo[]): void;
+
+    /**
+     * Retrieves the selected cells grouped by row in data-based format with cell values.
+     * Returns an array of objects, each containing a row, its selected cells, and their values.
+     *
+     * Format: `{ rowKey: string|number, fieldNames: string[], data: { [fieldName]: value } }`.
+     * In data-based mode, multiple cells in the same row are grouped together with their data values.
+     *
+     * @returns {RowCellInfo[]} Array of objects with row identifier, selected cell field names, and their values.
+     *
+     * @example
+     * ```tsx
+     * // Data-based mode result (persists across paging/sorting) with values included
+     * const selectedCells = gridRef.current.cellSelectionModule.getSelectedCellsData();
+     * // Returns: [
+     * //   {
+     * //     rowKey: '123',
+     * //     fieldNames: ['OrderID', 'CustomerName'],
+     * //     data: { OrderID: 10248, CustomerName: 'Vinet' }
+     * //   },
+     * //   {
+     * //     rowKey: '456',
+     * //     fieldNames: ['TotalAmount'],
+     * //     data: { TotalAmount: 32.38 }
+     * //   }
+     * // ]
+     * ```
+     */
+    getSelectedCellsData(): RowCellInfo[];
 
     /**
      * Sorts a specified column in the grid with given options.
@@ -2289,6 +3414,132 @@ export interface IGrid<T = unknown> extends GridProps<T> {
      * @returns {boolean} True if the field is valid, false otherwise.
      */
     validateField(field: string): boolean;
+
+    /**
+     * Begins editing the specified cell in the grid.
+     * This method is available only when `editSettings.mode` is set to 'Cell'.
+     *
+     * @param {string | number} primaryKeyValue - The primary key value of the row containing the cell
+     * @param {string} field - The field name of the cell to edit
+     * @returns {void}
+     *
+     * @example
+     * ```tsx
+     * const gridRef = useRef<GridRef>(null);
+     *
+     * // Enter edit mode on Freight cell in row with OrderID=10248
+     * gridRef.current?.editCell(10248, 'Freight');
+     * ```
+     */
+    editCell(primaryKeyValue: string | number, field: string): void;
+
+    /**
+     * Saves the changes made in cell edit mode and closes the edit state.
+     * This method is available only when `editSettings.mode` is set to 'Cell'..
+     * If validation is enabled, input is checked automatically; invalid cells are not saved.
+     *
+     * @returns {Promise<boolean>} Promise resolving to true if save succeeded, false if validation failed
+     *
+     * @example
+     * ```tsx
+     * const gridRef = useRef<GridRef>(null);
+     *
+     * // Save current cell changes
+     * const success = await gridRef.current?.saveCellChanges();
+     * if (success) {
+     *   console.log('Cell saved successfully');
+     * }
+     * ```
+     */
+    saveCellChanges(): Promise<boolean>;
+
+    /**
+     * Cancels the current cell edit operation and discards all unsaved changes.
+     *  This method can be used only when `editSettings.mode` is set to 'Cell'.
+     *
+     * @returns {Promise<void>}
+     *
+     * @example
+     * ```tsx
+     * const gridRef = useRef<GridRef>(null);
+     *
+     * // Cancel cell edit and revert changes
+     * await gridRef.current?.cancelCellChanges();
+     * ```
+     */
+    cancelCellChanges(): Promise<void>;
+
+    /**
+     * Opens the column chooser dialog programmatically.
+     * Requires the Column Chooser to be enabled `showColumnChooser={true}` in the grid configuration.
+     *
+     * @param {number} [x] - Optional X-axis position for dialog placement (in pixels)
+     * @param {number} [y] - Optional Y-axis position for dialog placement (in pixels)
+     * @returns {void}
+     *
+     * @example
+     * ```tsx
+     * const gridRef = useRef<GridRef>(null);
+     *
+     * // Open column chooser at specific position
+     * const handleButtonClick = () => {
+     *   gridRef.current?.openColumnChooser(100, 40);
+     * };
+     *
+     * // Open column chooser at default position
+     * const handleOpen = () => {
+     *   gridRef.current?.openColumnChooser();
+     * };
+     * ```
+     */
+    openColumnChooser(x?: number, y?: number): void;
+
+    /**
+     * Expands all grouped rows in the grid.
+     * Fires the `onGroup` event with the argument 'expandall' as the operation argument
+     * to represent the expand all groups action.
+     *
+     * @returns {void}
+     */
+    expandAll(): void;
+
+    /**
+     * Collapses all grouped rows in the grid.
+     * Fires the `onGroup` event, passing 'collapseall' as the operation argument
+     * to represent the collapse all groups action.
+     *
+     * @returns {void}
+     */
+    collapseAll(): void;
+
+    /**
+     * Groups the grid by the specified column fields.
+     * The column must have `allowGroup` set to `true` as the default.
+     * Triggers `onGroup` event with operation argument 'add'.
+     *
+     * @param {string} fields - The collection of field names of the column to group by.
+     * @param {boolean} [isResetRequired] - If true, resets existing groupings before applying the new grouping. Default is false, which adds to existing groupings.
+     * @returns {void}
+     */
+    groupColumn(fields: string[], isResetRequired?: boolean): void;
+
+    /**
+     * Removes grouping for the specified column fields.
+     * Triggers `onGroup` event with operation argument 'remove'.
+     *
+     * @param {string} fields - The collection field names of the column to ungroup.
+     * @returns {void}
+     */
+    ungroupColumn(fields: string[]): void;
+
+    /**
+     * Removes all active groupings and returns the grid to its default ungrouped state.
+     * Fires the `onGroup` event, passing 'removeall' as the operation argument
+     * to represent the clear grouping action.
+     *
+     * @returns {void}
+     */
+    clearGrouping(): void;
 }
 
 /**

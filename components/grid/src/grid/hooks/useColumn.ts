@@ -1,10 +1,10 @@
 import { ComponentType, createElement, isValidElement, ReactElement, useMemo } from 'react';
 import { DateFormatOptions, IL10n, formatUnit, isNullOrUndefined, NumberFormatOptions } from '@syncfusion/react-base';
 import { Skeleton, SkeletonProps } from '@syncfusion/react-notifications';
-import { IValueFormatter, CellTypes, IRow, EditType, ValueType, FilterBarType, TextAlign, ColumnType, LoadingIndicatorType, ServiceLocator, VirtualDomType, IGridBase } from '../types';
+import { IValueFormatter, CellTypes, IRow, EditType, ValueType, FilterBarType, TextAlign, ColumnType, LoadingIndicatorType, ServiceLocator, VirtualDomType, IGridBase, AggregateType, GroupedData, GroupType } from '../types';
 import { ColumnProps, IColumnBase } from '../types/column.interfaces';
 import { AggregateColumnProps, AggregateData } from '../types/aggregate.interfaces';
-import { useGridComputedProvider } from '../contexts';
+import { useGridComputedProvider, useGridMutableProvider } from '../contexts';
 import { setStringFormatter, getObject, getUid, headerValueAccessor as defaultHeaderValueAccessor,
     valueAccessor as defaultValueAccessor, isDateOrNumber, parseUnit,
     updateUIColumnType} from '../utils';
@@ -24,12 +24,14 @@ const CSS_CLASS_NAMES: Record<string, string> = {
  * @param {ServiceLocator} serviceLocator - ServiceLocator for column formatting and parsing property updates.
  * @param {IGridBase} gridProps - The grid configured properties.
  * @param {ColumnProps[]} typeDetectedUIColumn - After getting data type updated ui column.
+ * @param {boolean} isColumnChooserChanged - To check whether column chooser state is changed.
  * @returns {IColumnBase} The column properties with defaults applied
  * @private
  */
 export const defaultColumnProps: <T>(props: Partial<IColumnBase<T>>, serviceLocator: ServiceLocator, gridProps: IGridBase<T>,
-    typeDetectedUIColumn?: ColumnProps<T>) => Partial<IColumnBase<T>> = <T>(props: Partial<IColumnBase<T>>, serviceLocator: ServiceLocator,
-    gridProps: IGridBase<T>, typeDetectedUIColumn?: ColumnProps<T>):
+    typeDetectedUIColumn?: ColumnProps<T>, isColumnChooserChanged?: boolean) => Partial<IColumnBase<T>> = <T>(
+    props: Partial<IColumnBase<T>>, serviceLocator: ServiceLocator, gridProps: IGridBase<T>, typeDetectedUIColumn?: ColumnProps<T>,
+    isColumnChooserChanged?: boolean):
 Partial<IColumnBase<T>> => {
     const commandColumn: boolean = !isNullOrUndefined(props.getCommandItems);
     const isCheckboxColumn: boolean = props.type === ColumnType.Checkbox ||
@@ -39,13 +41,14 @@ Partial<IColumnBase<T>> => {
     const isColumnDOMVirtualizationDisabled: boolean = !isNullOrUndefined(gridProps?.virtualizationSettings) &&
         (gridProps?.virtualizationSettings?.enabled === false || gridProps?.virtualizationSettings?.type === VirtualDomType.Row ||
             props.autoHeight);
+    const isRequiredColumn: boolean = props?.isPrimaryKey || props?.isIdentity || (props.field && gridProps.groupSettings?.enabled &&
+        gridProps.groupSettings?.columns?.length && gridProps.groupSettings?.columns?.indexOf(props.field) > -1);
     // computed values should handle in component inside alone since react not allowed us to compute here using memo.
     return {
-        visible: true,
         autoHeight: false,
         textAlign: commandColumn || isCheckboxColumn ? TextAlign.Center : 'Left',
         disableHtmlEncode: true,
-        allowEdit: commandColumn ? false : true,
+        allowEdit: commandColumn || props.type === ColumnType.SingleGroup ? false : true,
         edit: {type: EditType.TextBox},
         filter: { type: props.filter?.type ?? gridProps?.filterSettings?.type ?? 'FilterBar', hideSearchbox: props.filter?.hideSearchbox ?? false,
             filterBarType: FilterBarType.TextBox, filterOperators: [] },
@@ -53,8 +56,15 @@ Partial<IColumnBase<T>> => {
         parseFn: typeFormatParseUpdatedColumn?.parseFn ?? typeDetectedUIColumn?.parseFn,
         getFormatter: typeFormatParseUpdatedColumn?.formatFn ?? typeDetectedUIColumn?.formatFn,
         getParser: typeFormatParseUpdatedColumn?.parseFn ?? typeDetectedUIColumn?.parseFn,
+        headerText: props.headerText ?? (props.type === ColumnType.SingleGroup ?
+            serviceLocator?.getService<IL10n>('localization')?.getConstant('singleColumnGroupLabel') : undefined),
         ...props,
-        width: !isColumnDOMVirtualizationDisabled ? (!isNullOrUndefined(props.width) ? (parseUnit(props.width) + 'px') : '100px') :
+        validationRules: isRequiredColumn ? { required: true, ...props.validationRules } : props.validationRules,
+        visible: isColumnChooserChanged ? typeDetectedUIColumn?.visible : (props?.field && (commandColumn ? false : props.allowGroup ??
+            true) && gridProps?.groupSettings?.type === GroupType.MultipleColumns &&
+            gridProps?.groupSettings?.columns?.indexOf(props?.field) >= 0 ? true : (typeFormatParseUpdatedColumn?.visible) ?? true),
+        width: !isColumnDOMVirtualizationDisabled ? (!isNullOrUndefined(props.width) ? (parseUnit(props.width) + 'px') : (props?.type ===
+            ColumnType.SingleGroup ? (!gridProps?.groupSettings?.captionFormat || gridProps?.groupSettings?.captionFormat === 'compact' ? '188px' : '335px') : '100px')) :
             props.width ? formatUnit(props.width) : '', // dom column virtualization only support pixels.
         valueAccessor: props.valueAccessor ?? defaultValueAccessor<T>,
         headerValueAccessor: props.headerValueAccessor ?? defaultHeaderValueAccessor,
@@ -62,9 +72,11 @@ Partial<IColumnBase<T>> => {
             (props.type ?? (commandColumn ? ColumnType.Command : typeDetectedUIColumn?.type))),
         sortComparer: typeDetectedUIColumn?.sortComparer ?? typeFormatParseUpdatedColumn?.sortComparer,
         uid: isNullOrUndefined(props.uid) ? getUid('grid-column') : props.uid,
-        allowSort: commandColumn ? false : props.allowSort ?? true,
-        allowFilter: commandColumn ? false : props.allowFilter ?? true,
+        allowSort: commandColumn || props.type === ColumnType.SingleGroup ? false : props.allowSort ?? true,
+        allowFilter: commandColumn || props.type === ColumnType.SingleGroup ? false : props.allowFilter ?? true,
         allowSearch: commandColumn ? false : props.allowSearch ?? true,
+        allowGroup: commandColumn || props.type === ColumnType.Checkbox || props.type === ColumnType.SingleGroup
+            ? false : props.allowGroup ?? props.field ? true : false,
         templateSettings: {
             ariaLabel: '',
             ...props.templateSettings
@@ -131,6 +143,7 @@ export const useColumn: <T>(props: Partial<IColumnBase<T>>) => {
     } = column;
     const { serviceLocator, virtualizationSettings, loadingIndicatorSettings } =
         useGridComputedProvider();
+    const { aggregateSelection } = useGridMutableProvider();
     const { indicatorType, params } = loadingIndicatorSettings;
     const formatter: IValueFormatter = serviceLocator?.getService<IValueFormatter>('valueFormatter');
     const localization: IL10n = serviceLocator?.getService<IL10n>('localization');
@@ -143,9 +156,50 @@ export const useColumn: <T>(props: Partial<IColumnBase<T>>) => {
         return (value: string | Object | null): string => {
             let updatedType: string = type;
             if (!isNullOrUndefined(format) && formatter) {
+                const isCaptionRowAggregateTypeCell: boolean = row.isCaptionRow && !isNullOrUndefined(column.groupCaptionAggregateType);
+                const applyNumberFormat: (closureValue: string | Object | null) => number | string =
+                    (closureValue: string | Object | null): number | string => {
+                        // Get appropriate formatter function
+                        const formatterFn: Function = isDateOrNumber(closureValue) ? (typeof format === 'string' ?
+                            setStringFormatter(formatter, updatedType, format) :
+                            formatter.getFormatFunction?.(format as NumberFormatOptions | DateFormatOptions)) : undefined;
+
+                        if (type === 'number' && typeof closureValue === 'string' && isNullOrUndefined(closureValue.split('.')[1])) {
+                            closureValue += '.0';
+                        }
+                        if (!isNullOrUndefined(formatterFn)) {
+                            const viewableContent: string = formatter.toView(closureValue as number | Date, formatterFn) as string;
+                            closureValue = viewableContent !== 'NaN' ? viewableContent : (isCaptionRowAggregateTypeCell ?
+                                (closureValue as string)?.split?.('.0')?.[0] : closureValue);
+                        }
+                        return closureValue as number | string;
+                    };
                 // Handle number validation
-                if (type === 'number' && typeof value === 'string' && isNaN(parseInt(value, 10))) {
-                    return '';
+                if ((type === 'number' || isCaptionRowAggregateTypeCell) && typeof value === 'string' &&
+                    (isNaN(parseInt(value, 10)) || isCaptionRowAggregateTypeCell)) {
+                    if (isCaptionRowAggregateTypeCell) { // for format applied group caption aggregate cells
+                        const fieldAggregates: AggregateData<T> = (row.data as GroupedData<T>)?.aggregates;
+                        const aggregateType: AggregateType | AggregateType[] | string | string[] = column.groupCaptionAggregateType;
+                        if (typeof aggregateType === 'string') {
+                            value = applyNumberFormat(value ?? fieldAggregates?.[`${field} - ${aggregateType.toLowerCase()}`]);
+                        } else {
+                            let aggValue: string = '';
+                            for (let aggIndex: number = 0, valueAccessorSplitted: string[] = value.split(', '); aggIndex < aggregateType.length; aggIndex++) {
+                                if (aggIndex > 0) {
+                                    aggValue += ' | ';
+                                }
+                                aggValue += aggregateType[aggIndex as number] + ': ';
+                                aggValue +=
+                                    String(valueAccessorSplitted?.[aggIndex as number] ??
+                                        applyNumberFormat(valueAccessorSplitted?.[aggIndex as number] ??
+                                            fieldAggregates?.[`${field} - ${aggregateType?.[aggIndex as number].toLowerCase()}`]));
+                            }
+                            value = aggValue;
+                        }
+                        return String(value);
+                    } else {
+                        return '';
+                    }
                 }
                 // Auto-detect type if not specified
                 if (!isNullOrUndefined(value) && !type) {
@@ -153,18 +207,7 @@ export const useColumn: <T>(props: Partial<IColumnBase<T>>) => {
                         ((value.getHours() || value.getMinutes() || value.getSeconds() || value.getMilliseconds()) ? 'datetime' : 'date') :
                         typeof value;
                 }
-                // Get appropriate formatter function
-                const formatterFn: Function = isDateOrNumber(value) ? (typeof format === 'string' ?
-                    setStringFormatter(formatter, updatedType, format) :
-                    formatter.getFormatFunction?.(format as NumberFormatOptions | DateFormatOptions)) : undefined;
-
-                if (type === 'number' && typeof value === 'string' && isNullOrUndefined(value.split('.')[1])) {
-                    value += '.0';
-                }
-                if (!isNullOrUndefined(formatterFn)) {
-                    const viewableContent: string = formatter.toView(value as number | Date, formatterFn) as string;
-                    value = viewableContent !== 'NaN' ? viewableContent : value;
-                }
+                value = applyNumberFormat(value);
             }
             if (type === 'boolean' && !column.displayAsCheckBox) {
                 // Handle boolean values properly - check actual boolean value, not just string representation
@@ -220,6 +263,12 @@ export const useColumn: <T>(props: Partial<IColumnBase<T>>) => {
         return (cellType === CellTypes.Data && field && row && row.isDataRow) ?
             getObject(field, row.data) : undefined;
     }, [cellType, field, row]);
+
+    /**
+     * Determines if cell should render loading skeleton
+     *
+     * @type {boolean}
+     */
     const isMaskCell: boolean = useMemo(() => {
         return indicatorType === LoadingIndicatorType.Shimmer && cellType === CellTypes.Data && field && row && row.isDataRow &&
             isNullOrUndefined(row.data);
@@ -237,6 +286,10 @@ export const useColumn: <T>(props: Partial<IColumnBase<T>>) => {
                 column.field + ' - ' + (typeof column.type === 'string' ? column.type.toLowerCase() : '') : column.columnName;
             if (column.format && !isNullOrUndefined(column.type) && typeof column.type === 'string') {
                 key = column.type;
+            }
+            const userSelectedAggregate: AggregateType = aggregateSelection?.getAggregate(row.rowIndex, column.field);
+            if (userSelectedAggregate) {
+                key = column.format ? userSelectedAggregate : `${column.field} - ${userSelectedAggregate.toLowerCase()}`;
             }
             return data[column.columnName] ? data[column.columnName][`${key}`] : '';
         };
@@ -271,11 +324,11 @@ export const useColumn: <T>(props: Partial<IColumnBase<T>>) => {
         // Handle data cell formatting
         else {
             if (isNullOrUndefined(template)) {
-                formattedVal = valueAccessor({field: (field as string), data: row.data, column: column});
+                formattedVal = valueAccessor({field: (field as string), data: row.data as T, column: column});
             } else if (typeof template === 'string' || isValidElement(template)) {
                 return template;
             } else {
-                return createElement(template, { column: column, data: row.data, rowIndex: row.rowIndex });
+                return createElement(template, { column: column, data: row.data as T, rowIndex: row.rowIndex });
             }
         }
         // Apply type-specific formatting for values

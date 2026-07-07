@@ -1,7 +1,7 @@
 import * as React from 'react';
-import { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle, useId, useMemo, JSX } from 'react';
-import { InputBase, renderFloatLabelElement } from '@syncfusion/react-inputs';
-import { preRender, useProviderContext, Browser, Variant, Size } from '@syncfusion/react-base';
+import { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle, useMemo, JSX } from 'react';
+import { InputBase, HelperText, renderFloatLabelElement } from '@syncfusion/react-inputs';
+import { preRender, useProviderContext, Browser, Variant, Size, useStableId } from '@syncfusion/react-base';
 import { CollisionType, type IPopup, Popup } from '@syncfusion/react-popups';
 import { ClockIcon, CloseIcon } from '@syncfusion/react-icons';
 import { createPortal } from 'react-dom';
@@ -12,9 +12,11 @@ import { Button } from '@syncfusion/react-buttons';
 import TimeList from './timepicker-list';
 import usePickerInput, { UsePickerInputResult } from '../hooks/usePickerInputs';
 import usePickerPopup from '../hooks/usePickerPopup';
+import usePickerInputKeyDown from '../hooks/usePickerInputKeyDown';
 import useTimePanel from '../hooks/useTimePanel';
+import { InputPrefix, InputSuffix } from '../calendar';
 
-type ITimePickerProps = ITimePicker & Omit<React.HTMLAttributes<HTMLDivElement>, 'defaultValue' | 'value' | 'onChange'>;
+type ITimePickerProps = ITimePicker & Omit<React.InputHTMLAttributes<HTMLInputElement>, keyof ITimePicker>;
 
 export interface ITimePicker extends TimePickerProps {
     /**
@@ -27,13 +29,23 @@ export interface ITimePicker extends TimePickerProps {
 }
 
 /**
- * The TimePicker component provides a time input with a list-based selector.
+ * The TimePicker component provides a time input with a list-based selector for choosing time values.
+ * It supports time formatting, parsing, min/max time constraints, time intervals (step), strict mode validation,
+ * and can be rendered as an inline picker, dialog-based picker, or full-screen mode on mobile devices.
+ *
+ * ```typescript
+ * import { TimePicker } from '@syncfusion/react-calendars';
+ *
+ * export default function App() {
+ *   return <TimePicker />;
+ * }
+ * ```
  */
 export const TimePicker: React.ForwardRefExoticComponent<ITimePickerProps & React.RefAttributes<ITimePicker>> =
     forwardRef<ITimePicker, ITimePickerProps>((props: ITimePickerProps, ref: React.Ref<ITimePicker>) => {
         const {
             value,
-            id= `timepicker_${useId()}`,
+            id,
             defaultValue,
             format = 'h:mm a',
             minTime,
@@ -47,7 +59,6 @@ export const TimePicker: React.ForwardRefExoticComponent<ITimePickerProps & Reac
             itemTemplate,
             clearButton = true,
             className = '',
-            zIndex = 1000,
             strictMode = false,
             open,
             pickerIcon = true,
@@ -60,12 +71,23 @@ export const TimePicker: React.ForwardRefExoticComponent<ITimePickerProps & Reac
             validationMessage = '',
             validityStyles = true,
             labelMode = 'Never',
+            prefix,
+            suffix,
+            helperText,
+            helperTextOnFocus = false,
+            helperTextDirection = 'Left',
             onChange,
             onOpen,
             onClose,
+            inputProps,
+            popupSettings,
+            inputMask = false,
+            maskPlaceholder,
             ...otherProps
         } = props;
 
+        const generatedId: string = useStableId('sf-timepicker');
+        const timePickerId: string = id ?? generatedId;
         const [selectedTime, setSelectedTime] = useState<Date | null>(value ?? defaultValue ?? null);
         const [isIconActive, setIsIconActive] = useState<boolean>(false);
 
@@ -132,10 +154,13 @@ export const TimePicker: React.ForwardRefExoticComponent<ITimePickerProps & Reac
             commitValue: updateValue,
             onOpen: () => {
                 showPopup();
-            }
+            },
+            inputMask,
+            format,
+            maskPlaceholder
         });
 
-        const { isOpen, showPopup, hidePopup, togglePopup, zIndexPopup } = usePickerPopup({
+        const { isOpen, showPopup, hidePopup, togglePopup, resolvedPopupSettings } = usePickerPopup({
             open,
             defaultOpen: false,
             disabled,
@@ -146,7 +171,7 @@ export const TimePicker: React.ForwardRefExoticComponent<ITimePickerProps & Reac
             contentRefs: [popupRef as unknown as React.RefObject<HTMLElement | null>],
             extraInsideRefs: [mobRef as unknown as React.RefObject<HTMLElement | null>],
             inputRef,
-            baseZIndex: zIndex
+            popupSettings
         });
 
         const handleTimeSelection: (time: Date, event?: React.SyntheticEvent) => void =
@@ -183,11 +208,14 @@ export const TimePicker: React.ForwardRefExoticComponent<ITimePickerProps & Reac
         }, [strictMode, minTime, maxTime, required, formatTimeValue, updateValue, pickerInput]);
 
         const commitInput: (e?: React.SyntheticEvent) => void = useCallback((e?: React.SyntheticEvent): void => {
-            const text: string = pickerInput.inputValue;
-            if (text.trim() === '') {
-                if (pickerInput.inputValue !== '') {
-                    pickerInput.setInputValue('');
-                }
+            const text: string = pickerInput.maskInputProps
+                ? pickerInput.maskInputProps!.value
+                : pickerInput.inputValue;
+            const isEmpty: boolean = pickerInput.maskInputProps
+                ? !pickerInput.hasPartialInput
+                : text.trim() === '';
+
+            if (isEmpty) {
                 if (strictMode && required) {
                     if (currentValue) {
                         pickerInput.setInputValue(formatTimeValue(currentValue));
@@ -266,6 +294,20 @@ export const TimePicker: React.ForwardRefExoticComponent<ITimePickerProps & Reac
             forwardListKeyDown(e, isOpen);
         }, [isOpen, showPopup, hidePopup, commitInput, forwardListKeyDown]);
 
+        const mergedKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void = usePickerInputKeyDown({
+            maskOnKeyDown: pickerInput.maskInputProps?.onKeyDown,
+            pickerOnKeyDown: handleKeyDown
+        });
+
+        const handleInputKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void = (e: React.KeyboardEvent<HTMLInputElement>) => {
+            if (isOpen && e.key === 'Tab' && !e.shiftKey) {
+                e.preventDefault();
+                timeListRef.current?.focus();
+                return;
+            }
+            mergedKeyDown(e);
+        };
+
         const isPartialTimeValid: (input: string) => boolean = useCallback((input: string): boolean => {
             if (!input.trim()) {
                 return !required;
@@ -311,7 +353,6 @@ export const TimePicker: React.ForwardRefExoticComponent<ITimePickerProps & Reac
             openOnFocus,
             open,
             clearButton,
-            zIndex,
             strictMode,
             value: currentValue,
             minTime,
@@ -320,7 +361,12 @@ export const TimePicker: React.ForwardRefExoticComponent<ITimePickerProps & Reac
             required,
             valid,
             validationMessage,
-            validityStyles
+            validityStyles,
+            inputProps,
+            popupSettings,
+            helperText,
+            helperTextOnFocus,
+            helperTextDirection
         };
 
         useImperativeHandle(ref, () => ({
@@ -355,6 +401,12 @@ export const TimePicker: React.ForwardRefExoticComponent<ITimePickerProps & Reac
             className
         ].filter(Boolean).join(' ');
 
+        const iconClassNames: string = [
+            'sf-input-icon', 'sf-time-icon', 'sf-icons',
+            isIconActive ? 'sf-active' : '',
+            (disabled || inputProps?.disabled) ? 'sf-disabled' : ''
+        ].filter(Boolean).join(' ');
+
         const sizeSuffix: string = size.toLowerCase().substring(0, 2);
         const timeListNode: JSX.Element = useMemo(() => (
             <TimeList
@@ -366,7 +418,7 @@ export const TimePicker: React.ForwardRefExoticComponent<ITimePickerProps & Reac
                 }}
                 formatter={formatTimeValue}
                 itemTemplate={itemTemplate}
-                idBase={`${id}`}
+                idBase={`${timePickerId}`}
                 className="sf-timepicker-list"
                 sizeClass={`sf-timepicker-list-${sizeSuffix}`}
                 isOpen={isOpen}
@@ -381,140 +433,171 @@ export const TimePicker: React.ForwardRefExoticComponent<ITimePickerProps & Reac
             dir,
             handleTimeSelection,
             sizeSuffix,
-            id,
+            timePickerId,
             timeListRef
         ]);
 
+        const handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void = (
+            e: React.ChangeEvent<HTMLInputElement>
+        ) => {
+            if (!pickerInput.maskInputProps && (!editable || readOnly || disabled)) {
+                return;
+            }
+            if (pickerInput.maskInputProps?.onChange) {
+                pickerInput.maskInputProps.onChange(e);
+            } else {
+                handleInputChange(e);
+            }
+        };
+
+        const handleInputBlur: (e: React.FocusEvent<HTMLInputElement>) => void = (e: React.FocusEvent<HTMLInputElement>) => {
+            pickerInput.setIsFocused(false);
+            commitInput(e);
+            if (!(inputMask && maskPlaceholder !== undefined)) {
+                pickerInput.setShowSegments(false);
+            }
+        };
+
         return (
-            <span
-                ref={containerRef}
-                className={classNames}
-                {...otherProps}
-            >
-                <InputBase
-                    ref={inputRef}
-                    id={id}
-                    className={'sf-timepicker'}
-                    placeholder={labelMode === 'Never' ? pickerInput.getPlaceholder : ''}
-                    disabled={disabled}
-                    readOnly={readOnly || !editable}
-                    onFocus={pickerInput.handleInputFocus}
-                    onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
-                        pickerInput.setIsFocused(false);
-                        commitInput(e);
-                        hidePopup();
-                    }}
-                    value={pickerInput.inputValue}
-                    onChange={editable && !readOnly && !disabled ? handleInputChange : undefined}
-                    role='combobox'
-                    aria-haspopup='listbox'
-                    autoComplete='off'
-                    aria-expanded={isOpen}
-                    aria-disabled={disabled}
-                    aria-controls={isOpen ? `${id}_options` : undefined}
-                    aria-label={pickerInput.getPlaceholder || 'Time picker input'}
-                    onKeyDown={handleKeyDown}
-                    tabIndex={0}
-                    required={required}
-                />
-
-                {labelMode !== 'Never' && renderFloatLabelElement(
-                    labelMode,
-                    false,
-                    pickerInput.inputValue,
-                    placeholder,
-                    id
-                )}
-
-                {clearButton && pickerInput.inputValue && (pickerInput.isFocused || isOpen) && (
-                    <span
-                        className='sf-clear-icon sf-input-icon'
-                        aria-label='clear time value'
-                        role='button'
-                        onMouseDown={handleClearMouseDown}
-                    >
-                        <CloseIcon />
-                    </span>
-                )}
-
+            <>
                 <span
-                    className={`sf-input-icon sf-time-icon sf-icons ${isIconActive ? 'sf-active' : ''}`}
-                    aria-label='select time'
-                    role='button'
-                    onClick={handleIconClick}
-                    onMouseDown={(e: React.MouseEvent<HTMLSpanElement, MouseEvent>): void => {
-                        e.preventDefault();
-                    }}
+                    ref={containerRef}
+                    className={classNames}
+                    {...otherProps}
                 >
-                    {pickerIcon === true ? <ClockIcon /> : pickerIcon}
-                </span>
+                    <InputPrefix prefix={prefix} />
+                    <InputBase
+                        ref={inputRef}
+                        id={timePickerId}
+                        className={'sf-timepicker'}
+                        placeholder={labelMode === 'Never' && !pickerInput.showMaskSegments ? pickerInput.getPlaceholder : ''}
+                        disabled={disabled || (inputProps && inputProps.disabled)}
+                        readOnly={readOnly || (inputProps && inputProps.readOnly) || (!editable && !inputMask) || !editable}
+                        onFocus={pickerInput.handleInputFocus}
+                        onBlur={handleInputBlur}
+                        value={pickerInput.maskInputProps ? pickerInput.maskInputProps?.value : pickerInput.inputValue}
+                        onChange={handleChange}
+                        onKeyDown={handleInputKeyDown}
+                        onClick={pickerInput.maskInputProps ? pickerInput.maskInputProps?.onClick : undefined}
+                        onPaste={pickerInput.maskInputProps ? pickerInput.maskInputProps?.onPaste : undefined}
+                        role='combobox'
+                        aria-haspopup='listbox'
+                        autoComplete='off'
+                        aria-expanded={isOpen}
+                        aria-disabled={disabled || (inputProps && inputProps.disabled)}
+                        aria-controls={isOpen ? `${timePickerId}_options` : undefined}
+                        aria-label={pickerInput.getPlaceholder || 'Time picker input'}
+                        tabIndex={inputProps?.disabled ? -1 : 0}
+                        required={required}
+                        {...inputProps}
+                    />
+                    <InputSuffix suffix={suffix} />
+                    {labelMode !== 'Never' && renderFloatLabelElement(
+                        labelMode,
+                        false,
+                        pickerInput.inputValue,
+                        placeholder,
+                        timePickerId
+                    )}
 
-                {isOpen &&
-                    createPortal(
-                        fullScreenMode && Browser.isDevice ? (
-                            <div ref={mobRef} className='sf-timepicker-mob sf-control' style={{ zIndex }} role="dialog" aria-modal="true" aria-label="Time selection">
-                                <div className='sf-timepicker-header'>
-                                    <Button
-                                        variant={Variant.Standard}
-                                        onClick={hidePopup}
-                                    >
-                                        <CloseIcon />
-                                    </Button>
-                                    <span className="sf-timepicker-title">Select Time</span>
+                    {clearButton && (!!pickerInput.inputValue || !!pickerInput.hasPartialInput) && (pickerInput.isFocused || isOpen)
+                    && !readOnly && (
+                        <span
+                            className='sf-clear-icon sf-input-icon'
+                            aria-label='clear time value'
+                            role='button'
+                            onMouseDown={handleClearMouseDown}
+                        >
+                            <CloseIcon />
+                        </span>
+                    )}
+
+                    <span
+                        className={iconClassNames}
+                        aria-label='select time'
+                        role='button'
+                        onClick={handleIconClick}
+                        onMouseDown={(e: React.MouseEvent<HTMLSpanElement, MouseEvent>): void => {
+                            e.preventDefault();
+                        }}
+                    >
+                        {pickerIcon === true ? <ClockIcon /> : pickerIcon}
+                    </span>
+
+                    {isOpen &&
+                        createPortal(
+                            fullScreenMode && Browser.isDevice ? (
+                                <div ref={mobRef} className='sf-timepicker-mob sf-control' style={{ zIndex: resolvedPopupSettings?.zIndex?.toString() }} role="dialog" aria-modal="true" aria-label="Time selection">
+                                    <div className='sf-timepicker-header'>
+                                        <Button
+                                            variant={Variant.Standard}
+                                            onClick={hidePopup}
+                                        >
+                                            <CloseIcon />
+                                        </Button>
+                                        <span className="sf-timepicker-title">Select Time</span>
+                                    </div>
+                                    {timeListNode}
                                 </div>
-                                {timeListNode}
-                            </div>
-                        ) : (
-                            <>
-                                {useDialog && (
-                                    <div className="sf-timepicker-popup-wrap sf-picker-popup" style={{ zIndex: zIndexPopup.toString() }}>
-                                        <div className="sf-overlay"></div>
+                            ) : (
+                                <>
+                                    {useDialog && (
+                                        <div className="sf-timepicker-popup-wrap sf-picker-popup" style={{ zIndex: resolvedPopupSettings?.zIndex?.toString() }}>
+                                            <div className="sf-overlay"></div>
+                                            <Popup
+                                                ref={popupRef}
+                                                className="sf-timepicker sf-popup sf-content-center"
+                                                open={isOpen}
+                                                onOpen={() => {
+                                                    ensureSelectedVisible();
+                                                }}
+                                                relateTo={document.body}
+                                                style={{ top: '0px', left: '0px', position: 'relative' }}
+                                                position={{ X: 'center', Y: 'center' }}
+                                                collision={{ X: CollisionType.Fit, Y: CollisionType.Fit }}
+                                                aria-modal="true"
+                                                role="dialog"
+                                                aria-label="Time selection"
+                                                {...resolvedPopupSettings}
+                                            >
+                                                {timeListNode}
+                                            </Popup>
+                                        </div>
+                                    )}
+                                    {useInline && (
                                         <Popup
                                             ref={popupRef}
-                                            className="sf-timepicker sf-popup sf-content-center"
+                                            className="sf-timepicker sf-popup"
                                             open={isOpen}
-                                            zIndex={zIndexPopup}
                                             onOpen={() => {
                                                 ensureSelectedVisible();
                                             }}
-                                            relateTo={document.body}
-                                            style={{ top: '0px', left: '0px', position: 'relative' }}
-                                            position={{ X: 'center', Y: 'center' }}
-                                            collision={{ X: CollisionType.Fit, Y: CollisionType.Fit }}
+                                            relateTo={containerRef.current as HTMLElement}
+                                            position={{ X: 'left', Y: 'bottom' }}
+                                            collision={{ X: CollisionType.Flip, Y: CollisionType.Flip }}
+                                            offsetY={4}
                                             aria-modal="true"
                                             role="dialog"
                                             aria-label="Time selection"
+                                            {...resolvedPopupSettings}
                                         >
                                             {timeListNode}
                                         </Popup>
-                                    </div>
-                                )}
-                                {useInline && (
-                                    <Popup
-                                        ref={popupRef}
-                                        className="sf-timepicker sf-popup"
-                                        open={isOpen}
-                                        zIndex={zIndexPopup}
-                                        onOpen={() => {
-                                            ensureSelectedVisible();
-                                        }}
-                                        relateTo={containerRef.current as HTMLElement}
-                                        position={{ X: 'left', Y: 'bottom' }}
-                                        collision={{ X: CollisionType.Flip, Y: CollisionType.Flip }}
-                                        offsetY={4}
-                                        aria-modal="true"
-                                        role="dialog"
-                                        aria-label="Time selection"
-                                    >
-                                        {timeListNode}
-                                    </Popup>
-                                )}
-                            </>
-                        ),
-                        document.body
-                    )}
+                                    )}
+                                </>
+                            ),
+                            document.body
+                        )}
 
-            </span>
+                </span>
+                <HelperText
+                    helperText={helperText}
+                    helperTextOnFocus={helperTextOnFocus}
+                    isFocused={pickerInput.isFocused || isOpen}
+                    helperTextDirection={helperTextDirection}
+                />
+            </>
+
         );
     });
 

@@ -1,6 +1,6 @@
 import { useMemo, useCallback, CSSProperties } from 'react';
-import { useProviderContext } from '@syncfusion/react-base';
-import { ProcessedEventsData } from '../types/internal-interface';
+import { isNullOrUndefined, useProviderContext } from '@syncfusion/react-base';
+import { ProcessedEventsData, CellData } from '../types/internal-interface';
 import { EventService } from '../services/EventService';
 import { DateService } from '../services/DateService';
 import { useSchedulerPropsContext } from '../context/scheduler-context';
@@ -9,6 +9,8 @@ import { useSchedulerEventsContext } from '../context/scheduler-events-context';
 import { SpannedEventPlacement } from '../types/enums';
 import { EventModel } from '../types/scheduler-types';
 import { PositioningService } from '../services/PositioningService';
+import { getCellDimensions } from '../utils/dimension-util';
+import { useResourceGroupingContext } from '../context/resource-grouping-context';
 
 const DISABLED_TIME_SCALE_EVENT_HEIGHT: number = 118; // px
 const DISABLED_TIME_SCALE_GAP: number = 2; // px gap between stacked items in disabled mode
@@ -38,6 +40,11 @@ export interface DayEventsWrapper {
      * Inline top position (in px) for the More indicator when timeScale is disabled
      */
     moreIndicatorTopPx?: number;
+
+    /**
+     * Group index for resource grouping
+     */
+    groupIndex?: number;
 }
 
 /**
@@ -60,18 +67,27 @@ export const useTimeSlotEvent: () => UseTimeSlotEventResult = (): UseTimeSlotEve
 
     const {
         eventSettings,
-        eventOverlap,
         timeFormat,
         timeScale,
         startHour,
         endHour,
         maxEventsPerRow = 3,
-        startHourTuple, endHourTuple
+        startHourTuple, endHourTuple,
+        schedulerRef, resources
     } = useSchedulerPropsContext();
 
     const { renderDates } = useSchedulerRenderDatesContext();
     const { eventsData } = useSchedulerEventsContext();
     const { locale, dir } = useProviderContext();
+    const { isGroupingEnabled, columnLevels } = useResourceGroupingContext();
+    const columnLastLevelData: CellData[] = isGroupingEnabled && columnLevels.length > 0
+        ? columnLevels[columnLevels.length - 1]
+        : [];
+    const effectiveRenderDates: Date[] = columnLastLevelData.length > 0
+        ? columnLastLevelData.map((cell: CellData) => cell.date as Date)
+        : renderDates;
+
+    const { cellHeight } = getCellDimensions(schedulerRef?.current?.element ?? null);
 
     /**
      * Process events for time slot rendering
@@ -123,7 +139,7 @@ export const useTimeSlotEvent: () => UseTimeSlotEventResult = (): UseTimeSlotEve
             }));
             eventsToRender.push(...processedEvents);
 
-            const eventGroups: ProcessedEventsData[][] = EventService.calculateOverlappingEvents(eventsToRender, eventOverlap);
+            const eventGroups: ProcessedEventsData[][] = EventService.calculateOverlappingEvents(eventsToRender);
 
             // Block events- filtered separately
             const blockEvents: EventModel[] = eventsData.filter((event: EventModel) =>
@@ -141,7 +157,8 @@ export const useTimeSlotEvent: () => UseTimeSlotEventResult = (): UseTimeSlotEve
                         segment,
                         timeScale,
                         startHour,
-                        endHour
+                        endHour,
+                        cellHeight
                     );
                     const eventKey: string = `${date.toISOString()}-${event.id}`;
                     const timeDisplay: string = DateService.formatTimeDisplay(event, locale, timeFormat);
@@ -151,6 +168,10 @@ export const useTimeSlotEvent: () => UseTimeSlotEventResult = (): UseTimeSlotEve
                         height: `${eventPosition.height}`,
                         top: (eventPosition.top || '0px')
                     };
+                    const resourceColor: string = EventService.getResourceColor(event, resources, eventSettings?.resourceColorField);
+                    if (resourceColor) {
+                        eventStyle.backgroundColor = resourceColor;
+                    }
                     if (dir === 'rtl') {
                         eventStyle.right = eventPosition.left || '0%';
                     }
@@ -194,7 +215,9 @@ export const useTimeSlotEvent: () => UseTimeSlotEventResult = (): UseTimeSlotEve
             return processedData;
         }
 
-        const processedEvents: ProcessedEventsData[] = EventService.processDayEvents(renderDates, eventsData);
+        const processedEvents: ProcessedEventsData[] =
+            EventService.processDayEvents(effectiveRenderDates, eventsData, resources, isGroupingEnabled,
+                                          eventSettings?.resourceColorField);
 
         const events: ProcessedEventsData[] = [];
         processedEvents.forEach((seg: ProcessedEventsData) => {
@@ -209,6 +232,9 @@ export const useTimeSlotEvent: () => UseTimeSlotEventResult = (): UseTimeSlotEve
                 top: `${topIndex * (DISABLED_TIME_SCALE_EVENT_HEIGHT + DISABLED_TIME_SCALE_GAP)}px`,
                 width: width || '96%'
             };
+            if (resources) {
+                eventStyle.backgroundColor = seg.eventStyle?.backgroundColor;
+            }
             if (dir === 'rtl') {
                 eventStyle.right = '0%';
             } else {
@@ -224,17 +250,29 @@ export const useTimeSlotEvent: () => UseTimeSlotEventResult = (): UseTimeSlotEve
         });
 
         return events;
-    }, [eventSettings, eventOverlap, timeScale, startHour, endHour, renderDates, dir, locale, timeFormat]);
+    }, [eventSettings, timeScale, startHour, endHour, renderDates, dir, locale, timeFormat, resources]);
 
-    // Process events for each day
     const dayWrappers: DayEventsWrapper[] | null = useMemo(() => {
-        if (!renderDates || renderDates.length === 0 || !eventsData || eventsData.length === 0) {
+        if (!effectiveRenderDates || effectiveRenderDates.length === 0 || !eventsData || eventsData.length === 0) {
             return null;
         }
 
-        return renderDates.map((date: Date) => {
+        const columns: CellData[] = columnLastLevelData.length > 0
+            ? columnLastLevelData
+            : effectiveRenderDates.map((date: Date) => ({ date } as CellData));
+
+        return columns.map((column: CellData) => {
+            const date: Date = column.date as Date;
             const dateKey: string = DateService.generateDateKey(date);
-            const timeSlotEvents: ProcessedEventsData[] = processTimeSlotEvents(date, eventsData);
+
+            let columnEvents: EventModel[] = eventsData;
+            if (isGroupingEnabled) {
+                columnEvents = eventsData.filter((event: EventModel) =>
+                    EventService.matchesResource(event, column, resources)
+                );
+            }
+
+            const timeSlotEvents: ProcessedEventsData[] = processTimeSlotEvents(date, columnEvents);
 
             // Calculate inline top position for More indicator when timeScale is disabled
             let moreIndicatorTopPx: number | undefined = undefined;
@@ -242,23 +280,31 @@ export const useTimeSlotEvent: () => UseTimeSlotEventResult = (): UseTimeSlotEve
                 moreIndicatorTopPx = maxEventsPerRow * (DISABLED_TIME_SCALE_EVENT_HEIGHT + DISABLED_TIME_SCALE_GAP); // 118px per spec
             }
 
+            const compositeKey: string = isGroupingEnabled && !isNullOrUndefined(column.groupIndex)
+                ? `${column.groupIndex}-${dateKey}`
+                : dateKey;
+
             return {
-                key: dateKey,
+                key: compositeKey,
                 dateTimestamp: date.getTime(),
                 events: timeSlotEvents,
-                moreIndicatorTopPx
+                moreIndicatorTopPx,
+                groupIndex: column.groupIndex
             } as DayEventsWrapper;
         });
     }, [
-        renderDates,
+        effectiveRenderDates,
         eventSettings,
-        eventOverlap,
         timeScale,
         timeFormat,
         startHour,
         endHour,
         locale,
-        eventsData
+        eventsData,
+        cellHeight,
+        isGroupingEnabled,
+        resources,
+        columnLastLevelData
     ]);
 
     return {

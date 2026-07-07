@@ -105,6 +105,89 @@ export function getThemeColor(theme: Theme): ThemeStyle {
             }
         };
         break;
+    case 'Tailwind':
+        style = {
+            tabColor: '#49454E',
+            chartTitleFont: {
+                color: '#111827', fontFamily: 'Inter', fontSize: '18px', fontStyle: 'Medium', fontWeight: '500'
+            },
+            chartSubTitleFont: {
+                color: '#49454E', fontFamily: 'Inter', fontSize: '14px', fontStyle: 'Regular', fontWeight: '400'
+            },
+            legendLabel: '#6B7280',
+            legendTitleFont: {
+                color: '#1C1B1F', fontFamily: 'Inter', fontSize: '14px', fontStyle: 'Normal', fontWeight: '600'
+            },
+            legendLabelFont: {
+                color: '#6B7280', fontFamily: 'Inter', fontSize: '14px', fontStyle: 'Medium', fontWeight: '500'
+            },
+            datalabelFont: {
+                color: '#4B5563', fontFamily: 'Inter', fontSize: '12px', fontStyle: 'Regular', fontWeight: '400'
+            }
+        };
+        break;
+    case 'TailwindDark':
+        style = {
+            tabColor: '#CAC4D0',
+            chartTitleFont: {
+                color: '#FFFFFF', fontFamily: 'Inter', fontSize: '18px', fontStyle: 'Medium', fontWeight: '500'
+            },
+            chartSubTitleFont: {
+                color: '#CAC4D0', fontFamily: 'Inter', fontSize: '14px', fontStyle: 'Regular', fontWeight: '400'
+            },
+            legendLabel: '#9CA3AF',
+            legendTitleFont: {
+                color: '#E6E1E5', fontFamily: 'Inter', fontSize: '14px', fontStyle: 'Normal', fontWeight: '600'
+            },
+            legendLabelFont: {
+                color: '#9CA3AF', fontFamily: 'Inter', fontSize: '14px', fontStyle: 'Medium', fontWeight: '500'
+            },
+            datalabelFont: {
+                color: '#D1D5DB', fontFamily: 'Inter', fontSize: '12px', fontStyle: 'Regular', fontWeight: '400'
+            }
+        };
+        break;
+    case 'Bootstrap':
+        style = {
+            tabColor: '#49454E',
+            chartTitleFont: {
+                color: '#212529', fontFamily: 'Helvetica', fontSize: '18px', fontStyle: 'Medium', fontWeight: '500'
+            },
+            chartSubTitleFont: {
+                color: '#49454E', fontFamily: 'Helvetica', fontSize: '14px', fontStyle: 'Regular', fontWeight: '400'
+            },
+            legendLabel: '#212529',
+            legendTitleFont: {
+                color: '#1C1B1F', fontFamily: 'Helvetica', fontSize: '14px', fontStyle: 'Normal', fontWeight: '600'
+            },
+            legendLabelFont: {
+                color: '#212529', fontFamily: 'Helvetica', fontSize: '14px', fontStyle: 'Medium', fontWeight: '500'
+            },
+            datalabelFont: {
+                color: '#FFFFFF', fontFamily: 'Helvetica', fontSize: '14px', fontStyle: 'Medium', fontWeight: '500'
+            }
+        };
+        break;
+    case 'BootstrapDark':
+        style = {
+            tabColor: '#CAC4D0',
+            chartTitleFont: {
+                color: '#FFFFFF', fontFamily: 'Helvetica', fontSize: '18px', fontStyle: 'Medium', fontWeight: '500'
+            },
+            chartSubTitleFont: {
+                color: '#CAC4D0', fontFamily: 'Helvetica', fontSize: '14px', fontStyle: 'Regular', fontWeight: '400'
+            },
+            legendLabel: '#DEE2E6',
+            legendTitleFont: {
+                color: '#E6E1E5', fontFamily: 'Helvetica', fontSize: '14px', fontStyle: 'Normal', fontWeight: '600'
+            },
+            legendLabelFont: {
+                color: '#DEE2E6', fontFamily: 'Helvetica', fontSize: '14px', fontStyle: 'Medium', fontWeight: '500'
+            },
+            datalabelFont: {
+                color: '#212529', fontFamily: 'Helvetica', fontSize: '14px', fontStyle: 'Medium', fontWeight: '500'
+            }
+        };
     }
 
     return style;
@@ -122,15 +205,24 @@ export function getSeriesColor(theme: Theme): string[] {
     let palette: string[];
     switch (theme) {
     case 'Material':
+    case 'MaterialDark':
         palette = [
             '#1E88E5', '#F25087', '#FB8C00', '#43A047', '#E53935',
             '#706C6C', '#F2BD02', '#00ACC1', '#7443B2', '#324070'
         ];
         break;
-    case 'MaterialDark':
+    case 'Tailwind':
+    case 'TailwindDark':
         palette = [
-            '#1E88E5', '#F25087', '#FB8C00', '#43A047', '#E53935',
-            '#706C6C', '#F2BD02', '#00ACC1', '#7443B2', '#324070'
+            '#7CCF00', '#8E51FF', '#E12AFB', '#00B8DB', '#FF6900',
+            '#8E51FF', '#FF2056', '#9CA3AF', '#D1D5DB', '#E5E7EB'
+        ];
+        break;
+    case 'Bootstrap':
+    case 'BootstrapDark':
+        palette = [
+            '#3F51B5', '#2196F3', '#FF9800', '#F44336', '#9C27B0',
+            '#4CAF50', '#FDD835', '#2196F5', '#E91E63', '#673AB7'
         ];
         break;
     }

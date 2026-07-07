@@ -325,14 +325,14 @@ export class DataManager {
                 this.requests = [];
                 this.makeRequest(result, deffered, args, <Query>query);
             } else {
-                args = DataManager.getDeferedArgs(<Query>query, result as ReturnOption, args as ReturnOption);
+                args = DataManager.getDeferedArgs(<Query>query, result as ReturnOption, args as ReturnOption, this.isEnableCache);
                 deffered.resolve(args);
             }
         } else {
             DataManager.nextTick(
                 () => {
                     const res: Object[] = this.executeLocal(<Query>query);
-                    args = DataManager.getDeferedArgs(<Query>query, res as ReturnOption, args as ReturnOption);
+                    args = DataManager.getDeferedArgs(<Query>query, res as ReturnOption, args as ReturnOption, this.isEnableCache);
                     deffered.resolve(args);
                 });
         }
@@ -362,6 +362,7 @@ export class DataManager {
         const singles: Object = Query.filterQueryLists(query.queries, ['onSelect', 'onPage', 'onSkip', 'onTake', 'onRange']);
         let key: string = url;
         const page: string = 'onPage';
+        const skip: string = 'onSkip';
         queries.sorts.forEach((obj: QueryOptions) => {
             key += obj.e.direction + obj.e.fieldName;
         });
@@ -392,6 +393,8 @@ export class DataManager {
         this.previousCacheQuery = key;
         if (page in singles) {
             key += singles[page].pageIndex;
+        } else if (skip in singles) {
+            key += 'skip' + singles[skip].nos;
         }
         return key;
     }
@@ -406,11 +409,14 @@ export class DataManager {
         return this.adaptor.processQuery(this, query);
     }
 
-    private static getDeferedArgs(query: Query, result: ReturnOption, args?: ReturnOption): Object {
+    private static getDeferedArgs(query: Query, result: ReturnOption, args?: ReturnOption, isEnableCache?: boolean): Object {
         if (query.isCountRequired) {
             args.result = result.result;
             args.count = result.count;
             args.aggregates = result.aggregates;
+        } else if (isEnableCache && !Array.isArray(result) && result.result &&
+            Array.isArray(result.result)) {
+            args = {...args, ...result};
         } else {
             args.result = result;
         }
@@ -504,7 +510,51 @@ export class DataManager {
                         (<Object[]>obj.results).splice(index, 1);
                         obj.keys.splice(index, 1);
                     }
-                    obj.results[obj.keys.push(key) - 1] = { keys: key, result: result.result, timeStamp: new Date(), count: result.count };
+                    let nextKey: string | null = null;
+                    let nextToken: string | null = null;
+
+                    if (data['@odata.nextLink']) {
+                        // OData standard pagination link returned by Microsoft APIs (e.g., Microsoft Graph)
+                        nextKey = '@odata.nextLink';
+                        nextToken = data['@odata.nextLink'];
+
+                    } else if (data['next']) {
+                        // Generic REST API pagination field commonly used to provide the next page URL/token
+                        nextKey = 'next';
+                        nextToken = data['next'];
+
+                    } else if (data['continuationToken']) {
+                        // Azure services pagination token (e.g., Azure Storage, Resource Manager, Graph APIs)
+                        nextKey = 'continuationToken';
+                        nextToken = data['continuationToken'];
+
+                    } else if (data['LastEvaluatedKey']) {
+                        // AWS pagination key (e.g., DynamoDB scan/query response, S3 list operations)
+                        nextKey = 'LastEvaluatedKey';
+                        nextToken = data['LastEvaluatedKey'];
+
+                    } else if (data['next_page_token']) {
+                        // gRPC or Google-style APIs pagination token
+                        nextKey = 'next_page_token';
+                        nextToken = data['next_page_token'];
+
+                    } else if (data['pageInfo']) {
+                        // GraphQL-style pagination metadata (typically contains endCursor for next page)
+                        nextKey = 'pageInfo';
+                        nextToken = data['pageInfo'];
+
+                    } else if (data['hasMore']) {
+                        // Boolean flag indicating if more data is available (no explicit token provided)
+                        nextKey = 'hasMore';
+                        nextToken = data['hasMore'];
+                    }
+                    if (!result?.result && Array.isArray(result)) {
+                        obj.results[obj.keys.push(key) - 1] = { keys: key, result: result, timeStamp: new Date(),
+                            ...(nextKey && nextToken ? { [nextKey]: nextToken } : {})
+                        };
+                    } else {
+                        obj.results[obj.keys.push(key) - 1] = { keys: key, result: result.result, timeStamp: new Date(), count: result.count };
+                    }
                     window.localStorage.setItem(this.guidId, JSON.stringify(obj));
                 }
                 if (request.contentType.indexOf('xml') === -1 && this.dateParse && this.isEnableCache) {

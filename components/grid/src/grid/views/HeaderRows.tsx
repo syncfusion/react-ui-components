@@ -36,13 +36,15 @@ const CSS_COLUMN_HEADER: string = 'sf-grid-header-row';
 const CSS_FILTER_HEADER: string = 'sf-filter-row';
 
 /**
- * HeaderRowsBase component renders the header rows within the table header section
+ * HeaderRowsBase component renders the header rows within the table header section.
+ * Manages header row generation with support for multi-level headers and filter bar row.
+ * Exposes internal header rows collection and row objects via forwarded ref for external manipulation.
  *
  * @component
  * @private
  * @param {Partial<IHeaderRowsBase>} props - Component properties
- * @param {RefObject<HeaderRowsRef>} ref - Forwarded ref to expose internal elements and methods
- * @returns {JSX.Element} The rendered thead element with header rows
+ * @param {RefObject<HeaderRowsRef>} ref - Forwarded ref exposing getHeaderRows() and getHeaderRowsObject() methods
+ * @returns {JSX.Element} The rendered thead element containing header rows
  */
 const HeaderRowsBase: (props: Partial<IHeaderRowsBase> & RefAttributes<HeaderRowsRef>) => ReactElement =
     memo(forwardRef<HeaderRowsRef, Partial<IHeaderRowsBase>>(
@@ -69,7 +71,7 @@ const HeaderRowsBase: (props: Partial<IHeaderRowsBase> & RefAttributes<HeaderRow
              *
              * @returns {IRow<ColumnProps>[]} Array of row options objects with element references
              */
-            const getHeaderRowsObject: () => IRow<ColumnProps<T>>[] = useCallback(() => rowsObjectRef.current, [rowsObjectRef.current]);
+            const getHeaderRowsObject: () => IRow<ColumnProps<T>>[] = useCallback(() => rowsObjectRef.current, []);
 
             /**
              * Expose internal elements and methods through the forwarded ref
@@ -99,6 +101,18 @@ const HeaderRowsBase: (props: Partial<IHeaderRowsBase> & RefAttributes<HeaderRow
                 }, []);
 
             /**
+             * Memoized row ref callback to prevent unnecessary child re-renders
+             *
+             * @param {RowRef<T>} element - Row ref element
+             * @param {number} index - Row index
+             */
+            const handleRowRef: (element: RowRef<T>, index: number) => void = useCallback((element: RowRef<T>, index: number) => {
+                if (element?.rowRef?.current) {
+                    storeRowRef(index, element.rowRef.current, element.getCells(), element.setRowObject);
+                }
+            }, [storeRowRef]);
+
+            /**
              * Memoized header row content to prevent unnecessary re-renders
              */
             const headerRowContent: JSX.Element[] | null = useMemo(() => {
@@ -115,11 +129,7 @@ const HeaderRowsBase: (props: Partial<IHeaderRowsBase> & RefAttributes<HeaderRow
                         rowClass({rowType: RowType.Header, rowIndex: options.rowIndex}) : rowClass) : '';
                     rows.push(
                         <RowBase<T>
-                            ref={(element: RowRef<T>) => {
-                                if (element?.rowRef?.current) {
-                                    storeRowRef(rowIndex, element.rowRef.current, element.getCells(), element.setRowObject);
-                                }
-                            }}
+                            ref={(element: RowRef<T>) => handleRowRef(element, rowIndex)}
                             role='row'
                             row={options}
                             key={rowId}

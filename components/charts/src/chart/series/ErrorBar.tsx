@@ -2,9 +2,9 @@ import * as React from 'react';
 import { ChartErrorBarProps } from '../base/interfaces';
 
 /**
- * @description Component for configuring data labels in a chart series
- * @param {ChartDataLabelProps} props - Properties for configuring the data label
- * @returns {null} This component doesn't render any UI elements but configures data label settings
+ * Component for configuring data labels in a chart series.
+ *
+ * @returns {null} - It is used only to pass the error bar configuration to the chart through the React context.
  */
 export const ChartErrorBar: React.FC<ChartErrorBarProps> = () => {
     return null;

@@ -181,7 +181,7 @@ export function interpolateStepBorderPath(
  * @param {Points[]} points - Ordered data points (must include xValue and yValue).
  * @param {SeriesProperties} series - Series configuration (uses yAxis.visibleRange.minimum and step).
  * @param {boolean} isInverted - Whether the chart is transposed (X/Y swapped in rendering).
- * @param {GetCoordinateFn} getCoordinate - Function that converts data (x, y) to screen coordinates.
+ * @param {Function} getCoordinate - Function that converts data (x, y) to screen coordinates.
  * @returns {string} SVG path data (d attribute) for the filled step-area polygon, or empty string.
  */
 export function getStepAreaPathDirection(

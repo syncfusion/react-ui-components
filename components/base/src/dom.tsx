@@ -191,9 +191,6 @@ export function append(fromElements: Element[] | NodeList, toElement: Element, i
  * @returns {void} ?
  */
 function executeScript(ele: Element): void {
-    if (!document) {
-        return;
-    }
     const scripts: NodeListOf<HTMLScriptElement> = ele.querySelectorAll('script');
     scripts.forEach((scriptElement: HTMLScriptElement) => {
         const script: HTMLScriptElement = document.createElement('script');
@@ -266,9 +263,6 @@ export function attributes(element: Element | Node, attributes: { [key: string]:
  * @private
  */
 export function select(selector: string, context: Document | Element = document): Element | null {
-    if (!document) {
-        return null;
-    }
     selector = querySelectId(selector);
     return context.querySelector(selector);
 }
@@ -282,9 +276,6 @@ export function select(selector: string, context: Document | Element = document)
  * @private
  */
 export function selectAll(selector: string, context: Document | Element = document): HTMLElement[] | [] {
-    if (!document) {
-        return [];
-    }
     selector = querySelectId(selector);
     const nodeList: NodeListOf<Element> = context.querySelectorAll(selector);
     return Array.from(nodeList) as HTMLElement[];
@@ -424,9 +415,6 @@ export function classList(element: Element, addClasses: string[], removeClasses:
  * @private
  */
 export function matches(element: Element, selector: string): boolean {
-    if (!document) {
-        return false;
-    }
     const matchesFn: Function = element.matches
         || (element as { msMatchesSelector?: (selector: string) => boolean }).msMatchesSelector
         || element.webkitMatchesSelector;

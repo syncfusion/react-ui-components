@@ -30,6 +30,7 @@
     overflow: hidden;
     position: absolute;
     width: $hscroll-nav-width;
+    height: $hscroll-nav-height;
 
     &.sf-scroll-left-nav {
       inset-inline-start: $hscroll-inline-distance;

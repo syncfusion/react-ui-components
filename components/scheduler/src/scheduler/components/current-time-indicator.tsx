@@ -12,7 +12,8 @@ export const CurrentTimeIndicator: FC<TimeIndicatorProps> = (props: TimeIndicato
     const {
         showTimeIndicator,
         startHour,
-        endHour
+        endHour,
+        timezone
     } = useSchedulerPropsContext();
 
     const {
@@ -25,7 +26,8 @@ export const CurrentTimeIndicator: FC<TimeIndicatorProps> = (props: TimeIndicato
         startHour,
         endHour,
         renderDates,
-        onPositionUpdate
+        onPositionUpdate,
+        timezone
     });
 
     if (!isVisible || !isWithinBounds || !multiDayViewInfo.isCurrentDayRendered) {

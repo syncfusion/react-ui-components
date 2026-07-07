@@ -6,6 +6,7 @@ import {
     RefAttributes,
     ForwardRefExoticComponent,
     useMemo,
+    useCallback,
     ReactElement,
     JSX,
     RefObject,
@@ -13,7 +14,7 @@ import {
     useEffect
 } from 'react';
 import { ITooltip, Tooltip } from '@syncfusion/react-popups';
-import { SortDirection, RenderRef, ValueType, ActionType, UseDataResult, ScrollMode } from '../types';
+import { SortDirection, RenderRef, ValueType, ActionType, UseDataResult, ScrollMode, RowCellInfo, CellIdentifier } from '../types';
 import { GridProps, GridRef, IGridBase } from '../types/grid.interfaces';
 import { PagerArgsInfo } from '../types/page.interfaces';
 import { useGridComputedProps } from '../hooks';
@@ -58,7 +59,7 @@ const GridBase: <T, >(props: Partial<IGridBase<T>> & RefAttributes<GridRef<T>>) 
         const { className, id, columns } = gridAPI;
         const { styles, setCurrentViewData, setCurrentPage,
             setTotalRecordsCount, setGridAction, setInitialLoad } = gridInternal;
-        const { columnsDirective } = gridScoped;
+        const { columnsDirective, groupModule } = gridScoped;
 
         // Initialize gridRef with all the properties
         if (gridRef.current === null) {
@@ -69,6 +70,7 @@ const GridBase: <T, >(props: Partial<IGridBase<T>> & RefAttributes<GridRef<T>>) 
                 currentViewData: [],
                 focusModule: gridScoped.focusModule,
                 selectionModule: gridScoped.selectionModule,
+                cellSelectionModule: gridScoped.cellSelectionModule,
                 pageSettings: gridAPI.pageSettings,
                 // Filter method
                 filterByColumn: (fieldName: string, filterOperator: string,
@@ -107,7 +109,8 @@ const GridBase: <T, >(props: Partial<IGridBase<T>> & RefAttributes<GridRef<T>>) 
                         previousPage: gridAPI.pageSettings.currentPage, requestType: ActionType.Paging
                     };
                     args.type = 'pageChanging';
-                    const confirmResult: boolean = gridAPI.virtualizationSettings?.scrollMode === ScrollMode.Virtual ? true :
+                    const confirmResult: boolean = gridAPI.virtualizationSettings?.scrollMode === ScrollMode.Virtual ||
+                        gridAPI.virtualizationSettings?.scrollMode === ScrollMode.Infinite ? true :
                         await gridScoped?.editModule?.checkUnsavedChanges?.();
                     if (!confirmResult) {
                         return;
@@ -173,6 +176,7 @@ const GridBase: <T, >(props: Partial<IGridBase<T>> & RefAttributes<GridRef<T>>) 
                 setCellValue: gridAPI.setCellValue,
                 validateEditForm: gridScoped.editModule?.validateEditForm,
                 validateField: gridScoped.editModule?.validateField,
+                expandedGroupCountRef: gridScoped.expandedGroupCountRef,
 
                 // Include all public API computed properties
                 ...gridAPI,
@@ -192,11 +196,22 @@ const GridBase: <T, >(props: Partial<IGridBase<T>> & RefAttributes<GridRef<T>>) 
                 isEdit: gridScoped.editModule?.isEdit,
                 editSettings: gridScoped.editModule?.editSettings,
                 editRowIndex: gridScoped.editModule?.editRowIndex,
-                editData: gridScoped.editModule?.editData as T | null
+                editData: gridScoped.editModule?.editData as T | null,
+                getCurrentViewRecords: () => gridScoped?.currentViewData as T[]
             };
             gridRef.current.pageSettings.currentPage = gridScoped.currentPage;
             gridRef.current.pageSettings.totalRecordsCount = gridScoped.totalRecordsCount;
-        }, [gridScoped.currentPage, gridScoped.totalRecordsCount, gridScoped.editModule, gridScoped.uiColumns.current]);
+        }, [gridScoped.currentPage, gridScoped.totalRecordsCount, gridScoped.editModule, gridScoped.uiColumns.current, groupModule]);
+
+        /**
+         * Memoized ref callback to attach DOM element to gridRef
+         * Updates gridRef.element without creating new function on every render
+         */
+        const attachGridElement: (el: HTMLDivElement) => void = useCallback((el: HTMLDivElement) => {
+            if (gridRef.current) {
+                gridRef.current.element = el;
+            }
+        }, []);
 
         // Expose gridRef directly through ref
         useImperativeHandle(ref, () => ({
@@ -219,6 +234,10 @@ const GridBase: <T, >(props: Partial<IGridBase<T>> & RefAttributes<GridRef<T>>) 
             },
             addRecord: gridScoped.editModule?.addRecord,
             deleteRecord: gridScoped.editModule?.deleteRecord,
+            // Cell Edit Mode methods
+            editCell: gridScoped.editModule?.editCell,
+            saveCellChanges: gridScoped.editModule?.saveCellChanges,
+            cancelCellChanges: gridScoped.editModule?.cancelCellChanges,
             setRowData: gridAPI.setRowData,
             updateRecord: gridScoped.editModule?.updateRecord,
             setCellValue: gridAPI.setCellValue,
@@ -227,7 +246,32 @@ const GridBase: <T, >(props: Partial<IGridBase<T>> & RefAttributes<GridRef<T>>) 
             getCurrentViewRecords: () => gridScoped?.currentViewData as T[],
             get selectedRowIndexes(): number[] {
                 return gridScoped.selectionModule.selectedRowIndexes;
-            }
+            },
+            // Cell selection methods
+            selectCell: (rowKey: string | number, fieldName: string) => {
+                gridScoped.cellSelectionModule?.selectCell(rowKey, fieldName);
+            },
+            selectCells: (cells: RowCellInfo[]) => {
+                gridScoped.cellSelectionModule?.selectCells(cells);
+            },
+            selectCellsByRange: (start: CellIdentifier, end: CellIdentifier) => {
+                gridScoped.cellSelectionModule?.selectCellsByRange(start, end);
+            },
+            clearCellSelection: () => {
+                gridScoped.cellSelectionModule?.clearCellSelection();
+            },
+            getSelectedCellsData: () => {
+                return gridScoped.cellSelectionModule?.getSelectedCellsData?.();
+            },
+            // Grouping methods and state (ATOMIC pattern: exposed directly)
+            groupColumn: groupModule.groupColumn,
+            ungroupColumn: groupModule.ungroupColumn,
+            clearGrouping: groupModule.clearGrouping,
+            expandAll: groupModule.expandAll,
+            collapseAll: groupModule.collapseAll,
+            // Expose grouping state for ContentRows integration
+            isGroupExpanded: groupModule.isGroupExpanded,
+            expandedGroupCountRef: gridScoped.expandedGroupCountRef
         }), [gridRef.current, renderExposedRef.current, gridScoped, gridAPI]);
 
         // Calculate column count for accessibility
@@ -265,14 +309,13 @@ const GridBase: <T, >(props: Partial<IGridBase<T>> & RefAttributes<GridRef<T>>) 
         return (
             <GridComputedProvider<T> grid={useMemo(() => ({
                 ...gridRef.current, ...gridAPI, setCurrentViewData, setCurrentPage,
-                setTotalRecordsCount, setGridAction, setInitialLoad
+                setTotalRecordsCount, setGridAction, setInitialLoad,
+                openColumnChooser: renderExposedRef.current?.openColumnChooser
             }), [gridAPI, setCurrentViewData, setCurrentPage,
-                setTotalRecordsCount, setGridAction, setInitialLoad])}>
+                setTotalRecordsCount, setGridAction, setInitialLoad, renderExposedRef.current?.openColumnChooser])}>
                 <GridMutableProvider<T> grid={gridScoped}>
                     <div
-                        ref={(el: HTMLDivElement) => {
-                            gridRef.current.element = el;
-                        }}
+                        ref={attachGridElement}
                         id={id}
                         className={className}
                         role='grid'

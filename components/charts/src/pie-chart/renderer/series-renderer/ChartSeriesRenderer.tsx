@@ -5,7 +5,7 @@ import { PieChartBorderProps, PieChartLocationProps, PieChartSeriesProps, PieCha
 import { useLayout } from '../../layout/LayoutContext';
 import { stringToNumber } from '../../utils/helper';
 import { degreeToLocation, indexFinder } from '../../utils/helper';
-import { ChartEventArg, registerChartEventHandler, useChartRenderVersion, useRegisterCenterLabelRender, useSeriesRenderVersion, useRegisterLegendUpdate } from '../../hooks/events';
+import { ChartEventArg, registerChartEventHandler, useChartRenderVersion, useRegisterCenterLabelRender, useSeriesRenderVersion, useRegisterLegendUpdate, useRegisterPieAnnotationRender } from '../../hooks/events';
 import { addPoint, generateClubPoint, getPoints, pushPoints, removePoint, refreshDataManager } from './ProcessData';
 import { AccPointData, angleDelta, computeAngles, findCenter, getPathArc, getPieData, initAngles, isEmpty, lerpAngleShortest, patternForIndex } from './series-helper';
 import { getSeriesColor } from '../../utils/theme';
@@ -117,6 +117,7 @@ export const ChartSeriesRenderer: React.ForwardRefExoticComponent<PieChartSeries
         }, [phase, layoutRef]);
 
         const legendClickedInfo: { version: number; id: string } = useSeriesRenderVersion();
+        const triggerPieAnnotationRender: (chartId?: string) => void = useRegisterPieAnnotationRender();
         const updateLegendSnapshots: (series: SeriesProperties, angles?: ArcAngle[]) => void =
             (series: SeriesProperties, angles?: ArcAngle[]): void => {
                 lastAnglesSnapshotRef.current = angles ? angles : computeAngles(series);
@@ -187,6 +188,7 @@ export const ChartSeriesRenderer: React.ForwardRefExoticComponent<PieChartSeries
                     }
                     setElementOptions(series.elementOptions);
                     updateLegendSnapshots(series, nextAngles.slice());
+                    triggerPieAnnotationRender(chart.element.id);
                     return;
                 }
 
@@ -213,6 +215,7 @@ export const ChartSeriesRenderer: React.ForwardRefExoticComponent<PieChartSeries
                         updateRafRef.current = requestAnimationFrame(step);
                     } else {
                         updateAnimRef.current = null;
+                        triggerPieAnnotationRender(chart.element.id);
                     }
                 };
                 updateRafRef.current = requestAnimationFrame(step);
@@ -243,6 +246,7 @@ export const ChartSeriesRenderer: React.ForwardRefExoticComponent<PieChartSeries
                 }
                 setElementOptions(series.elementOptions);
                 updateLegendSnapshots(series);
+                triggerPieAnnotationRender(chart.element.id);
             }
         }, [phase, progres, userHasInteracted, pieInfo.version]);
 
@@ -365,8 +369,6 @@ export const ChartSeriesRenderer: React.ForwardRefExoticComponent<PieChartSeries
                 if (series.dataLabel && series.dataLabel.visible) {
                     renderDataLabels(chart, series);
                 }
-                const triggerLegendUpdate: (chartId?: string) => void = useRegisterLegendUpdate();
-                triggerLegendUpdate(layoutRef.current?.element?.id);
                 setElementOptions(series.elementOptions);
             }
         }, [explodedPointIndex, phase]);
@@ -404,6 +406,8 @@ export const ChartSeriesRenderer: React.ForwardRefExoticComponent<PieChartSeries
                     renderDataLabels(chart, series);
                 }
                 setElementOptions(series.elementOptions);
+                requestAnimationFrame(() => {
+                    triggerLegendUpdate(layoutRef.current?.element?.id); });
             }
             // Point addition animation
             if (lengthDiff === 1) {
@@ -589,6 +593,7 @@ export const ChartSeriesRenderer: React.ForwardRefExoticComponent<PieChartSeries
                         });
                         renderPointsWithAngles(chart, interp, tweenPointsRef.current || []);
                         setElementOptions(series.elementOptions);
+                        triggerLegendUpdate(layoutRef.current?.element?.id);
 
                         if (tLin < 1) {
                             updateRafRef.current = requestAnimationFrame(step);
@@ -732,7 +737,7 @@ export const ChartSeriesRenderer: React.ForwardRefExoticComponent<PieChartSeries
          */
         function handleMouseClick(event: Event): void {
             const targetElement: HTMLElement = event.target as HTMLElement;
-            if (targetElement.id.indexOf('_Series_') > -1 && targetElement.id.indexOf('_datalabel_') === -1) {
+            if (targetElement.id.indexOf('_Series_') > -1 && (layoutRef.current?.visibleSeries[0]?.dataLabel?.position === 'Inside' || targetElement.id.indexOf('_datalabel_') === -1)) {
                 const pointIndex: number = indexFinder(targetElement.id) as number;
                 if (!isNaN(pointIndex)) {
                     setUserHasInteracted(true);
@@ -1094,6 +1099,15 @@ export const ChartSeriesRenderer: React.ForwardRefExoticComponent<PieChartSeries
 
         const visibleSeries: SeriesProperties = layoutRef.current?.visibleSeries?.[0];
 
+        const pieSeriesNamePrefix: string = visibleSeries?.name ? `${visibleSeries.name}, ` : '';
+        const pieSeriesTypeLabel: string = visibleSeries?.innerRadius !== '0%' ? 'Donut' : 'Pie';
+        const piePointCount: number = visibleSeries?.points?.length ?? 0;
+        const piePointCountLabel: string = piePointCount === 1 ? 'slice' : 'slices';
+        const pieSeriesIndex: number = visibleSeries?.index ?? 0;
+        const pieTotalSeriesCount: number = (layoutRef.current as Chart).visibleSeries?.length;
+        let pieSeriesAriaLabel: string = '';
+        pieSeriesAriaLabel = `${pieSeriesNamePrefix}${pieSeriesTypeLabel} ${pieSeriesIndex + 1} of ${pieTotalSeriesCount} with ${piePointCount} ${piePointCountLabel}`;
+
         useEffect(() => {
             if (borderAnimationTimeoutRef.current) {
                 clearTimeout(borderAnimationTimeoutRef.current);
@@ -1198,6 +1212,7 @@ export const ChartSeriesRenderer: React.ForwardRefExoticComponent<PieChartSeries
                         ref={ref}
                         aria-hidden='false'
                         role='region'
+                        aria-label={pieSeriesAriaLabel}
                     >
                         {visibleSeries.showBorderOnHover && hoverBorderProps && (
                             <path

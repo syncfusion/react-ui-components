@@ -10,8 +10,27 @@
     color: $dialog-header-font-color;
   }
 
+  .sf-btn.sf-dlg-closeicon-btn {
+    color: $dialog-close-icon-color;
+
+    &:hover,
+    &:focus {
+      color: $dialog-close-icon-hover-color;
+      background-color: $dialog-close-icon-bg-color;
+    }
+
+    &:active {
+      color: $dialog-close-icon-active-color;
+      background-color: $dialog-close-icon-bg-color;
+    }
+  }
+
   .sf-dlg-content {
     color: $dialog-content-font-color;
+  }
+
+  .sf-dlg-footer-content {
+    background: $dialog-footer-bg;
   }
 
   .sf-dlg-south-west,

@@ -1,5 +1,34 @@
 # Changelog
 
+## 34.1.29 (2026-07-06)
+
+### Menu
+
+The Menu component is a layout navigation menu with support for hierarchical menu items. It provides powerful control over menu interactions, customization options, and displays context-specific actions with nested submenus.
+
+  **Key features**
+
+  - **Hierarchical Structure:** Create nested menus with unlimited nesting levels, allowing for organization of related menu items and commands.
+  - **Flexible Orientation:** Configure the menu in either horizontal or vertical layout to fit different UI design requirements and navigation patterns.
+  - **Icon Support:** Enhance visual recognition by adding icons to menu items using CSS classes or React components (SVG).
+  - **Submenu Rendering Modes:** Choose between inline and portal rendering modes:
+    - **Inline**: Submenu is rendered inline within the parent menu item
+    - **Portal**: Submenu is rendered in the document body for advanced positioning control
+  - **Interaction Modes:** Support for both hover-based and click-based submenu opening with customizable hover delay.
+  - **Animation Effects:** Choose from various animation effects like FadeIn, SlideDown, ZoomIn, and None to control how the menu appears.
+  - **Keyboard Navigation:** Comprehensive keyboard support for accessibility, including arrow keys for navigation, Enter for selection, and Escape to close menus.
+
+### Context Menu
+
+#### Features
+
+- **Custom Container Rendering:** The ContextMenu component supports rendering within a custom container using the `container` prop, allowing better control over positioning context and element scoping instead of rendering to the document body.
+
+#### Breaking Changes
+
+- The `items` and `itemTemplate` props are removed. Use the composite pattern by passing custom elements to the `children` of `MenuItem` component instead for building menu items and customizing their appearance.
+- The `ContextMenuSelectEvent` event interface has been renamed to `MenuSelectEvent` for consistency across menu components.
+
 ## 32.2.3 (2026-02-05)
 
 ### Context Menu

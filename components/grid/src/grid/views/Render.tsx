@@ -12,11 +12,11 @@ import {
     ReactNode,
     useEffect,
     ReactElement,
-    useState,
-    useCallback
+    useCallback,
+    useState
 } from 'react';
-import { HeaderPanelBase, ContentPanelBase, PagerPanelBase, GridToolbar, PopupEditForm } from './index';
-import { RenderRef, IRenderBase, HeaderPanelRef, ContentPanelRef, FooterPanelRef, WrapMode, InlineEditFormRef, ColumnProps, IRow, ScrollMode, LoadingIndicatorType } from '../types';
+import { HeaderPanelBase, ContentPanelBase, PagerPanelBase, GridToolbar, PopupEditForm, ColumnChooserDialog, ContextMenuPanelBase } from './index';
+import { RenderRef, IRenderBase, HeaderPanelRef, ContentPanelRef, FooterPanelRef, WrapMode, InlineEditFormRef, ColumnProps, IRow, ScrollMode, LoadingIndicatorType, ActionType, ColumnChooserBeforeOpenEvent, ColumnChooserSettings, ColumnChooserApplyEvent, ContextMenuPanelRef, SortDescriptor } from '../types';
 import { useGridComputedProvider, useGridMutableProvider } from '../contexts';
 import { useRender, useScroll } from '../hooks';
 import { ToolbarItemProps, ToolbarAPI } from '../types/toolbar.interfaces';
@@ -26,6 +26,7 @@ import { Spinner, SpinnerProps } from '@syncfusion/react-popups';
 import { isNullOrUndefined } from '@syncfusion/react-base';
 import { DataManager } from '@syncfusion/react-data';
 import { addLastRowBorder } from '../utils';
+import { GroupDropArea } from '../views';
 
 /**
  * CSS class names used in the Render component
@@ -99,6 +100,7 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
         const headerPanelRef: RefObject<HeaderPanelRef> = useRef<HeaderPanelRef>(null);
         const contentPanelRef: RefObject<ContentPanelRef<T>> = useRef<ContentPanelRef<T>>(null);
         const footerPanelRef: RefObject<FooterPanelRef> = useRef<FooterPanelRef>(null);
+        const contextMenuPanelRef: RefObject<ContextMenuPanelRef> = useRef<ContextMenuPanelRef>(null);
         const pagerObjectRef:  RefObject<PagerRef> = useRef<PagerRef>(null);
         const popupEditFormRef: RefObject<InlineEditFormRef<T>> = useRef<InlineEditFormRef<T>>(null);
 
@@ -110,10 +112,99 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
         const { headerContentBorder, headerPadding, onContentScroll, onVirtualRowContentScroll, onVirtualColumnContentScroll,
             onHeaderScroll, onFooterScroll, getCssProperties } = privateScrollAPI;
         const { textWrapSettings, pageSettings, aggregates, toolbar, id, columns, dataSource, editSettings, height,
-            loadingIndicatorSettings } = useGridComputedProvider<T>();
+            loadingIndicatorSettings, getColumns, columnChooserSettings, showColumnChooser,
+            contextMenuSettings, element, groupSettings, sortSettings } = useGridComputedProvider<T>();
         const  { indicatorType, params } = loadingIndicatorSettings;
-        const { columnsDirective, currentViewData, totalRecordsCount, cssClass, toolbarModule, editModule, scrollMode, virtualSettings } =
-            useGridMutableProvider<T>();
+        const { columnsDirective, currentViewData, totalRecordsCount, cssClass, toolbarModule, editModule, scrollMode, virtualSettings,
+            infiniteScrollState, expandedGroupCountRef, groupModule } = useGridMutableProvider<T>();
+
+        // Column Chooser state management - moved from useGrid
+        const [isColumnChooserOpen, setIsColumnChooserOpen] = useState<boolean>(false);
+        const [columnChooserPosition, setColumnChooserPosition] = useState<{ x?: number; y?: number } | undefined>(undefined);
+
+        /**
+         * Opens the column chooser dialog programmatically.
+         * The dialog is automatically appended to the grid's parent element via the Dialog component's target prop.
+         *
+         * @param {number} x - Optional X coordinate for custom positioning
+         * @param {number} y - Optional Y coordinate for custom positioning
+         *
+         * @example
+         * ```tsx
+         * // Open at default position (near toolbar button)
+         * gridRef.current.openColumnChooser();
+         *
+         * // Open at custom position
+         * gridRef.current.openColumnChooser(100, 200);
+         * ```
+         */
+        const openColumnChooser: (x?: number, y?: number) => void = useCallback((x?: number, y?: number) => {
+            if (showColumnChooser === false) {
+                return;
+            }
+            // Set position if provided, otherwise use default positioning logic in ColumnChooserDialog
+            setColumnChooserPosition(x !== undefined || y !== undefined ? { x, y } : undefined);
+            setIsColumnChooserOpen(true);
+        }, [showColumnChooser]);
+
+        /**
+         * Closes the column chooser dialog
+         */
+        const closeColumnChooser: () => void = useCallback(() => {
+            setIsColumnChooserOpen(false);
+            setColumnChooserPosition(undefined);
+        }, []);
+
+        /**
+         * Handle before open event for column chooser dialog
+         */
+        const { onColumnChooserBeforeOpen } = useGridComputedProvider();
+        const handleColumnChooserBeforeOpen: (
+            event: { cancel: boolean; columnChooserSettings?: ColumnChooserSettings }
+        ) => void = useCallback(
+            (event: { cancel: boolean; columnChooserSettings?: ColumnChooserSettings }) => {
+                if (onColumnChooserBeforeOpen) {
+                    const args: ColumnChooserBeforeOpenEvent = {
+                        cancel: false,
+                        type: ActionType.ColumnChooserBeforeOpen,
+                        enableSearch: event.columnChooserSettings?.enableSearch,
+                        operator: event.columnChooserSettings?.operator,
+                        ignoreAccent: event.columnChooserSettings?.ignoreAccent,
+                        sortDirection: event.columnChooserSettings?.sortDirection,
+                        selectedColumns: event.columnChooserSettings?.selectedColumns
+                    };
+                    onColumnChooserBeforeOpen(args);
+                    // Propagate cancel flag back to the dialog
+                    event.cancel = args.cancel;
+                }
+            },
+            [onColumnChooserBeforeOpen]
+        );
+
+        /**
+         * Handle apply event for column chooser dialog
+         */
+        const { onColumnChooserApply } = useGridComputedProvider();
+        const handleColumnChooserApply: (
+            event: { columnVisibility?: Map<string, boolean>; columnChooserSettings?: ColumnChooserSettings }
+        ) => void = useCallback(
+            (event: { columnVisibility?: Map<string, boolean>; columnChooserSettings?: ColumnChooserSettings }
+            ) => {
+                if (onColumnChooserApply) {
+                    const args: ColumnChooserApplyEvent = {
+                        type: ActionType.ColumnChooserApply,
+                        columnVisibility: event.columnVisibility,
+                        enableSearch: event.columnChooserSettings?.enableSearch,
+                        operator: event.columnChooserSettings?.operator,
+                        ignoreAccent: event.columnChooserSettings?.ignoreAccent,
+                        sortDirection: event.columnChooserSettings?.sortDirection,
+                        selectedColumns: event.columnChooserSettings?.selectedColumns
+                    };
+                    onColumnChooserApply(args);
+                }
+            },
+            [onColumnChooserApply]
+        );
 
         // Synchronize scroll elements between header and content panels
         useSyncScrollElements(
@@ -137,10 +228,12 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
             showSpinner: protectedRenderAPI.showSpinner,
             hideSpinner: protectedRenderAPI.hideSpinner,
             scrollModule: protectedScrollAPI,
+            openColumnChooser,
             // Forward all properties from header and content panels
             ...(headerPanelRef.current as HeaderPanelRef),
             ...(contentPanelRef.current as ContentPanelRef<T>),
             ...(footerPanelRef.current as FooterPanelRef),
+            ...(contextMenuPanelRef.current as ContextMenuPanelRef),
             pagerModule: pagerObjectRef.current,
             ...(editModule.editSettings.mode === 'Popup' && editModule.isEdit ?
                 isNullOrUndefined(editModule.originalData) ? { addInlineRowFormRef: popupEditFormRef }
@@ -153,7 +246,9 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
             contentPanelRef.current,
             footerPanelRef.current,
             pagerObjectRef.current,
-            popupEditFormRef.current
+            popupEditFormRef.current,
+            openColumnChooser,
+            contextMenuPanelRef.current
         ]);
 
         const pagerPanel: JSX.Element = useMemo(() => (
@@ -192,24 +287,29 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
         }, [headerPadding, headerContentBorder, onHeaderScroll, isNoColumnRemoteData]);
 
         useMemo(() => {
+            if (scrollMode === ScrollMode.Infinite && !protectedScrollAPI.isDataOperationPreventVirtualCache.current) {
+                return;
+            }
             if (contentPanelRef.current?.contentScrollRef && virtualSettings.enableRow && virtualSettings.enableCache) {
                 contentPanelRef.current.contentScrollRef.scrollTop = 0;
                 protectedScrollAPI.virtualRowInfo.startIndex = 0;
             }
         }, [totalRecordsCount]);
         useMemo(() => {
-            protectedScrollAPI.virtualRowInfo.endIndex = (scrollMode === ScrollMode.Virtual ? totalRecordsCount :
-                currentViewData?.length) ?? 0;
-        }, [currentViewData, totalRecordsCount]);
+            protectedScrollAPI.virtualRowInfo.endIndex = (groupSettings.enabled && groupSettings.columns?.length &&
+                expandedGroupCountRef.current ? expandedGroupCountRef.current : (scrollMode === ScrollMode.Virtual ||
+                    scrollMode === ScrollMode.Infinite ? totalRecordsCount : currentViewData?.length)) ?? 0;
+        }, [currentViewData, totalRecordsCount, expandedGroupCountRef.current]);
 
         // Memoize content panel to prevent unnecessary re-renders
         const contentPanel: JSX.Element = useMemo(() => {
-            const toolbarHeight: number = toolbarModule?.getToolbar()?.clientHeight ?? 0;
-            const headerHeight: number = headerPanelRef.current?.headerPanelRef?.clientHeight ?? 0;
-            const footerHeight: number = footerPanelRef.current?.footerPanelRef?.clientHeight ?? 0;
-            const pagerHeight: number = pagerObjectRef.current?.element?.clientHeight ?? 0;
+            const groupDropAreaHeight: number = groupModule?.groupDropAreaRef.current?.getBoundingClientRect().height ?? 0;
+            const toolbarHeight: number = toolbarModule?.getToolbar()?.getBoundingClientRect().height ?? 0;
+            const headerHeight: number = headerPanelRef.current?.headerPanelRef?.getBoundingClientRect().height ?? 0;
+            const footerHeight: number = footerPanelRef.current?.footerPanelRef?.getBoundingClientRect().height ?? 0;
+            const pagerHeight: number = pagerObjectRef.current?.element?.getBoundingClientRect().height ?? 0;
 
-            const totalHeight: string = `calc(${privateRenderAPI.contentStyles.height} - ${toolbarHeight}px - ${headerHeight + 2}px - ${footerHeight}px - ${pagerHeight}px)`;
+            const totalHeight: string = `calc(${privateRenderAPI.contentStyles.height} - ${groupDropAreaHeight}px - ${toolbarHeight}px - ${headerHeight + 2}px - ${footerHeight}px - ${pagerHeight}px)`;
 
             return (<ContentPanelBase<T>
                 ref={(panelRef: ContentPanelRef<T>) => {
@@ -273,15 +373,15 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
         const popupEditPanel: JSX.Element = useMemo(() => {
             if ((editModule.editSettings.mode === 'Popup' || editModule.editSettings.mode === 'PopupTemplate') && editModule.isEdit) {
                 return (
-                    <PopupEditForm<T>
-                        ref={(ref: InlineEditFormRef<T>) => {
+                    <PopupEditForm
+                        ref={(ref: InlineEditFormRef<Record<string, unknown>>) => {
                             if (ref?.formRef?.current) {
-                                popupEditFormRef.current = ref;
-                                editModule.popupEditFormRef.current = ref;
+                                popupEditFormRef.current = ref as InlineEditFormRef<T>;
+                                editModule.popupEditFormRef.current = ref as InlineEditFormRef<T>;
                             }
                             if (ref && !isNullOrUndefined(editModule.originalData)) {
                                 editModule.rowObject.setRowObject((prev: IRow<ColumnProps<T>>) =>
-                                    ({ ...prev, editInlineRowFormRef: { current: ref } }));
+                                    ({ ...prev, editInlineRowFormRef: { current: ref as InlineEditFormRef<T> } }));
                             }
                         }}
                     />
@@ -290,6 +390,13 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
             return null;
         }, [editModule]);
 
+        const contextMenuPanel: JSX.Element = useMemo(() => {
+            if (element && contextMenuSettings.enabled) {
+                return <ContextMenuPanelBase ref={contextMenuPanelRef} />;
+            }
+            return null;
+        }, [element, contextMenuSettings]);
+
         useEffect(() => {
             if (!privateRenderAPI.isContentBusy && editModule?.isShowAddNewRowActive && !editModule?.isShowAddNewRowDisabled) {
                 contentPanelRef?.current?.addInlineRowFormRef?.current?.focusFirstField();
@@ -297,13 +404,28 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
         }, [privateRenderAPI.isContentBusy]);
         useEffect(() => {
             setContentHeightUpdateRequired({});
-        }, [toolbar]);
+        }, [toolbar, groupSettings?.showDropArea]);
 
         const loadingSpinnerProps: SpinnerProps = indicatorType === LoadingIndicatorType.Spinner ? params : {};
         return (
             <>
-                <Spinner visible={privateRenderAPI.isContentBusy &&
-                    indicatorType === LoadingIndicatorType.Spinner} className={cssClass} overlay={true} {...loadingSpinnerProps} />
+                <Spinner visible={privateRenderAPI.isContentBusy && ((!infiniteScrollState?.isVirtualScrollRequest &&
+                    scrollMode === ScrollMode.Infinite) || indicatorType === LoadingIndicatorType.Spinner)}
+                className={cssClass} overlay={true} {...loadingSpinnerProps} />
+                {groupSettings?.enabled && groupSettings?.showDropArea && (
+                    <GroupDropArea
+                        cssClass={cssClass}
+                        groupColumns={groupModule.groupedColumns.map((field: string) =>
+                            (getColumns?.()).find((column: ColumnProps) => column.field === field)) || []}
+                        onUngroupColumn={groupModule.ungroupColumn}
+                        sortDirections={sortSettings?.columns?.reduce(
+                            (acc: Record<string, 'Ascending' | 'Descending'>, col: SortDescriptor) => {
+                                acc[col.field as string] = col.direction as 'Ascending' | 'Descending';
+                                return acc;
+                            }, {}
+                        ) ?? {}}
+                    />
+                )}
                 {toolbarModule && toolbar?.length > 0 && (
                     <GridToolbar
                         key={id + '_grid_toolbar'}
@@ -313,11 +435,23 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
                         toolbarAPI={toolbarModule as ToolbarAPI}
                     />
                 )}
+                {showColumnChooser && (
+                    <ColumnChooserDialog
+                        isOpen={isColumnChooserOpen}
+                        onClose={closeColumnChooser}
+                        columns={getColumns?.() || []}
+                        position={columnChooserPosition}
+                        settings={columnChooserSettings}
+                        onBeforeOpen={handleColumnChooserBeforeOpen}
+                        onApply={handleColumnChooserApply}
+                    />
+                )}
                 {headerPanel}
                 {contentPanel}
                 {aggregates?.length ? footerPanel : null}
                 {pageSettings?.enabled && pagerPanel}
                 {popupEditPanel}
+                {contextMenuPanel}
             </>
         );
     })

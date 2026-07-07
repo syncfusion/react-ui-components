@@ -33,6 +33,9 @@
   
   .sf-timepicker-list-la {
     @include timepicker-list-size($timepicker-popup-height-la, $timepicker-item-height-la, $timepicker-font-size-la);
+    &.sf-ul {
+      border-radius: $timepicker-popup-border-radius-la;
+    }
   }
 
   .sf-timepicker-item {

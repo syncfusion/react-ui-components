@@ -7,9 +7,11 @@ $opacity11: .11 !default;
 $opacity12: .12 !default;
 $opacity14: .14 !default;
 $opacity16: .16 !default;
+$opacity65: .65 !default;
 
 // Heading sizes
 $font-family: var(--sf-font-family) !default;
+$font-size-2xs: var(--sf-font-size-2xs) !default;
 $font-size-xs: var(--sf-font-size-xs) !default;
 $font-size-sm: var(--sf-font-size-sm) !default;
 $font-size-base: var(--sf-font-size-base) !default;
@@ -18,6 +20,7 @@ $font-size-xl: var(--sf-font-size-xl) !default;
 $font-size-2xl: var(--sf-font-size-2xl) !default;
 $font-size-3xl: var(--sf-font-size-3xl) !default;
 
+$line-height-2xs: var(--sf-line-height-2xs) !default;
 $line-height-xs: var(--sf-line-height-xs) !default;
 $line-height-sm: var(--sf-line-height-sm) !default;
 $line-height-base: var(--sf-line-height-base) !default;
@@ -29,6 +32,7 @@ $line-height-5xl: var(--sf-line-height-5xl) !default;
 $font-weight-normal: var(--sf-font-weight-normal) !default;
 $font-weight-medium: var(--sf-font-weight-medium) !default;
 $font-weight-semibold: var(--sf-font-weight-semibold) !default;
+$font-weight-bold: var(--sf-font-weight-bold) !default;
 
 $letter-spacing-normal: var(--sf-letter-spacing-normal) !default;
 $letter-spacing-wide: var(--sf-letter-spacing-wide) !default;
@@ -59,8 +63,10 @@ $spacing-24: var(--sf-spacing-24) !default;
 $spacing-28: var(--sf-spacing-28) !default;
 $spacing-30: var(--sf-spacing-30) !default;
 $spacing-32: var(--sf-spacing-32) !default;
+$spacing-36: var(--sf-spacing-36) !default;
 $spacing-40: var(--sf-spacing-40) !default;
 $spacing-48: var(--sf-spacing-48) !default;
+$spacing-52: var(--sf-spacing-52) !default;
 $spacing-56: var(--sf-spacing-56) !default;
 $spacing-72: var(--sf-spacing-72) !default;
 

@@ -1,6 +1,6 @@
 import { ChartMarkerProps } from '../../base/interfaces';
 import { DoubleRangeType, PointRenderingEvent, Points, Rect, RenderOptions, SeriesProperties } from '../../chart-area/chart-interfaces';
-import { useVisiblePoints } from '../../utils/helper';
+import { calculateVisiblePoints } from '../../utils/helper';
 import { ColumnBase, ColumnBaseReturnType } from './ColumnBase';
 import MarkerRenderer from './MarkerRenderer';
 import { handleRectAnimation } from './SeriesAnimation';
@@ -8,7 +8,8 @@ import { handleRectAnimation } from './SeriesAnimation';
 const columnBaseInstance: ColumnBaseReturnType = ColumnBase();
 
 /**
- * Animation state interface for column series animations
+ * Animation state interface for column series animations.
+ *
  * @private
  */
 export interface AnimationState {
@@ -21,7 +22,8 @@ export interface AnimationState {
 }
 
 /**
- * Result interface for animation operations
+ * Result interface for animation operations.
+ *
  * @private
  */
 export interface AnimationResult {
@@ -100,7 +102,26 @@ interface ColumnSeriesType {
         point: Points,
         sideBySideInfo: DoubleRangeType,
         origin: number
-    ) => RenderOptions | undefined;
+    ) => RenderOptions | RenderOptions[] | undefined;
+
+    /**
+     * Renders SVG elements for Cylinder series.
+     *
+     * @param currentSeries - Current series instance
+     * @param pathOptions - SVG render options
+     * @param seriesIndex - Series index
+     * @param animationState - Animation state
+     * @param chartID - Chart ID
+     *
+     * @private
+     */
+    renderCylinderSeries: (
+        currentSeries: SeriesProperties,
+        pathOptions: RenderOptions[],
+        seriesIndex: number,
+        animationState: AnimationState,
+        chartID: string
+    ) => React.ReactNode;
 }
 
 /**
@@ -124,12 +145,10 @@ const ColumnSeries: ColumnSeriesType = {
      * expensive recomputations on each render.
      *
      * @param {SeriesProperties} series - Series configuration and data points
-     * @param {boolean} _isInverted - Chart inversion state (currently unused)
      * @returns {RenderOptions[]|Object} Array of render options, or object containing both options array and marker properties when markers are visible
      */
     render: (
-        series: SeriesProperties,
-        _isInverted: boolean
+        series: SeriesProperties
     ): RenderResult => {
         // Cache side-by-side info to avoid repeated calculations
         ColumnSeries.sideBySideInfo[series.index] = columnBaseInstance.getSideBySideInfo(series);
@@ -139,20 +158,22 @@ const ColumnSeries: ColumnSeriesType = {
 
         // Process each point in the series
         for (const point of series.points) {
-            const result: RenderOptions | undefined = ColumnSeries.renderPoint(
+            const result: RenderOptions | RenderOptions[] | undefined = ColumnSeries.renderPoint(
                 series,
                 point,
                 ColumnSeries.sideBySideInfo[series.index],
                 origin
             );
-
-            if (result) {
+            // Proper null-safety guard: check if result exists before type checking
+            if (result && Array.isArray(result)) {
+                options.push(...result);
+            } else if (result) {
                 options.push(result);
             }
         }
 
         // Update visible points using optimized helper
-        series.visiblePoints = useVisiblePoints(series);
+        series.visiblePoints = calculateVisiblePoints(series);
 
         // Render marker if visible
         const marker: ChartMarkerProps | undefined = series.marker?.visible
@@ -161,6 +182,91 @@ const ColumnSeries: ColumnSeriesType = {
 
         // Return consistent interface
         return { options, marker };
+    },
+
+    /**
+     * Renders SVG elements for Cylinder series.
+     *
+     * @param {SeriesProperties} currentSeries - Current series instance
+     * @param {RenderOptions[]} pathOptions - SVG render options
+     * @param {number} seriesIndex - Series index
+     * @param {AnimationState} animationState - Animation state
+     * @param {string} chartID - Chart ID
+     *
+     * @returns {SVGElement[]} SVG elements representing the rendered cylinder series.
+     *
+     * @private
+     */
+    renderCylinderSeries: (
+        currentSeries: SeriesProperties,
+        pathOptions: RenderOptions[],
+        seriesIndex: number,
+        animationState: AnimationState,
+        chartID: string
+    ): React.ReactNode => {
+        const points: Points[] = (currentSeries.visiblePoints as Points[]).filter(
+            (point: Points) => point.yValue !== null && point.yValue !== undefined);
+        const pathsPerPoint: number = 3;
+        return points.map((currentPoint: Points, pointIndex: number) => {
+            const startIndex: number = pointIndex * pathsPerPoint;
+            const endIndex: number = startIndex + pathsPerPoint;
+            return (
+                <g
+                    key={`${chartID}_Series_${seriesIndex}_Point_${pointIndex}`}
+                    id={`${chartID}_Series_${seriesIndex}_Point_${pointIndex}`}
+                    className="e-cylinder-point-group"
+                    role="img"
+                    aria-label={`${currentPoint.xValue}: ${currentPoint.yValue}, ${currentSeries.name}`}
+                >
+                    {pathOptions.slice(startIndex, endIndex).map(
+                        (pathOption: RenderOptions, partIndex: number) => {
+
+                            const pathIndex: number = startIndex + partIndex;
+                            const animationProps: {
+                                strokeDasharray: string | number;
+                                strokeDashoffset: number;
+                                interpolatedD?: string;
+                                animatedDirection?: string;
+                                animatedTransform?: string;
+                                animatedClipPath?: string;
+                            } = currentSeries.propsChange
+                                ? {
+                                    strokeDasharray: 'none',
+                                    strokeDashoffset: 0
+                                }
+                                : ColumnSeries.doAnimation(
+                                    pathOption,
+                                    seriesIndex,
+                                    animationState,
+                                    currentSeries.animation?.enable ?? false,
+                                    currentSeries,
+                                    currentPoint,
+                                    pathIndex
+                                );
+                            return (
+                                <path
+                                    key={`${pathOption.id}_${partIndex}`}
+                                    id={`${pathOption.id}_${partIndex}`}
+                                    d={animationProps.animatedDirection ?? pathOption.d}
+                                    fill={pathOption.fill}
+                                    stroke={pathOption.stroke}
+                                    strokeWidth={pathOption.strokeWidth}
+                                    fillOpacity={pathOption.opacity}
+                                    strokeOpacity={pathOption.opacity}
+                                    strokeDasharray={animationProps.strokeDasharray}
+                                    strokeDashoffset={animationProps.strokeDashoffset}
+                                    transform={animationProps.animatedTransform}
+                                    style={{
+                                        clipPath: animationProps.animatedClipPath,
+                                        outline: 'none'
+                                    }}
+                                />
+                            );
+                        }
+                    )}
+                </g>
+            );
+        });
     },
 
     /**
@@ -181,7 +287,7 @@ const ColumnSeries: ColumnSeriesType = {
         point: Points,
         sideBySideInfo: DoubleRangeType,
         origin: number
-    ): RenderOptions | undefined => {
+    ): RenderOptions | RenderOptions[] | undefined => {
         // Initialize point properties
         point.symbolLocations = [];
         point.regions = [];
@@ -212,11 +318,15 @@ const ColumnSeries: ColumnSeriesType = {
             rect.x = rect.x - offsetCalculation;
         }
 
+        if (rect.width <= 0) {
+            return undefined;
+        }
+
         // Trigger point render event for customization
         const argsData: PointRenderingEvent = columnBaseInstance.triggerEvent(
             series,
             point,
-            series.interior,
+            series.category === 'Indicator' ? point.color : series.interior,
             {
                 width: series.border?.width,
                 color: series.border?.color
@@ -232,8 +342,12 @@ const ColumnSeries: ColumnSeriesType = {
         }, series);
 
         // Generate unique identifier for the rendered element
-        const name: string = `${series.chart.element.id}_Series_${series.index}_Point_${point.index}`;
-
+        const name: string = series.category === 'Indicator' ? series.chart.element.id + '_Indicator_Series_' + series.index + '_' + series.name +
+            '_Point_' + point.index : `${series.chart.element.id}_Series_${series.index}_Point_${point.index}`;
+        if (series.columnFacet === 'Cylinder')
+        {
+            return columnBaseInstance.drawCylinder(series, point, rect, argsData, name);
+        }
         return columnBaseInstance.drawRectangle(series, point, rect, argsData, name);
 
     },

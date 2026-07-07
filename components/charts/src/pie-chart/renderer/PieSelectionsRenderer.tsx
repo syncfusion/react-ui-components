@@ -262,7 +262,7 @@ export const PieSelectionRenderer: React.FC<PieChartSelectionProps> = (props: Pi
                 return;
             }
             if (selection.mode !== 'None') {
-                calculateSelectedElements(currentChart, selection, legendRef, seriesRef, event.target!, true);
+                calculateSelectedElements(currentChart, selection, legendRef, seriesRef, event.target as Element, true);
                 requestAnimationFrame(() => {
                     const chart: Chart = layoutRef.current as Chart;
                     const currentSelection: PieBaseSelection = layoutRef.current?.chartSelection as PieBaseSelection;
@@ -371,7 +371,6 @@ export function isLegendTarget(target: HTMLElement, chart: Chart): boolean {
  * @param {RefObject<SVGGElement | null>} seriesRef - Ref to the series container.
  * @param {PieChartDataIndexProps} index - Target index ({seriesIndex, pointIndex}).
  * @param {HTMLElement} element - Optional raw event target (useful when the clicked element differs from the slice node).
- * @param {boolean} _pointClick - Reserved flag (unused in this implementation).
  * @returns {void}
  * @private
  */
@@ -384,8 +383,7 @@ export const performSelection: (chart: Chart, chartSelection: PieBaseSelection,
     legendRef: RefObject<SVGGElement | null>,
     seriesRef: RefObject<SVGGElement | null>,
     index: PieChartDataIndexProps,
-    element?: HTMLElement,
-    _pointClick?: boolean
+    element?: HTMLElement
 ): void => {
     if (chartSelection.isLegendSelection && !isNullOrUndefined(index?.pointIndex)) {
         const slice: HTMLElement = getPieSliceElement(seriesRef, chart.element.id, index.pointIndex as number) as HTMLElement;
@@ -534,7 +532,7 @@ function selection(
 }
 
 /**
- * Dims non-selected elements (slices and legend items) and restores full opacity
+ * Dims non-selected elements (slices, data labels, and legend items) and restores full opacity
  * when no selection/highlight is active.
  *
  * @param {Chart} chart - The chart instance (unused here; retained for signature parity).
@@ -672,6 +670,50 @@ export const blurEffect: (chart: Chart, _visibleSeries: SeriesProperties[], char
         }
     }
 
+    // Find the SVG root that contains the series and data labels
+    let svgRoot: SVGSVGElement | null = null;
+    if (seriesGroup?.ownerDocument) {
+        // Get the closest SVG ancestor from seriesGroup
+        let current: Element | null = seriesGroup;
+        while (current) {
+            if (current.tagName.toLowerCase() === 'svg') {
+                svgRoot = current as SVGSVGElement;
+                break;
+            }
+            current = current.parentElement;
+        }
+    }
+
+    const allDataLabelElements: Element[] = svgRoot
+        ? Array.from(svgRoot.querySelectorAll<Element>('[id*="_datalabel_Series_"][id*="_text_"]'))
+        : [];
+
+    for (const dataLabelElement of allDataLabelElements) {
+        const element: HTMLElement = dataLabelElement as HTMLElement;
+
+        // Extract point index from data label id
+        // Format: <chartId>_datalabel_Series_<seriesIndex>_text_<pointIndex>
+        const match: RegExpMatchArray = element.id.match(/_text_(\d+)$/) as RegExpMatchArray;
+
+        const pointIndex: number = parseInt(match[1], 10);
+        if (!Number.isFinite(pointIndex) || !match) { continue; }
+
+        // Check if this data label's corresponding slice is selected
+        const isDataLabelSelected: boolean = selectedPointSet.has(pointIndex);
+
+        // Determine if the corresponding slice is exploded
+        let isCorrespondingSliceExploded: boolean = false;
+        if (series?.points?.[pointIndex as number]) {
+            isCorrespondingSliceExploded = !!series.points[pointIndex as number].isExplode;
+        }
+
+        // Dim data label if its corresponding slice is not selected and has selection
+        const shouldDimDataLabel: boolean = !isCorrespondingSliceExploded && !isDataLabelSelected && hasSelection;
+
+        // Apply opacity directly without animation for data labels
+        element.style.opacity = shouldDimDataLabel ? '0.3' : '';
+    }
+
     // 2) Legend (snaps to full opacity; if you prefer animation here, you can restore it)
     const legendTranslateGroup: Element = (legendRef?.current as SVGGElement)?.children?.[0];
     const legendCollections: LegendOptions[] | undefined = (chart.chartLegend?.legendCollections as LegendOptions[] | undefined);
@@ -734,14 +776,12 @@ export const blurEffect: (chart: Chart, _visibleSeries: SeriesProperties[], char
  * @param {Element[]} elements - Target DOM elements to toggle.
  * @param {PieBaseSelection} chartSelection - Runtime selection/highlight object.
  * @param {Chart} chart - Chart instance (used to build pattern ids).
- * @param {number} _seriesIndex - Series index (pie typically uses 0, but passed for id stability).
  * @returns {void}
  */
 function applyStyles(
     elements: Element[],
     chartSelection: PieBaseSelection,
-    chart: Chart,
-    _seriesIndex?: number
+    chart: Chart
 ): void {
     const getPointIndexFromElementId: (id: string) => number = (id: string): number => {
         if (id.includes('_legend_')) {

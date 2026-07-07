@@ -7,6 +7,8 @@ $input-content-color: rgb($content-text-color) !default;
 $input-content-disabled-color: $content-text-color-disabled !default;
 $input-border-color: rgb($border) !default;
 $input-border-disabled-color: rgb($border-light) !default;
+$input-disabled-bg-color: none !default;
+$input-readonly-bg-color: none !default;
 $input-line-bottom: $spacing-0 !default;
 $input-line-background: rgb($primary-bg-color) !default;
 $input-padding: $spacing-5 $spacing-0 !default;
@@ -21,18 +23,35 @@ $input-float-prefix-focus-left: $spacing-0 !default;
 $input-border-focus-color: rgb($primary) !default;
 
 $input-outlined-border-radius: $radius-4 !default;
+$input-medium-outlined-border-radius: $radius-4 !default;
+$input-large-outlined-border-radius: $radius-4 !default;
 $input-outlined-padding: $spacing-5 $spacing-16 !default;
 $input-outlined-prefix-padding: $spacing-5 $spacing-0 !default;
 $input-outlined-focus-border-color: rgb($primary) !default;
 $input-outlined-border-hover-color: rgb($content-text-color-alt1) !default;
+$input-outlined-disabled-bg-color: transparent !default;
+$input-outlined-readonly-bg-color: transparent !default;
 
 $input-filled-background: rgb($series-1) !default;
 $input-filled-background-transition: opacity 15ms linear, background-color 15ms linear !default;
 $input-filled-border-radius: $radius-4 $radius-4 $radius-0 $radius-0 !default;
+$input-medium-filled-border-radius: $radius-4 $radius-4 $radius-0 $radius-0 !default;
+$input-large-filled-border-radius: $radius-4 $radius-4 $radius-0 $radius-0 !default;
 $input-filled-padding: $spacing-7 $spacing-12 !default;
 $input-filled-prefix-padding: $spacing-7 $spacing-0 !default;
 $input-filled-float-padding: $spacing-13 $spacing-12 $spacing-1 $spacing-12 !default;
 $input-filled-prefix-float-padding: $spacing-11 $spacing-0 $spacing-1 $spacing-0 !default;
+$input-filled-border-width: $spacing-0 $spacing-0 $spacing-1 $spacing-0 !default;
+$input-filled-border-color: rgb($border) !default;
+$input-filled-hover-active-bg-color: rgb($surface-variant) !default;
+$input-filled-hover-border-color: rgb($border) !default;
+$input-filled-box-shadow: none !default;
+$input-filled-disabled-bg-color: rgb($surface-variant) !default;
+$input-filled-line-background: rgb($primary-bg-color) !default;
+$input-filled-success-line-background: rgb($border-success) !default;
+$input-filled-warning-line-background: rgb($border-warning) !default;
+$input-filled-error-line-background: rgb($border-error) !default;
+$input-filled-focus-border-color: rgb($primary) !default;
 
 $input-float-margin-top: $spacing-16 !default;
 $input-float-top: calc(var(--sf-spacing) * -0.6875) !default;
@@ -45,6 +64,8 @@ $input-float-focus-font-size: $font-size-xs !default;
 $input-float-focus-transition: translate3d(0, calc(var(--sf-spacing) * -0.3125), 0) !default;
 $input-float-prefix-focus-transition: translate3d(0, calc(var(--sf-spacing) * -0.3125), 0) !default;
 $input-float-transform: translate3d(0, $spacing-16, 0) scale(1) !default;
+$input-float-font-weight: $font-weight-normal !default;
+$input-float-left: $spacing-0 !default;
 
 $input-outlined-float-top: calc(var(--sf-spacing) * -0.3125) !default;
 $input-outlined-float-left: $spacing-16 !default;
@@ -55,6 +76,7 @@ $input-outlined-float-focus-background: rgb($content-bg-color) !default;
 
 $input-filled-float-top: calc(var(--sf-spacing) * -0.6875) !default;
 $input-filled-float-left: $spacing-12 !default;
+$input-filled-float-focus-left: $spacing-16 !default;
 $input-filled-float-focus-transition: translate3d(0, $spacing-11, 0) !default;
 $input-filled-font-size: $font-size-xs !default;
 $input-filled-line-height: $line-height-xs !default;
@@ -80,6 +102,10 @@ $input-medium-close-icon-margin-inline: $spacing-4 !default;
 $input-medium-close-icon-font-size: $font-size-xl !default;
 $input-medium-float-prefix-focus-transition: translate3d(0, calc(var(--sf-spacing) * -0.625), 0) !default;
 $input-medium-float-focus-transition: translate3d(0, calc(var(--sf-spacing) * -0.5625), 0) !default;
+$input-medium-float-font-size: $font-size-xs !default;
+$input-medium-float-line-height: $line-height-xs !default;
+$input-medium-float-left: $spacing-0 !default;
+$input-medium-float-margin-top: $spacing-16 !default;
 
 $input-medium-outlined-padding: $spacing-9 $spacing-16 !default;
 $input-medium-outlined-prefix-padding: $spacing-9 $spacing-0 !default;
@@ -91,7 +117,7 @@ $input-medium-filled-line-height: $line-height-sm !default;
 $input-medium-filled-padding: $spacing-9 $spacing-16 !default;
 $input-medium-filled-float-padding: calc(var(--sf-spacing) * 1.0625) $spacing-16 $spacing-1 $spacing-16 !default;
 $input-medium-filled-float-top: calc(var(--sf-spacing) * -0.4375) !default;
-$input-medium-filled-float-left: $spacing-16 !default;
+$input-medium-filled-float-left: $spacing-14 !default;
 $input-medium-filled-float-focus-transition: translate3d(0, $spacing-7, 0) !default;
 $input-medium-filled-font-size: $font-size-sm !default;
 
@@ -105,6 +131,10 @@ $input-large-close-icon-margin-inline: $spacing-4 !default;
 $input-large-close-icon-font-size: $font-size-xl !default;
 $input-large-float-prefix-focus-transition: translate3d(0, calc(var(--sf-spacing) * -0.625), 0) !default;
 $input-large-float-focus-transition: translate3d(0, calc(var(--sf-spacing) * -0.5625), 0) !default;
+$input-large-float-font-size: $font-size-xs !default;
+$input-large-float-line-height: $line-height-xs !default;
+$input-large-float-left: $spacing-0 !default;
+$input-large-float-margin-top: $spacing-16 !default;
 
 $input-large-outlined-padding: $spacing-11 $spacing-16 !default;
 $input-large-outlined-prefix-padding: $spacing-11 $spacing-0 !default;
@@ -117,7 +147,7 @@ $input-large-filled-padding: $spacing-11 $spacing-16 !default;
 $input-large-filled-float-padding: $spacing-20 $spacing-16 $spacing-2 $spacing-16 !default;
 $input-large-filled-float-prefix-padding: $spacing-20 $spacing-0 $spacing-2 $spacing-0 !default;
 $input-large-filled-float-top: calc(var(--sf-spacing) * -0.3125) !default;
-$input-large-filled-float-left: $spacing-16 !default;
+$input-large-filled-float-left: $spacing-14 !default;
 $input-large-filled-float-focus-transition: translate3d(0, $spacing-8, 0) !default;
 $input-large-filled-font-size: $font-size-base !default;
 $input-large-filled-prefix-padding: $spacing-11 $spacing-0 !default;
@@ -136,3 +166,27 @@ $input-form-label-letter-space: $letter-spacing-wide !default;
 $input-form-label-color: rgb($content-text-color-alt1) !default;
 $input-form-error-font-size: $font-size-xs !default;
 $input-form-error-color: rgb($error-font-color) !default;
+
+$input-outlined-focus-border-shadow: 0 0 0 2px $input-outlined-focus-border-color;
+$input-success-border-shadow: inset 1px 1px $input-success-border-color, inset -1px 0 $input-success-border-color, inset 0 -1px $input-success-border-color;
+$input-warning-border-shadow: inset 1px 1px $input-warning-border-color, inset -1px 0 $input-warning-border-color, inset 0 -1px $input-warning-border-color;
+$input-error-border-shadow: inset 1px 1px $input-error-border-color, inset -1px 0 $input-error-border-color, inset 0 -1px $input-error-border-color;
+
+$input-filled-focus-border-shadow: transparent;
+$input-filled-success-border-shadow: transparent;
+$input-filled-warning-border-shadow: transparent;
+$input-filled-error-border-shadow: transparent;
+
+$input-helper-text-font-weight: $font-weight-normal !default;
+$input-helper-text-font-size: $font-size-xs !default; 
+$input-helper-text-line-height: $line-height-xs !default;
+$input-helper-text-letter-spacing: $letter-spacing-wide !default;
+$input-helper-text-on-focus-transform: translateY(-100%) !default;
+$input-helper-text-on-focus-transition: transform 200ms cubic-bezier(0, 0, 0.2, 1) 0ms !default;
+$input-helper-text-on-focused-transform: translateY(0) !default;
+
+$input-medium-helper-text-font-size: $font-size-xs !default; 
+$input-medium-helper-text-line-height: $line-height-xs !default;
+
+$input-large-helper-text-font-size: $font-size-xs !default; 
+$input-large-helper-text-line-height: $line-height-xs !default;

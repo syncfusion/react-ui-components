@@ -1,5 +1,4 @@
-import * as React from 'react';
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { forwardRef, HTMLAttributes, JSX, ReactElement, ReactNode, Ref, RefAttributes, RefObject, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { VirtualizationProps } from './types';
 import { ScrollEvent } from '../list-view';
 import { computeWindow } from './utils';
@@ -23,7 +22,7 @@ export interface VirtualScrollerProps<T> extends VirtualizationProps {
      * Specifies the external scroll container or window.
      * If provided, VirtualScroller attaches passive scroll listeners to this element.
      */
-    scrollParent?: React.RefObject<HTMLElement>
+    scrollParent?: RefObject<HTMLElement>
 
     /**
      * Scrolls to make the item at this index initially visible when the component mounts.
@@ -35,7 +34,7 @@ export interface VirtualScrollerProps<T> extends VirtualizationProps {
     /**
      * Specifies the render function for each row.
      */
-    itemContent: (index: number, item: T) => React.ReactNode;
+    itemContent: (index: number, item: T) => ReactNode;
 
     /**
      * Specifies the async fetch hook triggered when scrolling reaches the loaded range.
@@ -54,10 +53,10 @@ export interface IVirtualScroller<T> extends VirtualScrollerProps<T> {
     element?: HTMLElement | null;
 }
 
-type IVirtualScrollerProps<T> = VirtualScrollerProps<T> & React.HTMLAttributes<HTMLDivElement>;
+type IVirtualScrollerProps<T> = VirtualScrollerProps<T> & HTMLAttributes<HTMLDivElement>;
 
-const VirtualScrollerInner: <T>(props: IVirtualScrollerProps<T>, ref: React.Ref<IVirtualScroller<T>>) => React.JSX.Element
-= <T, >(props: IVirtualScrollerProps<T>, ref: React.Ref<IVirtualScroller<T>>) => {
+const VirtualScrollerInner: <T>(props: IVirtualScrollerProps<T>, ref: Ref<IVirtualScroller<T>>) => JSX.Element
+= <T, >(props: IVirtualScrollerProps<T>, ref: Ref<IVirtualScroller<T>>) => {
     const {
         items,
         itemSize,
@@ -79,13 +78,13 @@ const VirtualScrollerInner: <T>(props: IVirtualScrollerProps<T>, ref: React.Ref<
     const [range, setRange] = useState(() => computeWindow(totalRows, 0, itemSize, pageSize, overscanCount));
     const [scrollTop, setScrollTop] = useState(0);
     const [isLoading, setIsLoading] = useState<boolean>(false);
-    const localContainerRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement | null>(null);
-    const inFlight: React.RefObject<boolean> = useRef(false);
-    const requestedUntil: React.RefObject<number> = useRef(0);
-    const didInitialScroll: React.RefObject<boolean> = useRef<boolean>(false);
-    const virtualItemsRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement | null>(null);
-    const lastStartIndexRef: React.RefObject<number> = useRef<number>(0);
-    const lastOffsetYRef: React.RefObject<number> = useRef<number>(0);
+    const localContainerRef: RefObject<HTMLDivElement | null> = useRef<HTMLDivElement | null>(null);
+    const inFlight: RefObject<boolean> = useRef(false);
+    const requestedUntil: RefObject<number> = useRef(0);
+    const didInitialScroll: RefObject<boolean> = useRef<boolean>(false);
+    const virtualItemsRef: RefObject<HTMLDivElement | null> = useRef<HTMLDivElement | null>(null);
+    const lastStartIndexRef: RefObject<number> = useRef<number>(0);
+    const lastOffsetYRef: RefObject<number> = useRef<number>(0);
 
     const firstVisibleIndex: number = useMemo(() => (
         Math.max(0, Math.floor(scrollTop / Math.max(1, itemSize)))
@@ -121,6 +120,13 @@ const VirtualScrollerInner: <T>(props: IVirtualScrollerProps<T>, ref: React.Ref<
         ...publicAPI as IVirtualScroller<T>,
         element: (scrollParent?.current) || localContainerRef.current
     }), [publicAPI]);
+
+    useEffect(() => {
+        if (items.length === 0) {
+            requestedUntil.current = 0;
+            inFlight.current = false;
+        }
+    }, [items.length]);
 
     useEffect(() => {
         setRange(computeWindow(totalRows, scrollTop, itemSize, pageSize, overscanCount));
@@ -211,7 +217,7 @@ const VirtualScrollerInner: <T>(props: IVirtualScrollerProps<T>, ref: React.Ref<
         }
     }, [items.length, onScrollRequest, showSkeleton]);
 
-    const renderListContent: () => React.JSX.Element = useCallback(() => (
+    const renderListContent: () => JSX.Element = useCallback(() => (
         <>
             {currentGroupItem && scrollTop >= itemSize && (
                 <div className="sf-pinned-group">
@@ -254,9 +260,9 @@ const VirtualScrollerInner: <T>(props: IVirtualScrollerProps<T>, ref: React.Ref<
     return (renderListContent());
 };
 
-export const VirtualScroller: <T>(props: VirtualScrollerProps<T> & React.HTMLAttributes<HTMLDivElement>
-& React.RefAttributes<IVirtualScroller<T>>) => React.ReactElement | null = forwardRef(VirtualScrollerInner) as <T>(
-    props: IVirtualScrollerProps<T> & React.RefAttributes<IVirtualScroller<T>>
-) => React.ReactElement | null;
+export const VirtualScroller: <T>(props: VirtualScrollerProps<T> & HTMLAttributes<HTMLDivElement>
+& RefAttributes<IVirtualScroller<T>>) => ReactElement | null = forwardRef(VirtualScrollerInner) as <T>(
+    props: IVirtualScrollerProps<T> & RefAttributes<IVirtualScroller<T>>
+) => ReactElement | null;
 
 export default VirtualScroller;

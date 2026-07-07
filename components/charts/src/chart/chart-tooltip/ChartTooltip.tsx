@@ -9,7 +9,7 @@ import { ChartProviderChildProps } from '../chart-area/chart-interfaces';
  * ChartTooltip component for configuring and setting the tooltip behavior in the chart.
  *
  * @param {ChartTooltipProps} props - Props used to customize the chart tooltip.
- * @returns {null} This component does not render any visible output.
+ * @returns {null} - It is used only to pass the tooltip configuration to the chart through the React context.
  */
 export const ChartTooltip: React.FC<ChartTooltipProps> = (props: ChartTooltipProps) => {
     const context: ChartProviderChildProps = useContext(ChartContext);
@@ -41,7 +41,8 @@ export const ChartTooltip: React.FC<ChartTooltipProps> = (props: ChartTooltipPro
         props.showNearestPoint,
         props.showHeaderLine,
         props.showNearestTooltip,
-        props.template
+        props.template,
+        props.followPointer
     ]);
 
     // This component doesn't render anything directly

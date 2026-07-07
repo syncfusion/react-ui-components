@@ -11,7 +11,7 @@ import { ChartProviderChildProps } from '../chart-area/chart-interfaces';
  * such as mode, multi-select, selected indexes, and pattern when mounted.
  *
  * @param {ChartSelectionProps} props - Selection configuration properties.
- * @returns {null} This component does not render any UI and returns null.
+ * @returns {null}- It is used only to pass the selection configuration to the chart through the React context.
  */
 export const ChartSelection: React.FC<ChartSelectionProps> = (props: ChartSelectionProps) => {
     const context: ChartProviderChildProps = useContext(ChartContext);

@@ -163,6 +163,13 @@ export enum ColumnType {
     Checkbox = 'checkbox',
 
     /**
+     * Represents a special column type for rendering group captions in grouped data scenarios.
+     *
+     * @default 'singlegroup'
+     */
+    SingleGroup = 'singlegroup',
+
+    /**
      * Represents a special column type for rendering command buttons (Edit, Delete, Update, Cancel).
      * Used to define a column that displays action buttons instead of data values.
      *
@@ -280,18 +287,19 @@ export enum FilterBarType {
 }
 
 /**
- * Defines the filter bar mode options for grid filtering behavior.
- * Determines how and when the filter operation is triggered in the grid.
+ * Defines the filter mode options for grid filtering behavior across all filter types.
+ * Determines how and when the filter operation is triggered in the filter bar, Excel filter, and checkbox filter.
  *
- * @default FilterBarMode.OnEnter
+ * @default FilterMode.OnEnter
  * @example
  * ```tsx
- * <Grid filterSettings={{ mode: FilterBarMode.Immediate }} />
+ * <Grid filterSettings={{ mode: FilterMode.Immediate }} />
  * ```
  */
-export enum FilterBarMode {
+export enum FilterMode {
     /**
-     * Initiates the filter operation only after the Enter key is pressed.
+     * In filter bar: Filtering triggers only after pressing Enter key following data entry.
+     * In Excel/Checkbox filter: Filtering triggers only after user changes selection and clicks OK button. Clicking Clear clears the filter.
      * Suitable for precise filtering and reducing unnecessary operations.
      *
      * @default 'OnEnter'
@@ -299,8 +307,9 @@ export enum FilterBarMode {
     OnEnter = 'OnEnter',
 
     /**
-     * Initiates the filter operation automatically after a short delay (default: 500 ms).
-     * Ideal for responsive filtering as the user types.
+     * In filter bar: Filtering triggers immediately as the user types, with a configurable delay.
+     * In Excel/Checkbox filter: Filtering triggers immediately when user checks/unchecks items or performs search, without requiring OK confirmation.
+     * Ideal for responsive filtering with immediate results.
      *
      * @default 'Immediate'
      */
@@ -365,6 +374,34 @@ export enum SelectionMode {
     Multiple = 'Multiple'
 }
 
+/**
+ * Defines the type of selection target in the grid.
+ * Determines whether selection applies to rows or cells.
+ *
+ * @default SelectionType.Row
+ * @example
+ * ```tsx
+ * <Grid selectionSettings={{ type: SelectionType.Row }} />
+ * ```
+ */
+export enum SelectionType {
+    /**
+     * Enables row selection only.
+     * Allows selecting entire rows as individual units.
+     * Maintains backward compatibility as the default selection behavior.
+     *
+     * @default 'Row'
+     */
+    Row = 'Row',
+
+    /**
+     * Enables cell selection only.
+     * Allows selecting individual cells within the grid.
+     *
+     * @default 'Cell'
+     */
+    Cell = 'Cell'
+}
 
 /**
  * Specifies the header checkbox click behavior for remote data sources.
@@ -521,6 +558,22 @@ export enum ActionType {
     FilterDialogAfterOpen = 'FilterDialogAfterOpen',
 
     /**
+     * Represents the event triggered before the Column Chooser dialog is opened.
+     * Used to customize dialog settings, control visible columns, or prevent opening based on conditions.
+     *
+     * @default 'ColumnChooserBeforeOpen'
+     */
+    ColumnChooserBeforeOpen = 'ColumnChooserBeforeOpen',
+
+    /**
+     * Represents the event triggered when column changes are applied in the Column Chooser dialog.
+     * Fired when the user clicks OK/Apply button with the final column configuration.
+     *
+     * @default 'ColumnChooserApply'
+     */
+    ColumnChooserApply = 'ColumnChooserApply',
+
+    /**
      * Represents a searching operation applied to fields.
      * Typically triggered by toolbar search input changes or programmatic search logic.
      *
@@ -575,6 +628,19 @@ export enum ActionType {
      * @default 'Paging'
      */
     Paging = 'Paging',
+
+    /**
+     * Represents a grouping operation applied to one or more fields.
+     * Commonly triggered by column grouping interactions or programmatic grouping logic.
+     *
+     * @default 'Grouping'
+     */
+    Grouping = 'Grouping',
+
+    /**
+     * Represents a refresh operation triggered to reload or re-render (only required state updates) the grid data.
+     */
+    Refresh = 'Refresh'
 }
 
 /**
@@ -692,6 +758,8 @@ export type Action =
     'ClearFiltering' |
     'FilterDialogBeforeOpen' |
     'FilterDialogAfterOpen' |
+    'ColumnChooserBeforeOpen' |
+    'ColumnChooserApply' |
     'Sorting' |
     'ClearSorting' |
     'Searching' |
@@ -699,7 +767,8 @@ export type Action =
     'Delete' |
     'Edit' |
     'Add' |
-    'Refresh';
+    'Refresh' |
+    'Grouping';
 /**
  * Enumerates the types of aggregate calculations supported by the Data Grid component.
  * Defines the available aggregation methods for summarizing data in the grid’s footer sections.
@@ -727,6 +796,22 @@ export enum AggregateType {
 }
 
 /**
+ * Defines the grouping behavior for the Data Grid component when grouping data by one or more columns.
+ * Determines how grouped data is visually structured and organized within the grid.
+ * Used to configure the grouping logic and presentation of grouped rows in the grid.
+ * ```props
+ * * SingleColumn :- Specifies single column grouping.
+ * * MultipleColumns :- Specifies multiple columns grouping.
+ * * GroupRows :- Specifies group rows grouping.
+ * ```
+ */
+export enum GroupType {
+    SingleColumn = 'SingleColumn',
+    MultipleColumns = 'MultipleColumns',
+    GroupRows = 'GroupRows'
+}
+
+/**
  * Defines the set of actionable items displayed in the grid toolbar. Each item maps to a specific user command. Enables direct data operations, UI control.
  * ```props
  * * Add :- Creates new row or record. Opens blank form or inserts editable row.
@@ -735,6 +820,8 @@ export enum AggregateType {
  * * Delete :- Removes selected row or record.
  * * Cancel :- Discards unsaved changes. Exits edit mode, maintains data integrity.
  * * Search :- Displays input for row filtering. Supports keyword match, column-level queries
+ * * ColumnChooser :- Opens column chooser dialog for showing/hiding columns
+ * * Print :- Prints the grid with configured data range and formatting options.
  * ```
  */
 export type ToolbarItems =
@@ -743,7 +830,10 @@ export type ToolbarItems =
     'Update' |
     'Delete' |
     'Cancel' |
-    'Search';
+    'Search' |
+    'ColumnChooser' |
+    'Print' |
+    'PdfExport';
 
 /**
  * Defines the available edit types for grid columns.
@@ -801,7 +891,7 @@ export enum EditType {
  * Defines the scrolling and data-loading strategy for the Data Grid component during virtualized row rendering.
  * Determines how rows are fetched and rendered based on the current scroll position and viewport.
  *
- * This enum is used with VirtualizationSettings to control whether data is loaded dynamically from a server
+ * This enum is used with `VirtualizationSettings` to control whether data is loaded dynamically from a server
  * or rendered from locally available data.
  *
  * @default ScrollMode.Auto
@@ -994,6 +1084,100 @@ export enum CommandItemType {
 }
 
 /** @private */
-export const ThemeDefaults: Record<Theme, { rowHeight: number }> = {
-    [Theme.Material]: { rowHeight: 50 }
+export const ThemeDefaults: Record<Theme, { rowHeight: number, groupingIndent: number }> = {
+    [Theme.Material]: { rowHeight: 50, groupingIndent: 20 }
 };
+
+/**
+ * Defines the cell selection mode for rectangular range selection behavior.
+ * Controls how cells are selected when creating ranges via mouse drag or keyboard shortcuts.
+ *
+ * Modes:
+ * * `Flow` - Selects all cells between start and end positions including all intermediate rows (default Excel-like behavior).
+ * * `Box` - Selects only cells within the column boundaries of the start and end positions.
+ * * `BoxWithBorder` - Box mode with visible border highlighting around the selection.
+ *
+ * @default Flow
+ * @example
+ * ```tsx
+ * <Grid selectionSettings={{ type: 'Cell', cellSelection: { enabled: true, type: CellSelectionType.Box } }} />
+ * ```
+ */
+export enum CellSelectionType {
+    /**
+     * Selects all cells between start and end positions including all intermediate rows (Excel-like behavior).
+     * Direction-aware selection: maintains selection logic based on drag direction.
+     *
+     * @default 'Flow'
+     */
+    Flow = 'Flow',
+
+    /**
+     * Selects only cells within the column boundaries of the start and end positions.
+     * Creates a rectangular block selection limited to the specified column range.
+     *
+     * @default 'Box'
+     */
+    Box = 'Box',
+
+    /**
+     * Box mode with visible border highlighting around the selection.
+     * Provides a visual outline around the selected rectangular range for better clarity.
+     *
+     * @default 'BoxWithBorder'
+     */
+    BoxWithBorder = 'BoxWithBorder'
+}
+
+/**
+ * Defines the set of built-in context menu item types available in the Data Grid component.
+ * Specifies the standard actions that can be displayed in context menus when right-clicking on grid cells or rows.
+ * Used to configure which default menu items should appear in the context menu alongside custom items.
+ *
+ * @default -
+ * @example
+ * ```tsx
+ * const contextMenuSettings = {
+ *   enabled: true,
+ *   items: ['Edit', 'Delete', 'Save', 'Cancel']
+ * };
+ *
+ * <Grid contextMenuSettings={contextMenuSettings} />
+ * ```
+ *
+ * @remarks
+ * **Available Items:**
+ * * `Edit` - Initiates edit mode for the row where the context menu was triggered.
+ * * `Delete` - Removes the row where the context menu was triggered.
+ * * `Save` - Saves changes made during edit mode.
+ * * `Cancel` - Cancels edit mode and discards unsaved changes to the row.
+ * * `SortAscending` - Sorts the grid data in ascending order based on the selected column.
+ * * `SortDescending` - Sorts the grid data in descending order based on the selected column.
+ * * `ClearSort` - Removes sorting for the selected column.
+ * * `FirstPage` - Navigates to the first page of paginated data in the grid.
+ * * `PrevPage` - Navigates to the previous page of paginated data.
+ * * `LastPage` - Navigates to the last page of paginated data.
+ * * `NextPage` - Navigates to the next page of paginated data.
+ * * `SelectRow` - Selects the row where the context menu was triggered.
+ * * `ClearRowSelection` - Deselects the row where the context menu was triggered.
+ * * `ClearSelection` - Clears all row selections in the grid.
+ * * `Sum` - Adds Sum aggregation to the aggregate cell (number columns only).
+ * * `Average` - Adds Average aggregation to the aggregate cell (number columns only).
+ * * `Min` - Adds Min aggregation to the aggregate cell (number columns only).
+ * * `Max` - Adds Max aggregation to the aggregate cell (number columns only).
+ * * `Count` - Adds Count aggregation to the aggregate cell (all column types).
+ * * `TrueCount` - Adds TrueCount aggregation to the aggregate cell (boolean columns only).
+ * * `FalseCount` - Adds FalseCount aggregation to the aggregate cell (boolean columns only).
+ * * `Custom` - Adds Custom aggregation to the aggregate cell (for columns with customAggregate property).
+ */
+export type ContextMenuItem = 'Edit' | 'Delete' | 'Save' | 'Cancel' | 'SortAscending' | 'SortDescending' | 'ClearSort' | 'FirstPage' | 'PrevPage' | 'LastPage' | 'NextPage' | 'SelectRow' | 'ClearRowSelection' | 'ClearSelection' | 'Sum' | 'Average' | 'Min' | 'Max' | 'Count' | 'TrueCount' | 'FalseCount' | 'Custom';
+
+/**
+ * Defines the range of rows to include in the print operation.
+ * ```props
+ * * All :- Prints all rows from the data source.
+ * * CurrentPage :- Prints only rows displayed on the current page.
+ * * Custom :- Prints a specified range of rows using startRow and endRow.
+ * ```
+ */
+export type PrintRange = 'All' | 'CurrentPage' | 'Custom';

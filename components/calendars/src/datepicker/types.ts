@@ -1,6 +1,9 @@
+import { inputBaseProps, HorizontalAlignment } from '@syncfusion/react-inputs';
 import { CalendarBaseProps, CalendarUiProps } from '../calendar';
-import { LabelMode, Size, Variant } from '@syncfusion/react-base';
-export { Variant };
+import { LabelMode, Variant, Size } from '@syncfusion/react-base';
+import { PopupSettings, CollisionAxis, CollisionType } from '@syncfusion/react-popups';
+export { Variant, Size, HorizontalAlignment };
+export { PopupSettings, CollisionAxis, CollisionType };
 
 /**
  * Specifies the variant behavior for picker components, determining how the popup is displayed across devices.
@@ -23,7 +26,43 @@ export enum PickerVariant {
     Auto = 'Auto'
 }
 
-export interface InputBaseProps {
+/**
+ * Specifies placeholder overrides for date/time segments
+ * in masked input. Applicable only when `inputMask` is true.
+ *
+ */
+export interface MaskPlaceholder {
+    /**
+     * Specifies the placeholder for the day segment (e.g., "dd").
+     */
+    day?: string;
+    /**
+     * Specifies the placeholder for the month segment (e.g., "mm" or localized month).
+     */
+    month?: string;
+    /**
+     * Specifies the placeholder for the year segment (e.g., "yyyy").
+     */
+    year?: string;
+    /**
+     * Specifies the placeholder for the hour segment (e.g., "hh" or "HH").
+     */
+    hour?: string;
+    /**
+     * Specifies the placeholder for the minute segment (e.g., "mm").
+     */
+    minute?: string;
+    /**
+     * Specifies the placeholder for the second segment (e.g., "ss").
+     */
+    second?: string;
+    /**
+     * Specifies the placeholder for the meridiem segment (e.g., "AM/PM").
+     */
+    meridiem?: string;
+}
+
+export interface InputProps extends inputBaseProps {
     /**
      * Specifies the placeholder text to display in the input box when no value is set.
      *
@@ -103,20 +142,6 @@ export interface InputBaseProps {
     validityStyles?: boolean;
 
     /**
-     * Specifies the visual style variant of the component.
-     *
-     * @default Variant.Standard
-     */
-    variant?: Variant;
-
-    /**
-     * Specifies the size style of the Timepicker. Options include 'Small', 'Medium' and 'Large'.
-     *
-     * @default Size.Medium
-     */
-    size?: Size;
-
-    /**
      * Specifies whether to show the clear button within the input field.
      *
      * @default true
@@ -146,14 +171,37 @@ export interface InputBaseProps {
     open?: boolean;
 
     /**
-     * Sets the z-index value for the dropdown popup, controlling its stacking order relative to other elements on the page.
+     * Specifies additional HTML attributes to apply to the underlying input element. Values provided here can override default aria-* attributes set by the component.
      *
-     * @default 1000
      */
-    zIndex?: number;
+    inputProps?: Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'defaultValue'>;
+
+    /**
+     * Specifies configuration for the popup, including positioning,
+     * collision handling, sizing, and layering behavior.
+     *
+     * @default -
+     */
+    popupSettings?: PopupSettings;
+
+    /**
+     * Specifies whether to enable a segment-based masked input driven by the
+     * current `format` instead of a free-text input.
+     *
+     * @default false
+     */
+    inputMask?: boolean;
+
+    /**
+     * Per-segment placeholder overrides for the mask input.
+     * Only relevant when `inputMask=true`.
+     *
+     * @default -
+     */
+    maskPlaceholder?: MaskPlaceholder;
 }
 
-export interface DatePickerProps extends CalendarBaseProps , InputBaseProps, CalendarUiProps {
+export interface DatePickerProps extends CalendarBaseProps , InputProps, CalendarUiProps {
     /**
      * Specifies the date format string for displaying and parsing date values.
      * Examples: 'MM/dd/yyyy', 'yyyy-MM-dd', etc.

@@ -8,7 +8,7 @@ import { ChartProviderChildProps } from './chart-interfaces';
  * ChartSubtitle component for configuring and setting the subtitle of the chart.
  *
  * @param {ChartTitleProps} props - Props used to customize the chart subtitle.
- * @returns {null} This component does not render any visible output.
+ * @returns {null} - It is used only to pass the sub title configuration to the chart through the React context.
  */
 export const ChartSubtitle: React.FC<ChartTitleProps> = (props: ChartTitleProps) => {
     const context: ChartProviderChildProps = useContext(ChartContext);

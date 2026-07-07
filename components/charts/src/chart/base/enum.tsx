@@ -99,6 +99,8 @@ export type EmptyPointMode =
  * StackingBar :- Represents a stacking bar series.
  * StackingBar100 :- Represents a 100% stacking Bar series.
  * StepLine :- Represents a step line series.
+ * StackingLine :- Represents a stacking  series.
+ * StackingLine100 :- Represents a 100% stacking line series.
  * SplineArea :- Represents a spline area series.
  * Scatter :- Represents a scatter series.
  * Spline :- Represents a spline series.
@@ -108,44 +110,89 @@ export type EmptyPointMode =
  * Hilo :- Represents a hilo series.
  * HiloOpenClose :- Represents a hiloOpenClose series.
  * RangeArea :- Represents a rangeArea series.
+ * RangeStepArea :- Represents a range step area series.
  * RangeColumn :- Represents a rangeColumn series.
  * StackingArea :- Represents a stacking area series.
  * StackingArea100 :- Represents a 100% stacking area series.
+ * StackingStepArea :- Represents a stacking step area series.
  * SplineRangeArea :- Represents a spline range area series.
  * MultiColoredArea :- Represents a multi colored area series.
  * Waterfall :- Represents a waterfall series.
  * Histogram :- Represents a histogram series.
+ * PolarLine :- Represents a polar line series.
+ * PolarSpline :- Represents a polar spline series.
+ * PolarArea :- Represents a polar area series.
+ * PolarSplineArea :- Represents a polar spline area series.
+ * PolarColumn :- Represents a polar column series.
+ * PolarStackingArea :- Represents a polar stacking area series.
+ * PolarStackingColumn :- Represents a polar stacking column series.
+ * PolarRangeColumn :- Represents a polar range column series.
+ * PolarScatter :- Represents a polar scatter series.
+ * RadarLine :- Represents a radar line series.
+ * RadarSpline :- Represents a radar spline series.
+ * RadarArea :- Represents a radar area series.
+ * RadarSplineArea :- Represents a radar spline area series.
+ * RadarColumn :- Represents a radar column series.
+ * RadarStackingArea :- Represents a radar stacking area series.
+ * RadarStackingColumn :- Represents a radar stacking column series.
+ * RadarRangeColumn :- Represents a radar range column series.
+ * RadarScatter :- Represents a radar scatter series.
  * Pareto :- Represents a pareto series.
+ * BoxAndWhisker :- Represents a box and whisker series.
  * ```
  */
 export type ChartSeriesType =
     'Line' |
-    'MultiColoredLine'|
+    'MultiColoredLine' |
     'Column' |
     'Area' |
     'Bar' |
     'StackingColumn' |
-    'StackingColumn100'|
+    'StackingColumn100' |
     'StackingBar' |
-    'StackingBar100'|
+    'StackingBar100' |
     'StepLine' |
     'SplineArea' |
     'SplineRangeArea' |
     'Scatter' |
     'Spline' |
-    'StepArea'|
+    'StepArea' |
     'Bubble' |
     'Candle' |
     'Hilo' |
-    'HiloOpenClose'|
-    'RangeArea'|
-    'RangeColumn'|
-    'StackingArea'|
-    'StackingArea100'|
-    'Waterfall'|
-    'MultiColoredArea'|
-    'Histogram'|
-    'Pareto';
+    'HiloOpenClose' |
+    'RangeArea' |
+    'RangeStepArea' |
+    'RangeColumn' |
+    'StackingArea100' |
+    'PolarLine' |
+    'PolarColumn' |
+    'PolarStackingArea' |
+    'PolarStackingColumn' |
+    'PolarRangeColumn' |
+    'PolarScatter' |
+    'PolarSpline' |
+    'PolarSplineArea' |
+    'PolarArea' |
+    'RadarScatter' |
+    'RadarSpline' |
+    'RadarSplineArea' |
+    'RadarLine' |
+    'RadarColumn' |
+    'RadarArea' |
+    'RadarStackingArea' |
+    'RadarStackingColumn' |
+    'RadarRangeColumn' |
+    'StackingArea' |
+    'StackingArea100' |
+    'StackingStepArea' |
+    'Waterfall' |
+    'MultiColoredArea' |
+    'Histogram' |
+    'Pareto' |
+    'StackingLine' |
+    'StackingLine100' |
+    'BoxAndWhisker';
 
 /**
  * Specifies the position where the step begins in a step line series.
@@ -222,7 +269,7 @@ export type LabelPosition =
  * Defines the shapes available for legend items in the chart.
  * ```props
  * Circle :- Renders a circular legend shape.
- * Rectangle :-Renders a rectangular legend shape.
+ * Rectangle :- Renders a rectangular legend shape.
  * Triangle :- Renders a triangular legend shape.
  * Diamond :- Renders a diamond-shaped legend.
  * Cross :- Renders a cross-shaped legend.
@@ -301,7 +348,7 @@ export type ToolbarItems =
  * ```props
  * XY :- Zooms both the horizontal (X) and vertical (Y) axes.
  * X :- Zooms only the horizontal (X) axis.
- * Y:- Zooms only the vertical (Y) axis.
+ * Y :- Zooms only the vertical (Y) axis.
  * ```
  */
 export type ZoomMode =
@@ -334,15 +381,15 @@ export type SelectionMode =
  * * DiagonalForward :- Applies a diagonal forward pattern
  * * Crosshatch :- Applies a crosshatch pattern.
  * * Pacman :- Applies a pacman-style pattern.
- * * Diagonalbackward :- Applies a diagonal backward pattern.
+ * * DiagonalBackward :- Applies a diagonal backward pattern.
  * * Grid :- Applies a grid pattern.
  * * Turquoise :- Applies a turquoise pattern.
  * * Star :- Applies a star pattern.
  * * Triangle :- Applies a triangle pattern.
  * * Circle :- Applies a circle pattern.
  * * Tile :- Applies a tile pattern.
- * * Horizontaldash :- Applies a vertical dash pattern.
- * * Verticaldash :- Applies a rectangle pattern.
+ * * HorizontalDash :- Applies a horizontal dash pattern.
+ * * VerticalDash :- Applies a vertical dash pattern.
  * * Rectangle :- Applies a box pattern.
  * * Box :- Applies a vertical stripe pattern.
  * * Verticalstripe :- Applies a vertical stripe pattern.
@@ -431,7 +478,7 @@ export type SkeletonType =
  * Days :- The stripline size is based on day in the DateTime axis.
  * Hours :- The stripline size is based on hour in the DateTime axis.
  * Minutes :- The stripline size is based on minutes in the DateTime axis.
- * Seconds:- The stripline size is based on seconds in the DateTime axis.
+ * Seconds :- The stripline size is based on seconds in the DateTime axis.
  * ```
  */
 export type StripLineSizeUnit =
@@ -484,17 +531,6 @@ export type SeriesValueType =
     'HighLowOpenClose';
 
 /**
- * Specifies the coordinate unit type for chart annotations. They are:
- * ```props
- * Pixel :- Positions annotations using pixel values relative to the chart container.
- * Point :- Positions annotations using axis values relative to chart data points.
- * ```
- */
-export type AnnotationCoordinateUnit =
-    'Pixel' |
-    'Point';
-
-/**
  * Specifies the type of error bar to be rendered in the chart.
  * Available options are:
  * ```props
@@ -528,3 +564,129 @@ export type TrendlineTypes =
     | 'Power'
     | 'Logarithmic'
     | 'MovingAverage';
+
+/**
+ * Specifies the visual shape used to render data points in column and bar series.
+ *
+ * ```props
+ * Rectangle :- Renders data points using the standard rectangular column or bar shape.
+ * Cylinder :- Renders data points with a cylindrical visual appearance.
+ * ```
+ */
+export type ColumnFacet =
+    'Rectangle' |
+    'Cylinder';
+
+/**
+ * Defines the quartile and whisker calculation mode used by the Box‑and‑Whisker chart series.
+ *
+ * ```props
+ * Exclusive :- Quartiles exclude the median when splitting the dataset.
+ * Inclusive :- Quartiles include the median in both halves.
+ * Normal :- Uses the standard box plot calculation method.
+ * ```
+ */
+export type BoxPlotMode =
+    'Exclusive'
+    | 'Inclusive'
+    | 'Normal';
+
+/**
+ * Specifies the position of the scrollbar in the chart.
+ * ```props
+ * Top :- Places the scrollbar at the top of the chart. Applicable only for horizontal scrollbars.
+ * Bottom :- Places the scrollbar at the bottom of the chart. Applicable only for horizontal scrollbars.
+ * Left :- Places the scrollbar on the left side of the chart. Applicable only for vertical scrollbars.
+ * Right :- Places the scrollbar on the right side of the chart. Applicable only for vertical scrollbars.
+ * PlaceNextToAxisLine :- Places the scrollbar next to the axis line.
+ * ```
+ */
+export type ScrollbarPosition =
+    'Top' |
+    'Bottom' |
+    'Left' |
+    'Right' |
+    'PlaceNextToAxisLine';
+
+/**
+ * Defines the rendering modes available for the MACD (Moving Average
+ * Convergence Divergence) indicator.
+ * ```props
+ * Line :- Displays the MACD line along with the signal line.
+ * Histogram :- Displays only the MACD histogram bars.
+ * Both :- Displays the MACD line, signal line, and histogram.
+ * ```
+ */
+export type MacdType =
+    'Line' |
+    'Histogram' |
+    'Both';
+
+
+/**
+ * Defines the financial data fields used by financial series
+ * and technical indicators for value comparison and calculation.
+ * ```props
+ * High :- Represents the highest price during a given period.
+ * Low :- Represents the lowest price during a given period.
+ * Open :- Represents the opening price at the start of a period.
+ * Close :- Represents the closing price at the end of a period.
+ * ```
+ */
+export type FinancialDataField =
+    'High' |
+    'Low' |
+    'Open' |
+    'Close';
+
+/**
+ * Defines the types of technical indicators used to analyze market trends and price movements.
+ * Each indicator serves a specific analytical purpose for financial chart visualization.
+ *
+ * The options are:
+ * ```props
+ * Sma :- Simple Moving Average indicator. Commonly used for trend identification by smoothing price data.
+ * Ema :- Exponential Moving Average indicator. Gives more weight to recent prices than SMA.
+ * Tma :- Triangular Moving Average indicator. Double-smoothed moving average for smoother trend lines.
+ * Atr :- Average True Range indicator. Measures market volatility and price movement range.
+ * AccumulationDistribution :- Accumulation / Distribution indicator. Combines price and volume to identify momentum.
+ * Momentum :- Momentum indicator. Measures the rate of change in price movements.
+ * Rsi :- Relative Strength Index indicator. Identifies overbought and oversold conditions (0-100 scale).
+ * Macd :- Moving Average Convergence Divergence indicator. Shows relationship between two moving averages.
+ * Stochastic :- Stochastic Oscillator indicator. Compares closing price to price range over a period.
+ * BollingerBands :- Bollinger Bands indicator. Displays volatility bands around a moving average.
+ * ```
+ *
+ * @example
+ * ```tsx
+ * <ChartIndicator type="Sma" period={14} />
+ * <ChartIndicator type="Rsi" period={14} overBought={80} overSold={20} />
+ * <ChartIndicator type="BollingerBands" period={20} standardDeviation={2} />
+ * ```
+ */
+export type IndicatorsType =
+    'Sma' |
+    'Ema' |
+    'Tma' |
+    'Atr' |
+    'AccumulationDistribution' |
+    'Momentum' |
+    'Rsi' |
+    'Macd' |
+    'Stochastic' |
+    'BollingerBands';
+
+/**
+ * Defines the mode of the legend in the chart. They are:
+ * ```props
+ * Series :- Render legend items based on visible series.
+ * Point :- Render legend items based on points.
+ * Range :- Render legend items based on range color mapping conditions.
+ * Gradient :- Render legend items based on gradient color mapping conditions.
+ * ```
+ */
+export type LegendMode =
+    'Series' |
+    'Point' |
+    'Range' |
+    'Gradient';

@@ -397,7 +397,7 @@ function calculateStackLabel(
                     const shapeRect: ShapeRectConfig = {
                         id: `${chart.element.id}_StackLabel_TextShape_${stackLabelIndex}`,
                         fill: String(props.fill),
-                        border: props.border!,
+                        border: props.border as ChartBorderProps,
                         opacity: 1,
                         rect: rect,
                         rx: Number(props.borderRadius?.x),

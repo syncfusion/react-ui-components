@@ -1,5 +1,5 @@
 import { CSSProperties } from 'react';
-import { TimeScaleProps } from '../types/scheduler-types';
+import { EventModel, SchedulerResource, TimeScaleProps } from '../types/scheduler-types';
 import { ProcessedEventsData } from '../types/internal-interface';
 import { DateService, MINUTES_PER_DAY, MINUTES_PER_HOUR, MS_PER_DAY } from './DateService';
 import { ROW_HEIGHT, ALL_DAY_EVENT_HEIGHT, EVENTS_GAP } from './EventService';
@@ -18,17 +18,19 @@ export class PositioningService {
      * @param {TimeScaleProps} timeScale - The time scale configuration
      * @param {string} startHour - The start hour of the scheduler
      * @param {string} endHour - The end hour of the scheduler
+     * @param {number} [cellHeight] - Optional custom cell height. If not provided or 0, falls back to ROW_HEIGHT
      * @returns {CSSProperties} CSS properties for positioning
      */
     static calculateEventPosition(
         eventInfo: ProcessedEventsData,
         timeScale: TimeScaleProps,
         startHour: string,
-        endHour: string
+        endHour: string,
+        cellHeight?: number
     ): CSSProperties {
         const top: string = (eventInfo.event.isAllDay && eventInfo.event.isBlock) ? '0px' :
-            this.calculateTopPosition(eventInfo.startDate, timeScale, startHour);
-        const height: string = this.calculateHeight(eventInfo, timeScale, startHour, endHour);
+            this.calculateTopPosition(eventInfo.startDate, timeScale, startHour, cellHeight);
+        const height: string = this.calculateHeight(eventInfo, timeScale, startHour, endHour, cellHeight);
         let widthValue: number = 96;
         let left: string = eventInfo.event.isBlock ? '1px' : '0%';
 
@@ -92,6 +94,7 @@ export class PositioningService {
      * @param {TimeScaleProps} timeScale - The time scale configuration (for non-allday events)
      * @param {string} startHour - The start hour of the scheduler (for non-allday events)
      * @param {string} endHour - The end hour of the scheduler (for non-allday events)
+     * @param {number} [cellHeight] - Optional custom cell height. If not provided or 0, falls back to ROW_HEIGHT
      * @returns {CSSProperties} CSS properties for positioning
      */
     static calculatePositionStyles(
@@ -99,7 +102,8 @@ export class PositioningService {
         renderDates: Date[],
         timeScale?: TimeScaleProps,
         startHour?: string,
-        endHour?: string
+        endHour?: string,
+        cellHeight?: number
     ): CSSProperties {
         // For spanned events
         if (eventInfo.totalSegments) {
@@ -117,7 +121,7 @@ export class PositioningService {
         }
         // For regular time slot events
         if (timeScale && startHour && endHour) {
-            return this.calculateEventPosition(eventInfo, timeScale, startHour, endHour);
+            return this.calculateEventPosition(eventInfo, timeScale, startHour, endHour, cellHeight);
         }
         return {};
     }
@@ -128,19 +132,28 @@ export class PositioningService {
      * @param {Date} startTime - The event start time
      * @param {TimeScaleProps} timeScale - The time scale configuration
      * @param {string} startHour - The start hour of the scheduler
+     * @param {number} [cellHeight] - Optional custom cell height. If not provided or 0, falls back to ROW_HEIGHT
      * @returns {string} The top position as a CSS value
+     *
+     * **Note on Dynamic Cell Heights:**
+     * The cellHeight parameter allows this method to adapt to CSS customizations
+     * of cell dimensions. When cellHeight is provided and non-zero, it is used
+     * instead of the hardcoded ROW_HEIGHT constant. This ensures that event
+     * positioning correctly accounts for custom cell heights applied via CSS.
      */
     static calculateTopPosition(
         startTime: Date,
         timeScale: TimeScaleProps,
-        startHour: string
+        startHour: string,
+        cellHeight?: number
     ): string {
         const startHourDate: Date = DateService.getStartEndHours(startHour);
         const schedulerStartMinutes: number = startHourDate.getHours() * MINUTES_PER_HOUR + startHourDate.getMinutes();
         const eventStartMinutes: number = startTime.getHours() * MINUTES_PER_HOUR + startTime.getMinutes();
         // Calculate minutes from scheduler start time
         const minutesFromStart: number = eventStartMinutes - schedulerStartMinutes;
-        const rowHeight: number = ROW_HEIGHT;
+        // Use passed cellHeight if provided and valid, otherwise fall back to ROW_HEIGHT
+        const rowHeight: number = (cellHeight && cellHeight > 0) ? cellHeight : ROW_HEIGHT;
         const pixelsPerMinute: number = rowHeight / (timeScale.interval / timeScale.slotCount);
         const top: number = minutesFromStart * pixelsPerMinute;
         return `${Math.max(0, top)}px`;
@@ -153,13 +166,20 @@ export class PositioningService {
      * @param {TimeScaleProps} timeScale - The time scale configuration
      * @param {string} startHour - The start hour of the scheduler
      * @param {string} endHour - The end hour of the scheduler
+     * @param {number} [cellHeight] - Optional custom cell height. If not provided or 0, falls back to ROW_HEIGHT
      * @returns {string} The height as a CSS value
+     *
+     * **Note on Dynamic Cell Heights:**
+     * The cellHeight parameter enables this method to correctly calculate event
+     * heights based on actual DOM cell dimensions rather than hardcoded constants.
+     * This is essential for supporting CSS-customized cell heights (e.g., 100px cells).
      */
     static calculateHeight(
         eventInfo: ProcessedEventsData,
         timeScale: TimeScaleProps,
         startHour: string,
-        endHour: string
+        endHour: string,
+        cellHeight?: number
     ): string {
         const eventStartTime: Date = new Date(eventInfo.startDate);
         const eventEndTime: Date = new Date(eventInfo.endDate);
@@ -187,7 +207,9 @@ export class PositioningService {
             // For multi-day events, extend to the end of the current view
             cellsSpanned = Math.min(remainingMinutesInView / intervalMinutes);
         }
-        let height: number = Math.round(cellsSpanned * ROW_HEIGHT - 2);
+        // Use passed cellHeight if provided and valid, otherwise fall back to ROW_HEIGHT
+        const rowHeight: number = (cellHeight && cellHeight > 0) ? cellHeight : ROW_HEIGHT;
+        let height: number = Math.round(cellsSpanned * rowHeight - 2);
         height = height > 0 ? height : 1;
         return `${height}px`;
     }
@@ -249,6 +271,75 @@ export class PositioningService {
 
         positions.splice(positionIndex, 1, true);
         sharedPositionMap.set(dateKey, positions);
+        return sharedPositionMap;
+    }
+
+    /**
+     * Initializes position maps for event rendering.
+     * Creates a shared position map when no resources are configured,
+     * or prepares the per-resource map structure when resources are present.
+     *
+     * @param {Date[]} renderDates - The dates to initialize position maps for
+     * @param {boolean} usePerResourcePositioning - Whether to use per-resource position maps
+     * @returns {Object} The initialized maps with sharedPositionMap and positionMapsPerResource
+     */
+    static initializePositionMaps(
+        renderDates: Date[],
+        usePerResourcePositioning: boolean
+    ): {
+            sharedPositionMap: Map<string, boolean[]> | undefined;
+            positionMapsPerResource: Map<string, Map<string, boolean[]>>;
+        } {
+        let sharedPositionMap: Map<string, boolean[]> | undefined;
+        const positionMapsPerResource: Map<string, Map<string, boolean[]>> = new Map();
+
+        if (!usePerResourcePositioning) {
+            sharedPositionMap = new Map<string, boolean[]>();
+            renderDates.forEach((date: Date) => {
+                const dateKey: string = DateService.generateDateKey(date);
+                sharedPositionMap!.set(dateKey, []);
+            });
+        }
+
+        return { sharedPositionMap, positionMapsPerResource };
+    }
+
+    /**
+     * Gets or creates the position map for an event based on its resource key.
+     * When per-resource positioning is enabled, creates a composite key from
+     * all resource field values to identify the correct position map.
+     *
+     * @param {EventModel} event - The event to get position map for
+     * @param {SchedulerResource[]} resources - The scheduler resources
+     * @param {Map<string, Map<string, boolean[]>>} positionMapsPerResource - Map of position maps per resource key
+     * @param {Date[]} renderDates - The dates being rendered
+     * @param {Map<string, boolean[]>} sharedPositionMap - The shared position map when not using per-resource positioning
+     * @returns {Map<string, boolean[]>} The position map for the event
+     */
+    static getPositionMapForEvent(
+        event: EventModel,
+        resources: SchedulerResource[],
+        positionMapsPerResource: Map<string, Map<string, boolean[]>>,
+        renderDates: Date[],
+        sharedPositionMap: Map<string, boolean[]> | undefined
+    ): Map<string, boolean[]> {
+        if (!sharedPositionMap) {
+            const resourceKeyParts: (string | number)[] = resources.map((resource: SchedulerResource) => {
+                const value: string | number | (string | number)[] =
+                        Reflect.get(event, resource.field) as string | number | (string | number)[];
+                return (value as string | number) || '';
+            }).filter((v: string | number) => v !== '');
+            const resourceKey: string = resourceKeyParts.join('|');
+
+            if (!positionMapsPerResource.has(resourceKey)) {
+                const newMap: Map<string, boolean[]> = new Map();
+                renderDates.forEach((date: Date) => {
+                    newMap.set(DateService.generateDateKey(date), []);
+                });
+                positionMapsPerResource.set(resourceKey, newMap);
+            }
+            return positionMapsPerResource.get(resourceKey)!;
+        }
         return sharedPositionMap;
     }
 }

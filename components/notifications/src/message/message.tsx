@@ -1,5 +1,4 @@
-import * as React from 'react';
-import { useEffect, useRef, useState, forwardRef, HTMLAttributes, useImperativeHandle, useMemo, useCallback, Ref } from 'react';
+import { useEffect, useRef, useState, forwardRef, HTMLAttributes, useImperativeHandle, useMemo, useCallback, Ref, ReactNode, SyntheticEvent, ForwardRefExoticComponent, RefAttributes, RefObject, JSX, type KeyboardEvent } from 'react';
 import { IL10n, L10n, preRender, useProviderContext, SvgIcon, Severity, Variant } from '@syncfusion/react-base';
 export { Severity, Variant };
 
@@ -13,7 +12,7 @@ export interface MessageProps {
      *
      * @default true
      */
-    icon?: React.ReactNode;
+    icon?: ReactNode;
 
     /**
      * Shows or hides the close icon in the Message component. An end user can click the close icon to hide the message, and the onClose event will be triggered.
@@ -24,7 +23,7 @@ export interface MessageProps {
      *
      * @default false
      */
-    closeIcon?: React.ReactNode;
+    closeIcon?: ReactNode;
 
     /**
      * Specifies the severity of the message, which is used to define the appearance (icons and colors) of the message. The available severity messages are Normal, Success, Info, Warning, and Error.
@@ -52,7 +51,7 @@ export interface MessageProps {
      *
      * @event closed
      */
-    onClose?: (event: React.SyntheticEvent) => void;
+    onClose?: (event: SyntheticEvent) => void;
 }
 export interface IMessage extends MessageProps {
     /**
@@ -75,7 +74,7 @@ type MsgProps = IMessage & HTMLAttributes<HTMLDivElement>;
  * <Message closeIcon={true}>Editing is restricted</Message>
  * ```
  */
-export const Message: React.ForwardRefExoticComponent<MsgProps & React.RefAttributes<IMessage>> =
+export const Message: ForwardRefExoticComponent<MsgProps & RefAttributes<IMessage>> =
     forwardRef<IMessage, MsgProps>((props: MsgProps, ref: Ref<IMessage>) => {
         const {
             children,
@@ -89,7 +88,7 @@ export const Message: React.ForwardRefExoticComponent<MsgProps & React.RefAttrib
             ...eleAttr
         } = props;
         const [isVisible, setIsVisible] = useState(true);
-        const eleRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
+        const eleRef: RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
         const { locale, dir } = useProviderContext();
         const msgCloseIcon: string = 'M10.5858 12.0001L2.58575 4.00003L3.99997 2.58582L12 10.5858L20 2.58582L21.4142 4.00003L13.4142 12.0001L21.4142 20L20 21.4142L12 13.4143L4.00003 21.4142L2.58581 20L10.5858 12.0001Z';
         const infoIcon: string = 'M12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3ZM1 12C1 5.92487 5.92487 1 12 1C18.0751 1 23 5.92487 23 12C23 18.0751 18.0751 23 12 23C5.92487 23 1 18.0751 1 12ZM13 11V17H11V11H13ZM13 9V7H11V9H13Z';
@@ -104,7 +103,7 @@ export const Message: React.ForwardRefExoticComponent<MsgProps & React.RefAttrib
             return l10n.getConstant('close');
         }, [locale]);
 
-        const classArray: string[] = ['sf-control sf-message sf-lib sf-size-small', className];
+        const classArray: string[] = ['sf-control sf-message sf-lib', className];
         const hasWrap: boolean = useMemo(() => classArray.join(' ').split(' ').includes('sf-content-center'), [className]);
 
         const classes: string = useMemo(() => {
@@ -146,10 +145,10 @@ export const Message: React.ForwardRefExoticComponent<MsgProps & React.RefAttrib
          * Function to perform message close action.
          *
          * @private
-         * @param {React.SyntheticEvent} event - The original mouse or keyboard event arguments.
+         * @param {SyntheticEvent} event - The original mouse or keyboard event arguments.
          * @returns {void}
          */
-        function closeMessage(event: React.SyntheticEvent): void {
+        function closeMessage(event: SyntheticEvent): void {
             setIsVisible(false);
             onClose?.(event);
         }
@@ -158,10 +157,10 @@ export const Message: React.ForwardRefExoticComponent<MsgProps & React.RefAttrib
          * Function to perform key down action.
          *
          * @private
-         * @param {React.KeyboardEvent} event - The original keyboard event arguments.
+         * @param {KeyboardEvent} event - The original keyboard event arguments.
          * @returns {void}
          */
-        function handleKeyDown(event: React.KeyboardEvent): void {
+        function handleKeyDown(event: KeyboardEvent): void {
             if (event.key === 'Enter' || event.key === ' ') {
                 closeMessage(event);
             }
@@ -171,14 +170,14 @@ export const Message: React.ForwardRefExoticComponent<MsgProps & React.RefAttrib
          * Gets the content of the message component.
          *
          * @private
-         * @returns {React.JSX.Element} - The content of the message component.
+         * @returns {JSX.Element} - The content of the message component.
          */
-        const getContent: () => React.JSX.Element = useCallback((): React.JSX.Element => (
+        const getContent: () => JSX.Element = useCallback((): JSX.Element => (
             <>
                 {icon && (
                     <span className="sf-msg-icon sf-display-flex">
                         {typeof icon === 'boolean' ? (
-                            <SvgIcon className="sf-font-size-lg" d={msgIcon} />
+                            <SvgIcon d={msgIcon} />
                         ) : (
                             icon
                         )}
@@ -188,7 +187,7 @@ export const Message: React.ForwardRefExoticComponent<MsgProps & React.RefAttrib
                     {children}
                 </div>
             </>
-        ), [icon, children, severity, msgIcon]);
+        ), [icon, children, msgIcon]);
 
         const publicAPI: Partial<IMessage> = {
             icon,

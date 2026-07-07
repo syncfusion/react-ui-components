@@ -1,21 +1,12 @@
-import { useState, useRef, forwardRef, useImperativeHandle, useEffect, Ref, ButtonHTMLAttributes, JSX, useCallback } from 'react';
-import { IPopup, Popup, CollisionType } from '@syncfusion/react-popups';
+import { useState, useRef, forwardRef, useImperativeHandle, useEffect, Ref, ButtonHTMLAttributes, JSX, useCallback, useMemo,
+    ReactNode, SyntheticEvent, ForwardRefExoticComponent, RefAttributes, memo, type MouseEvent, type KeyboardEvent,
+    isValidElement, Dispatch, SetStateAction, RefObject
+} from 'react';
+import { IPopup, Popup, CollisionType, PositionAxis, CollisionAxis, PopupAnimationOptions, PopupSettings } from '@syncfusion/react-popups';
 import { Button, Position, Color, Size, Variant, IButton } from '@syncfusion/react-buttons';
-import { AnimationOptions, useProviderContext, preRender, IAnimation, Animation, Effect } from '@syncfusion/react-base';
-import * as React from 'react';
+import { useProviderContext, preRender, IAnimation, AnimationOptions, Animation, Effect } from '@syncfusion/react-base';
 import { createPortal } from 'react-dom';
-export { Color, Size, Variant, Position };
-
-interface AnimationProps {
-    /**
-     * Specifies the animation that should happen when Popup opens.
-     */
-    show?: AnimationOptions;
-    /**
-     * Specifies the animation that should happen when Popup closes.
-     */
-    hide?: AnimationOptions;
-}
+export { Color, Size, Variant, Position, PositionAxis, CollisionAxis, CollisionType, PopupSettings };
 
 /**
  * ItemModel interface defines properties for each dropdown item.
@@ -27,7 +18,7 @@ export interface ItemModel {
      *
      * @default -
      */
-    icon?: React.ReactNode;
+    icon?: ReactNode;
 
     /**
      * Specifies the id for item.
@@ -73,7 +64,7 @@ export interface ButtonSelectEvent {
      * The original mouse event that triggered the selection.
      * Contains information about the click event on the list item.
      */
-    event?: React.SyntheticEvent;
+    event?: SyntheticEvent;
 
     /**
      * The data object representing the selected item.
@@ -92,7 +83,7 @@ export interface DropDownButtonProps {
      *
      * @default -
      */
-    icon?: React.ReactNode;
+    icon?: ReactNode;
 
     /**
      * Specifies the position of the icon relative to the Dropdown Button text. Options include placing the icon at the left, right, top, or bottom of the button content.
@@ -109,15 +100,6 @@ export interface DropDownButtonProps {
     items?: ItemModel[];
 
     /**
-     * This property defines the width of the dropdown popup for the Dropdown Button component.
-     * Set the width as a string or number using valid CSS units like `px`, `%`, or `rem`, or as pixels.
-     * The default value of `auto` allows the popup to adjust based on the content length, but a specific width can be provided for more precise control.
-     *
-     * @default auto
-     */
-    popupWidth?: string | number;
-
-    /**
      * Controls whether the popup element is created upon clicking open. When set to `true`, the popup is created on click.
      *
      * @default false
@@ -125,41 +107,32 @@ export interface DropDownButtonProps {
     lazyOpen?: boolean;
 
     /**
-     * Specifies the target element for the Dropdown Button's popup content.
-     *
-     * @default -
-     */
-    target?: React.RefObject<HTMLElement>;
-
-    /**
      * Provides a template for displaying content within the dropdown items.
      *
      * @default -
      */
-    itemTemplate?: (item: ItemModel) => React.ReactNode;
+    itemTemplate?: (item: ItemModel) => ReactNode;
 
     /**
-     * Specifies the animation settings for opening the dropdown.
-     * The settings control the duration, easing, and effect of the animation applied when the dropdown opens.
+     * Specifies the popup settings including position, offset, collision handling, animation, and target element configuration.
      *
-     * @default { effect: 'SlideDown', duration: 400, easing: 'ease' }
-     * @private
+     * @default {}
      */
-    animation?: AnimationProps;
+    popupSettings?: PopupSettings;
 
     /**
      * Triggers while closing the Dropdown Button popup.
      *
      * @event onClose
      */
-    onClose?: (event?: React.SyntheticEvent) => void;
+    onClose?: (event?: SyntheticEvent) => void;
 
     /**
      * Triggers while opening the Dropdown Button popup.
      *
      * @event onOpen
      */
-    onOpen?: (event?: React.SyntheticEvent) => void;
+    onOpen?: (event?: SyntheticEvent) => void;
 
     /**
      * Triggers while selecting action item in Dropdown Button popup.
@@ -188,14 +161,6 @@ export interface DropDownButtonProps {
      * @default Size.Medium
      */
     size?: Size;
-
-    /**
-     * Specifies the relative container element of the dropdown popup element.Based on the relative element, popup element will be positioned.
-     *
-     * @default 'body'
-     * @private
-     */
-    relateTo?: HTMLElement | string;
 }
 
 /**
@@ -232,7 +197,7 @@ type IDropDownButtonProps = IDropDownButton & Omit<ButtonHTMLAttributes<HTMLButt
  * <DropDownButton items={menuItems}>Default</DropDownButton>
  * ```
  */
-export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProps & React.RefAttributes<IDropDownButton>> =
+export const DropDownButton: ForwardRefExoticComponent<IDropDownButtonProps & RefAttributes<IDropDownButton>> =
     forwardRef<IDropDownButton, IDropDownButtonProps>((props: IDropDownButtonProps, ref: Ref<IDropDownButton>) => {
         const {
             children,
@@ -240,14 +205,10 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
             icon,
             iconPosition = Position.Left,
             items = [],
-            popupWidth = 'auto',
-            animation = { show: {name: 'SlideDown', duration: 100, timingFunction: 'ease'},
-                hide: {name: 'SlideUp', duration: 100, timingFunction: 'ease'} },
             disabled = false,
             lazyOpen = false,
             itemTemplate,
-            target,
-            relateTo,
+            popupSettings = {},
             color,
             variant,
             size = Size.Medium,
@@ -257,27 +218,41 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
             ...domProps
         } = props;
 
-        const buttonRef: React.RefObject<IButton | null> = useRef<IButton>(null);
-        const popupRef: React.RefObject<IPopup | null> = useRef<IPopup>(null);
-        const listRef: React.RefObject<HTMLUListElement | null> = useRef<HTMLUListElement>(null);
-        const itemRefs: React.MutableRefObject<Array<HTMLLIElement | null>> = useRef<Array<HTMLLIElement | null>>([]);
+        const { dir } = useProviderContext();
+        const {
+            position = { X: 'left', Y: 'bottom' },
+            offsetX = 0,
+            offsetY = 0,
+            collision,
+            zIndex,
+            autoReposition,
+            width = 'auto',
+            height,
+            viewPortElementRef
+        } = popupSettings;
+        const animation: PopupAnimationOptions = { show: { name: 'SlideDown', duration: 100, timingFunction: 'ease' },
+            hide: { name: 'SlideUp', duration: 100, timingFunction: 'ease' } };
+        const resolvedCollision: CollisionAxis = collision || ((dir === 'rtl') ? { X: CollisionType.Fit, Y: CollisionType.Flip } : { X: CollisionType.Flip, Y: CollisionType.Flip });
+        const buttonRef: RefObject<IButton | null> = useRef<IButton>(null);
+        const popupRef: RefObject<IPopup | null> = useRef<IPopup>(null);
+        const listRef: RefObject<HTMLUListElement | null> = useRef<HTMLUListElement>(null);
+        const itemRefs: RefObject<Array<HTMLLIElement | null>> = useRef<Array<HTMLLIElement | null>>([]);
         const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
 
         const [isPopupOpen, setIsPopupOpen] = useState<boolean>(false);
         const [menuItems, setMenuItems] = useState<ItemModel[]>(items);
-        const { dir } = useProviderContext();
         const [mounted, setMounted] = useState(false);
 
         useEffect(() => {
             setMounted(true);
         }, []);
 
-        const isMounted: React.RefObject<boolean> = useRef(true);
+        const isMounted: RefObject<boolean> = useRef(true);
 
         const itemClickHandler: (
             item: ItemModel,
-            event?: React.SyntheticEvent
-        ) => void = useCallback((item: ItemModel, event?: React.SyntheticEvent) => {
+            event?: SyntheticEvent
+        ) => void = useCallback((item: ItemModel, event?: SyntheticEvent) => {
             if (item.disabled) {
                 return;
             }
@@ -288,24 +263,24 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
             }
         }, [onSelect]);
 
-        const updateMenuItems: (items: ItemModel[], setMenuItems: React.Dispatch<React.SetStateAction<ItemModel[]>>) => void
-         = (items: ItemModel[], setMenuItems: React.Dispatch<React.SetStateAction<ItemModel[]>>) => {
-             if (isMounted) {
-                 setMenuItems((prevItems: ItemModel[]) => {
-                     const isDifferent: boolean = items.length !== prevItems.length || items.some((item: ItemModel, index: number) => {
-                         const prevItem: ItemModel | undefined = prevItems[index as number];
-                         return (
-                             item.id !== prevItem?.id ||
-                                item.text !== prevItem?.text ||
-                                item.url !== prevItem?.url ||
-                                item.disabled !== prevItem?.disabled ||
-                                typeof item.icon === 'string' ? item.icon !== prevItem?.icon : !React.isValidElement(item.icon)
-                         );
-                     });
-                     return isDifferent ? items : prevItems;
-                 });
-             }
-         };
+        const updateMenuItems: (items: ItemModel[], setMenuItems: Dispatch<SetStateAction<ItemModel[]>>) => void
+        = useCallback((items: ItemModel[], setMenuItems: Dispatch<SetStateAction<ItemModel[]>>) => {
+            if (isMounted) {
+                setMenuItems((prevItems: ItemModel[]) => {
+                    const isDifferent: boolean = items.length !== prevItems.length || items.some((item: ItemModel, index: number) => {
+                        const prevItem: ItemModel | undefined = prevItems[index as number];
+                        return (
+                            item.id !== prevItem?.id ||
+                               item.text !== prevItem?.text ||
+                               item.url !== prevItem?.url ||
+                               item.disabled !== prevItem?.disabled ||
+                               (typeof item.icon === 'string' ? item.icon !== prevItem?.icon : !isValidElement(item.icon))
+                        );
+                    });
+                    return isDifferent ? items : prevItems;
+                });
+            }
+        }, []);
 
         useEffect(() => {
             updateMenuItems(items, setMenuItems);
@@ -319,8 +294,7 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
             preRender('dropDownButton');
         }, []);
 
-
-        const focusableIndices: number[] = React.useMemo(() => {
+        const focusableIndices: number[] = useMemo(() => {
             return menuItems
                 .map((it: ItemModel, idx: number) => (!it.disabled && !it.hasSeparator ? idx : -1))
                 .filter((idx: number) => idx >= 0);
@@ -360,7 +334,7 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
         }, [menuItems, ensureValidFocusIndex]);
 
         useEffect(() => {
-            const handleClickOutside: (event: MouseEvent) => void = (event: MouseEvent): void => {
+            const handleClickOutside: (event: globalThis.MouseEvent) => void = (event: globalThis.MouseEvent): void => {
                 const buttonElement: HTMLElement | null | undefined = buttonRef.current?.element;
                 const popupElement: HTMLElement | null | undefined = popupRef.current?.element;
                 const targetNode: Node = event.target as Node;
@@ -368,18 +342,18 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
                     if (!buttonElement.contains(targetNode) && !popupElement.contains(targetNode)) {
                         setIsPopupOpen(false);
                         if (onClose && isPopupOpen) {
-                            onClose(event as unknown as React.MouseEvent);
+                            onClose(event as unknown as MouseEvent);
                         }
                     }
                 }
             };
 
-            const handleKeyDown: (e: KeyboardEvent) => void = (e: KeyboardEvent): void => {
+            const handleKeyDown: (e: globalThis.KeyboardEvent) => void = (e: globalThis.KeyboardEvent): void => {
                 if ((e.altKey || e.metaKey) && e.key === 'ArrowUp' || e.key === 'Escape' || e.key === 'Esc') {
                     e.preventDefault();
                     e.stopPropagation();
                     setIsPopupOpen(false);
-                    onClose?.(e as unknown as React.MouseEvent);
+                    onClose?.(e as unknown as MouseEvent);
                     buttonRef.current?.element?.focus();
                 }
             };
@@ -394,19 +368,17 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
             };
         }, [isPopupOpen, onClose]);
 
-        const publicAPI: Partial<IDropDownButton> = {
+        const publicAPI: Partial<IDropDownButton> = useMemo(() => ({
             iconPosition,
             icon,
-            target,
-            popupWidth,
             items,
             lazyOpen,
-            relateTo,
             itemTemplate,
+            popupSettings,
             color,
             variant,
             size
-        };
+        }), [iconPosition, icon, items, lazyOpen, itemTemplate, popupSettings, color, variant, size]);
 
         const animationOption: {
             name: Effect;
@@ -418,7 +390,7 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
             timingFunction: animation.show.timingFunction
         } : null;
 
-        const togglePopup: (event?: React.SyntheticEvent) => void = (event?: React.SyntheticEvent) => {
+        const togglePopup: (event?: SyntheticEvent) => void = (event?: SyntheticEvent) => {
             if (!isPopupOpen) {
                 if (animationOption) {
                     const animationInstance: IAnimation = Animation(animationOption);
@@ -460,14 +432,14 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
             element: buttonRef.current?.element
         }), [publicAPI]);
 
-        const handleKeyDown: (e: React.KeyboardEvent<HTMLElement>) => void =
-            useCallback((e: React.KeyboardEvent<HTMLElement>): void => {
+        const handleKeyDown: (e: KeyboardEvent<HTMLElement>) => void =
+            useCallback((e: KeyboardEvent<HTMLElement>): void => {
                 switch (e.key) {
                 case 'ArrowDown': {
                     e.preventDefault();
                     e.stopPropagation();
                     if (e.altKey || e.metaKey) {
-                        togglePopup(e as React.SyntheticEvent);
+                        togglePopup(e as SyntheticEvent);
                     } else {
                         const nextIndex: number = getNextFocusableIndex(focusedIndex ?? -1, true);
                         focusIndex(nextIndex);
@@ -479,7 +451,7 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
                     e.stopPropagation();
                     if (e.altKey || e.metaKey) {
                         setIsPopupOpen(false);
-                        onClose?.(e as React.KeyboardEvent<HTMLElement>);
+                        onClose?.(e as KeyboardEvent<HTMLElement>);
                         buttonRef.current?.element?.focus();
                     } else {
                         const prevIndex: number = getNextFocusableIndex(focusedIndex ?? -1, false);
@@ -510,7 +482,7 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
                             itemClickHandler(menuItems[idx as number], e);
                         }
                     } else {
-                        togglePopup(e as unknown as React.MouseEvent);
+                        togglePopup(e as unknown as MouseEvent);
                     }
                     break;
                 }
@@ -519,7 +491,7 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
                     e.preventDefault();
                     if (isPopupOpen) {
                         setIsPopupOpen(false);
-                        onClose?.(e as React.SyntheticEvent);
+                        onClose?.(e as SyntheticEvent);
                         buttonRef.current?.element?.focus();
                     }
                     break;
@@ -542,9 +514,9 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
                 menuItems
             ]);
 
-        const renderItemContent: (item: ItemModel) => React.ReactNode = React.useCallback((item: ItemModel): React.ReactNode => {
+        const renderItemContent: (item: ItemModel) => ReactNode = useCallback((item: ItemModel): ReactNode => {
             if (itemTemplate) {
-                return (itemTemplate as Function)(item);
+                return itemTemplate(item);
             }
 
             const content: JSX.Element = (
@@ -565,8 +537,8 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
             ) : content;
         }, [itemTemplate]);
 
-        const handleItemClick: (item: ItemModel, event: React.MouseEvent<HTMLLIElement, MouseEvent>) => void
-        = React.useCallback((item: ItemModel, event: React.MouseEvent<HTMLLIElement, MouseEvent>) => {
+        const handleItemClick: (item: ItemModel, event: MouseEvent<HTMLLIElement, globalThis.MouseEvent>) => void
+        = useCallback((item: ItemModel, event: MouseEvent<HTMLLIElement, globalThis.MouseEvent>) => {
             event.stopPropagation();
             const el: Element = event.currentTarget;
             const idx: number = itemRefs.current.findIndex((li: HTMLLIElement | null) => li === el);
@@ -574,14 +546,14 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
             itemClickHandler(item, event);
         }, [itemClickHandler, focusIndex]);
 
-        const renderItems: () => JSX.Element = React.useCallback(() => (
+        const renderItems: () => JSX.Element = useCallback(() => (
             <ul
                 role='menu'
                 tabIndex={0}
                 aria-label='dropdown menu'
                 ref={listRef}
                 onKeyDown={handleKeyDown}
-                onMouseDown={(e: React.SyntheticEvent) => e.preventDefault()}
+                onMouseDown={(e: SyntheticEvent) => e.preventDefault()}
             >
                 {menuItems.map((item: ItemModel, index: number) => {
                     const isFocused: boolean = focusedIndex === index;
@@ -595,7 +567,7 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
                             aria-label={item.text}
                             aria-disabled={item.disabled ? 'true' : 'false'}
                             onClick={item.disabled || item.hasSeparator ? undefined :
-                                (event: React.MouseEvent<HTMLLIElement, MouseEvent>) => handleItemClick(item, event)}
+                                (event: MouseEvent<HTMLLIElement, globalThis.MouseEvent>) => handleItemClick(item, event)}
                         >
                             {!item.hasSeparator && renderItemContent(item)}
                         </li>
@@ -617,7 +589,7 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
                     iconPosition={iconPosition}
                     disabled={disabled}
                     onKeyDown={handleKeyDown}
-                    onClick={(event: React.MouseEvent) => {
+                    onClick={(event: MouseEvent) => {
                         event.preventDefault();
                         togglePopup(event);
                     }}
@@ -632,13 +604,18 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
                     <Popup
                         open={isPopupOpen}
                         ref={popupRef}
-                        targetRef={target || buttonRef.current as React.RefObject<HTMLElement> }
-                        relateTo={relateTo || (buttonRef.current?.element as HTMLElement)}
-                        position={{ X: 'left', Y: 'bottom' }}
+                        viewPortElementRef={viewPortElementRef}
+                        relateTo={buttonRef.current?.element as HTMLElement}
+                        position={position}
+                        offsetX={offsetX}
+                        offsetY={offsetY}
                         animation={animation}
-                        collision={(dir === 'rtl') ? { X: CollisionType.Fit, Y: CollisionType.Flip } : { X: CollisionType.Flip, Y: CollisionType.Flip }}
-                        width={popupWidth}
-                        className={`sf-dropdown-popup sf-drp-btn-${size.toLowerCase().substring(0, 2)} ${popupWidth !== 'auto' ? 'sf-dropdown-popup-width' : ''}`}
+                        collision={resolvedCollision}
+                        zIndex={zIndex}
+                        autoReposition={autoReposition}
+                        width={width}
+                        height={height}
+                        className={`sf-dropdown-popup sf-drp-btn-${size.toLowerCase().substring(0, 2)} ${width !== 'auto' ? 'sf-dropdown-popup-width' : ''}`}
                         onClose={() => {
                             setIsPopupOpen(false);
                             if (buttonRef.current?.element) {
@@ -657,4 +634,4 @@ export const DropDownButton: React.ForwardRefExoticComponent<IDropDownButtonProp
         );
     });
 
-export default React.memo(DropDownButton);
+export default memo(DropDownButton);

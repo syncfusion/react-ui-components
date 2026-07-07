@@ -64,8 +64,9 @@ export const PieChart: React.ForwardRefExoticComponent<PieChartComponentProps & 
         }, [props.height, props.width]);
 
         useImperativeHandle(ref, () => ({
-            element: chartRef.current
-        }), []);
+            element: chartRef.current,
+            theme: props.theme || 'Material'
+        }), [props.theme]);
 
         useEffect(() => {
             preRender('piechart');

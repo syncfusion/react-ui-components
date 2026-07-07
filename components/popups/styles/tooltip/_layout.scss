@@ -46,12 +46,8 @@
 
   .sf-tooltip-close {
     cursor: pointer;
-    position: absolute;
-    right: $tooltip-close-icon-right;
-    top: $tooltip-close-icon-top;
-    box-shadow: $tooltip-close-icon-box-shadow;
     display: flex;
-    padding: $tooltip-close-icon-padding;
+    height: inherit;
 
     svg {
       font-size: $tooltip-close-icon-font-size;
@@ -62,5 +58,8 @@
     overflow-x: hidden;
     padding: $tooltip-content-padding;
     position: relative;
+    display: flex;
+    align-items: center;
+    gap: $tooltip-content-gap;
   }
 }

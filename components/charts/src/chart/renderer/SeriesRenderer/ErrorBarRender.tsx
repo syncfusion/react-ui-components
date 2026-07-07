@@ -247,7 +247,7 @@ export function sum(values: number[]): number {
  * Computes mean, variance, and standard deviation metrics for error bar modes.
  *
  * @param {SeriesProperties} series - Series containing x/y data collections.
- * @param {ErrorBarMode} mode - Axis mode to evaluate (horizontal/vertical/both).
+ * @param {'Vertical' | 'Horizontal' | 'Both'} mode - Axis mode to evaluate (horizontal/vertical/both).
  * @returns {Mean} Aggregate statistics required for deviation/error formulas.
  * @private
  */

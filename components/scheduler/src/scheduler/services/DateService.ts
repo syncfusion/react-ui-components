@@ -1,8 +1,9 @@
-import { View, WeekRule  } from '../types/enums';
+import { View, WeekRule } from '../types/enums';
 import { ActiveViewProps } from '../types/internal-interface';
 import { WorkHoursProps, EventModel } from '../types/scheduler-types';
 import { cldrData, formatDate, getDefaultDateObject, getValue } from '@syncfusion/react-base';
 import { useSchedulerLocalization } from '../../scheduler/common/locale';
+import { Timezone } from './Timezone';
 
 export const DAYS_PER_WEEK: number = 7;
 export const MINUTES_PER_HOUR: number = 60;
@@ -12,6 +13,7 @@ export const MS_PER_MINUTE: number = 60000;
 export const HOURS_PER_DAY: number = 24;
 export const MINUTES_PER_DAY: number = 1440;
 export const MS_PER_DAY: number = 86400000;
+export const MS_PER_SECOND: number = 1000;
 
 /**
  * Service for handling scheduler date operations
@@ -54,7 +56,9 @@ export class DateService {
             workDays,
             showWeekend,
             displayDate,
-            numberOfWeeks
+            useDisplayDate,
+            numberOfWeeks,
+            agendaDaysCount
         } = activeViewProps;
 
         let dates: Date[] = [];
@@ -64,7 +68,9 @@ export class DateService {
             : new Date(selectedDate);
         const totalDays: number = viewType === 'Week' || viewType === 'WorkWeek'
             ? DAYS_PER_WEEK * interval
-            : interval;
+            : viewType === 'Agenda'
+                ? (agendaDaysCount * interval)
+                : interval;
 
         let currentDate: Date = new Date(startDate);
         if (viewType === 'Week') {
@@ -92,9 +98,17 @@ export class DateService {
                 currentDate = this.addDays(currentDate, 1);
             } while (interval !== dates.length);
         }
+        else if (viewType === 'Agenda') {
+            for (let i: number = 0; i < totalDays; i++) {
+                if (showWeekend || this.isWorkDay(currentDate, workDays)) {
+                    dates.push(new Date(currentDate));
+                }
+                currentDate = this.addDays(currentDate, 1);
+            }
+        }
         else if (viewType === 'Month') {
             dates = this.getMonthRenderDates(selectedDate, interval, firstDayOfWeek, workDays, showWeekend,
-                                             displayDate, numberOfWeeks, startCellDate, endCellDate);
+                                             displayDate, numberOfWeeks, startCellDate, endCellDate, useDisplayDate);
         }
         return dates;
     }
@@ -142,13 +156,15 @@ export class DateService {
         displayDate?: Date,
         numberOfWeeks? : number,
         startCellDate?: Date,
-        lastCellDate?: Date
+        lastCellDate?: Date,
+        useDisplayDate?: boolean
     ): Date[] {
         const renderDates: Date[] = [];
         displayDate = this.setValidDate(displayDate);
         const currentDate: Date = this.normalizeDate(selectedDate);
-        let start: Date = startCellDate ?? this.getMonthStart(currentDate, displayDate, firstDayOfWeek);
-        const monthEnd: Date = lastCellDate ?? this.getMonthEnd(currentDate, displayDate, firstDayOfWeek, numberOfWeeks, interval);
+        let start: Date = startCellDate ?? this.getMonthStart(currentDate, displayDate, firstDayOfWeek, numberOfWeeks, useDisplayDate);
+        const monthEnd: Date = lastCellDate ??
+            this.getMonthEnd(currentDate, displayDate, firstDayOfWeek, numberOfWeeks, interval, useDisplayDate);
         do {
             if (showWeekend) {
                 renderDates.push(start);
@@ -232,8 +248,15 @@ export class DateService {
         return result;
     }
 
-    static getMonthStart(currentDate: Date, displayDate: Date, firstDayOfWeek: number): Date {
-        const date: Date = displayDate ? displayDate : this.firstDateOfMonth(currentDate);
+    static getMonthStart(
+        currentDate: Date,
+        displayDate: Date,
+        firstDayOfWeek: number,
+        numberOfWeeks?: number,
+        useDisplayDate?: boolean
+    ): Date {
+        const date: Date = useDisplayDate ? displayDate :
+            (displayDate || numberOfWeeks > 0) ? currentDate : this.firstDateOfMonth(currentDate);
         const monthStart: Date = this.getWeekFirstDate(date, firstDayOfWeek);
         return new Date(monthStart.getFullYear(), monthStart.getMonth(), monthStart.getDate());
     }
@@ -243,10 +266,11 @@ export class DateService {
         displayDate: Date,
         firstDayOfWeek: number,
         numberOfWeeks: number,
-        interval: number
+        interval: number,
+        useDisplayDate?: boolean
     ): Date {
         if (displayDate || numberOfWeeks > 0) {
-            const start: Date = this.getMonthStart(currentDate, displayDate, firstDayOfWeek);
+            const start: Date = this.getMonthStart(currentDate, displayDate, firstDayOfWeek, numberOfWeeks, useDisplayDate);
             const numberOfDays: number = WEEK_LENGTH * (numberOfWeeks > 0 ?
                 numberOfWeeks : DEFAULT_WEEKS);
             return this.addDays(start, (numberOfDays - 1));
@@ -981,4 +1005,15 @@ export class DateService {
         }
         return hour;
     };
+
+    /**
+     * Returns the display time adjusted for the scheduler timezone when provided.
+     *
+     * @param {string} timezone Optional timezone identifier
+     * @returns {Date} Date adjusted to display timezone if provided, otherwise the base date
+     */
+    static getCurrentTime(timezone?: string): Date {
+        const base: Date = new Date();
+        return timezone ? Timezone.add(base, timezone) : base;
+    }
 }

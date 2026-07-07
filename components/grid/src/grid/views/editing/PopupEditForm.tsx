@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useState, useCallback, memo, RefAttributes, forwardRef, ReactElement, useRef, useMemo, JSX, RefObject, CSSProperties, useImperativeHandle, createElement } from 'react';
+import { useState, useCallback, memo, forwardRef, useRef, useMemo, JSX, RefObject, CSSProperties, useImperativeHandle, createElement } from 'react';
 import { Dialog, IDialog } from '@syncfusion/react-popups';
 import { Button, ICheckbox } from '@syncfusion/react-buttons';
 import { useGridComputedProvider, useGridMutableProvider } from '../../contexts';
@@ -12,38 +12,62 @@ import { IDatePicker } from '@syncfusion/react-calendars';
 import { IDropDownList } from '@syncfusion/react-dropdowns';
 import { useFormValidationRules } from '../../hooks';
 
+// CSS class names for popup edit form
+const POPUP_EDIT_CLASS: string = 'sf-grid-popup-edit';
+const POPUP_EDIT_CANCEL_CLASS: string = 'sf-grid-popup-edit-cancel';
+const POPUP_EDIT_SAVE_CLASS: string = 'sf-grid-popup-edit-save';
+const EDIT_CELL_CLASS: string = 'sf-cell sf-grid-edit-cell';
+const EDIT_FORM_CLASS: string = 'sf-grid-edit-form';
+const EDIT_TABLE_CLASS: string = 'sf-grid-edit-table';
+const DATE_WRAPPER_CLASS: string = 'sf-date-wrapper';
+const DATEPICKER_CLASS: string = 'sf-datepicker';
+
 /**
  * PopupEditForm component renders a modal dialog for editing grid records with form validation.
+ * Provides imperative methods for form validation, cell editing, and data retrieval via ref.
  *
- * @param {RefAttributes<InlineEditFormRef<T>>} props - Component props (forwarded ref only)
- * @param {React.ForwardedRef<InlineEditFormRef<T>>} ref - Imperative methods ref for validateForm, getEditCells, getFormElement, getCurrentData
+ * @param {RefAttributes<InlineEditFormRef<Record<string, unknown>>>} props - Component props (forwarded ref only)
+ * @param {React.ForwardedRef<InlineEditFormRef<Record<string, unknown>>>} ref - Imperative methods ref exposing validateForm, getEditCells, getFormElement, getCurrentData
  * @returns {ReactElement} Modal dialog with form fields, validation tooltips, and save/cancel buttons
  */
-export const PopupEditForm: <T>(props: RefAttributes<InlineEditFormRef<T>>) => ReactElement =
-    memo(forwardRef<InlineEditFormRef>(<T, >(_props: {}, ref: React.ForwardedRef<InlineEditFormRef<T>>) => {
+export const PopupEditForm: React.ForwardRefExoticComponent<React.RefAttributes<InlineEditFormRef<Record<string, unknown>>>> =
+    memo(forwardRef((_props: {}, ref: React.ForwardedRef<InlineEditFormRef<Record<string, unknown>>>) => {
 
-        const { id, serviceLocator, getPrimaryKeyFieldNames, columns } = useGridComputedProvider<T>();
-        const { cssClass, editModule } = useGridMutableProvider<T>();
-
+        const { id, serviceLocator, getPrimaryKeyFieldNames, columns } = useGridComputedProvider<Record<string, unknown>>();
+        const { cssClass, editModule } = useGridMutableProvider<Record<string, unknown>>();
         const formatter: IValueFormatter = serviceLocator?.getService<IValueFormatter>('valueFormatter');
         const { editSettings, editData, originalData, editRowIndex, validationErrors, updateEditData } = editModule;
         const primaryKey: string = getPrimaryKeyFieldNames?.()[0];
         const localization: IL10n = serviceLocator?.getService<IL10n>('localization');
         const formRef: React.RefObject<IFormValidator> = useRef<IFormValidator>(null);
-        const editCellRefs: React.RefObject<{ [field in keyof T]?: EditCellRef }> = useRef<{ [field in keyof T]?: EditCellRef }>({});
+        const editCellRefs: React.RefObject<{ [key: string]: EditCellRef | undefined }> =
+            useRef<{ [key: string]: EditCellRef | undefined }>({});
         const rowRef: RefObject<HTMLTableRowElement> = useRef<HTMLTableRowElement>(null);
-
-        const dialogClass: string = cssClass ? cssClass + ' sf-grid-popup-edit' : 'sf-grid-popup-edit';
-
+        const dialogClass: string = cssClass ? cssClass + ' ' + POPUP_EDIT_CLASS : POPUP_EDIT_CLASS;
         const isAddOperation: boolean = isNullOrUndefined(originalData);
         const [formState, setFormState] = useState<FormState | null>(null);
-
         const popupRef: React.RefObject<IDialog> = useRef<IDialog>(null);
         const focusableInputRef: React.RefObject<HTMLElement> = useRef<HTMLElement>(null);
-
         const { rules: formValidationRules } = useFormValidationRules(columns);
+        const [internalData, setInternalData] =
+            useState(internalDataFn(isAddOperation, editData, columns as ColumnProps<Record<string, unknown>>[]));
 
-        const [internalData, setInternalData] = useState<T>(internalDataFn(isAddOperation, editData, columns as ColumnProps<T>[]));
+        /**
+         * Extract focusable input element from component instance
+         */
+        const setFocusableInput: (cellRef: EditCellRef) => void = useCallback((cellRef: EditCellRef) => {
+            if (cellRef?.inputRef?.current && isNullOrUndefined(focusableInputRef.current)) {
+                const currentInput: HTMLInputElement | HTMLSelectElement | ITextBox | INumericTextBox
+                | ICheckbox | IDatePicker | IDropDownList = cellRef.inputRef.current;
+
+                if ('element' in currentInput && currentInput.element) {
+                    const element: HTMLElement = currentInput.element as HTMLElement;
+                    focusableInputRef.current = (element.classList.contains(DATE_WRAPPER_CLASS) ||
+                        element.classList.contains(DATEPICKER_CLASS)) ? element.querySelector('input')
+                        : element;
+                }
+            }
+        }, []);
 
         const colGroupContent: JSX.Element = useMemo<JSX.Element>(() => {
             const idKey: string = `${id}-${isAddOperation ? 'add' : 'edit'}-colgroup`;
@@ -66,15 +90,23 @@ export const PopupEditForm: <T>(props: RefAttributes<InlineEditFormRef<T>>) => R
                 }
             }, []);
 
-        const handleFieldChange: (column: ColumnProps<T>, value: ValueType, formatter: IValueFormatter, internalData: T,
-            setInternalData: (value: React.SetStateAction<T>) => void, formState: FormState,
-            stableOnFieldChange: (field: string, value: ValueType | null) => void) =>
+        const handleFieldChange: (column: ColumnProps<Record<string, unknown>>, value: ValueType, formatter: IValueFormatter,
+            internalData: Record<string, unknown>, setInternalData: (value: React.SetStateAction<Record<string, unknown>>) =>
+            void, formState: FormState, stableOnFieldChange: (field: string, value: ValueType | null) => void) =>
         void = useCallback(handleFieldChangeFn, [formState]);
 
-        const handleFieldBlur: (column: ColumnProps<T>, value: ValueType | Record<string, unknown>, formatter: IValueFormatter,
-            internalData: T, setInternalData: (value: React.SetStateAction<T>) => void, isAddOperation: boolean,
-            editModule: UseEditResult<T>, formState: FormState, formRef: RefObject<IFormValidator>) =>
+        const handleFieldBlur: (column: ColumnProps<Record<string, unknown>>, value: ValueType | Record<string, unknown>,
+            formatter: IValueFormatter, internalData: Record<string, unknown>,
+            setInternalData: (value: React.SetStateAction<Record<string, unknown>>) => void, isAddOperation: boolean,
+            editModule: UseEditResult<Record<string, unknown>>, formState: FormState, formRef: RefObject<IFormValidator>) =>
         void = useCallback(handleFieldBlurFn, [formState]);
+
+        /**
+         * Memoized onFocus handler to prevent unnecessary re-renders
+         */
+        const onEditCellFocus: (field: string) => void = useCallback((field: string) => {
+            formState?.onFocus?.(field);
+        }, [formState]);
 
         /**
          * Render edit fields with proper data binding
@@ -82,7 +114,7 @@ export const PopupEditForm: <T>(props: RefAttributes<InlineEditFormRef<T>>) => R
         const renderEditFields: React.JSX.Element[] = useMemo(() => {
             if (!formState) { return null; }
 
-            return columns.map((column: ColumnProps<T>) => {
+            return columns.map((column: ColumnProps<Record<string, unknown>>) => {
 
                 const editable: boolean = column.allowEdit !== false && column.visible &&
                     column.field && (isAddOperation ? column.isPrimaryKey : !column.isPrimaryKey);
@@ -99,7 +131,7 @@ export const PopupEditForm: <T>(props: RefAttributes<InlineEditFormRef<T>>) => R
                     >
                         <td
                             key={`edit-cell-${column.field}`}
-                            className={'sf-cell sf-grid-edit-cell'}
+                            className={EDIT_CELL_CLASS}
                             data-mappinguid={column.uid}
                             role='gridcell'
                             aria-colindex={1}
@@ -113,14 +145,8 @@ export const PopupEditForm: <T>(props: RefAttributes<InlineEditFormRef<T>>) => R
                                 <EditCell
                                     ref={(cellRef: EditCellRef | null) => {
                                         storeEditCellRef(column.field, cellRef);
-                                        if (cellRef?.inputRef?.current && editable && isNullOrUndefined(focusableInputRef.current)) {
-                                            const currentInput: HTMLInputElement | HTMLSelectElement | ITextBox | INumericTextBox
-                                            | ICheckbox | IDatePicker | IDropDownList = cellRef.inputRef.current;
-
-                                            if ('element' in currentInput && currentInput.element) {
-                                                const element: HTMLElement = currentInput.element as HTMLElement;
-                                                focusableInputRef.current = (element.classList.contains('sf-date-wrapper') || element.classList.contains('sf-datepicker')) ? element.querySelector('input') : element;
-                                            }
+                                        if (cellRef && editable) {
+                                            setFocusableInput(cellRef);
                                         }
                                     }}
                                     column={column}
@@ -133,9 +159,7 @@ export const PopupEditForm: <T>(props: RefAttributes<InlineEditFormRef<T>>) => R
                                     onBlur={(value: ValueType | Object | undefined) => handleFieldBlur(
                                         column, value as ValueType | Record<string, unknown>, formatter,
                                         internalData, setInternalData, isAddOperation, editModule, formState, formRef)}
-                                    onFocus={() => {
-                                        formState?.onFocus?.(column.field);
-                                    }}
+                                    onFocus={() => onEditCellFocus(column.field)}
                                     isAdd={isAddOperation}
                                     formState={formState}
                                     popupRef={popupRef}
@@ -145,7 +169,8 @@ export const PopupEditForm: <T>(props: RefAttributes<InlineEditFormRef<T>>) => R
                     </tr>
                 );
             });
-        }, [columns, internalData, validationErrors, isAddOperation, handleFieldChange, handleFieldBlur, storeEditCellRef, formState]);
+        }, [columns, internalData, validationErrors, isAddOperation, handleFieldChange, handleFieldBlur, storeEditCellRef, formState,
+            onEditCellFocus]);
 
         /**
          * Validate the form using FormValidator component
@@ -175,8 +200,8 @@ export const PopupEditForm: <T>(props: RefAttributes<InlineEditFormRef<T>>) => R
         /**
          * Get current form internal parsed data
          */
-        const getCurrentData: () => T = useCallback(() => {
-            return internalData as T;
+        const getCurrentData: () => Record<string, unknown> = useCallback(() => {
+            return internalData as Record<string, unknown>;
         }, [internalData]);
 
         /**
@@ -219,14 +244,14 @@ export const PopupEditForm: <T>(props: RefAttributes<InlineEditFormRef<T>>) => R
                     <>
                         <Button
                             variant={Variant.Standard}
-                            className={cssClass ? cssClass + ' sf-grid-popup-edit-cancel' : 'sf-grid-popup-edit-cancel'}
+                            className={cssClass ? cssClass + ' ' + POPUP_EDIT_CANCEL_CLASS : POPUP_EDIT_CANCEL_CLASS}
                             aria-label={localization?.getConstant('cancelButtonLabel')}
                         >
                             {localization?.getConstant('cancelButtonLabel')}
                         </Button>
                         <Button
                             variant={Variant.Standard}
-                            className={cssClass ? cssClass + ' sf-grid-popup-edit-save' : 'sf-grid-popup-edit-save'}
+                            className={cssClass ? cssClass + ' ' + POPUP_EDIT_SAVE_CLASS : POPUP_EDIT_SAVE_CLASS}
                             aria-label={localization?.getConstant('saveButtonLabel')}
                         >
                             {localization?.getConstant('saveButtonLabel')}
@@ -250,13 +275,13 @@ export const PopupEditForm: <T>(props: RefAttributes<InlineEditFormRef<T>>) => R
                             onFormStateChange={(args: FormState) => {
                                 setFormState(args);
                             }}
-                            className={'sf-grid-edit-form' + (cssClass !== '' ? ' ' + cssClass : '')}
+                            className={EDIT_FORM_CLASS + (cssClass !== '' ? ' ' + cssClass : '')}
                             id={`grid-edit-form-${editRowIndex}`}
                             aria-label={`${isAddOperation ? localization?.getConstant('addButtonLabel') : localization?.getConstant('editButtonLabel')} ${localization?.getConstant('recordFormLabel')}`}
                             role='form'
                         >
                             <table
-                                className='sf-grid-edit-table'
+                                className={EDIT_TABLE_CLASS}
                                 role='grid'
                             >
                                 {colGroupContent}
@@ -273,6 +298,6 @@ export const PopupEditForm: <T>(props: RefAttributes<InlineEditFormRef<T>>) => R
                 }
             </Dialog>
         );
-    })) as <T>(props: RefAttributes<InlineEditFormRef<T>>) => ReactElement;
+    })) as React.ForwardRefExoticComponent<React.RefAttributes<InlineEditFormRef<Record<string, unknown>>>>;
 
-(PopupEditForm as React.ForwardRefExoticComponent<React.RefAttributes<InlineEditFormRef>>).displayName = 'PopupEditForm';
+(PopupEditForm as React.ForwardRefExoticComponent<React.RefAttributes<InlineEditFormRef<Record<string, unknown>>>>).displayName = 'PopupEditForm';

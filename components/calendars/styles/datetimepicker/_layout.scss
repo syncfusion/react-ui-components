@@ -17,6 +17,10 @@
             background-color: $datetimepicker-bg-color;
             border: $datetimepicker-border-color;
             border-radius: $datetimepicker-border-radius;
+
+            .sf-datetimepicker-footer {
+                background-color: $datetimepicker-footer-bg;
+            }
         }
 
         .sf-timepicker-list.sf-ul {

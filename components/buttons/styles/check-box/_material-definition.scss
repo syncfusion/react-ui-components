@@ -4,11 +4,11 @@
 @function cbox-ripple-color($color, $opacity: 0.08) {
   @return rgba($color, $opacity);
 }
+
 // Checkbox sizes
 $cbox-frame-sm-font-size: $spacing-16 !default;
 $cbox-frame-me-font-size: $spacing-18 !default;
 $cbox-frame-la-font-size: $spacing-20 !default;
-$cbox-frame-dimension: 1em !default;
 
 $cbox-icon-size: $font-size-xs !default;
 $cbox-icon-small-size: $font-size-xs !default;
@@ -16,24 +16,26 @@ $cbox-icon-large-size: $font-size-sm !default;
 $cbox-sm-line-height: $line-height-xs !default;
 $cbox-me-line-height: $line-height-sm !default;
 $cbox-la-line-height: $line-height-sm !default;
-$cbox-vertical-line-height: 0 !default;
 
 $cbox-label-sm-font-size:$font-size-xs !default;
 $cbox-label-me-font-size:$font-size-sm !default;
 $cbox-label-la-font-size:$font-size-sm !default;
 
-$cbox-sm-gap: $spacing-12;
-$cbox-me-gap: $spacing-12;
-$cbox-la-gap: $spacing-16;
+$cbox-sm-gap: $spacing-4 !default;
+$cbox-me-gap: $spacing-3 !default;
+$cbox-la-gap: $spacing-4 !default;
+
+$cbox-label-font-weight: $font-weight-normal !default;
 
 // Ripple sizes
-$cbox-ripple-padding: $spacing-16 !default;
-$cbox-ripple-small-padding: $spacing-14 !default;
-$cbox-ripple-large-padding: $spacing-20 !default;
+$cbox-ripple-padding: $spacing-7 !default;
+$cbox-ripple-small-padding: $spacing-6 !default;
+$cbox-ripple-large-padding: $spacing-10 !default;
 
 // Borders
 $cbox-border-radius: $radius-2 !default;
 $cbox-border: 2px solid !default;
+$cbox-ripple-radius: $radius-full !default;
 
 // Margins
 $cbox-margin: $spacing-8 !default;
@@ -41,11 +43,14 @@ $cbox-margin: $spacing-8 !default;
 // Colors
 $cbox-color: rgb($content-text-color) !default;
 $cbox-checkmark-color: rgb($primary-text-color) !default;
-$cbox-checkmark-bgcolor: rgb($primary) !default;
-
+$cbox-checkmark-bgcolor: rgb($secondary) !default;
 $cbox-checked-ripple-bgcolor: rgba($primary, .08) !default;
-
 $cbox-keyboard-focus-box-shadow: $shadow-focus-ring2 !default;
+$cbox-pressed-focus-border-color: rgb($content-text-color-alt1) !default;
+$cbox-keyboard-pressed-box-shadow: none !default;
+$cbox-unchecked-color: rgb($content-text-color-alt1) !default;
+$cbox-unchecked-bg-color: transparent !default;
+$cbox-disabled-opacity: 0.38 !default;
 
 // Color variants map with text colors
 $cbox-variants: (

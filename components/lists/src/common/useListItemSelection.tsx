@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, type KeyboardEvent, type MouseEvent, RefObject } from 'react';
 import { DataSource, FieldsMapping } from './types';
 import { scrollIntoItem } from './utils';
 
@@ -14,7 +14,7 @@ export interface SelectEvent {
     /**
      * Specifies the DOM event object triggered by the user's interaction through mouse or keyboard.
      */
-    event: React.MouseEvent | React.KeyboardEvent;
+    event: MouseEvent | KeyboardEvent;
 
     /**
      * Specifies whether the item is selected.
@@ -27,27 +27,30 @@ export interface SelectEvent {
     index?: number;
 }
 
+/**
+ * Props for the `useListItemSelection` hook.
+ *
+ * @private
+ */
 export interface UseListItemSelectionProps {
     fields: FieldsMapping;
     listItemDatas: DataSource[];
     onSelect?: (event: SelectEvent, isAlreadySelected: boolean) => void;
-    setListItemDatas: (data: DataSource[]) => void;
-    scrollParent?: React.RefObject<HTMLElement>;
+    scrollParent?: RefObject<HTMLElement>;
 }
 
 export type UseListItemSelectionResult = {
     focusedItem: DataSource | null;
     activeItemsId: string[];
-    handleSelection: (item: DataSource, e: React.MouseEvent<Element, MouseEvent> | React.KeyboardEvent<Element>, index: number) => void;
-    keyActionHandler: (e: React.KeyboardEvent<HTMLElement>) => void;
+    handleSelection: (item: DataSource, e: MouseEvent<Element> | KeyboardEvent<Element>, index: number) => void;
+    keyActionHandler: (e: KeyboardEvent<HTMLElement>) => void;
 };
 
 export const useListItemSelection: ({fields, listItemDatas,
-    onSelect, setListItemDatas, scrollParent }: UseListItemSelectionProps) => UseListItemSelectionResult = ({
+    onSelect, scrollParent }: UseListItemSelectionProps) => UseListItemSelectionResult = ({
     fields,
     listItemDatas,
     onSelect,
-    setListItemDatas,
     scrollParent
 }: UseListItemSelectionProps) => {
     const [focusedItem, setFocusedItem] = useState<DataSource | null>(null);
@@ -71,9 +74,9 @@ export const useListItemSelection: ({fields, listItemDatas,
         return (!isHeader && !isDisabled && !isHidden);
     };
 
-    const processSelection: (e: React.MouseEvent<Element, MouseEvent> | React.KeyboardEvent<Element>,
+    const processSelection: (e: MouseEvent<Element> | KeyboardEvent<Element>,
         item: DataSource, index: number) => void = useCallback((
-        e: React.MouseEvent | React.KeyboardEvent, item: DataSource, index: number ): void => {
+        e: MouseEvent | KeyboardEvent, item: DataSource, index: number ): void => {
         const eventArgs: SelectEvent = {data: item, event: e, selected: true, index: index};
         const idField: string = fields?.id || 'id';
         const isAlreadySelected: boolean = focusedItem ?
@@ -84,10 +87,10 @@ export const useListItemSelection: ({fields, listItemDatas,
         const itemId: string = (item[String(idField)]).toString();
         setActiveItemsId([itemId.toString()]);
         setFocusedItem(item);
-    }, [onSelect, setListItemDatas, listItemDatas, focusedItem, fields]);
+    }, [onSelect, listItemDatas, focusedItem, fields]);
 
-    const handleSelection: (item: DataSource, e: React.MouseEvent<Element, MouseEvent> | React.KeyboardEvent<Element>, index: number)
-    => void = useCallback((item: DataSource, e: React.MouseEvent | React.KeyboardEvent, index: number): void => {
+    const handleSelection: (item: DataSource, e: MouseEvent<Element> | KeyboardEvent<Element>, index: number)
+    => void = useCallback((item: DataSource, e: MouseEvent | KeyboardEvent, index: number): void => {
         if (isValidItem(item)) {
             processSelection(e, item, index);
         }
@@ -119,15 +122,15 @@ export const useListItemSelection: ({fields, listItemDatas,
         scrollToIndex(targetIndex);
     }, [listItemDatas]);
 
-    const homeKeyHandler: (e: React.KeyboardEvent<HTMLElement>, end: boolean) => void
-    = useCallback((_e: React.KeyboardEvent<HTMLElement>, end: boolean): void => {
+    const homeKeyHandler: (e: KeyboardEvent<HTMLElement>, end: boolean) => void
+    = useCallback((_e: KeyboardEvent<HTMLElement>, end: boolean): void => {
         if (!listItemDatas || listItemDatas.length === 0) { return; }
         const start: number = end ? listItemDatas.length - 1 : 0;
         findAndScrollToIndex(start, end, 'homeKey');
     }, [listItemDatas]);
 
-    const arrowKeyHandler: (e: React.KeyboardEvent<HTMLElement>, prev: boolean) => void
-    = useCallback((_e: React.KeyboardEvent<HTMLElement>, prev: boolean): void => {
+    const arrowKeyHandler: (e: KeyboardEvent<HTMLElement>, prev: boolean) => void
+    = useCallback((_e: KeyboardEvent<HTMLElement>, prev: boolean): void => {
         if (!listItemDatas || listItemDatas.length === 0) { return; }
 
         const idField: string = fields?.id || 'id';
@@ -138,8 +141,8 @@ export const useListItemSelection: ({fields, listItemDatas,
         findAndScrollToIndex(startIndex, prev, 'arrowKey');
     }, [listItemDatas, focusedItem, fields?.id]);
 
-    const keyActionHandler: (e: React.KeyboardEvent<HTMLElement>) => void
-    = useCallback((e: React.KeyboardEvent<HTMLElement>): void => {
+    const keyActionHandler: (e: KeyboardEvent<HTMLElement>) => void
+    = useCallback((e: KeyboardEvent<HTMLElement>): void => {
         switch (e.key) {
         case 'Home':
             e.preventDefault();

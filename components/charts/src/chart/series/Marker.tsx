@@ -1,4 +1,5 @@
 import { ChartMarkerProps } from '../base/interfaces';
+import * as React from 'react';
 
 /**
  * @typedef ChartMarkerProps
@@ -13,7 +14,7 @@ type ChartMarkerProperty = ChartMarkerProps & {
 /**
  * @description Represents a marker in a chart series
  * @param {ChartMarkerProps} props - Properties for configuring the chart marker
- * @returns {JSX.Element} A React element that renders the marker with its children
+ * @returns {Element} A React element that renders the marker with its children
  */
 export const ChartMarker: React.FC<ChartMarkerProperty> = (props: ChartMarkerProperty) => {
     return <>{props.children}</>;

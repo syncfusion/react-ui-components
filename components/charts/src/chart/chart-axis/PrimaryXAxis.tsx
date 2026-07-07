@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ChartCrosshairTooltipProps, ChartAxisProps, MajorGridLines, MajorTickLines, MinorGridLines, MinorTickLines } from '../base/interfaces';
+import { ChartCrosshairTooltipProps, ChartAxisProps, MajorGridLines, MajorTickLines, MinorGridLines, MinorTickLines, ChartScrollbarProps } from '../base/interfaces';
 import { ChartContext } from '../layout/ChartProvider';
 import { useContext, useEffect, useMemo } from 'react';
 import { defaultChartConfigs } from '../base/default-properties';
@@ -13,14 +13,16 @@ import { ChartAxisTitle } from './TitleStyle';
 import { AxisModel, ChartProviderChildProps } from '../chart-area/chart-interfaces';
 import { ChartStripLines, ChartStripLine } from './StripLines';
 import { getCircularReplacer } from '../series/Series';
-import { ChartStripLineProps } from '../base/interfaces';
+import { ChartStripLineProps, ChartMultiLevelLabelProps } from '../base/interfaces';
 import { extend, isNullOrUndefined } from '@syncfusion/react-base';
 import { ChartCrosshairTooltip } from './CrosshairTooltip';
+import { ChartScrollbar } from './ChartScrollBar';
+import { ChartMultiLevelLabels } from './ChartMultiLevelLabel';
 
 /**
  * Safely stringifies an object to JSON, handling circular references.
  *
- * @param {unknown} obj - The object to stringify
+ * @param {{}} obj - The object to stringify
  * @returns {string} JSON string representation of the object, or empty object if null/undefined
  */
 export const safeStringify: (obj: unknown) => string = (obj: unknown) => {
@@ -31,7 +33,7 @@ export const safeStringify: (obj: unknown) => string = (obj: unknown) => {
  * Safely parses a JSON string to an object.
  *
  * @param {string} jsonString - The JSON string to parse
- * @returns {unknown} Parsed object, or empty object if input is invalid
+ * @returns {{}} Parsed object, or empty object if input is invalid
  */
 export const safeParse: (jsonString: string) => unknown = (jsonString: string) => {
     return jsonString ? JSON.parse(jsonString) : {};
@@ -148,19 +150,76 @@ export const processStripLines: (
 };
 
 /**
+ * Processes multi-level label configurations from a chart component.
+ * Extracts multi-level label levels and their categories from the component hierarchy.
+ * Merges with default configurations to ensure all required properties are set.
+ *
+ * @param {React.ReactNode} child - The child element containing multi-level label configurations.
+ * @param {ChartMultiLevelLabelProps[]} defaultMultiLevelLabels - Default multi-level label settings to use as fallback.
+ * @returns {ChartMultiLevelLabelProps[]} Processed multi-level label configuration array.
+ */
+export const processMultiLevelLabels: (
+    child: React.ReactNode,
+    defaultMultiLevelLabels: ChartMultiLevelLabelProps[]
+) => ChartMultiLevelLabelProps[] = (
+    child: React.ReactNode,
+    defaultMultiLevelLabels: ChartMultiLevelLabelProps[]
+): ChartMultiLevelLabelProps[] => {
+    if (!React.isValidElement(child) || child.type !== ChartMultiLevelLabels) {
+        return [...defaultMultiLevelLabels];
+    }
+    const multiLevelLabelsElement: React.ReactElement<{ children?: React.ReactNode }> = child as React.ReactElement<{
+        children?: React.ReactNode }>;
+    const labelChildren: React.ReactNode[] = React.Children.toArray(multiLevelLabelsElement.props.children || []);
+
+    if (labelChildren.length > 0) {
+        return labelChildren
+            .filter((labelChild: React.ReactNode): labelChild is React.ReactElement =>
+                React.isValidElement(labelChild))
+            .map((labelChild: React.ReactElement) => {
+                const defaultProps: ChartMultiLevelLabelProps = defaultMultiLevelLabels[0];
+                const levelProps: ChartMultiLevelLabelProps = labelChild.props as ChartMultiLevelLabelProps;
+                const mergedProps: ChartMultiLevelLabelProps = {
+                    ...defaultProps,
+                    ...levelProps,
+                    textStyle: {
+                        ...defaultProps.textStyle,
+                        ...levelProps.textStyle
+                    },
+                    border: {
+                        ...defaultProps.border,
+                        ...levelProps.border
+                    }
+                };
+                return mergedProps;
+            });
+    } else {
+        return [...defaultMultiLevelLabels];
+    }
+};
+
+/**
  * Primary X-Axis component for the chart.
  * Renders the vertical axis with customizable properties like labels, grid lines, tick marks, and strip lines.
  * A non-rendering component that configures the chart's primary X-axis.
  *
  * @param {ChartAxisProps} props - The properties for configuring the X-axis
- * @returns {null} This component doesn't render any visible elements
+ * @returns {null} - It is used only to pass the primary x axis configuration to the chart through the React context.
  */
 export const ChartPrimaryXAxis: React.FC<ChartAxisProps> = (props: ChartAxisProps) => {
     const context: ChartProviderChildProps = useContext(ChartContext);
     const childArray: React.ReactNode[] = React.Children.toArray(props.children);
     const childrenPropsSignature: string = childArray
-        .map((child: React.ReactNode) => processChildElement(child, ChartStripLines))
+        .map((child: React.ReactNode) => {
+            if (React.isValidElement(child) && child.type === ChartMultiLevelLabels) {
+                const processedMultiLevelLabels: ChartMultiLevelLabelProps[] =
+                    processMultiLevelLabels(child, defaultChartConfigs.MultiLevelLabels);
+                return JSON.stringify({ type: 'ChartMultiLevelLabels', props: processedMultiLevelLabels });
+            }
+            return processChildElement(child, ChartStripLines);
+        })
         .join('|'); // simple delimiter for the string array
+
     const serializedProps: string = useMemo(() => {
         const { children, ...rest } = props;
         return JSON.stringify(rest);
@@ -175,6 +234,8 @@ export const ChartPrimaryXAxis: React.FC<ChartAxisProps> = (props: ChartAxisProp
         let titleStyle: ChartAxisTitleProps = defaultChartConfigs.TitleStyle;
         let stripLines: ChartStripLineProps[] = [...defaultChartConfigs.StripLines];
         let axisCrosshairTooltip: ChartCrosshairTooltipProps = defaultChartConfigs.AxisCrosshairTooltip;
+        let scrollbarSettings: ChartScrollbarProps = defaultChartConfigs.ChartScrollBar;
+        let multiLevelLabels: ChartMultiLevelLabelProps[] = [...defaultChartConfigs.MultiLevelLabels];
 
         childArray.forEach((child: React.ReactNode) => {
             if (!React.isValidElement(child)) { return; }
@@ -220,6 +281,15 @@ export const ChartPrimaryXAxis: React.FC<ChartAxisProps> = (props: ChartAxisProp
                     ...childProps
                 };
             }
+            else if (child.type === ChartScrollbar) {
+                scrollbarSettings = {
+                    ...defaultChartConfigs.ChartScrollBar,
+                    ...child.props as ChartScrollbarProps   // config only
+                };
+            }
+            else if (child.type === ChartMultiLevelLabels) {
+                multiLevelLabels = processMultiLevelLabels(child, defaultChartConfigs.MultiLevelLabels);
+            }
         });
         axisProps.majorGridLines = extend({}, majorGridLines);
         axisProps.majorGridLines.width = isNullOrUndefined(axisProps.majorGridLines.width) ? 0 : axisProps.majorGridLines.width;
@@ -230,6 +300,8 @@ export const ChartPrimaryXAxis: React.FC<ChartAxisProps> = (props: ChartAxisProp
         axisProps.titleStyle = titleStyle;
         axisProps.stripLines = stripLines;
         axisProps.crosshairTooltip = axisCrosshairTooltip;
+        axisProps.scrollbarSettings = scrollbarSettings;
+        axisProps.multiLevelLabels = multiLevelLabels;
         axisProps.crossAt = { ...defaultChartConfigs.PrimaryXAxis.crossAt, ...props.crossAt};
         axisProps.lineStyle = { ...defaultChartConfigs.PrimaryXAxis.lineStyle, ...props.lineStyle };
         context?.setChartPrimaryXAxis(axisProps as AxisModel);

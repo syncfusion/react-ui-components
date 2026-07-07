@@ -1,14 +1,15 @@
 import { extend, HorizontalAlignment, VerticalAlignment } from '@syncfusion/react-base';
 import { ChartBorderProps,  ChartLegendProps, ChartFontProps, LegendClickEvent, ChartLocationProps } from '../../base/interfaces';
-import { ChartSeriesType, LegendShape } from '../../base/enum';
-import { BaseLegend, createLegendOption, createPathOption, createRectOption, RectOption } from '../../base/Legend-base';
+import { ChartMarkerShape, ChartSeriesType, LegendShape } from '../../base/enum';
+import { BaseLegend, createLegendOption, createPathOption, createRectOption, RectOption, GradientStopOption } from '../../base/Legend-base';
 import { LegendOptions } from '../../base/Legend-base';
-import { calculateLegendShapes, calculateShapes, getTitle, measureText, stringToNumber, titlePositionX, useTextTrim, useTextWrap } from '../../utils/helper';
+import { calculateLegendShapes, calculateShapes, getTitle, isRangeColorEnabled, measureText, stringToNumber, titlePositionX, useTextTrim, useTextWrap } from '../../utils/helper';
 import { subtractThickness } from '../AxesRenderer/CartesianLayoutRender';
 import { AxisTextStyle } from '../../chart-axis/base';
 import { useRegisterAxisRender, useRegisterSeriesRender } from '../../hooks/useClipRect';
-import { AxisModel, Chart, PathOptions, Rect, SeriesProperties, ChartSizeProps, TextOption, TextStyleModel } from '../../chart-area/chart-interfaces';
+import { AxisModel, Chart, PathOptions, Rect, SeriesProperties, ChartSizeProps, TextOption, TextStyleModel, Points } from '../../chart-area/chart-interfaces';
 import { LegendPosition, TextOverflow } from '../../../common';
+import { SCATTER_MARKER_SHAPES } from '../SeriesRenderer/ScatterSeriesRenderer';
 
 // === LEGEND INITIALIZATION & CONFIGURATION ===
 
@@ -60,26 +61,82 @@ export function getLegendOptions(chartLegend: ChartLegendProps, visibleSeriesCol
     legend.pagingRegions = [];
     legend.totalNoOfPages = 0;
     legend.legendTranslate = '';
+    legend.mode = (legend.mode === 'Gradient' || legend.mode === 'Range') ? (isRangeColorEnabled(chart) ? legend.mode : 'Series') : legend.mode;
 
+    const colors: string[] = [];
     let seriesType: ChartSeriesType;
     let fill: string;
     let dashArray: string;
+    let markerShape: ChartMarkerShape;
     legend.isRtlEnable = chart.enableRtl;
     legend.isReverse = !legend.isRtlEnable && chartLegend.reverse;
     for (const series of visibleSeriesCollection) {
-        if (series.name !== '' && !(series.category === 'TrendLine' && visibleSeriesCollection[series.sourceIndex].name === '')) {
-            seriesType = series.type as Required<ChartSeriesType>;
-            dashArray = series.dashArray as Required<string>;
-            fill = series.interior as Required<string>;
-            legend.legendCollections.push(createLegendOption(
-                series.name as Required<string>, fill, series.legendShape as Required<LegendShape>,
-                series.visible as Required<boolean>, seriesType, series.legendImageUrl ? series.legendImageUrl : '',
-                series.marker?.shape,
-                series.marker?.visible, undefined, undefined, dashArray
-            ));
+        markerShape = series.marker?.shape as ChartMarkerShape;
+        if (series.type?.indexOf('Scatter') as number !== -1 && !markerShape) {
+            markerShape = SCATTER_MARKER_SHAPES[series.index % SCATTER_MARKER_SHAPES.length];
+        }
+        if (legend.mode === 'Series') {
+            if (series.name !== '' && !(series.category === 'TrendLine' && visibleSeriesCollection[series.sourceIndex].name === '') && series.category !== 'Indicator') {
+                seriesType = (series.type as Required<ChartSeriesType>).replace(/^(Polar|Radar)/i, '') as ChartSeriesType;
+                dashArray = series.dashArray as Required<string>;
+                fill = series.interior as Required<string>;
+                legend.legendCollections.push(createLegendOption(
+                    series.name as Required<string>, fill, series.legendShape as Required<LegendShape>,
+                    series.visible as Required<boolean>, seriesType, series.legendImageUrl ? series.legendImageUrl : '',
+                    markerShape,
+                    series.marker?.visible, undefined, undefined, dashArray
+                ));
+            }
+        }
+        else if (legend.mode === 'Point') {
+            for (const points of series.points) {
+                fill = points.interior ? points.interior : series.interior;
+                legend.legendCollections.push(createLegendOption(
+                    points.x.toString(), fill, series.legendShape, (series.category === 'TrendLine' ?
+                        chart.series[series.sourceIndex].trendlines?.[series.index].visible : points.visible),
+                    series.type, (series.type === 'Scatter' && series.marker?.shape === 'Image') ? series.marker.imageUrl : '',
+                    markerShape, series.marker?.visible, null, null, series.dashArray
+                ));
+            }
+        }
+        else if (legend.mode === 'Range') {
+            for (const points of series.points) {
+                fill = points.interior ? points.interior : series.interior;
+                let legendLabel: string = 'Others';
+                if (colors.indexOf(fill) < 0) {
+                    colors.push(fill);
+                    if (isRangeColorEnabled(chart)) {
+                        for (const rangeMap of chart.rangeColorModule) {
+                            if (rangeMap?.fill === fill) {
+                                legendLabel = rangeMap.label as string;
+                            }
+                        }
+                        legend.legendCollections.push(createLegendOption(
+                            legendLabel, fill, series.legendShape, (series.category === 'TrendLine' ?
+                                chart.series[series.sourceIndex].trendlines?.[series.index].visible : points.visible),
+                            series.type, (series.type === 'Scatter' && series.marker?.shape === 'Image') ? series.marker.imageUrl : '',
+                            markerShape, series.marker?.visible, null, null, series.dashArray
+                        ));
+                    }
+                }
+            }
+        }
+        else {
+            if (isRangeColorEnabled(chart)) {
+                const startLabel: string | undefined = chart.rangeColorModule[0].start?.toString();
+                const endLabel: string | undefined = chart.rangeColorModule[chart.rangeColorModule.length - 1].end?.toString();
+                legend.legendCollections.push(createLegendOption(
+                    startLabel, series.interior, 'Rectangle', true,
+                    series.type, '', markerShape, series.marker?.visible
+                ));
+                legend.legendCollections.push(createLegendOption(
+                    endLabel, series.interior, 'Rectangle', true,
+                    series.type, '', markerShape, series.marker?.visible
+                ));
+            }
         }
     }
-    if (legend.reverse) {
+    if (legend.reverse && legend.mode !== 'Gradient') {
         legend.legendCollections.reverse();
     }
     return legend;
@@ -363,8 +420,13 @@ export function setBounds(
     }
     computedWidth = Math.min(computedWidth, legendBounds.width);
     computedHeight = Math.min(computedHeight, legendBounds.height);
-    legendBounds.width = !chartLegend.width ? computedWidth : legendBounds.width;
-    legendBounds.height = !chartLegend.height ? computedHeight : legendBounds.height;
+    if (legend.mode === 'Gradient') {
+        legendBounds.width = legend.width ? legendBounds.width : legend.isVertical ? computedWidth : 0.75 * legendBounds.width;
+        legendBounds.height = legend.height ? legendBounds.height : legend.isVertical ? 0.75 * legendBounds.height : computedHeight;
+    } else {
+        legendBounds.width = !legend.width ? computedWidth : legendBounds.width;
+        legendBounds.height = !legend.height ? computedHeight : legendBounds.height;
+    }
     if (legend.isTop && chartLegend.titleOverflow !== 'None') {
         calculateLegendTitle(chartLegend, legendBounds, legend.chart as Chart, legend);
         legendBounds.height += chartLegend.titleOverflow === 'Wrap' && (legend.legendTitleCollections as Required<string[]>).length > 1 ? ((legend.legendTitleSize?.height as Required<number>) - ((legend.legendTitleSize?.height as Required<number>)
@@ -529,7 +591,11 @@ export function renderLegend(chartLegend: ChartLegendProps, legendBounds: Rect, 
     } else if (legend.isTitle && !legend.isVertical) {
         titlePlusArrowWidth = 0;
     }
-    if (legend.legendCollections && firstLegend !== legend.legendCollections.length) {
+    if (legend.mode === 'Gradient' && legend.legendCollections && legend.legendCollections.length > 1) {
+        getLinearLegend(legendBounds, chart, chartLegend, legend);
+        legend.totalPages = 1;
+    }
+    else if (legend.legendCollections && firstLegend !== legend.legendCollections.length) {
         let count: number = 0;
         let previousLegend: LegendOptions = legend.legendCollections[firstLegend as number];
         const startPadding: number = titlePlusArrowWidth + padding +
@@ -619,6 +685,178 @@ export function renderLegend(chartLegend: ChartLegendProps, legendBounds: Rect, 
 }
 
 /**
+ * To get linear legend.
+ *
+ * @param {Rect} legendBounds - The bounds of the legend.
+ * @param {Chart } chart - The chart instance.
+ * @param {ChartLegendProps} chartLegend - The legend settings.
+ * @param {BaseLegend} legend - The legend settings.
+ * @returns {void}
+ * @private
+ */
+function getLinearLegend(
+    legendBounds: Rect, chart: Chart,
+    chartLegend: ChartLegendProps, legend: BaseLegend
+): void {
+    const previousLegend: LegendOptions | undefined = legend.legendCollections && legend.legendCollections[0];
+    const nextLegend: LegendOptions | undefined = legend.legendCollections && legend.legendCollections[1];
+    const gradientLegendCount: number = 0;
+    const opacity: number = 1;
+    const fillColors: string[] = [];
+    const numberItems: number[] = [];
+
+    if (legend.title) {
+        if (!legend.isVertical) {
+            if (chartLegend.position === 'Top') {
+                legendBounds.y += legend.legendTitleSize?.height as number;
+                legendBounds.height -= legend.legendTitleSize?.height as number;
+            }
+        } else {
+            legendBounds.y += legend.legendTitleSize?.height as number;
+            legendBounds.height -= legend.legendTitleSize?.height as number;
+        }
+    }
+
+    for (const colorMap of (chart).rangeColorModule) {
+        if (colorMap.start && numberItems.indexOf(colorMap.start) < 0) {
+            numberItems.push(colorMap.start);
+        }
+        if (numberItems.indexOf(colorMap.end as number) < 0) {
+            numberItems.push(colorMap.end as number);
+        }
+
+        fillColors.push(colorMap.fill as string);
+        fillColors.push(colorMap.fill as string);
+
+    }
+
+    const x1: string = legend.isRtlEnable && !legend.isVertical ? '100%' : '0%';
+    const x2: string = legend.isVertical || legend.isRtlEnable ? '0%' : '100%';
+    const y2: string = legend.isVertical ? '100%' : '0%';
+
+    // Store gradient options instead of creating DOM elements
+    const gradientStops: GradientStopOption[] = [];
+    const full: number = numberItems[numberItems.length - 1] - numberItems[0];
+    for (let b: number = 0; b < fillColors.length; b++) {
+        let offsetValue: number = numberItems[b as number] - numberItems[0];
+        offsetValue = full === 0 ? 0 : offsetValue / full;
+        gradientStops.push({
+            offset: offsetValue.toString(),
+            stopColor: fillColors[b as number],
+            stopOpacity: opacity.toString()
+        });
+    }
+
+    const startLabel: string | undefined = previousLegend?.text.toString();
+    const endLabel: string| undefined = nextLegend?.text.toString();
+    const startTextSize: ChartSizeProps = measureText(startLabel as string, legend.textStyle as TextStyleModel
+        , chart.themeStyle.legendLabelFont);
+    const endTextSize: ChartSizeProps = measureText(endLabel as string
+        , legend.textStyle as TextStyleModel, chart.themeStyle.legendLabelFont);
+    const textWidth: number = startTextSize.width > endTextSize.width ? startTextSize.width : endTextSize.width;
+    const textHeight: number = startTextSize.height > endTextSize.height ? startTextSize.height : endTextSize.height;
+    let otherSpaces: number = (2 * textWidth) + (4 * (legend.padding as number));
+    let linearBarWidth: number = legendBounds.width;
+    let linearBarHeight: number = legendBounds.height;
+    let xValue: number = legendBounds.x + textWidth + (2 * (legend.padding as number));
+    let yValue: number = legendBounds.y + (legend.padding as number);
+    let startLabelY: number;
+    let endLabelY: number;
+    let startLabelX: number;
+    let endLabelX: number;
+
+    if (legend.isVertical) {
+        otherSpaces = (2 * textHeight) + (4 * (legend.padding as number));
+        linearBarWidth = legendBounds.width - (2 * (legend.padding as number));
+        linearBarHeight = legendBounds.height - otherSpaces;
+        xValue = legendBounds.x + (legend.padding as number);
+        yValue = legendBounds.y + textHeight + (2 * (legend.padding as number));
+        startLabelY = legendBounds.y + (legend.padding as number) + textHeight;
+        endLabelY = yValue + linearBarHeight + textHeight;
+        startLabelX = (legendBounds.x + (legendBounds.width * 0.5)) - (textWidth * 0.5);
+        endLabelX = startLabelX;
+        if (linearBarWidth > 30) {
+            const diffWidth: number = linearBarWidth - 30;
+            linearBarWidth = 30;
+            xValue = xValue + (diffWidth / 2);
+        }
+    } else {
+        linearBarWidth = legendBounds.width - otherSpaces;
+        linearBarHeight = legendBounds.height - (2 * (legend.padding as number));
+        startLabelX = legendBounds.x + ((!legend.isRtlEnable) ? (legend.padding as number) + (textWidth - startTextSize.width) :
+            linearBarWidth + (3 * (legend.padding as number)) + textWidth);
+        endLabelX = legendBounds.x + ((!legend.isRtlEnable) ? linearBarWidth + (3 * (legend.padding as number)) + textWidth :
+            (legend.padding as number) + (textWidth - endTextSize.width));
+        startLabelY = legendBounds.y + (legendBounds.height * 0.5) + (textHeight * 0.25);
+        endLabelY = startLabelY;
+        if (linearBarHeight > 30) {
+            const diffHeight: number = linearBarHeight - 30;
+            linearBarHeight = 30;
+            yValue = yValue + (diffHeight / 2);
+        }
+    }
+
+    const anchor: string = chart.enableRtl ? 'end' : '';
+    const hiddenColor: string = '#D3D3D3';
+    const gradientTextOptions: TextOption[] = [];
+
+    for (let i: number = 0; i < 2; i++) {
+        const legendOption: LegendOptions = (legend.legendCollections as LegendOptions[])[i as number];
+        const fontcolor: string = legendOption.visible ? (legend.textStyle as Required<ChartFontProps>).color ||
+            chart.themeStyle.legendLabelFont.color : hiddenColor;
+
+        const legendTextOption: TextOption = {
+            id: legend.legendID + '_gradient_text_' + i,
+            x: i === 0 ? startLabelX : endLabelX,
+            y: i === 0 ? startLabelY : endLabelY,
+            anchor: anchor,
+            text: (i === 0 ? startLabel : endLabel) as string,
+            labelRotation: 0,
+            fontFamily: legend.textStyle?.fontFamily || chart.themeStyle.legendLabelFont.fontFamily,
+            fontWeight: (legend.textStyle?.fontWeight || chart.themeStyle.legendLabelFont.fontWeight) as string,
+            fontSize: (legend.textStyle?.fontSize || chart.themeStyle.legendLabelFont.fontSize) as string,
+            fontStyle: (legend.textStyle?.fontStyle || chart.themeStyle.legendLabelFont.fontStyle) as string,
+            opacity: legendOption.visible ? 1 : (chartLegend.opacity as Required<number>),
+            fill: fontcolor,
+            baseLine: 'auto'
+        };
+        gradientTextOptions.push(legendTextOption);
+    }
+
+    // Create and store complete gradient options object
+    const gradientId: string = 'linearGradient' + gradientLegendCount;
+    if (!legend.gradientOptions) {
+        legend.gradientOptions = {};
+    }
+    legend.gradientOptions = {
+        gradientId: gradientId,
+        gradientX1: x1,
+        gradientY1: '0%',
+        gradientX2: x2,
+        gradientY2: y2,
+        gradientStops: gradientStops,
+        gradientBarRect: {
+            id: `${gradientId}_bar`,
+            fill: `url(#${gradientId})`,
+            stroke: 'transparent',
+            strokeWidth: 0,
+            strokeDasharray: '',
+            opacity: 1,
+            d: '',
+            x: xValue,
+            y: yValue,
+            width: linearBarWidth,
+            height: linearBarHeight,
+            rx: 0,
+            ry: 0,
+            transform: ''
+        },
+        gradientTextOption: gradientTextOptions
+    };
+}
+
+
+/**
  * Calculates the rendering point for the legend item based on various parameters.
  *
  * @param {ChartLegendProps} chartLegend - The chart legend properties.
@@ -665,16 +903,16 @@ export function getRenderPoint(
         legendOption.location.x = (count === firstLegend) ? previousLegend.location.x : previousBound;
         legendOption.location.y = previousLegend.location.y;
     }
-    let availwidth: number = (!legend.isRtlEnable) ? (legend.legendBounds?.x as Required<number> +
-            (legend.legendBounds?.width as Required<number>)) -
-            (legendOption.location.x + textPadding - (legend.itemPadding as Required<number>) -
-                ((chartLegend.shapeWidth || 10) as Required<number>) / 2) : (legendOption.location.x - textPadding +
-                    (legend.itemPadding as Required<number>) + (((chartLegend.shapeWidth || 10) as Required<number>) / 2)) -
-        (legend.legendBounds?.x as Required<number>);
-    if (!legend.isVertical && legend.isPaging && !chartLegend.enablePages) {
-        availwidth = legend.legendBounds?.width as Required<number> - (legend.fivePixel as Required<number>);
-    }
-    availwidth = chartLegend.maxLabelWidth ? Math.min(chartLegend.maxLabelWidth, availwidth) : availwidth;
+    // let availwidth: number = (!legend.isRtlEnable) ? (legend.legendBounds?.x as Required<number> +
+    //         (legend.legendBounds?.width as Required<number>)) -
+    //         (legendOption.location.x + textPadding - (legend.itemPadding as Required<number>) -
+    //             ((chartLegend.shapeWidth || 10) as Required<number>) / 2) : (legendOption.location.x - textPadding +
+    //                 (legend.itemPadding as Required<number>) + (((chartLegend.shapeWidth || 10) as Required<number>) / 2)) -
+    //     (legend.legendBounds?.x as Required<number>);
+    // if (!legend.isVertical && legend.isPaging && !chartLegend.enablePages) {
+    //     availwidth = legend.legendBounds?.width as Required<number> - (legend.fivePixel as Required<number>);
+    // }
+    // availwidth = chartLegend.maxLabelWidth ? Math.min(chartLegend.maxLabelWidth, availwidth) : availwidth;
 }
 
 /**
@@ -851,7 +1089,7 @@ export function renderSymbol(
         ((legendOption.shape === 'HorizontalLine') || (legendOption.shape === 'VerticalLine') || (legendOption.shape === 'Cross')));
     let shape: string = (legendOption.shape === 'SeriesType') ? legendOption.type : legendOption.shape;
     shape = shape === 'Scatter' ? legendOption.markerShape as string : shape;
-    const strokewidth: number = isStrokeWidth ? chart.visibleSeries[legendIndex as number].width as Required<number> : 1;
+    const strokewidth: number = isStrokeWidth ? legend.mode === 'Series' ? chart.visibleSeries[legendIndex as number].width as Required<number> : chart.visibleSeries[0].width as Required<number> : 1;
     let symbolOption: PathOptions = createPathOption(
         legend.legendID + '_shape_' + legendIndex, symbolColor, strokewidth,
         symbolColor, legend.opacity as Required<number>, legendOption.dashArray as Required<string>, '');
@@ -1070,7 +1308,8 @@ export function changePage(
  * @private
  */
 export function LegendClick(props: ChartLegendProps, index: number, chart: Chart, legend: BaseLegend): void {
-    const seriesIndex: number = index;
+    legend.mode = (legend.mode === 'Gradient' || legend.mode === 'Range') ? (isRangeColorEnabled(chart) ? legend.mode : 'Series') : legend.mode;
+    const seriesIndex: number = legend.mode === 'Series' ? index : 0;
     const legendIndex: number = !legend.isReverse ? index : ((legend.legendCollections as Required<LegendOptions[]>).length - 1)
         - index;
     const series: SeriesProperties = chart.visibleSeries[seriesIndex as number];
@@ -1087,43 +1326,109 @@ export function LegendClick(props: ChartLegendProps, index: number, chart: Chart
             }
         }
     }
-    const legendClickArgs: LegendClickEvent = {
-        text: chartLegend.text, shape: chartLegend.shape,
-        seriesName: series.name as string, cancel: false
-    };
-    chart.chartProps?.onLegendClick?.(legendClickArgs);
-    series.legendShape = legendClickArgs.shape;
-    if (!legendClickArgs.cancel) {
-        if (series.fill !== null) {
-            chart.visibleSeries[index as number].interior = series.fill || '';
-        }
-        if (props.toggleVisibility) {
-            series.isLegendClicked = true;
-            changeSeriesVisiblity(series, series.visible, chart);
-            chartLegend.visible = (series.visible as Required<boolean>);
-            if (chartLegend.markerOption) {
-                chartLegend.markerOption.fill = chartLegend.visible ? series.interior as Required<string> : '#D3D3D3';
-                chartLegend.markerOption.stroke = chartLegend.visible ? series.interior as Required<string> : '#D3D3D3';
+    if (legend.mode === 'Series') {
+        const legendClickArgs: LegendClickEvent = {
+            text: chartLegend.text, shape: chartLegend.shape,
+            seriesName: series.name as string, cancel: false
+        };
+        chart.chartProps?.onLegendClick?.(legendClickArgs);
+        series.legendShape = legendClickArgs.shape;
+        if (!legendClickArgs.cancel) {
+            if (series.fill !== null) {
+                chart.visibleSeries[index as number].interior = series.fill || '';
             }
-            if (chartLegend.symbolOption) {
-                if (!((series.type === 'Spline' || series.type === 'StepLine') && chartLegend.shape === 'SeriesType')) {
-                    chartLegend.symbolOption.fill = chartLegend.visible ? series.interior as Required<string> : '#D3D3D3';
+            if (props.toggleVisibility) {
+                series.isLegendClicked = true;
+                changeSeriesVisiblity(series, series.visible, chart);
+                chartLegend.visible = (series.visible as Required<boolean>);
+                if (chartLegend.markerOption) {
+                    chartLegend.markerOption.fill = chartLegend.visible ? series.interior as Required<string> : '#D3D3D3';
+                    chartLegend.markerOption.stroke = chartLegend.visible ? series.interior as Required<string> : '#D3D3D3';
                 }
-                chartLegend.symbolOption.stroke = chartLegend.visible ? series.interior as Required<string> : '#D3D3D3';
+                if (chartLegend.symbolOption) {
+                    if (!((series.type === 'Spline' || series.type === 'StepLine') && chartLegend.shape === 'SeriesType')) {
+                        chartLegend.symbolOption.fill = chartLegend.visible ? series.interior as Required<string> : '#D3D3D3';
+                    }
+                    chartLegend.symbolOption.stroke = chartLegend.visible ? series.interior as Required<string> : '#D3D3D3';
+                }
+                if (chartLegend.textOption) {
+                    chartLegend.textOption.fill = chartLegend.visible ? (legend.textStyle as Required<ChartFontProps>).color ||
+                        chart.themeStyle.legendLabelFont.color : '#D3D3D3';
+                }
             }
-            if (chartLegend.textOption) {
-                chartLegend.textOption.fill = chartLegend.visible ? (legend.textStyle as Required<ChartFontProps>).color ||
-                    chart.themeStyle.legendLabelFont.color : '#D3D3D3';
-            }
-            chart.animateSeries = false;
-            chart.isLegendClicked = true;
-            const chartId: string = chart.element.id;
-            const triggerRender: (chartId?: string) => void = useRegisterAxisRender();
-            triggerRender(chartId);
-            const triggerSeriesRender: (chartId?: string) => void = useRegisterSeriesRender();
-            triggerSeriesRender(chartId);
         }
     }
+    else if (legend.mode === 'Point') {
+        const point: Points = series.points[index as number];
+        const legendClickArgs: LegendClickEvent = {
+            text: chartLegend.text, shape: chartLegend.shape,
+            seriesName: series.name as string, cancel: false
+        };
+        chart.chartProps?.onLegendClick?.(legendClickArgs);
+        if (legend.toggleVisibility && !legendClickArgs.cancel) {
+            point.visible = !point.visible;
+            const legendOption: LegendOptions = legend.legendCollections?.[index as number] as LegendOptions;
+            legendOption.visible = point.visible;
+
+            if (legendOption.markerOption) {
+                legendOption.markerOption.fill = legendOption.visible ? point.interior as Required<string> || point.color as Required<string> : '#D3D3D3';
+                legendOption.markerOption.stroke = legendOption.visible ? point.interior as Required<string> || point.color as Required<string> : '#D3D3D3';
+            }
+            if (legendOption.symbolOption) {
+                if (!((series.type === 'Spline' || series.type === 'StepLine') && chartLegend.shape === 'SeriesType')) {
+                    legendOption.symbolOption.fill = legendOption.visible ? point.interior as Required<string> || point.color as Required<string> : '#D3D3D3';
+                }
+                legendOption.symbolOption.stroke = legendOption.visible ? point.interior as Required<string> || point.color as Required<string> : '#D3D3D3';
+            }
+            if (legendOption.textOption) {
+                legendOption.textOption.fill = legendOption.visible ? (legend.textStyle as Required<ChartFontProps>).color ||
+                    chart.themeStyle.legendLabelFont.color : '#D3D3D3';
+            }
+
+        }
+    }
+    else if (legend.mode === 'Range') {
+        const points: Points[] = [];
+        const legendOption: LegendOptions = legend.legendCollections?.[index as number] as LegendOptions;
+        for (const point of series.points) {
+            if (legendOption.fill === (point.interior || series.interior)) {
+                points.push(point);
+                if (legend.toggleVisibility ) {
+                    point.visible = !point.visible;
+                    const legendOption: LegendOptions = legend.legendCollections?.[index as number] as LegendOptions;
+                    legendOption.visible = point.visible;
+
+                    if (legendOption.markerOption) {
+                        legendOption.markerOption.fill = legendOption.visible ? point.interior as Required<string> || point.color as Required<string> : '#D3D3D3';
+                        legendOption.markerOption.stroke = legendOption.visible ? point.interior as Required<string> || point.color as Required<string> : '#D3D3D3';
+                    }
+                    if (legendOption.symbolOption) {
+                        if (!((series.type === 'Spline' || series.type === 'StepLine') && chartLegend.shape === 'SeriesType')) {
+                            legendOption.symbolOption.fill = legendOption.visible ? point.interior as Required<string> || point.color as Required<string> : '#D3D3D3';
+                        }
+                        legendOption.symbolOption.stroke = legendOption.visible ? point.interior as Required<string> || point.color as Required<string> : '#D3D3D3';
+                    }
+                    if (legendOption.textOption) {
+                        legendOption.textOption.fill = legendOption.visible ? (legend.textStyle as Required<ChartFontProps>).color ||
+                            chart.themeStyle.legendLabelFont.color : '#D3D3D3';
+                    }
+
+                }
+            }
+        }
+        const legendClickArgs: LegendClickEvent = {
+            text: chartLegend.text, shape: chartLegend.shape,
+            seriesName: series.name as string, cancel: false
+        };
+        chart.chartProps?.onLegendClick?.(legendClickArgs);
+    }
+    chart.animateSeries = false;
+    chart.isLegendClicked = true;
+    const chartId: string = chart.element.id;
+    const triggerRender: (chartId?: string) => void = useRegisterAxisRender();
+    triggerRender(chartId);
+    const triggerSeriesRender: (chartId?: string) => void = useRegisterSeriesRender();
+    triggerSeriesRender(chartId);
 }
 
 /**

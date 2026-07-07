@@ -1,4 +1,4 @@
-import { ChartFontProps } from '../base/interfaces';
+import { ChartBorderProps, ChartFontProps } from '../base/interfaces';
 import { AxisLabelPosition, EdgeLabelPlacement, LabelIntersectMode, LabelPlacement } from '../base/enum';
 import { HorizontalAlignment } from '@syncfusion/react-base';
 import { TextOverflow } from '../../common';
@@ -227,6 +227,14 @@ export interface ChartAxisLabelProps extends ChartFontProps {
      * @default null
      */
     formatter?: (value: number, text: string) => string | boolean;
+
+    /**
+     * The `border` property allows customization of the border for axis labels.
+     * It includes options to set the color, width, and dash pattern of the border.
+     *
+     * @default {color: '', width: 0, dashArray: ''}
+     */
+    border?: ChartBorderProps;
 }
 
 /**

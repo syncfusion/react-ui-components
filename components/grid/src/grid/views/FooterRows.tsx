@@ -34,6 +34,9 @@ import { DataUtil } from '@syncfusion/react-data';
 
 // CSS class constants following enterprise naming convention
 const CSS_SUMMARY_ROW: string = 'sf-grid-summary-row';
+const CSS_ROW_HEIGHT: string = 'sf-grid-row-height';
+const SUMMARY_ROW_ID_PREFIX: string = 'grid-summary-row';
+const GRID_ROW_UID: string = 'grid-row';
 
 /**
  * FooterRowsBase component renders the footer rows within the table footer section
@@ -46,11 +49,11 @@ const CSS_SUMMARY_ROW: string = 'sf-grid-summary-row';
  */
 const FooterRowsBase: (props: Partial<IFooterRowsBase> & RefAttributes<FooterRowsRef>) => ReactElement =
     memo(forwardRef<FooterRowsRef, Partial<IFooterRowsBase>>(
-        <T, >(props: Partial<IFooterRowsBase>, ref: RefObject<FooterRowsRef>) => {
+        <T extends object = {}>(props: Partial<IFooterRowsBase>, ref: RefObject<FooterRowsRef>) => {
             const { tableScrollerPadding, ...rest } = props;
 
-            const { columnsDirective, responseData } = useGridMutableProvider<T>();
-            const { aggregates, rowHeight, serviceLocator } = useGridComputedProvider<T>();
+            const { columnsDirective, responseData, aggregateSelection } = useGridMutableProvider<T>();
+            const { aggregates, rowHeight, serviceLocator, getColumns } = useGridComputedProvider<T>();
 
             // Refs for DOM elements and child components
             const footerSectionRef: RefObject<HTMLTableSectionElement> = useRef<HTMLTableSectionElement>(null);
@@ -93,74 +96,119 @@ const FooterRowsBase: (props: Partial<IFooterRowsBase> & RefAttributes<FooterRow
                     rowsObjectRef.current[index as number].cells = cellRef;
                 }, []);
 
-            const getData: () => AggregateRowProps[] = (): AggregateRowProps[] => {
-                const rows: AggregateRowProps[] = [];
-                const row: AggregateRowProps[] = aggregates.slice();
-                for (let i: number = 0; i < row.length; i++) {
-                    const columns: AggregateColumnProps<T>[] = row[parseInt(i.toString(), 10)].columns;
-                    if (columns && columns.length) {
-                        rows.push({ columns: columns });
+            const isColumnsVisible: (columns: AggregateColumnProps[]) => boolean = useCallback(
+                (columns: AggregateColumnProps[]): boolean => {
+                    const cols: ColumnProps[] = getColumns();
+                    const colsMap: Map<string, ColumnProps> = new Map(cols.map((col: ColumnProps) => [col.field, col]));
+                    for (let i: number = 0; i < columns.length; i++) {
+                        const col: ColumnProps | undefined = colsMap.get(columns[parseInt(i.toString(), 10)].columnName);
+                        if (col?.visible) {
+                            return true;
+                        }
                     }
-                }
-                return rows;
-            };
+                    return false;
+                },
+                [getColumns]
+            );
 
-            const getFormatter: (column: AggregateColumnProps<T>) => Function = (column: AggregateColumnProps<T>): Function => {
-                const valueFormatter: IValueFormatter = serviceLocator?.getService<IValueFormatter>('valueFormatter');
-                if (typeof (column.format) === 'object') {
-                    return valueFormatter.getFormatFunction(extend({}, column.format as DateFormatOptions));
-                } else if (typeof (column.format) === 'string') {
-                    return valueFormatter.getFormatFunction({ format: column.format } as NumberFormatOptions);
-                }
-                return (a: Object) => a;
-            };
+            const getData: () => AggregateRowProps[] = useCallback(
+                (): AggregateRowProps[] => {
+                    const rows: AggregateRowProps[] = [];
+                    const row: AggregateRowProps[] = aggregates.slice();
+                    for (let i: number = 0; i < row.length; i++) {
+                        const columns: AggregateColumnProps<T>[] = row[parseInt(i.toString(), 10)].columns;
+                        if (columns && columns.length && isColumnsVisible(columns)) {
+                            rows.push({ columns: columns });
+                        }
+                    }
+                    return rows;
+                },
+                [aggregates, isColumnsVisible]
+            );
+
+            const getFormatter: (column: AggregateColumnProps<T>) => Function = useCallback(
+                (column: AggregateColumnProps<T>): Function => {
+                    const valueFormatter: IValueFormatter = serviceLocator?.getService<IValueFormatter>('valueFormatter');
+                    if (typeof (column.format) === 'object') {
+                        return valueFormatter.getFormatFunction(extend({}, column.format as DateFormatOptions));
+                    } else if (typeof (column.format) === 'string') {
+                        return valueFormatter.getFormatFunction({ format: column.format } as NumberFormatOptions);
+                    }
+                    return (a: Object) => a;
+                },
+                [serviceLocator]
+            );
 
             const calculateAggregate: (type: AggregateType | string, data: Object, column?: AggregateColumnProps<T>) => Object =
-                (type: AggregateType | string, data: Object, column?: AggregateColumnProps<T>): Object => {
-                    if (type === 'Custom') {
-                        const temp: CustomSummaryType<T> = column.customAggregate as CustomSummaryType<T>;
-                        if (typeof temp === 'string') {
-                            return temp;
+                useCallback(
+                    (type: AggregateType | string, data: Object, column?: AggregateColumnProps<T>): Object => {
+                        if (type === 'Custom') {
+                            const temp: CustomSummaryType<T> = column?.customAggregate as CustomSummaryType<T>;
+                            if (typeof temp === 'string') {
+                                return temp;
+                            }
+                            return temp ? temp(data, column) : '';
                         }
-                        return temp ? temp(data, column) : '';
-                    }
-                    return 'result' in data ? DataUtil.aggregates[type.toLowerCase()](data.result, column.field) : null;
-                };
+                        return 'result' in data ? DataUtil.aggregates[type.toLowerCase()](data.result, column?.field) : null;
+                    },
+                    []
+                );
 
-            const setTemplate: (column: AggregateColumnProps<T>, data: SummaryData, single: T) => T =
-                (column: AggregateColumnProps<T>, data: SummaryData, single: T): T => {
-                    let types: AggregateType[] = column.type as AggregateType[];
-                    const formatFn: Function = getFormatter(column);
-                    const group: Group = data;
-                    if (!(types instanceof Array)) {
-                        types = [column.type as AggregateType];
-                    }
-                    for (let i: number = 0; i < types.length; i++) {
-                        const key: string = column.field + ' - ' + types[parseInt(i.toString(), 10)].toLowerCase();
-                        const disp: string = column.columnName;
-                        const val: Object = types[parseInt(i.toString(), 10)] !== 'Custom' && group.aggregates
-                            && key in group.aggregates ? group.aggregates[`${key}`] :
-                            calculateAggregate(types[parseInt(i.toString(), 10)], group, column);
-                        single[`${disp}`] = single[`${disp}`] || {};
-                        single[`${disp}`][`${key}`] = val;
-                        single[`${disp}`][types[parseInt(i.toString(), 10)]] = !isNullOrUndefined(val) ? formatFn(val) : '';
-                    }
-                    return single;
-                };
+            const setTemplate: (column: AggregateColumnProps<T>, data: SummaryData, single: T, rowIndex: number) => T =
+                useCallback(
+                    (column: AggregateColumnProps<T>, data: SummaryData, single: T, rowIndex: number): T => {
+                        let types: AggregateType[] = column.type as AggregateType[];
+                        const formatFn: Function = getFormatter(column);
+                        const group: Group = data;
+                        const userSelectedAggregate: AggregateType = aggregateSelection?.getAggregate(rowIndex, column.field);
+                        if (userSelectedAggregate) {
+                            types = [userSelectedAggregate];
+                        } else if (!(types instanceof Array)) {
+                            types = [column.type as AggregateType];
+                        }
+                        for (let i: number = 0; i < types.length; i++) {
+                            const key: string = column.field + ' - ' + types[parseInt(i.toString(), 10)].toLowerCase();
+                            const disp: string = column.columnName;
+                            const val: Object = types[parseInt(i.toString(), 10)] !== 'Custom' && group.aggregates
+                                && key in group.aggregates ? group.aggregates[`${key}`] :
+                                calculateAggregate(types[parseInt(i.toString(), 10)], group, column);
+                            single[`${disp}`] = single[`${disp}`] || {};
+                            single[`${disp}`][`${key}`] = val;
+                            single[`${disp}`][types[parseInt(i.toString(), 10)]] = !isNullOrUndefined(val) ? formatFn(val) : '';
+                        }
+                        return single;
+                    },
+                    [getFormatter, aggregateSelection, calculateAggregate]
+                );
 
-            const buildSummaryData: (args: SummaryData) => T[] = (args: SummaryData): T[] => {
-                const dummy: T[] = [];
-                const summaryRows: AggregateRowProps[] = getData();
-                for (let i: number = 0; i < summaryRows.length; i++) {
-                    let single: T = {} as T;
-                    const column: AggregateColumnProps<T>[] = summaryRows[parseInt(i.toString(), 10)].columns;
-                    for (let j: number = 0; j < column.length; j++) {
-                        single = setTemplate(column[parseInt(j.toString(), 10)], args, single);
+            const buildSummaryData: (args: SummaryData) => T[] = useCallback(
+                (args: SummaryData): T[] => {
+                    const dummy: T[] = [];
+                    const summaryRows: AggregateRowProps[] = getData();
+                    for (let i: number = 0; i < summaryRows.length; i++) {
+                        let single: T = {} as T;
+                        const column: AggregateColumnProps<T>[] = summaryRows[parseInt(i.toString(), 10)].columns;
+                        for (let j: number = 0; j < column.length; j++) {
+                            single = setTemplate(column[parseInt(j.toString(), 10)], args, single, i);
+                        }
+                        dummy.push(single);
                     }
-                    dummy.push(single);
-                }
-                return dummy;
-            };
+                    return dummy;
+                },
+                [getData, setTemplate]
+            );
+
+            /**
+             * Creates a memoized ref callback for storing row references
+             */
+            const createRowRefCallback: (rowIndex: number) => ((element: RowRef<T>) => void) = useCallback(
+                (rowIndex: number) => (element: RowRef<T>) => {
+                    if (element?.rowRef?.current) {
+                        storeRowRef(rowIndex, element.rowRef.current, element.getCells());
+                    }
+                },
+                [storeRowRef]
+            );
 
             /**
              * Memoized footer row content to prevent unnecessary re-renders
@@ -173,26 +221,22 @@ const FooterRowsBase: (props: Partial<IFooterRowsBase> & RefAttributes<FooterRow
                 // Generate footer rows based on aggregates
                 for (let rowIndex: number = 0; rowIndex < summaries.length; rowIndex++) {
                     const options: IRow<ColumnProps<T>> = {};
-                    options.uid = getUid('grid-row');
+                    options.uid = getUid(GRID_ROW_UID);
                     options.data = data[parseInt(rowIndex.toString(), 10)] as T;
                     options.rowIndex = rowIndex;
                     options.isAggregateRow = true;
 
-                    const rowId: string = `grid-summary-row-${rowIndex}-${Math.random().toString(36).substr(2, 5)}`;
+                    const rowId: string = `${SUMMARY_ROW_ID_PREFIX}-${rowIndex}-${Math.random().toString(36).substr(2, 5)}`;
                     // Store the options object for getRowsObject
                     rowOptions.push({ ...options });
                     rows.push(
                         <RowBase<T>
-                            ref={(element: RowRef<T>) => {
-                                if (element?.rowRef?.current) {
-                                    storeRowRef(rowIndex, element.rowRef.current, element.getCells());
-                                }
-                            }}
+                            ref={createRowRefCallback(rowIndex)}
                             role='row'
                             row={options}
                             key={rowId}
                             rowType={RenderType.Summary}
-                            className={`${CSS_SUMMARY_ROW}`.trim()}
+                            className={`${CSS_SUMMARY_ROW + (rowHeight ? (' ' + CSS_ROW_HEIGHT) : '')}`.trim()}
                             data-uid={options.uid}
                             style={{ height: `${rowHeight}px` }}
                             tableScrollerPadding={tableScrollerPadding}
@@ -206,7 +250,7 @@ const FooterRowsBase: (props: Partial<IFooterRowsBase> & RefAttributes<FooterRow
                 // Store the row options in the ref for access via getRowsObject
                 rowsObjectRef.current = rowOptions;
                 return rows;
-            }, [columnsDirective, rowHeight, responseData, tableScrollerPadding]);
+            }, [columnsDirective, rowHeight, responseData, tableScrollerPadding, createRowRefCallback]);
 
             return (
                 <tfoot

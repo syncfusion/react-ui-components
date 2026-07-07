@@ -1,7 +1,7 @@
 import { CheckboxChangeEvent } from '@syncfusion/react-buttons';
 import { useSelection } from '../hooks';
 import { ColumnProps } from './column.interfaces';
-import { AutoSelectMode, SelectionMode } from './enum';
+import { AutoSelectMode, CellSelectionType, SelectionMode, SelectionType } from './enum';
 import { CellFocusEvent } from './focus.interfaces';
 import { IRow } from './interfaces';
 
@@ -38,16 +38,33 @@ export interface SelectionSettings {
     mode?: string | SelectionMode;
 
     /**
-     * Defines the type of selection, such as `Row`, to specify the selection target.
-     * Used internally to determine whether selection applies to rows or other elements like cells.
+     * Defines the type of selection target in the grid.
+     * Determines whether selection applies to rows or cells.
      *
-     * @default 'Row'
-     * @private
+     * Options:
+     * * `Row` - Only row selection is enabled (default, backward compatible).
+     * * `Cell` - Only cell selection is enabled (individual cells can be selected).
+     *
+     * @default 'Row' | SelectionType.Row
      */
-    type?: string;
+    type?: string | SelectionType;
 
     /**
-     * When `checkboxOnly` is set to true, row selection is possible only through the checkbox.
+     * Specifies the cell selection type for range selection behavior.
+     * Only applies when type is 'Cell'.
+     * Determines how cells are selected when creating rectangular ranges.
+     *
+     * Options:
+     * * `Flow` - Selects all cells between start/end including all rows (Excel-like).
+     * * `Box` - Selects only cells within column range boundaries.
+     * * `BoxWithBorder` - Box mode with visible selection border.
+     *
+     * @default 'Flow'
+     */
+    cellSelectionType?: string | CellSelectionType;
+
+    /**
+     * When `checkboxOnly` is set to `true`, row selection is possible only through the checkbox.
      * Clicking other row or cell elements does not trigger selection.
      *
      * @default false
@@ -57,7 +74,7 @@ export interface SelectionSettings {
     /**
      * Specifies whether row selection is persisted across grid operations such as sorting, filtering, searching, paging, or refreshing.
      * Selection persistence requires a primary key, so define at least one unique value column with the `isPrimaryKey` property in the column definition.
-     * When the checkbox selection feature is enabled, selection persistence is automatically set to true. Set `enablePersistence` to false to disable selection persistence.
+     * When the checkbox selection feature is enabled, selection persistence is automatically set to true. Set `enablePersistence` to `false` to disable selection persistence.
      *
      * @default false
      */
@@ -84,6 +101,34 @@ export interface SelectionSettings {
  * @private
  */
 export interface SelectionModel<T = unknown> {
+
+    /**
+     * Callback function for determining row selectability and checkbox visibility per row.
+     * When provided, evaluates each row to determine if it can be selected.
+     */
+    isRowSelectableProp: IsRowSelectable<T>;
+
+    /**
+     * Maps selectable rows to their selectability configuration for the current view.
+     * Pre-computed from `isRowSelectable` callback evaluation on each row in `currentViewData`.
+     * Used to determine which rows are eligible for selection operations.
+     *
+     * @default new Map()
+     */
+    selectableRows: Map<string, RowSelectableParams>;
+
+    /**
+     * Maps non-selectable rows to their selectability configuration for the current view.
+     * Pre-computed from `isRowSelectable` callback evaluation on each row in `currentViewData`.
+     * Preserves selectability metadata for excluded rows across selection operations.
+     *
+     * @default new Map()
+     */
+    nonSelectableRows: Map<string, RowSelectableParams>;
+
+    currentViewSelectableRows:  Map<string, RowSelectableParams>;
+    currentViewNonSelectableRows:  Map<string, RowSelectableParams>;
+
     /**
      * Clears all currently selected rows in the grid.
      * Resets the selection state, removing any highlighted rows and updating the grid’s UI.
@@ -229,7 +274,7 @@ export interface SelectionModel<T = unknown> {
      *
      * @template T
      * @param {T} rowData - The row data object to update in the persisted collection.
-     * @param {boolean} isSelected - When `true`, adds the row; when `false`, removes it.
+     * @param {boolean} isSelected - When true, adds the row; when false, removes it.
      */
     updatePersistCollection: (rowData: T, isSelected: boolean) => void;
 
@@ -279,21 +324,27 @@ export interface SelectionModel<T = unknown> {
     headerCheckBoxOnChange: (row?: IRow<ColumnProps>, event?: CheckboxChangeEvent) => void;
 
     /**
-     * Retrieves the full row object from a row element or row index.
-     *
-     * @template T
-     * @param {Element | number} row - The row DOM element or the numeric index of the row in the table.
-     * @returns {IRow<ColumnProps<T>>} The complete row data object conforming to IRow<ColumnProps<T>>.
-     */
-    getRowObj: (row: Element | number) => IRow<ColumnProps<T>>;
-
-    /**
      * Updates the header selection state based on current selection.
      * Typically used to refresh the header checkbox state after row-level changes.
      *
      * @returns {void} This method does not return any value directly.
      */
     updateHeaderSelectionState: () => void;
+
+    /**
+     * Evaluates row selectability for the given row data.
+     *
+     * @param rowData - The row data object to evaluate
+     * @returns Normalized selectability configuration for the row
+     */
+    isRowSelectableEval: (rowData: T) => RowSelectableParams;
+
+    /**
+     * Computes the header checkbox tri-state from selectable rows on the current page.
+     *
+     * @returns Header checkbox state derived from selectable rows only
+     */
+    getHeaderCheckboxState: () => HeaderCheckboxState;
 
 }
 
@@ -305,6 +356,59 @@ export interface SelectionModel<T = unknown> {
  * @private
  */
 export type selectionModule<T = unknown> = ReturnType<typeof useSelection<T>>;
+
+/**
+ * Configures row selectability and checkbox visibility for a single row.
+ * Returned by the `isRowSelectable` callback on GridProps.
+ */
+export interface RowSelectableParams {
+    /**
+     * Specifies whether the row can be selected.
+     *
+     * @default true
+     */
+    selectable: boolean;
+
+    /**
+     * Controls whether a disabled checkbox is rendered for non-selectable rows.
+     *
+     * @default true
+     */
+    showDisabledCheckboxes?: boolean;
+}
+
+/**
+ * Callback type for determining row selectability and checkbox visibility per row.
+ *
+ * @template T - Row data type
+ * @param rowData - The data object for the row being evaluated
+ * @returns true or false for simple selectability, or a {@link RowSelectableParams} object for full control
+ *
+ */
+export type IsRowSelectable<T = unknown> = (rowData: T) => boolean | RowSelectableParams;
+
+/**
+ * Tri-state representation of the header checkbox.
+ * Computed from selectable rows only when `isRowSelectable` is configured.
+ *
+ * @private
+ */
+export interface HeaderCheckboxState {
+    /**
+     * Specifies whether the header checkbox shows a checked state.
+     */
+    checked: boolean;
+
+    /**
+     * Specifies whether the header checkbox shows an indeterminate state.
+     */
+    indeterminate: boolean;
+
+    /**
+     * Specifies whether the header checkbox is disabled.
+     */
+    disabled: boolean;
+}
 
 /**
  * Represents event arguments for row selection events in the Data Grid component.

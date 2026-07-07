@@ -1,10 +1,14 @@
 import { CSSProperties } from 'react';
-import { EventFields, EventModel, TimeScaleProps } from '../types/scheduler-types';
-import { ProcessedEventsData } from '../types/internal-interface';
+import { EventFields, EventModel, SchedulerResource, TimeScaleProps } from '../types/scheduler-types';
+import { ProcessedEventsData, CellData } from '../types/internal-interface';
 import { DateService, MS_PER_DAY } from './DateService';
 import { PositioningService } from './PositioningService';
-import { getCellFromIndex } from '../utils/actions';
+import { Timezone } from './Timezone';
+import { getCellFromIndex, getEventMaxID } from '../utils/actions';
 import { CSS_CLASSES } from '../common/constants';
+import { DEFAULT_FIELDS } from '../utils/default-props';
+import { ResourceGroupingMetadata, ResourceLevel } from './ResourceGroupingService';
+import { isNullOrUndefined } from '@syncfusion/react-base';
 
 export const ALL_DAY_EVENT_HEIGHT: number = 24;
 export const EVENTS_GAP: number = 4;
@@ -88,20 +92,7 @@ export class EventService {
         }
 
         // Default field mappings if none provided
-        const fieldMappings: EventFields = fields || {
-            id: 'Id',
-            subject: 'Subject',
-            startTime: 'StartTime',
-            endTime: 'EndTime',
-            isAllDay: 'IsAllDay',
-            location: 'Location',
-            description: 'Description',
-            isReadonly: 'IsReadonly',
-            isBlock: 'IsBlock',
-            recurrenceRule: 'RecurrenceRule',
-            recurrenceID: 'RecurrenceID',
-            recurrenceException: 'RecurrenceException'
-        };
+        const fieldMappings: EventFields = fields || DEFAULT_FIELDS;
 
         return events.map((eventData: Record<string, any>): EventModel => {
             const mappedEvent: Partial<EventModel> = {};
@@ -151,11 +142,21 @@ export class EventService {
             if (fieldMappings.recurrenceException && Object.prototype.hasOwnProperty.call(eventData, fieldMappings.recurrenceException)) {
                 mappedEvent.recurrenceException = eventData[fieldMappings.recurrenceException] as string;
             }
+            if (fieldMappings.followingId && Object.prototype.hasOwnProperty.call(eventData, fieldMappings.followingId)) {
+                mappedEvent.followingId = eventData[fieldMappings.followingId] as string | number;
+            }
+            if (fieldMappings.startTimezone && Object.prototype.hasOwnProperty.call(eventData, fieldMappings.startTimezone)) {
+                mappedEvent.startTimezone = eventData[fieldMappings.startTimezone] as string;
+            }
+            if (fieldMappings.endTimezone && Object.prototype.hasOwnProperty.call(eventData, fieldMappings.endTimezone)) {
+                mappedEvent.endTimezone = eventData[fieldMappings.endTimezone] as string;
+            }
 
             // Preserve any additional fields from the original event that are not mapped
             const mappedSourceKeys: Set<string> = new Set(Object.values(fieldMappings));
+            const mappedFieldKeys: Set<string> = new Set(Object.values(DEFAULT_FIELDS));
             const preservedExtras: Record<string, any> = Object.fromEntries(
-                Object.entries(eventData).filter(([key]: [string, any]) => !mappedSourceKeys.has(key))
+                Object.entries(eventData).filter(([key]: [string, any]) => !(mappedSourceKeys.has(key) && mappedFieldKeys.has(key)))
             );
             Object.assign(mappedEvent as Record<string, any>, preservedExtras);
 
@@ -185,12 +186,9 @@ export class EventService {
         });
     }
 
-    static calculateOverlappingEvents(events: ProcessedEventsData[], eventOverlap: boolean = true): ProcessedEventsData[][] {
+    static calculateOverlappingEvents(events: ProcessedEventsData[]): ProcessedEventsData[][] {
         if (!events || events.length === 0) {
             return [];
-        }
-        if (!eventOverlap) {
-            return this.resolveOverlappingEvents(events);
         }
         const sortedEvents: ProcessedEventsData[] = this.sortEventsByStartTimeAndDuration(events);
         return this.identifyOverlapGroups(sortedEvents);
@@ -315,6 +313,111 @@ export class EventService {
     }
 
     /**
+     * Groups events by each render date they span.
+     *
+     * @param {EventModel[]} events - Events to group.
+     * @param {Date[]} renderDates - Render dates to check against.
+     * @param {boolean} [excludeBlockEvents=true] - Whether to exclude block events.
+     * @returns {Map<string, EventModel[]>} Events grouped by date key.
+     */
+    static groupEventsByRenderDates(
+        events: EventModel[],
+        renderDates: Date[],
+        excludeBlockEvents: boolean = true
+    ): Map<string, EventModel[]> {
+        const eventsByDate: Map<string, EventModel[]> = new Map<string, EventModel[]>();
+        if (!events?.length || !renderDates?.length) {
+            return eventsByDate;
+        }
+
+        const filteredEvents: EventModel[] = excludeBlockEvents
+            ? events.filter((event: EventModel) => !event.isBlock)
+            : events;
+
+        renderDates.forEach((date: Date) => {
+            const dateKey: string = DateService.generateDateKey(date);
+            const dateNormalized: Date = DateService.normalizeDate(date);
+
+            const eventsOnDate: EventModel[] = filteredEvents.filter((event: EventModel) => {
+                if (!event.startTime || !event.endTime) { return false; }
+
+                const eventStartNormalized: Date = DateService.normalizeDate(event.startTime);
+                const eventEndNormalized: Date = DateService.normalizeDate(event.endTime);
+
+                return eventStartNormalized <= dateNormalized && eventEndNormalized >= dateNormalized;
+            });
+
+            if (eventsOnDate.length > 0) {
+                eventsByDate.set(dateKey, eventsOnDate);
+            }
+        });
+
+        return eventsByDate;
+    }
+
+    /**
+     * Filters out overlapping events, keeping only the highest priority event from each overlapping group.
+     * Events are grouped by date first, then overlap resolution is applied within each date.
+     *
+     * @param {EventModel[]} events - Array of events to filter
+     * @param {Date[]} renderDates - Array of render dates for date-based grouping
+     * @returns {EventModel[]} - Filtered array containing only non-overlapping events (highest priority from each group within same date)
+     * @private
+     */
+    static filterNonOverlappingEvents(events: EventModel[], renderDates: Date[]): EventModel[] {
+        if (!events || events.length === 0 || !renderDates || renderDates.length === 0) {
+            return events;
+        }
+
+        const nonBlockEvents: EventModel[] = events.filter((event: EventModel) => !event.isBlock);
+        const blockEvents: EventModel[] = events.filter((event: EventModel) => event.isBlock);
+        if (nonBlockEvents.length === 0) { return events; }
+
+        // Group events by date
+        const eventsByDate: Map<string, EventModel[]> = this.groupEventsByRenderDates(nonBlockEvents, renderDates, false);
+
+        const filteredOutEvents: Set<string> = new Set();
+        const selectedEvents: EventModel[] = [];
+        const selectedSet: Set<string> = new Set();
+
+        eventsByDate?.forEach((dateEvents: EventModel[]) => {
+            const processedEvents: ProcessedEventsData[] = dateEvents
+                .filter((event: EventModel) => !filteredOutEvents.has(event.guid || `${event.id}`))
+                .map((event: EventModel) => ({
+                    event,
+                    startDate: event.startTime,
+                    endDate: event.endTime
+                }));
+
+            if (processedEvents.length === 0) { return; }
+
+            const resolvedGroups: ProcessedEventsData[][] = this.resolveOverlappingEvents(processedEvents);
+            const processedEventGuids: Set<string> = new Set(processedEvents.map((e: ProcessedEventsData) => e.event.guid || `${e.event.id}`));
+            const resolvedGroupGuids: Set<string> = new Set(resolvedGroups.flatMap((group: ProcessedEventsData[]) => group.map((e: ProcessedEventsData) => e.event.guid || `${e.event.id}`)));
+
+            processedEventGuids.forEach((guid: string) => {
+                if (!resolvedGroupGuids.has(guid)) {
+                    filteredOutEvents.add(guid);
+                }
+            });
+
+            resolvedGroups.forEach((group: ProcessedEventsData[]) => {
+                if (group.length > 0) {
+                    const selectedEvent: EventModel = group[0].event;
+                    const eventKey: string = selectedEvent.guid || `${selectedEvent.id}`;
+
+                    if (!selectedSet.has(eventKey)) {
+                        selectedEvents.push(selectedEvent);
+                        selectedSet.add(eventKey);
+                    }
+                }
+            });
+        });
+
+        return [...selectedEvents, ...blockEvents];
+    }
+
+    /**
      * Checks if two events overlap in time
      *
      * @param {ProcessedEventsData} event1 - First event
@@ -324,6 +427,14 @@ export class EventService {
     static eventsOverlap(event1: ProcessedEventsData, event2: ProcessedEventsData): boolean {
         if (!event1?.event.startTime || !event1?.event.endTime || !event2?.event.startTime || !event2?.event.endTime) {
             return false;
+        }
+        if (event1.event.isAllDay || event2.event.isAllDay) {
+            const event1StartDate: Date = DateService.normalizeDate(event1.event.startTime);
+            const event1EndDate: Date = DateService.normalizeDate(event1.event.endTime);
+            const event2StartDate: Date = DateService.normalizeDate(event2.event.startTime);
+            const event2EndDate: Date = DateService.normalizeDate(event2.event.endTime);
+
+            return event1StartDate <= event2EndDate && event1EndDate >= event2StartDate;
         }
         return (
             (event1.event.startTime < event2.event.endTime && event1.event.endTime > event2.event.startTime) ||
@@ -336,15 +447,11 @@ export class EventService {
      *
      * @param {EventModel} event - Event to check
      * @param {EventModel[]} allEvents - All events in the scheduler
-     * @param {boolean} [isEventModelField=true] -
-     *   - `false`: `eventData` uses PascalCase fields → `StartTime` / `EndTime`
-     *   - `true`(default): `eventData` uses lowercase fields → `startTime` / `endTime`
-     * @param {Record<string, string>} [fields] - Field mapping configuration
      * @returns {boolean} True if event overlaps with any other event
      */
-    static checkEventOverlap(event: EventModel, allEvents: EventModel[], isEventModelField: boolean = true, fields?: EventFields): boolean {
-        const newStartTime: Date = isEventModelField ? event.startTime : event[fields.startTime] as Date | undefined;
-        const newEndTime: Date = isEventModelField ? event.endTime : event[fields.endTime] as Date | undefined;
+    static checkEventOverlap(event: EventModel, allEvents: EventModel[]): boolean {
+        const newStartTime: Date = event.startTime;
+        const newEndTime: Date = event.endTime;
 
         if (!newStartTime || !newEndTime) {
             return false;
@@ -363,14 +470,16 @@ export class EventService {
             const oldStartTime: Date = otherEvent.startTime;
             const oldEndTime: Date = otherEvent.endTime;
             const isAllDay: boolean = otherEvent.isAllDay;
-            if (otherEvent.id === event.id || otherEvent.id === event.Id || otherEvent.guid === event.guid) {
+            if (otherEvent.id === event.id || otherEvent.guid === event.guid) {
                 return false;
             }
             if (!oldStartTime || !oldEndTime) {
                 return false;
             }
-            if (isAllDay) {
-                return (newStartTime <= oldEndTime && newEndTime >= oldStartTime);
+            if (isAllDay || event?.isAllDay) {
+                const oldStartDateOnly: Date = DateService.normalizeDate(oldStartTime);
+                const oldEndDateOnly: Date = DateService.normalizeDate(oldEndTime);
+                return (eventStartDate <= oldEndDateOnly && eventEndDate >= oldStartDateOnly);
             } else {
                 return (newStartTime < oldEndTime && newEndTime > oldStartTime);
             }
@@ -382,14 +491,9 @@ export class EventService {
      *
      * @param {EventModel | EventModel[]} eventData - Event(s) to check
      * @param {EventModel[]} allEvents - All events in the scheduler
-     * @param {boolean} [isEventModelField=true] -
-     *   - `false`: `eventData` uses PascalCase fields → `StartTime` / `EndTime`
-     *   - `true`(default): `eventData` uses lowercase fields → `startTime` / `endTime`
-     * @param {Record<string, string>} [fields] - Field mapping configuration
      * @returns {boolean} True if event overlaps with a blocked event
      */
-    static isBlockRange(eventData: EventModel | EventModel[], allEvents?: EventModel[],
-                        isEventModelField: boolean = true, fields?: EventFields): boolean {
+    static isBlockRange(eventData: EventModel | EventModel[], allEvents?: EventModel[]): boolean {
         const eventCollection: EventModel[] = Array.isArray(eventData) ? eventData : [eventData];
 
         if (eventCollection && eventCollection.length === 0) { return false; }
@@ -406,14 +510,14 @@ export class EventService {
             const blockIsAllDayOrMultiDay: boolean = block.isAllDay || EventService.isMultiDayEvent(block);
 
             for (const event of eventCollection) {
-                const eventStart: Date = isEventModelField ? event.startTime : event[fields.startTime] as Date;
-                const eventEnd: Date = isEventModelField ? event.endTime : event[fields.endTime] as Date;
+                const eventStart: Date = event.startTime;
+                const eventEnd: Date = event.endTime;
 
                 if (!eventStart || !eventEnd) { continue; }
 
                 let overlaps: boolean;
 
-                if (blockIsAllDayOrMultiDay) {
+                if (blockIsAllDayOrMultiDay || event.isAllDay) {
                     const eventStartDate: Date = DateService.normalizeDate(eventStart);
                     const eventEndDate: Date = DateService.normalizeDate(eventEnd);
                     const blockStartDate: Date = DateService.normalizeDate(blockStart);
@@ -486,6 +590,81 @@ export class EventService {
         });
 
         return processedEvents;
+    }
+
+    /**
+     * Processes events specifically for Agenda View to calculate segments.
+     * Matches EJ2 AgendaBase.processAgendaEvents logic.
+     *
+     * @param {EventModel[]} events - Events to process
+     * @param {Date[]} dates - Current view dates
+     * @returns {Map<string, ProcessedEventsData[]>} Processed events grouped by date key
+     */
+    static processAgendaEvents(
+        events: EventModel[],
+        dates: Date[]
+    ): Map<string, ProcessedEventsData[]> {
+        const eventsByDate: Map<string, ProcessedEventsData[]> = new Map();
+        if (!events?.length || !dates?.length) { return eventsByDate; }
+
+        const filteredEvents: EventModel[] = this.filterEventsByDateRange(
+            events.filter((event: EventModel) => !event.isBlock),
+            dates
+        );
+
+        if (!filteredEvents?.length) { return eventsByDate; }
+
+        const datesMap: Map<number, string> = new Map();
+        dates.forEach((d: Date) => {
+            const dateNormalized: Date = DateService.resetTime(d);
+            const dateTime: number = dateNormalized.getTime();
+            const key: string = DateService.generateDateKey(dateNormalized);
+            datesMap.set(dateTime, key);
+            eventsByDate.set(key, []);
+        });
+
+        filteredEvents.forEach((event: EventModel) => {
+            const start: Date = DateService.resetTime(new Date(event.startTime));
+            const end: Date = (event.isAllDay || !DateService.isMidnight(event.endTime)) ?
+                DateService.resetTime(new Date(event.endTime)) :
+                DateService.addDays(DateService.resetTime(new Date(event.endTime)), -1);
+            const totalSegments: number = DateService.getDaysCount(event.startTime, event.endTime, event.isAllDay);
+
+            let current: Date = new Date(start);
+            let segmentIndex: number = 0;
+
+            while (current <= end) {
+                const currentTimestamp: number = current.getTime();
+                const dateKey: string | undefined = datesMap.get(currentTimestamp);
+                if (dateKey) {
+                    const isFirstDay: boolean = currentTimestamp === start.getTime();
+                    const isLastDay: boolean = currentTimestamp === end.getTime();
+
+                    const startDate: Date = isFirstDay ? new Date(event.startTime) : new Date(current);
+                    const endDate: Date = isLastDay ? new Date(event.endTime) : DateService.addDays(new Date(current), 1);
+
+                    const segment: ProcessedEventsData = {
+                        event,
+                        startDate,
+                        endDate,
+                        segmentIndex,
+                        totalSegments
+                    };
+
+                    eventsByDate.get(dateKey).push(segment);
+                }
+                current = DateService.addDays(current, 1);
+                segmentIndex++;
+            }
+        });
+
+        eventsByDate.forEach((events: ProcessedEventsData[]): void => {
+            events.sort((a: ProcessedEventsData, b: ProcessedEventsData): number => {
+                return (a.startDate as any) - (b.startDate as any);
+            });
+        });
+
+        return eventsByDate;
     }
 
     /**
@@ -627,19 +806,21 @@ export class EventService {
         return maxEventCount;
     }
 
-    static processDayEvents(renderDates: Date[], eventsData: EventModel[]): ProcessedEventsData[] {
+    static processDayEvents(
+        renderDates: Date[],
+        eventsData: EventModel[],
+        resources?: SchedulerResource[],
+        isGroupingEnabled?: boolean,
+        resourceColorField?: string
+    ): ProcessedEventsData[] {
         if (!renderDates?.length || !eventsData?.length) { return []; }
 
         // Filter events within the render dates range
         const filteredEvents: EventModel[] = EventService.filterEventsByDateRange(eventsData, renderDates);
         const events: ProcessedEventsData[] = [];
 
-        // Prepare shared occupied positions for all days in range
-        let sharedPositionMap: Map<string, boolean[]> = new Map<string, boolean[]>();
-        renderDates.forEach((date: Date) => {
-            const dateKey: string = DateService.generateDateKey(date);
-            sharedPositionMap.set(dateKey, []);
-        });
+        const { sharedPositionMap, positionMapsPerResource } =
+            PositioningService.initializePositionMaps(renderDates, isGroupingEnabled);
 
         const sortedEventsByTime: EventModel[] = DateService.sortByTimeAndSpan(filteredEvents);
 
@@ -652,9 +833,12 @@ export class EventService {
             const isMultiDay: boolean = EventService.isMultiDayEvent(event);
             const totalSegments: number = isMultiDay ? DateService.getDaysCount(event.startTime, event.endTime, event.isAllDay) : 1;
             const includeEndMidnight: boolean = event.isAllDay ? true : !DateService.isMidnight(event.endTime);
-            // Calculate stacking index across span
+            const positionMapForEvent: Map<string, boolean[]> = PositioningService.getPositionMapForEvent(
+                event, resources, positionMapsPerResource, renderDates, sharedPositionMap
+            );
+
             const positionIndex: number = !event.isBlock ?
-                EventService.findNonConflictingPosition(renderDates, startDate, endDate, includeEndMidnight, sharedPositionMap) : null;
+                EventService.findNonConflictingPosition(renderDates, startDate, endDate, includeEndMidnight, positionMapForEvent) : null;
 
             if (isMultiDay) {
                 for (const date of renderDates) {
@@ -665,7 +849,7 @@ export class EventService {
                     if (!shouldIncludeDate) { continue; }
 
                     if (!event.isBlock) {
-                        sharedPositionMap = PositioningService.setIndexPosition(sharedPositionMap, date, positionIndex);
+                        PositioningService.setIndexPosition(positionMapForEvent, date, positionIndex);
                     }
 
                     const isFirstDay: boolean = currentDate.getTime() === startDate.getTime();
@@ -693,6 +877,7 @@ export class EventService {
                         new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 1, 0, 0, 0);
 
                     const eventKey: string = `${date.toISOString()}-${event.id}`;
+                    const resourceColor: string = EventService.getResourceColor(event, resources, resourceColorField);
 
                     events.push({
                         event: event,
@@ -706,14 +891,16 @@ export class EventService {
                         positionIndex,
                         eventClasses,
                         eventKey,
-                        isMonthEvent: true
+                        isMonthEvent: true,
+                        eventStyle: resourceColor ? { backgroundColor: resourceColor } : undefined
                     });
                 }
             } else {
                 if (!event.isBlock) {
-                    sharedPositionMap = PositioningService.setIndexPosition(sharedPositionMap, startDate, positionIndex);
+                    PositioningService.setIndexPosition(positionMapForEvent, startDate, positionIndex);
                 }
                 const eventKey: string = `${startDate.toISOString()}-${event.id}`;
+                const resourceColor: string = EventService.getResourceColor(event, resources, resourceColorField);
                 events.push({
                     event: event,
                     startDate: event.startTime,
@@ -721,7 +908,8 @@ export class EventService {
                     positionIndex,
                     eventClasses,
                     eventKey,
-                    isMonthEvent: true
+                    isMonthEvent: true,
+                    eventStyle: resourceColor ? { backgroundColor: resourceColor } : undefined
                 });
             }
         });
@@ -734,6 +922,21 @@ export class EventService {
         });
     }
 
+    private static getAbsoluteColumnIndex(
+        columnIndex: number,
+        groupIndex: number | undefined,
+        rowLength: number,
+        groupingConfig?: ResourceGroupingMetadata
+    ): number {
+        if (!groupingConfig || groupIndex === undefined) {
+            return columnIndex;
+        }
+        if (groupingConfig.byDate) {
+            return (columnIndex * (groupingConfig.leafResources?.length ?? 1)) + groupIndex;
+        }
+        return (groupIndex * rowLength) + columnIndex;
+    }
+
     /**
      * Calculates pixel position and size for a cloned month event using DOM measurements.
      *
@@ -744,6 +947,7 @@ export class EventService {
      * @param {boolean} isRtl - Defines its RTL.
      * @param {boolean} isMonthView - Define current view is month view or not.
      * @param {HTMLElement} currentCell - Contains current target.
+     * @param {ResourceGroupingMetadata} groupingConfig - Grouping configuration for resource grouping.
      * @returns {CSSProperties} Inline style object containing top, left, and width (in pixels).
      */
     static cloneEventPosition(
@@ -753,7 +957,8 @@ export class EventService {
         isAllDaySource: boolean,
         isRtl: boolean = false,
         isMonthView: boolean,
-        currentCell?: HTMLElement
+        currentCell?: HTMLElement,
+        groupingConfig?: ResourceGroupingMetadata
     ): CSSProperties {
         const eventStartDay: Date = DateService.normalizeDate(eventInfo.startDate);
         const eventEndDay: Date = DateService.normalizeDate(eventInfo.endDate);
@@ -763,16 +968,22 @@ export class EventService {
         let targetCell: HTMLElement;
         let topPx: number;
         let heightPx: number;
+        const absoluteColumnIndex: number = EventService.getAbsoluteColumnIndex(
+            eventInfo.columnIndex,
+            eventInfo.groupIndex,
+            eventInfo.week?.length ?? 0,
+            groupingConfig
+        );
+
         if (isAllDaySource) {
             const alldayRow: HTMLElement = schedulerRef?.querySelector(`.${CSS_CLASSES.ALL_DAY_ROW}`);
             const alldayCells: NodeListOf<HTMLElement> = alldayRow.querySelectorAll<HTMLElement>(`.${CSS_CLASSES.ALL_DAY_CELL}`);
-            targetCell = alldayCells.item(eventInfo.columnIndex);
+            targetCell = alldayCells.item(absoluteColumnIndex);
             topPx = alldayRow.offsetTop;
-        }
-        else {
-            targetCell = getCellFromIndex(schedulerRef, eventInfo.rowIndex, eventInfo.columnIndex);
+        } else {
+            targetCell = getCellFromIndex(schedulerRef, eventInfo.rowIndex, absoluteColumnIndex);
             if (isMonthView) {
-                topPx = (targetCell.querySelector(`.${CSS_CLASSES.APPOINTMENT_WRAPPER}`) as HTMLElement).offsetTop;
+                topPx = (targetCell?.querySelector(`.${CSS_CLASSES.APPOINTMENT_WRAPPER}`) as HTMLElement)?.offsetTop;
             } else {
                 topPx = targetCell?.offsetTop;
                 heightPx = Math.max(0, (currentCell.offsetHeight));
@@ -846,7 +1057,11 @@ export class EventService {
         isAllDaySource: boolean,
         isRtl: boolean = false,
         isMonthView: boolean,
-        currentCell?: HTMLElement
+        currentCell?: HTMLElement,
+        resources?: SchedulerResource[],
+        groupIndex?: number,
+        groupingConfig?: ResourceGroupingMetadata,
+        resourceColorField?: string
     ): ProcessedEventsData[] {
         const rowDates: Date[][] = isAllDaySource ? [renderDates] :
             DateService.getRenderWeeks(renderDates, showWeekend, workDays);
@@ -854,8 +1069,24 @@ export class EventService {
         const isMultiDay: boolean = EventService.isMultiDayEvent(event);
 
         segments.forEach((segment: ProcessedEventsData) => {
-            segment.eventStyle = this.cloneEventPosition(schedulerRef, segment, cellWidth, isAllDaySource, isRtl, isMonthView, currentCell);
+            if (!isNullOrUndefined(groupIndex)) {
+                segment.groupIndex = groupIndex;
+            }
+            segment.eventStyle = this.cloneEventPosition(
+                schedulerRef,
+                segment,
+                cellWidth,
+                isAllDaySource,
+                isRtl,
+                isMonthView,
+                currentCell,
+                groupingConfig
+            );
             segment.totalSegments = isMultiDay ? DateService.getDaysCount(segment.startDate, segment.endDate, segment.event?.isAllDay) : 1;
+            const resourceColor: string | undefined = EventService.getResourceColor(event, resources, resourceColorField);
+            if (resourceColor) {
+                segment.eventStyle.backgroundColor = resourceColor;
+            }
         });
 
         return segments;
@@ -869,13 +1100,26 @@ export class EventService {
         startHour: string,
         endHour: string,
         cellWidth: number,
-        isRtl: boolean = false
+        isRtl: boolean = false,
+        cellHeight?: number,
+        resources?: SchedulerResource[],
+        groupIndex?: number,
+        groupingConfig?: ResourceGroupingMetadata,
+        resourceColorField?: string
     ): ProcessedEventsData[] {
+        const measuredCellHeight: number | undefined = cellHeight;
         const segments: ProcessedEventsData[] = this.splitEventByDay(event, renderDates);
         segments.forEach((segment: ProcessedEventsData) => {
-            const topPx: string = PositioningService.calculateTopPosition(segment.startDate, timeScale, startHour);
-            const heightPx: string = PositioningService.calculateHeight(segment, timeScale, startHour, endHour);
-            const targetCell: HTMLElement = getCellFromIndex(schedulerRef, 0, segment.columnIndex); // first index '0'
+            const topPx: string = PositioningService.calculateTopPosition(segment.startDate, timeScale, startHour, measuredCellHeight);
+            const heightPx: string = PositioningService.calculateHeight(segment, timeScale, startHour, endHour, measuredCellHeight);
+            const absoluteColumnIndex: number = this.getAbsoluteColumnIndex(
+                segment.columnIndex,
+                groupIndex,
+                renderDates.length,
+                groupingConfig
+            );
+
+            const targetCell: HTMLElement = getCellFromIndex(schedulerRef, 0, absoluteColumnIndex); // first index '0'
             segment.eventStyle = {
                 top: topPx,
                 height: heightPx,
@@ -888,6 +1132,10 @@ export class EventService {
                 segment.eventStyle.right = `${rightpx}px`;
             } else {
                 segment.eventStyle.left = `${targetCell.offsetLeft}px`;
+            }
+            const resourceColor: string | undefined = EventService.getResourceColor(event, resources, resourceColorField);
+            if (resourceColor) {
+                segment.eventStyle.backgroundColor = resourceColor;
             }
         });
 
@@ -904,5 +1152,234 @@ export class EventService {
     static getEventByGuid(events: EventModel[], guid: string): EventModel | undefined {
         if (!events?.length || !guid) { return undefined; }
         return events.find((e: EventModel) => e?.guid === guid);
+    }
+
+    /**
+     * Converts event times from UTC to display timezone for calendar rendering.
+     * For events with timezone metadata, their startTime/endTime are converted
+     * from UTC to the assigned timezone. All-day events bypass conversion.
+     *
+     * Priority order:
+     * 1. Event-level timezone (startTimezone/endTimezone) - converted if present
+     * 2. Scheduler-level timezone - used as fallback for events without event-level timezone
+     * 3. No conversion if neither is present
+     *
+     * @param {EventModel[]} events - Events to convert for display
+     * @param {string} [schedulerTimezone] - Optional scheduler-level timezone to apply to all events without event-level timezone
+     * @param {boolean} [isReverse] - perform reverse conversion (remove timezone offsets / convert back to scheduler/UTC)
+     * @returns {EventModel[]} Events with timezone-converted times for display
+     */
+    static processTimeZone(events: EventModel[], schedulerTimezone?: string, isReverse: boolean = false): EventModel[] {
+        if (!events || events.length === 0) {
+            return events;
+        }
+        return events.map((event: EventModel): EventModel => {
+            if (event.isAllDay) {
+                return event;
+            }
+            if (event.startTimezone || event.endTimezone) {
+                const startTimezone: string = event.startTimezone || event.endTimezone;
+                const endTimezone: string = event.endTimezone || event.startTimezone;
+                if (isReverse) {
+                    if (schedulerTimezone) {
+                        event.startTime = Timezone.convert(new Date(event.startTime), startTimezone, schedulerTimezone);
+                        event.endTime = Timezone.convert(new Date(event.endTime), endTimezone, schedulerTimezone);
+                        event.startTime = Timezone.remove(new Date(event.startTime), schedulerTimezone);
+                        event.endTime = Timezone.remove(new Date(event.endTime), schedulerTimezone);
+                    } else {
+                        event.startTime = Timezone.remove(new Date(event.startTime), schedulerTimezone);
+                        event.endTime = Timezone.remove(new Date(event.endTime), schedulerTimezone);
+                    }
+                } else {
+                    event.startTime = Timezone.add(new Date(event.startTime), startTimezone);
+                    event.endTime = Timezone.add(new Date(event.endTime), endTimezone);
+                    if (schedulerTimezone) {
+                        event.startTime = Timezone.convert(new Date(event.startTime), startTimezone, schedulerTimezone);
+                        event.endTime = Timezone.convert(new Date(event.endTime), endTimezone, schedulerTimezone);
+                    }
+                }
+            } else if (schedulerTimezone) {
+                if (isReverse) {
+                    event.startTime = Timezone.remove(new Date(event.startTime), schedulerTimezone);
+                    event.endTime = Timezone.remove(new Date(event.endTime), schedulerTimezone);
+                } else {
+                    event.startTime = Timezone.add(new Date(event.startTime), schedulerTimezone);
+                    event.endTime = Timezone.add(new Date(event.endTime), schedulerTimezone);
+                }
+            }
+            return event;
+        });
+    }
+
+    /**
+     * Converts a single event time from scheduler timezone to event timezone (or vice versa)
+     * Returns the original time if any parameter is missing.
+     *
+     * @param {Date} time - The date/time to convert
+     * @param {string} tz - The source timezone (typically scheduler timezone)
+     * @param {string} eventTz - The target event timezone
+     * @returns {Date} Converted date or original/undefined
+     */
+    static convertEventTime(time: Date, tz?: string, eventTz?: string): Date {
+        if (!tz || !eventTz || !time) { return time; }
+        return Timezone.convert(new Date(time), tz, eventTz);
+    }
+
+    /**
+     * Gets the resource color for an event based on the resource configuration.
+     * If the event doesn't have a resource field value, returns the first resource's color as default.
+     *
+     * @param {EventModel} event - The event to get the color for
+     * @param {SchedulerResource[]} resources - Array of resource configurations
+     * @param {string} [resourceColorField] - Optional name of the resource level to use for coloring
+     * @returns {string | undefined} The color value from the resource, or undefined if no resources or no color field
+     */
+    static getResourceColor(event: EventModel, resources?: SchedulerResource[], resourceColorField?: string): string | undefined {
+        if (!resources || resources.length === 0) {
+            return undefined;
+        }
+        let targetResource: SchedulerResource;
+        if (resourceColorField) {
+            targetResource = resources.find((resource: SchedulerResource) => resource.name === resourceColorField);
+            if (!targetResource || !targetResource.colorField) {
+                targetResource = resources[resources.length - 1];
+            }
+        } else {
+            targetResource = resources[resources.length - 1];
+        }
+        if (!targetResource.colorField) { return undefined; }
+        let resourceID: string | number | (string | number)[] =
+            event[targetResource.field] as string | number | (string | number)[];
+        resourceID = typeof (resourceID) === 'object' ? resourceID[0] : resourceID;
+        if (isNullOrUndefined(resourceID)) {
+            return undefined;
+        }
+        const resourceData: Record<string, unknown> | undefined = this.findResourceData(
+            targetResource,
+            resourceID
+        );
+        if (!resourceData) {
+            return this.getDefaultResourceColor(targetResource);
+        }
+        return resourceData[targetResource.colorField] as string | undefined;
+    }
+
+    /**
+     * Finds a resource data item that matches the given resource field value.
+     *
+     * @param {SchedulerResource} resource - The resource configuration
+     * @param {unknown} fieldValue - The value to match against the resource's idField
+     * @returns {Record<string, unknown>} The matching resource data item
+     */
+    private static findResourceData(resource: SchedulerResource, fieldValue: unknown): Record<string, unknown> {
+        if (!resource.dataSource || !Array.isArray(resource.dataSource)) {
+            return undefined;
+        }
+        return (resource.dataSource as Record<string, unknown>[]).find(
+            (item: Record<string, unknown>) => item[resource.idField] === fieldValue
+        );
+    }
+
+    /**
+     * Gets the color from the first resource data item (default resource).
+     *
+     * @param {SchedulerResource} resource - The resource configuration
+     * @returns {string} The color value from the first resource
+     */
+    private static getDefaultResourceColor(resource: SchedulerResource): string {
+        if (!resource.colorField || !resource.dataSource || !Array.isArray(resource.dataSource)) {
+            return undefined;
+        }
+        const firstResourceData: Record<string, unknown> = (resource.dataSource as Record<string, unknown>[])[0];
+        if (!firstResourceData) {
+            return undefined;
+        }
+        return firstResourceData[resource.colorField] as string;
+    }
+
+    /**
+     * Splits a single event into multiple events when it has resources configured with multiple: true.
+     * Each split event gets a unique ID and GUID. Used during save operation to ensure proper event creation.
+     *
+     * @param {EventModel} event - The event to split
+     * @param {SchedulerResource[]} resources - The resource configurations
+     * @param {EventModel[]} [eventsData] - Optional array of existing events for ID generation
+     * @returns {EventModel[]} Array of events, one per resource ID, each with unique ID and GUID
+     */
+    static splitEventForMultipleResources(event: EventModel, resources?: SchedulerResource[], eventsData?: EventModel[]): EventModel[] {
+        if (!resources || resources.length === 0) {
+            return [event];
+        }
+        let splitEvents: EventModel[] = [event];
+        let nextEventId: string | number = getEventMaxID(eventsData);
+        const isNumericId: boolean = typeof nextEventId === 'number';
+
+        for (const resource of resources) {
+            if (resource.multiple === true) {
+                const resourceIds: string | number | (string | number)[] = event[resource.field] as string | number | (string | number)[];
+                if (Array.isArray(resourceIds) && resourceIds.length > 1) {
+                    const newSplitEvents: EventModel[] = [];
+
+                    splitEvents.forEach((currentEvent: EventModel) => {
+                        resourceIds.forEach((resourceId: string | number) => {
+                            const clonedEvent: EventModel = {
+                                ...currentEvent,
+                                id: isNumericId ? nextEventId : this.generateEventGuid(),
+                                guid: this.generateEventGuid()
+                            };
+
+                            if (isNumericId) {
+                                nextEventId = (nextEventId as number) + 1;
+                            }
+                            clonedEvent[resource.field] = resourceId;
+                            newSplitEvents.push(clonedEvent);
+                        });
+                    });
+                    splitEvents = newSplitEvents;
+                }
+            }
+        }
+        return splitEvents;
+    }
+
+    /**
+     * Checks if an event matches a specific resource leaf (for resource grouping).
+     * Validates that the event's resource field values align with the leaf resource's groupOrder chain.
+     *
+     * @param {EventModel} event - The event to check
+     * @param {CellData} resourceLeaf - The leaf-level resource object with groupOrder and resourceData properties
+     * @param {SchedulerResource[]} resources - Array of resource configurations (defines field mappings)
+     * @returns {boolean} True if event belongs to this resource leaf
+     *
+     * @private
+     */
+    static matchesResource(
+        event: EventModel,
+        resourceLeaf: CellData | ResourceLevel,
+        resources?: SchedulerResource[]
+    ): boolean {
+        if (!resources || resources.length === 0 || !resourceLeaf || !resourceLeaf.groupOrder
+            || !Array.isArray(resourceLeaf.groupOrder)) {
+            return true;
+        }
+        for (let i: number = 0; i < resources.length; i++) {
+            const resource: SchedulerResource = resources[parseInt(i.toString(), 10)];
+            const expectedGroupId: string = resourceLeaf.groupOrder[parseInt(i.toString(), 10)];
+            const eventResourceValue: string | number | (string | number)[] =
+                event[resource.field] as string | number | (string | number)[];
+            if (isNullOrUndefined(eventResourceValue)) {
+                return false;
+            }
+            const eventResourceIds: (string | number)[] = Array.isArray(eventResourceValue)
+                ? (eventResourceValue as (string | number)[])
+                : [eventResourceValue as string | number];
+            const matches: boolean = eventResourceIds.some((id: string | number) =>
+                String(id) === String(expectedGroupId)
+            );
+            if (!matches) {
+                return false;
+            }
+        }
+        return true;
     }
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { getZindexPartial } from '@syncfusion/react-popups';
+import { getZindexPartial, PopupSettings } from '@syncfusion/react-popups';
 
 export interface UsePickerPopupOptions {
     open?: boolean;
@@ -15,7 +15,7 @@ export interface UsePickerPopupOptions {
     enableAltDownToOpen?: boolean;
     enableAltUpToClose?: boolean;
     enableEscapeToClose?: boolean;
-    baseZIndex?: number;
+    popupSettings?: PopupSettings;
     onAltDownGlobal?: () => void;
     onAltUpGlobal?: () => void;
     onEscapeGlobal?: () => void;
@@ -26,9 +26,15 @@ export interface UsePickerPopupResult {
     showPopup: () => void;
     hidePopup: () => void;
     togglePopup: () => void;
-    zIndexPopup: number;
+    resolvedPopupSettings?: PopupSettings;
 }
 
+/**
+ * Hook for managing picker popup open/close state, outside-click detection, and keyboard interactions.
+ *
+ * @param {UsePickerPopupOptions} opts - Configuration options including open state, refs, and callbacks.
+ * @returns {UsePickerPopupResult} Object containing popup state and control functions.
+ */
 export default function usePickerPopup(opts: UsePickerPopupOptions): UsePickerPopupResult {
     const {
         open,
@@ -44,7 +50,7 @@ export default function usePickerPopup(opts: UsePickerPopupOptions): UsePickerPo
         enableAltDownToOpen = true,
         enableAltUpToClose = true,
         enableEscapeToClose = true,
-        baseZIndex,
+        popupSettings,
         onAltDownGlobal,
         onAltUpGlobal,
         onEscapeGlobal
@@ -54,13 +60,21 @@ export default function usePickerPopup(opts: UsePickerPopupOptions): UsePickerPo
     const [innerOpen, setInnerOpen] = useState<boolean>(!!defaultOpen);
     const isOpen: boolean = isControlled ? !!open : innerOpen;
 
-    const zIndexPopup: number = useMemo(() => {
-        let base: number = typeof baseZIndex === 'number' ? baseZIndex : 1000;
-        if (base === 1000 && containerRef.current) {
-            base = getZindexPartial(containerRef.current);
+    const resolvedPopupSettings: PopupSettings | undefined = useMemo(() => {
+        const baseZIndex: number = popupSettings && typeof popupSettings.zIndex === 'number' ? popupSettings.zIndex : 1000;
+        if (baseZIndex === 1000) {
+            const calculatedZIndex: number = containerRef.current ? getZindexPartial(containerRef.current) : 1000;
+            return {
+                ...popupSettings,
+                zIndex: Math.max(3, calculatedZIndex + 1)
+            };
+        } else {
+            return {
+                ...popupSettings,
+                zIndex: baseZIndex
+            };
         }
-        return Math.max(3, base + 1);
-    }, [baseZIndex, containerRef.current]);
+    }, [popupSettings, containerRef.current]);
 
     const showPopup: () => void = useCallback((): void => {
         if (disabled || readOnly) {
@@ -187,5 +201,5 @@ export default function usePickerPopup(opts: UsePickerPopupOptions): UsePickerPo
         onEscapeGlobal
     ]);
 
-    return { isOpen, showPopup, hidePopup, togglePopup, zIndexPopup };
+    return { isOpen, showPopup, hidePopup, togglePopup, resolvedPopupSettings };
 }

@@ -35,6 +35,8 @@ import { getCellDetails, scrollToHour, scrollToWorkHour } from './utils/actions'
 import { EventService } from './services/EventService';
 import { EditorProvider } from './context/scheduler-editor-popup-context';
 import { showRecurrenceAlert } from './utils/event-base';
+import { SchedulerPopupStateProvider } from './context/scheduler-popup-state-context';
+import { ResourceGroupingProvider } from './context/resource-grouping-context';
 
 export interface IScheduler extends SchedulerProps {
     /**
@@ -116,13 +118,14 @@ export interface IScheduler extends SchedulerProps {
  * The React Scheduler component that displays a list of events scheduled at specific dates and times, helping users plan and manage their schedule effectively.
  *
  * ```typescript
- * import { Scheduler, DayView, WeekView, WorkWeekView, MonthView } from '@syncfusion/react-scheduler';
+ * import { Scheduler, DayView, WeekView, WorkWeekView, MonthView, AgendaView } from '@syncfusion/react-scheduler';
  *
  * <Scheduler>
  *   <DayView />
  *   <WeekView />
  *   <WorkWeekView />
  *   <MonthView />
+ *   <AgendaView />
  * </Scheduler>
  * ```
  */
@@ -136,6 +139,8 @@ export const Scheduler: ForwardRefExoticComponent<SchedulerProps & RefAttributes
             view,
             defaultView,
             eventSettings,
+            resources,
+            group,
             timeScale,
             workHours,
             startHour,
@@ -155,8 +160,10 @@ export const Scheduler: ForwardRefExoticComponent<SchedulerProps & RefAttributes
             readOnly,
             showQuickInfoPopup,
             header,
+            resourceHeader,
             quickInfo,
             keyboardNavigation,
+            onDataBind,
             onDataRequest,
             onSelectedDateChange,
             onViewChange,
@@ -185,6 +192,8 @@ export const Scheduler: ForwardRefExoticComponent<SchedulerProps & RefAttributes
             weekRule,
             enableRecurrenceValidation,
             scrollToSettings,
+            timezone,
+            timezoneDataSource,
             ...rest
         } = mergeSchedulerProps(defaultSchedulerProps, props) as SchedulerProps;
 
@@ -225,7 +234,11 @@ export const Scheduler: ForwardRefExoticComponent<SchedulerProps & RefAttributes
                 handleClose,
                 (action: AlertAction, onSelect: (selectOption: CrudAction) => void) =>
                     showRecurrenceAlert(action, confirmationDialog, getString, onSelect),
-                processedEventsRef.current
+                processedEventsRef.current,
+                timezone,
+                resources,
+                group,
+                eventSettings?.fields
             );
         const { open, data, originalData, action, onClose, onCellDoubleClickHandler, onEventDoubleClickHandler,
             onMoreDetails, onEditEvent } = editorState;
@@ -259,6 +272,8 @@ export const Scheduler: ForwardRefExoticComponent<SchedulerProps & RefAttributes
             view,
             defaultView,
             eventSettings,
+            resources,
+            group,
             timeScale,
             workHours,
             startHour,
@@ -271,6 +286,7 @@ export const Scheduler: ForwardRefExoticComponent<SchedulerProps & RefAttributes
             dateFormat,
             timeFormat,
             dateHeader,
+            resourceHeader,
             cell,
             headerIndent,
             editor,
@@ -282,6 +298,7 @@ export const Scheduler: ForwardRefExoticComponent<SchedulerProps & RefAttributes
             rowAutoHeight,
             readOnly,
             onEditorSubmit,
+            onDataBind,
             onDataRequest,
             onSelectedDateChange,
             onViewChange,
@@ -303,7 +320,9 @@ export const Scheduler: ForwardRefExoticComponent<SchedulerProps & RefAttributes
             onError,
             enableRecurrenceValidation,
             viewComponents,
-            weekRule
+            weekRule,
+            timezone,
+            timezoneDataSource
         });
 
         const {
@@ -405,14 +424,15 @@ export const Scheduler: ForwardRefExoticComponent<SchedulerProps & RefAttributes
             },
             openQuickInfoPopup,
             scrollTo: scrollToHours
-        }), [addEvent, deleteEvent, saveEvent, schedulerElementRef.current, eventsData, onClose, renderDates, scrollToHour]);
+        }), [addEvent, deleteEvent, saveEvent, schedulerElementRef.current, eventsData, onClose,
+            renderDates, scrollToHour]);
 
         useEffect(() => {
             schedulerRef.current = APIs;
         }, [APIs]);
 
         useEffect(() => {
-            preRender('scheduler');
+            preRender('schedule');
         }, []);
 
         useEffect(() => {
@@ -483,65 +503,71 @@ export const Scheduler: ForwardRefExoticComponent<SchedulerProps & RefAttributes
             >
                 <SchedulerContext.Provider value={contextValue}>
                     <SchedulerRenderDatesContext.Provider value={{ renderDates }}>
-                        <SchedulerEventsContext.Provider value={{eventsData, eventsProcessed}}>
-                            {header !== false &&
-                                <SchedulerToolbar
-                                    view={internalCurrentView}
-                                    availableViews={viewComponents}
-                                    onViewButtonClick={handleViewButtonClick}
-                                    onPreviousClick={handlePreviousClick}
-                                    onNextClick={handleNextClick}
-                                    onTodayClick={handleTodayClick}
-                                    onDateDropdownClick={handleDateDropdownClick}
-                                    dateRangeText={dateRangeText}
-                                    isCalendarOpen={showCalendar}
-                                    calendarView={calendarView}
-                                    selectedDate={internalSelectedDate}
-                                    firstDayOfWeek={activeViewProps.firstDayOfWeek}
-                                    onCalendarChange={handleCalendarChange}
-                                    renderDates={renderDates}
-                                    customizeHeader={typeof header === 'function' ? header : undefined}
-                                />
-                            }
+                        <SchedulerEventsContext.Provider value={{ eventsData, eventsProcessed }}>
+                            <ResourceGroupingProvider>
+                                <SchedulerPopupStateProvider>
+                                    {header !== false &&
+                                        <SchedulerToolbar
+                                            view={internalCurrentView}
+                                            availableViews={viewComponents}
+                                            onViewButtonClick={handleViewButtonClick}
+                                            onPreviousClick={handlePreviousClick}
+                                            onNextClick={handleNextClick}
+                                            onTodayClick={handleTodayClick}
+                                            onDateDropdownClick={handleDateDropdownClick}
+                                            dateRangeText={dateRangeText}
+                                            isCalendarOpen={showCalendar}
+                                            calendarView={calendarView}
+                                            selectedDate={internalSelectedDate}
+                                            firstDayOfWeek={activeViewProps.firstDayOfWeek}
+                                            onCalendarChange={handleCalendarChange}
+                                            renderDates={renderDates}
+                                            customizeHeader={typeof header === 'function' ? header : undefined}
+                                            schedulerElementRef={schedulerElementRef}
+                                        />
+                                    }
 
-                            {isTooltipEnabled ? (
-                                <SchedulerTooltip
-                                    {...(tooltipProps || {})}
-                                    onTooltipOpen={onTooltipOpen}
-                                >
-                                    {schedulerTable}
-                                </SchedulerTooltip>
-                            ) : (
-                                schedulerTable
-                            )}
+                                    {isTooltipEnabled ? (
+                                        <SchedulerTooltip
+                                            {...(tooltipProps || {})}
+                                            onTooltipOpen={onTooltipOpen}
+                                            containerRef={schedulerElementRef}
+                                        >
+                                            {schedulerTable}
+                                        </SchedulerTooltip>
+                                    ) : (
+                                        schedulerTable
+                                    )}
 
-                            <QuickInfoPopup
-                                ref={cellEditRef}
-                                onClose={handleClose}
-                                onEditEvent={onEditEvent}
-                                onMoreDetails={onMoreDetails}
-                            />
+                                    <QuickInfoPopup
+                                        ref={cellEditRef}
+                                        onClose={handleClose}
+                                        onEditEvent={onEditEvent}
+                                        onMoreDetails={onMoreDetails}
+                                    />
 
-                            <EditorProvider editorState={editorState}>
-                                <EditorPopup
-                                    open={open}
-                                    onClose={onClose}
-                                    data={data}
-                                    action={action}
-                                    originalData={originalData}
-                                />
-                            </EditorProvider>
+                                    <EditorProvider editorState={editorState}>
+                                        <EditorPopup
+                                            open={open}
+                                            onClose={onClose}
+                                            data={data}
+                                            action={action}
+                                            originalData={originalData}
+                                        />
+                                    </EditorProvider>
 
-                            <ConfirmationDialog
-                                visible={dialogState.visible}
-                                title={dialogState.title}
-                                message={dialogState.message}
-                                confirmText={dialogState.confirmText}
-                                showCancel={dialogState.showCancel}
-                                action={dialogState.action}
-                                onConfirm={dialogState.onConfirm || (() => confirmationDialog.hide())}
-                                onCancel={confirmationDialog.hide}
-                            />
+                                    <ConfirmationDialog
+                                        visible={dialogState.visible}
+                                        title={dialogState.title}
+                                        message={dialogState.message}
+                                        confirmText={dialogState.confirmText}
+                                        showCancel={dialogState.showCancel}
+                                        action={dialogState.action}
+                                        onConfirm={dialogState.onConfirm || (() => confirmationDialog.hide())}
+                                        onCancel={confirmationDialog.hide}
+                                    />
+                                </SchedulerPopupStateProvider>
+                            </ResourceGroupingProvider>
                         </SchedulerEventsContext.Provider>
                     </SchedulerRenderDatesContext.Provider>
                 </SchedulerContext.Provider>

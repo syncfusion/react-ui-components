@@ -83,6 +83,15 @@ export interface CalendarCellProps extends Omit<React.TdHTMLAttributes<HTMLTable
      * @default -
      */
     view?: CalendarView;
+
+    /**
+     * Prevents only the visual `sf-disabled` class from being rendered.
+     * The cell can still remain logically disabled through `isDisabled`.
+     *
+     * @private
+     * @default false
+     */
+    suppressDisabledClass?: boolean;
 }
 
 /**
@@ -99,11 +108,11 @@ forwardRef<HTMLTableCellElement, CalendarCellProps>((props: CalendarCellProps, r
         isSelected = false,
         isFocused = false,
         isWeekend = false,
-        weekNumber,
-        view,
+        suppressDisabledClass = false,
         role,
         date,
         children,
+        weekNumber,
         weekHeader,
         onClick,
         ...domProps
@@ -114,10 +123,11 @@ forwardRef<HTMLTableCellElement, CalendarCellProps>((props: CalendarCellProps, r
         className || '',
         isOutOfRange ? 'sf-other-month' : '',
         isWeekend ? 'sf-weekend' : '',
-        (isDisabled) ? 'sf-disabled' : '',
+        isDisabled && !suppressDisabledClass ? 'sf-disabled' : '',
         isToday ? 'sf-today' : '',
         (isToday && isFocused) ? 'sf-focused-date' : '',
         (isFocused) ? 'sf-focused-date' : '',
+        (weekNumber) ? 'sf-week-number' : '',
         isSelected ? 'sf-selected' : ''
     ].filter(Boolean);
 
@@ -142,6 +152,7 @@ forwardRef<HTMLTableCellElement, CalendarCellProps>((props: CalendarCellProps, r
             aria-selected={isSelected}
             aria-disabled={isDisabled}
             data-date={date ? date.getTime().toString() : ''}
+            aria-current={isToday ? 'date' : undefined}
             {...domProps}
         >
             {children}

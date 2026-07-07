@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import * as React from 'react';
 import { useLayout } from '../layout/LayoutContext';
 import { registerChartEventHandler, useSeriesRenderVersion } from '../hooks/useClipRect';
 import { withInBounds, getCommonXValues, valueToCoefficient, getClosestX, measureText, getValueXByPoint, getValueYByPoint } from '../utils/helper';
@@ -85,7 +86,6 @@ interface CrosshairPaths {
  * @param {boolean} [props.showLabel] - Toggles visibility of data value labels (default: true)
  * @param {'horizontal' | 'vertical' | 'both'} [props.orientation] - Crosshair direction (default: 'both')
  * @param {React.CSSProperties} [props.style] - Additional CSS styles for the crosshair container
- * @param {function} [props.onHover] - Callback invoked when crosshair position changes
  *
  * @returns {React.ReactElement | null} Crosshair component JSX or null if inactive
  */
@@ -136,12 +136,6 @@ export const ChartCrosshairRenderer: React.FC<ChartCrosshairProps> = (props: Cha
         rightOverflow: 0
     });
 
-    /**
-     * Reference to timeout handle for delayed crosshair removal.
-     * Prevents flickering when mouse quickly moves in and out of chart area.
-     *
-     * @ref {React.MutableRefObject<NodeJS.Timeout | null>}
-     */
     const crosshairTimeoutRef: React.MutableRefObject<NodeJS.Timeout | null> = useRef<NodeJS.Timeout | null>(null);
 
     const touchTimeoutRef: React.MutableRefObject<NodeJS.Timeout | null> = useRef<NodeJS.Timeout | null>(null);
@@ -383,10 +377,14 @@ export const ChartCrosshairRenderer: React.FC<ChartCrosshairProps> = (props: Cha
      * @returns {string} Semi-transparent RGBA color string with 0.25 opacity for subtle highlighting
      *
      */
-    const crosshairLightenColor: (color: string) => string = useCallback((color: string): string => {
-        const rgbValue: ColorValue = convertHexToColor(colorNameToHex(color));
-        return `rgba(${rgbValue.r}, ${rgbValue.g}, ${rgbValue.b}, 0.25)`;
-    }, []);
+    const crosshairLightenColor: (color: string) => string = (color: string): string => {
+        try {
+            const rgbValue: ColorValue = convertHexToColor(colorNameToHex(color));
+            return `rgba(${rgbValue.r}, ${rgbValue.g}, ${rgbValue.b}, 0.25)`;
+        } catch {
+            return 'rgba(0,0,0,0.25)';
+        }
+    };
 
     /**
      * Handle touch start events for crosshair updates - synchronized with tooltip
@@ -514,7 +512,6 @@ export const ChartCrosshairRenderer: React.FC<ChartCrosshairProps> = (props: Cha
      * @param {AxisModel} axis - The target axis containing the crosshairTooltip configuration.
      * @returns {string | boolean} The formatter result: a string to use as the label, or a boolean to indicate no change.
      */
-
     function applyCrosshairFormatter(
         value: number,
         text: string,
@@ -736,7 +733,7 @@ export const ChartCrosshairRenderer: React.FC<ChartCrosshairProps> = (props: Cha
                         tooltip !== null
                 );
         },
-        [findCrosshairDirection, getAxisFormattedText]
+        [findCrosshairDirection, getAxisFormattedText, getValueXByPoint, getValueYByPoint, measureText]
     );
 
     /**

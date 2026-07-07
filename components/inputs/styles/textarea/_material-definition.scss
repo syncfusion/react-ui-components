@@ -1,7 +1,16 @@
 @use '../../../base/styles/themes/variables' as *;
 
-$input-multiline-outlined-padding: $spacing-11 $spacing-16!default;
+$input-multiline-outlined-padding: $spacing-16 $spacing-12 !default;
 $input-multiline-padding: $spacing-11 $spacing-0 !default;
 $input-multiline-min-height: calc(var(--sf-spacing) * 4.375) !default;
 $input-multiline-filled-min-height: calc(var(--sf-spacing) * 4.625) !default;
 $input-multiline-outlined-float-focus-transition: translate3d(0, calc(var(--sf-spacing) * -0.5), 0) !default;
+$input-multiline-filled-label-mask-inline-end: $spacing-16 !default;
+
+$input-multiline-medium-padding: $spacing-8 $spacing-0 !default;
+$input-multiline-medium-outlined-padding: $spacing-8 $spacing-16 !default;
+$input-multiline-medium-filled-padding: $spacing-20 $spacing-14 !default;
+
+$input-multiline-large-padding: $spacing-12 $spacing-0 !default;
+$input-multiline-large-outlined-padding: $spacing-8 $spacing-16 !default;
+$input-multiline-large-filled-padding: $spacing-22 $spacing-14 !default;

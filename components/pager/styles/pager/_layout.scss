@@ -13,8 +13,11 @@
 
     div,
     a {
-      display: inline;
+      display: inline-flex;
       user-select: none;
+    }
+    div.sf-pager-message-bar {
+      display: inline-block;
     }
 
     .sf-pager-mfirst,
@@ -41,6 +44,7 @@
     float: right;
     letter-spacing: $pager-message-letter-spacing;
     line-height: $pager-message-line-height;
+    color: $pager-message-bar-color;
   }
 
   .sf-numeric-item {
@@ -62,6 +66,18 @@
       padding: $pager-container-icon-padding;
       vertical-align: middle;
       margin: $pager-numeric-item-marging;
+    }
+
+    .sf-pager-first {
+      border: $pager-goto-first-border;
+      border-radius: $pager-goto-first-border-radius;
+    }
+    .sf-pager-last {
+      border-radius: $pager-goto-last-border-radius;      
+    }
+    .sf-pager-previous, .sf-numeric-item, .sf-pager-next, .sf-pager-last  {
+      border: $pager-icons-and-numeric-item-border;
+      border-left: 0;
     }
   }
 
@@ -127,6 +143,19 @@
     .sf-pager-mlast {
       @include textalign-width-styles(left, calc(10% + 11px));
       margin-left: $pager-spacing-4;
+    }
+  }
+
+  .sf-rtl .sf-pager-container {
+    .sf-pager-first { 
+      border-radius: $pager-rtl-goto-first-border-radius;
+    }
+    .sf-pager-last {
+      border-radius: $pager-rtl-goto-last-border-radius;      
+    }
+    .sf-pager-previous, .sf-numeric-item, .sf-pager-next, .sf-pager-last  {
+      border: $pager-icons-and-numeric-item-border;
+      border-right: 0;
     }
   }
 

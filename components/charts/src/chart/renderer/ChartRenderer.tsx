@@ -1,6 +1,6 @@
 // ChartRenderer.tsx
 import { useLayout } from '../layout/LayoutContext';
-import { ChartBorderProps, ChartAreaProps, ChartComponentProps, ChartTooltipProps, ChartZoomSettingsProps, Column, ChartMarginProps, Row } from '../base/interfaces';
+import { ChartBorderProps, ChartAreaProps, ChartComponentProps, ChartTooltipProps, ChartZoomSettingsProps, Column, ChartMarginProps, Row, ChartRangeColorProps, ChartLegendProps } from '../base/interfaces';
 import { JSX, useContext, useEffect, useLayoutEffect } from 'react';
 import { calculateVisibleAxis } from './AxesRenderer/AxisRender';
 import { extend, useProviderContext } from '@syncfusion/react-base';
@@ -8,11 +8,55 @@ import { getSeriesColor, getThemeColor } from '../utils/theme';
 import { processChartSeries } from './SeriesRenderer/ProcessData';
 import { ChartContext } from '../layout/ChartProvider';
 import { defaultChartConfigs } from '../base/default-properties';
-import { AxisModel, Chart, ColumnProps, ElementWithSize, RowProps, SeriesProperties, ChartSizeProps, ChartTrendlineModel } from '../chart-area/chart-interfaces';
+import { AxisModel, Chart, ColumnProps, ElementWithSize, RowProps, SeriesProperties, ChartSizeProps, ChartTrendlineModel, ChartIndicatorSettings } from '../chart-area/chart-interfaces';
 import { markerShapes } from './SeriesRenderer/MarkerRenderer';
 import { Theme } from '../../common';
 import { initTrendlineSeriesCollection } from './SeriesRenderer/TrendlinesRenderer';
 import { initSeries } from './SeriesRenderer/ParetoSeriesRenderer';
+import { firstToLowerCase } from '../utils/helper';
+import { ChartSeriesType, IndicatorsType } from '../base/enum';
+import { indicatorModules } from './IndicatorsRenderer/ChartIndicatorsBase';
+
+/**
+ * Initialize indicator modules and collect their target series into visibleSeries.
+ *
+ * @param {ChartIndicatorSettings[]} [chartIndicators] - Indicator models to initialize.
+ * @param {Chart} [layoutChart] - The chart instance from layoutRef.current.chart.
+ * @param {SeriesProperties[]} visibleSeries - The mutable visible series array to append target series to.
+ * @param {ChartIndicatorSettings[]} indicatorsModels - The mutable array to collect initialized indicators.
+ * @returns {void}
+ */
+function initializeIndicators(
+    chartIndicators: ChartIndicatorSettings[] | undefined,
+    layoutChart: Chart | undefined,
+    visibleSeries: SeriesProperties[],
+    indicatorsModels: ChartIndicatorSettings[]
+): void {
+    if (!chartIndicators?.length) {
+        return;
+    }
+
+    let i: number = 0;
+    for (const indicator of chartIndicators) {
+        const techIndicator: ChartIndicatorSettings = indicator;
+        techIndicator.index = i;
+        const type: string = firstToLowerCase(techIndicator.type as IndicatorsType);
+        const moduleKey: string = `${type}IndicatorModule` as string;
+        if (indicatorModules[moduleKey as string] && indicator.seriesName !== '') {
+            indicatorModules[moduleKey as string].initSeriesCollection(techIndicator, layoutChart as Chart);
+            let indicatorSeries: number = 0;
+            for (const targetSeries of techIndicator.targetSeries as SeriesProperties[]) {
+                targetSeries.indicatorIndex = indicatorSeries;
+                targetSeries.sourceIndex = i;
+                targetSeries.index = (visibleSeries.length - 1) + 1;
+                visibleSeries.push(targetSeries);
+                indicatorSeries++;
+            }
+            indicatorsModels.push(techIndicator);
+        }
+        i++;
+    }
+}
 
 /**
  * ChartRenderer - Core functional component responsible for rendering the complete chart layout and structure.
@@ -28,7 +72,8 @@ import { initSeries } from './SeriesRenderer/ParetoSeriesRenderer';
 export const ChartRenderer: React.FC<ChartComponentProps> = (props: ChartComponentProps) => {
     const { layoutRef, availableSize, reportMeasured, phase, setLayoutValue,
         triggerRemeasure, disableAnimation, setDisableAnimation } = useLayout();
-    const { parentElement, rows, columns, chartArea, chartSeries, axisCollection, chartZoom, chartTooltip } = useContext(ChartContext);
+    const { parentElement, rows, columns, chartArea, chartSeries, axisCollection, chartZoom, chartTooltip
+        , chartIndicators, chartRangeColor, chartLegend } = useContext(ChartContext);
     const { locale, dir } = useProviderContext();
     useLayoutEffect(() => {
         if (phase === 'measuring') {
@@ -41,11 +86,16 @@ export const ChartRenderer: React.FC<ChartComponentProps> = (props: ChartCompone
             const paretoAxes: AxisModel[] = [];
             let visibleSeries: SeriesProperties[] = calculateVisibleSeries(chartSeries as SeriesProperties[], props, theme,
                                                                            axisCollection, paretoAxes);
+
+            const indicatorsModels: ChartIndicatorSettings[] = [];
+            initializeIndicators(chartIndicators as ChartIndicatorSettings[], layoutRef.current.chart as Chart, visibleSeries
+                , indicatorsModels);
+
             const requireInvertedAxis: boolean = calculateAreaType(visibleSeries, props);
             const visibleAxisCollection: AxisModel[] = calculateVisibleAxis(
                 requireInvertedAxis, axisCollection, visibleSeries, paretoAxes);
 
-            visibleSeries = processChartSeries(visibleSeries);
+            visibleSeries = processChartSeries(visibleSeries, indicatorsModels, chartRangeColor);
 
             const chartRows: RowProps[] = rows.map((row: Row) => {
                 const newRow: RowProps = extend({}, row) as RowProps;
@@ -63,7 +113,7 @@ export const ChartRenderer: React.FC<ChartComponentProps> = (props: ChartCompone
                 props, parentElement, margin, disableAnimation as boolean, border as Required<ChartBorderProps>, availableSize,
                 dir, borderWidth, rectWidth, rectHeight, locale, theme, requireInvertedAxis, axisCollection,
                 triggerRemeasure, visibleAxisCollection, chartRows, chartColumns, visibleSeries, chartArea, chartZoom
-                , chartTooltip);
+                , chartTooltip, indicatorsModels, chartRangeColor, chartLegend);
             setLayoutValue('chart', chartConfiguration);
             setDisableAnimation?.(false);
             reportMeasured('Chart');
@@ -74,7 +124,8 @@ export const ChartRenderer: React.FC<ChartComponentProps> = (props: ChartCompone
         if (phase !== 'measuring') {
             triggerRemeasure();
         }
-    }, [props.border?.width, props.theme, props.margin?.left, props.margin?.right, props.margin?.top, props.margin?.bottom, locale, dir]);
+    }, [props.border?.width, props?.transposed, props.theme, props.margin?.left,
+        props.margin?.right, props.margin?.top, props.margin?.bottom, locale, dir]);
 
     return phase === 'rendering' && (
         <>
@@ -256,6 +307,9 @@ export function calculateVisibleSeries(chartSeries: SeriesProperties[], chart: C
  * @param {ChartAreaProps} chartArea - Properties defining the chart area.
  * @param {ChartZoomSettingsProps} chartZoom - Zoom settings for the chart.
  * @param {ChartTooltipProps} chartTooltip - Tooltip configuration for the chart.
+ * @param {ChartIndicatorSettings[]} chartIndicators - The array of technical indicators for the chart.
+ * @param {ChartRangeColorProps[]} rangeColorModule - The range color mapping configurations used by the chart.
+ * @param {ChartLegendProps} chartLegend - legend settings for the chart.
  * @returns {Partial<Chart>} A partial chart configuration object used for rendering.
  * @private
  */
@@ -266,7 +320,8 @@ function createChartLayoutConfig(
     borderWidth: number, rectWidth: number, rectHeight: number, locale: string, theme: Theme,
     requireInvertedAxis: boolean, axisCollection: AxisModel[], triggerRemeasure: () => void, visibleAxisCollection: AxisModel[],
     chartRows: RowProps[], chartColumns: ColumnProps[], visibleSeries: SeriesProperties[], chartArea: ChartAreaProps,
-    chartZoom: ChartZoomSettingsProps, chartTooltip: ChartTooltipProps): Partial<Chart> {
+    chartZoom: ChartZoomSettingsProps, chartTooltip: ChartTooltipProps, chartIndicators: ChartIndicatorSettings[],
+    rangeColorModule: ChartRangeColorProps[], chartLegend: ChartLegendProps): Partial<Chart> {
     const chartConfig: Partial<Chart> = {
         element: parentElement.element,
         margin: margin,
@@ -274,6 +329,7 @@ function createChartLayoutConfig(
         border: border,
         availableSize: availableSize,
         enableRtl: dir === 'rtl' || locale === 'ar'  ? true : false,
+        chartAreaType: (visibleSeries.length > 0  && ((visibleSeries[0].type as  ChartSeriesType).indexOf('Polar') > -1 || (visibleSeries[0].type as ChartSeriesType).indexOf('Radar') > -1)) ? 'PolarRadar' : 'Cartesian',
         rect: { x: borderWidth / 2, y: borderWidth / 2, width: rectWidth, height: rectHeight },
         background: props.background || 'transparent',
         backgroundImage: props.backgroundImage,
@@ -302,7 +358,6 @@ function createChartLayoutConfig(
         visibleSeries: visibleSeries,
         horizontalAxes: [],
         verticalAxes: [],
-        enableAnimation: props.enableAnimation ?? true,
         chartArea: chartArea,
         paneLineOptions: [],
         zoomSettings: chartZoom,
@@ -312,8 +367,12 @@ function createChartLayoutConfig(
         enableSideBySidePlacement: props.enableSideBySidePlacement,
         startPanning: false,
         tooltipModule: chartTooltip,
-        dataLabelCollections: []
+        indicators: chartIndicators,
+        dataLabelCollections: [],
+        seriesLabelCollections: [],
+        markerCollections: [],
+        rangeColorModule: rangeColorModule,
+        legendSettings: chartLegend
     };
     return chartConfig;
 }
-

@@ -3,6 +3,7 @@ import { extend, getValue } from '@syncfusion/react-base';
 import { createPoint, getObjectValue, pushData, pushDoublePoint, setEmptyPoint } from './ProcessData';
 import { useRegisterAxisRender } from '../../hooks/useClipRect';
 import { DataPoint, Points, SeriesProperties } from '../../chart-area/chart-interfaces';
+import * as React from 'react';
 
 /**
  * Updates a specific point within a series based on the axis value type.
@@ -78,11 +79,10 @@ export const animatePath: (timestamp: number, duration: number, setAnimationProg
  * @param {DataPoint} pointData - The data point to add.
  * @param {number} pointData.x - The x-coordinate of the point.
  * @param {number} duration - Animation duration.
- * @param {number} pointData.y - The y-coordinate of the point.
- * @param {Series} series - The series to add the point to.
- * @param {MutableRefObject<boolean>} internalDataUpdateRef - Reference to track internal data updates.
+ * @param {SeriesProperties} series - The series to add the point to.
+ * @param {React.MutableRefObject<boolean>} internalDataUpdateRef - Reference to track internal data updates.
  * @param {React.Dispatch<React.SetStateAction<number>>} setAnimationProgress - Function to update animation progress state.
- * @param {MutableRefObject<number | null>} animationFrameRef - Reference to the animation frame.
+ * @param {React.MutableRefObject<number>} animationFrameRef - Reference to the animation frame.
  * @param {number | null} animationFrameRef.current - The current animation frame ID.
  * @param {Function} updateSeries - Function to update the series data after animation.
  * @returns {void} This function does not return a value
@@ -123,10 +123,10 @@ export const addPoint: (pointData: DataPoint, duration: number, series: SeriesPr
  *
  * @param {number} index - The index of the point to remove.
  * @param {number} duration - Animation duration.
- * @param {Series} series - The series to remove the point from.
- * @param {MutableRefObject<boolean>} internalDataUpdateRef - Reference to track internal data updates.
+ * @param {SeriesProperties} series - The series to remove the point from.
+ * @param {React.MutableRefObject<boolean>} internalDataUpdateRef - Reference to track internal data updates.
  * @param {Function} setAnimationProgress - Function to set animation progress.
- * @param {MutableRefObject<number>} animationFrameRef - Reference to the animation frame.
+ * @param {React.MutableRefObject<number>} animationFrameRef - Reference to the animation frame.
  * @param {number|null} animationFrameRef.current - The current animation frame ID.
  * @param {Function} updateSeries - Function to update the series.
  * @returns {void} - This function doesn't return a value.
@@ -179,10 +179,10 @@ export const removePoint: (index: number, duration: number, series: SeriesProper
  *
  * @param {Object[]} data - The new data array to set for the series.
  * @param {number} duration - Animation duration.
- * @param {Series} series - The series to update.
- * @param {MutableRefObject<boolean>} internalDataUpdateRef - Reference to track internal data updates.
+ * @param {SeriesProperties} series - The series to update.
+ * @param {React.MutableRefObject<number>} internalDataUpdateRef - Reference to track internal data updates.
  * @param {Function} setAnimationProgress - Function to set animation progress.
- * @param {MutableRefObject<number>} animationFrameRef - Reference to the animation frame.
+ * @param {React.MutableRefObject<number>} animationFrameRef - Reference to the animation frame.
  * @param {number|null} animationFrameRef.current - The current animation frame ID.
  * @param {Function} updateSeries - Function to update the series.
  * @returns {void} - This function doesn't return a value.
@@ -225,7 +225,7 @@ export const setData: (data: Object[], duration: number,
 
                 point.y = point.close;
                 point.yValue = (typeof point.close === 'number' && point.close !== null) ? point.close : 0;
-            } else if (series.type === 'RangeArea' || series.type === 'RangeColumn') {
+            } else if (series.type === 'RangeArea' || series.type === 'RangeStepArea' || series.type === 'RangeColumn') {
                 point.high = getObjectValueByMappingString(series.high, newPoint);
                 point.low = getObjectValueByMappingString(series.low, newPoint);
 

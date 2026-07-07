@@ -1,4 +1,4 @@
-import { RefObject, ComponentType, ComponentProps } from 'react';
+import { RefObject, ComponentType, ComponentProps, Dispatch, SetStateAction } from 'react';
 import { ColumnProps } from '../types/column.interfaces';
 import { useEdit } from '../hooks';
 import { IFormValidator } from '@syncfusion/react-inputs';
@@ -10,6 +10,9 @@ import { IDropDownList, DropDownListProps } from '@syncfusion/react-dropdowns';
 import { ActionType, EditType, NewRowPosition } from '../types/enum';
 import { IRow, ValueType } from './';
 import { Dialog, IDialog } from '@syncfusion/react-popups';
+import { FocusedCellInfo } from './focus.interfaces';
+import { GridRef } from './grid.interfaces';
+import { UseDataResult } from './interfaces';
 
 /**
  * Defines the editing interaction mode for grid records.
@@ -17,9 +20,10 @@ import { Dialog, IDialog } from '@syncfusion/react-popups';
  * * Normal :- Allows inline editing directly within grid cells.
  * * Popup :- Displays edit form in a modal dialog with auto-generated fields.
  * * PopupTemplate :- Displays edit form in a modal dialog using custom template.
+ * * Cell :- Allows editing individual cells with field-based tracking.
  * ```
  */
-export type EditMode = 'Normal' | 'Popup' | 'PopupTemplate';
+export type EditMode = 'Normal' | 'Popup' | 'PopupTemplate' | 'Cell';
 
 /**
  * Configuration settings for customizing the Syncfusion `Dialog` component used in popup edit mode.
@@ -115,7 +119,7 @@ export interface EditSettings<T = unknown> {
      * Determines whether the grid should automatically display a persistent "Add New Row" form when initialized.
      *
      * When this property is enabled, the grid enters an edit state by default, allowing to add new records
-     * without interacting with an explicit add toolbar button. This feature requires that allowAdd is set to true.
+     * without interacting with an explicit add toolbar button. This feature requires that `allowAdd` is set to `true`.
      *
      * @default false
      * @private
@@ -220,6 +224,7 @@ export interface EditState<T = unknown> {
     isShowAddNewRowActive: boolean; // Whether the add new row is currently active
     isShowAddNewRowDisabled: boolean; // Whether the add new row inputs should be disabled (but still visible)
     rowObject: IRow<ColumnProps<T>>;
+    editCellIndex?: { primaryKeyValue: string | number; field: string; };
 }
 
 /**
@@ -237,6 +242,7 @@ export interface UseEditResult<T = unknown> {
     showAddNewRowData: T;
     isShowAddNewRowActive: boolean;
     isShowAddNewRowDisabled: boolean;
+    editCellIndex?: { primaryKeyValue: string | number; field: string; };
     editRecord: (rowElement?: HTMLTableRowElement) => Promise<void>;
     saveDataChanges: () => Promise<boolean>;
     cancelDataChanges: () => Promise<void>;
@@ -251,6 +257,17 @@ export interface UseEditResult<T = unknown> {
     handleGridClick: (event: React.MouseEvent) => void;
     handleGridDoubleClick: (event: React.MouseEvent, rowElement?: HTMLTableRowElement) => void;
     checkUnsavedChanges: () => Promise<boolean>;
+    editCell: (primaryKeyValue: string | number, field: string) => void;
+    saveCellChanges: () => Promise<boolean>;
+    cancelCellChanges: () => Promise<void>;
+    editFocusedCell: () => void;
+    deleteCell: () => void;
+    updateValidationErrors: (errors: Record<string, string>) => void;
+    handleCellEditKeyDown: (
+        e: React.KeyboardEvent,
+        navigateToNextCell?: (direction: 'nextCell' | 'prevCell') => void
+    ) => Promise<void>;
+
     // Dialog state and methods for confirmation dialogs
     isDialogOpen: boolean;
     dialogConfig: ConfirmDialogConfig;
@@ -267,6 +284,86 @@ export interface UseEditResult<T = unknown> {
     rowObject: IRow<ColumnProps<T>>;
     popupEditFormRef: RefObject<InlineEditFormRef<T>>;
 }
+
+/**
+ * Interface for the CellContext helper function type
+ *
+ * @private
+ */
+export type CellContext<T> = {
+    row: IRow<ColumnProps<T>>;
+    column: ColumnProps<T>;
+    primaryKeyValue: string;
+    focusInfo: FocusedCellInfo;
+};
+
+/**
+ * Interface for the handleCellEditKeyDown function type
+ *
+ * @private
+ */
+export type HandleCellEditKeyDown = (
+    e: React.KeyboardEvent,
+    navigateToNextCell?: (direction: 'nextCell' | 'prevCell') => void,
+    getFocusInfo?: () => FocusedCellInfo
+) => Promise<void>;
+
+/**
+ * Type definition for cell edit module that represents the return type of the useCellEdit hook.
+ * Provides cell-level editing functionality including edit, save, cancel, and keyboard handling.
+ *
+ * @private
+ */
+export type CellEditModule = {
+    /**
+     * Initiates cell edit mode for a specific cell.
+     * @param primaryKeyValue - The primary key value of the row containing the cell
+     * @param field - The field name of the column
+     */
+    editCell: (primaryKeyValue: string | number, field: string) => Promise<void>;
+    /**
+     * Saves changes made in cell edit mode.
+     * @returns true if changes were saved successfully, false otherwise
+     */
+    saveCellChanges: () => Promise<boolean>;
+    /**
+     * Cancels cell edit mode and discards changes.
+     */
+    cancelCellChanges: () => Promise<void>;
+    /**
+     * Updates validation errors in the edit state.
+     * @param errors - Record of validation errors
+     */
+    updateValidationErrors: (errors: Record<string, string>) => void;
+    /**
+     * Consolidated keyboard handler for cell edit mode.
+     */
+    handleCellEditKeyDown: HandleCellEditKeyDown;
+    /**
+     * Handles Delete key action - clears cell value and triggers save.
+     */
+    handleDeleteCell: () => void;
+    editFocusedCell: () => void;
+};
+
+/**
+ * Type definition for the useCellEdit hook function.
+ * Manages cell-level editing functionality.
+ *
+ * @private
+ */
+export type UseCellEditHook = <T>(
+    gridRef: RefObject<GridRef<T>>,
+    currentViewData: T[],
+    dataOperations: UseDataResult<T>,
+    editSettings: EditSettings<T>,
+    editState: EditState<T>,
+    setEditState: Dispatch<SetStateAction<EditState<T>>>,
+    setGridAction: Dispatch<SetStateAction<Object>>,
+    editDataRef: RefObject<T>,
+    getPrimaryKeyField: () => string,
+    updateEditData: (field: string, value: ValueType, rowObject?: IRow<ColumnProps<T>>) => void
+) => CellEditModule;
 
 /**
  * Type definition for edit strategy module that represents the return type of the useEdit hook.
@@ -497,6 +594,44 @@ export interface RowEditEvent<T = unknown> {
      * Flag indicating whether to cancel the edit operation.
      *
      * Set to true to prevent the row from entering edit mode.
+     *
+     * @default false
+     */
+    cancel?: boolean;
+}
+
+/**
+ * Event structure triggered during a cell edit operation in Cell edit mode.
+ *
+ * This interface provides access to the cell data, field, and row index,
+ * and supports cancellation of the cell edit operation.
+ */
+export interface CellEditEvent<T = unknown> {
+    /**
+     * Data object containing the current values of the row being edited.
+     *
+     * @default -
+     */
+    data: T;
+
+    /**
+     * Index of the row being edited in the grid's data source.
+     *
+     * @default -
+     */
+    rowIndex: number;
+
+    /**
+     * Field name of the cell being edited.
+     *
+     * @default -
+     */
+    field: string;
+
+    /**
+     * Flag indicating whether to cancel the cell edit operation.
+     *
+     * Set to true to prevent the cell from entering edit mode.
      *
      * @default false
      */
@@ -990,6 +1125,88 @@ export interface InlineEditFormRef<T = unknown> {
      * @default null
      */
     readonly rowRef: RefObject<HTMLTableRowElement | null>;
+}
+
+/**
+ * Ref interface for CellEditForm component.
+ * Exposes the cell editor state and FormValidator for programmatic control.
+ *
+ * @private
+ */
+export interface CellEditFormRef {
+    /**
+     * Reference to the FormValidator instance for validation control.
+     *
+     * @default null
+     */
+    formRef: React.RefObject<IFormValidator>;
+
+    /**
+     * Reference to the EditCell component for accessing editor methods.
+     * Provides focus(), getValue(), setValue(), and inputRef.
+     *
+     * @default null
+     */
+    editCellRef: React.RefObject<EditCellRef>;
+}
+
+/**
+ * Ref interface for Cell EditForm component
+ *
+ * @private
+ */
+export interface CellEditFormProps<T = unknown> {
+    /**
+     * The field name of the cell being edited.
+     */
+    field: string;
+
+    /**
+     * Current value of the cell.
+     */
+    value: ValueType | Object | undefined;
+
+    /**
+     * Column configuration.
+     */
+    column: ColumnProps<T>;
+
+    /**
+     * Full row data object.
+     */
+    rowData: T;
+
+    /**
+     * Callback when cell value changes.
+     *
+     * @param {string} field - The field name
+     * @param {unknown} value - The new value
+     */
+    onFieldChange: (field: string, value: unknown) => void;
+
+    /**
+     * Callback to save cell changes.
+     * Called when Enter is pressed or click outside occurs.
+     */
+    onSave: () => void;
+
+    /**
+     * Callback to cancel cell changes.
+     * Called when Escape is pressed.
+     */
+    onCancel: () => void;
+
+    /**
+     * Optional validation error messages by field.
+     */
+    validationErrors?: Record<string, string>;
+
+    /**
+     * Optional callback to sync validation errors back to parent.
+     *
+     * @param {Record<string, string>} errors - Validation error messages by field
+     */
+    onValidationChange?: (errors: Record<string, string>) => void;
 }
 
 /**

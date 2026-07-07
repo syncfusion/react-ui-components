@@ -3,6 +3,7 @@ import { AggregateType } from './enum';
 import { DateFormatOptions, NumberFormatOptions } from '@syncfusion/react-base';
 import { CellClassProps } from './column.interfaces';
 import { Query } from '@syncfusion/react-data';
+import { GroupedData } from '.';
 
 /**
  * Represents the structure of aggregate result values returned by the Data Grid component.
@@ -288,7 +289,7 @@ export interface AggregateRowRenderEvent<T = unknown> {
      *
      * @default {}
      */
-    data: T;
+    data: T | GroupedData<T>;
     /**
      * Defines the DOM element representing the aggregate row being rendered in the grid.
      * Specifies the actual HTML element that will contain all aggregate cells within the row.

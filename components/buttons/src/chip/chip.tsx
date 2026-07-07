@@ -1,7 +1,10 @@
-import { forwardRef, HTMLAttributes, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
-import { preRender, useProviderContext, useRippleEffect } from '@syncfusion/react-base';
-import * as React from 'react';
+import { forwardRef, ForwardRefExoticComponent, HTMLAttributes, memo, ReactNode, Ref, RefAttributes, RefObject,
+    useCallback, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, MouseEventHandler, KeyboardEventHandler,
+    FocusEventHandler, type MouseEvent, type KeyboardEvent
+} from 'react';
+import { preRender, useProviderContext, useRippleEffect, Size } from '@syncfusion/react-base';
 import { CheckTickIcon, CloseIcon } from '@syncfusion/react-icons';
+export { Size };
 
 /**
  * Represents the variant types for the Chip component.
@@ -37,21 +40,21 @@ export interface ChipBaseProps {
      *
      * @default -
      */
-    avatar?: React.ReactNode;
+    avatar?: ReactNode;
 
     /**
      * Specifies the leading icon CSS class or React node for the Chip.
      *
      * @default -
      */
-    leadingIcon?: React.ReactNode;
+    leadingIcon?: ReactNode;
 
     /**
      * Specifies the trailing icon CSS or React node for the Chip.
      *
      * @default -
      */
-    trailingIcon?: React.ReactNode;
+    trailingIcon?: ReactNode;
 
     /**
      * Specifies whether the Chip component is disabled or not.
@@ -98,16 +101,25 @@ export interface ChipBaseProps {
     /**
      * Specifies the icon element to indicate the chip’s selected state.
      * When provided, replaces the default selection indicator.
+     *
      * @default -
      */
-    selectIcon?: React.ReactNode;
+    selectIcon?: ReactNode;
 
     /**
-     * Specifies the icon element to render for the chip’s remove action.
+     * Specifies the icon element to render for the chip's remove action.
      * When provided, replaces the default close/remove icon.
-     *@default -
+     *
+     * @default -
      */
-    removeIcon?: React.ReactNode;
+    removeIcon?: ReactNode;
+
+    /**
+     * Specifies the size of the Chip. Options include 'Small', 'Medium' and 'Large'.
+     *
+     * @default Size.Medium
+     */
+    size?: Size;
 }
 
 /**
@@ -137,7 +149,7 @@ export interface ChipDeleteEvent {
     /**
      * Specifies the event that triggered the delete action.
      */
-    event: React.MouseEvent | React.KeyboardEvent;
+    event: MouseEvent | KeyboardEvent;
 }
 
 /**
@@ -163,8 +175,8 @@ type ChipComponentProps = ChipProps & HTMLAttributes<HTMLDivElement>;
  * <Chip color="Primary" removable={true}>Anne</Chip>
  * ```
  */
-export const Chip: React.ForwardRefExoticComponent<ChipComponentProps & React.RefAttributes<IChip>> =
-React.memo(forwardRef<IChip, ChipProps>((props: ChipComponentProps, ref: React.Ref<IChip>) => {
+export const Chip: ForwardRefExoticComponent<ChipComponentProps & RefAttributes<IChip>> =
+memo(forwardRef<IChip, ChipProps>((props: ChipComponentProps, ref: Ref<IChip>) => {
     const {
         value,
         text,
@@ -179,6 +191,7 @@ React.memo(forwardRef<IChip, ChipProps>((props: ChipComponentProps, ref: React.R
         removable,
         variant = 'Filled',
         color,
+        size = Size.Medium,
         onDelete,
         onClick,
         selectIcon= <CheckTickIcon/>,
@@ -198,11 +211,12 @@ React.memo(forwardRef<IChip, ChipProps>((props: ChipComponentProps, ref: React.R
         removable,
         variant,
         color,
+        size,
         selectIcon,
         removeIcon
     };
 
-    const chipRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
+    const chipRef: RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
     const [isFocused, setIsFocused] = useState<boolean>(false);
     const { dir, ripple } = useProviderContext();
     const IconClasses: string = 'sf-content-center sf-overflow-hidden';
@@ -217,8 +231,8 @@ React.memo(forwardRef<IChip, ChipProps>((props: ChipComponentProps, ref: React.R
         element: chipRef.current
     }));
 
-    const handleDelete: (e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => void =
-    React.useCallback((e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => {
+    const handleDelete: (e: MouseEvent<HTMLDivElement> | KeyboardEvent<HTMLDivElement>) => void =
+    useCallback((e: MouseEvent<HTMLDivElement> | KeyboardEvent<HTMLDivElement>) => {
         if (!removable) {return; }
         e.stopPropagation();
         const eventArgs: ChipDeleteEvent = {
@@ -231,25 +245,25 @@ React.memo(forwardRef<IChip, ChipProps>((props: ChipComponentProps, ref: React.R
         }
     }, [onDelete, text, props]);
 
-    const handleSpanDelete: React.MouseEventHandler<HTMLSpanElement>  = React.useCallback((e: React.MouseEvent<HTMLSpanElement>) => {
+    const handleSpanDelete: MouseEventHandler<HTMLSpanElement>  = useCallback((e: MouseEvent<HTMLSpanElement>) => {
         if (removable) {
-            handleDelete(e as unknown as React.MouseEvent<HTMLDivElement>);
+            handleDelete(e as unknown as MouseEvent<HTMLDivElement>);
         }
     }, [removable, handleDelete]);
 
-    const handleClick: React.MouseEventHandler<HTMLDivElement>  =
-    React.useCallback((e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => {
+    const handleClick: MouseEventHandler<HTMLDivElement>  =
+    useCallback((e: MouseEvent<HTMLDivElement> | KeyboardEvent<HTMLDivElement>) => {
         if (onClick) {
-            onClick(e as React.MouseEvent<HTMLDivElement>);
+            onClick(e as MouseEvent<HTMLDivElement>);
         }
     }, [onClick, text, props]);
 
-    const handleKeyDown: React.KeyboardEventHandler<HTMLDivElement>  = React.useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    const handleKeyDown: KeyboardEventHandler<HTMLDivElement>  = useCallback((e: KeyboardEvent<HTMLDivElement>) => {
         switch (e.key) {
         case 'Enter':
         case ' ':
             e.preventDefault();
-            handleClick(e as unknown as React.MouseEvent<HTMLDivElement>);
+            handleClick(e as unknown as MouseEvent<HTMLDivElement>);
             break;
         case 'Delete':
         case 'Backspace':
@@ -261,15 +275,15 @@ React.memo(forwardRef<IChip, ChipProps>((props: ChipComponentProps, ref: React.R
         }
     }, [removable, handleClick, handleDelete]);
 
-    const handleFocus: React.FocusEventHandler<HTMLDivElement> = React.useCallback(() => {
+    const handleFocus: FocusEventHandler<HTMLDivElement> = useCallback(() => {
         setIsFocused(true);
     }, []);
 
-    const handleBlur: React.FocusEventHandler<HTMLDivElement> = React.useCallback(() => {
+    const handleBlur: FocusEventHandler<HTMLDivElement> = useCallback(() => {
         setIsFocused(false);
     }, []);
 
-    const chipClassName: string = React.useMemo(() => {
+    const chipClassName: string = useMemo(() => {
         if (className?.includes('sf-chip')) {
             return className;
         }
@@ -283,11 +297,12 @@ React.memo(forwardRef<IChip, ChipProps>((props: ChipComponentProps, ref: React.R
             isFocused ? 'sf-focused' : '',
             variant === 'Outlined' ? 'sf-outline' : '',
             color ? `sf-${color.toLowerCase()}` : '',
-            avatar || leadingIcon || leadingIconUrl ? 'sf-chip-has-icon' : ''
+            avatar || leadingIcon || leadingIconUrl ? 'sf-chip-has-icon' : '',
+            size ? `sf-chip-${size.toLowerCase()}` : ''
         ].filter(Boolean).join(' ');
-    }, [className, disabled, dir, avatar, leadingIcon, isFocused, variant, color]);
+    }, [className, disabled, dir, avatar, leadingIcon, isFocused, variant, color, size]);
 
-    const avatarClasses: string = React.useMemo(() => {
+    const avatarClasses: string = useMemo(() => {
         return [
             'sf-chip-avatar',
             IconClasses,
@@ -295,7 +310,7 @@ React.memo(forwardRef<IChip, ChipProps>((props: ChipComponentProps, ref: React.R
         ].filter(Boolean).join(' ');
     }, [avatar]);
 
-    const trailingIconClasses: string = React.useMemo(() => {
+    const trailingIconClasses: string = useMemo(() => {
         return [
             trailingIconUrl && !removable ? 'sf-chip-trailing-url' : 'sf-chip-delete',
             IconClasses,

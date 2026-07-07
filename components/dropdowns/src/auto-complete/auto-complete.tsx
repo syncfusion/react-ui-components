@@ -1,9 +1,10 @@
-import * as React from 'react';
-import { useEffect, useId, useImperativeHandle, useMemo } from 'react';
+import { forwardRef, ForwardRefExoticComponent, InputHTMLAttributes, memo, ReactElement, ReactNode, Ref, RefAttributes, RefObject, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
 import { validationProps } from '@syncfusion/react-inputs';
 import { DropDownProps, DropDownSelectionProps, InputProps } from '../common/types';
-import { IDropdown, Dropdown } from '../common/drop-down';
-import { preRender } from '@syncfusion/react-base';
+import { IDropdown, Dropdown } from '../common/dropdown';
+import { preRender, useStableId } from '@syncfusion/react-base';
+import { DropdownInput, DropdownMenu, DropdownHeader, DropdownListContent, DropdownNoRecords, DropdownError, DropdownFooter, DropdownClearButton, DropdownPrefix, DropdownSuffix } from '../common/components';
+import { CSS_CLASSES } from '../common/constants';
 
 /**
  * Props for the Autocomplete component.
@@ -52,7 +53,7 @@ export interface AutocompleteProps extends DropDownProps, DropDownSelectionProps
      *
      * @default -
      */
-    valueTemplate?: (inputElement: React.ReactElement<HTMLInputElement>) => React.ReactNode;
+    valueTemplate?: (inputElement: ReactElement<HTMLInputElement>) => ReactNode;
 
     /** Specifies the callback invoked when a custom value (not in the suggestion list)
      * is committed via Enter key. Receives the custom string value as a parameter.
@@ -75,7 +76,7 @@ export interface IAutocomplete extends AutocompleteProps {
     element?: HTMLInputElement | null;
 }
 
-type IAutocompleteProps = AutocompleteProps & Omit<React.InputHTMLAttributes<HTMLSpanElement>, keyof AutocompleteProps>;
+type IAutocompleteProps = AutocompleteProps & Omit<InputHTMLAttributes<HTMLSpanElement>, keyof AutocompleteProps>;
 
 /**
  * Autocomplete lets users type to search or choose a single option from a list. It supports controlled and uncontrolled usage (value / defaultValue),
@@ -101,10 +102,10 @@ type IAutocompleteProps = AutocompleteProps & Omit<React.InputHTMLAttributes<HTM
  * }
  * ```
  */
-export const Autocomplete: React.ForwardRefExoticComponent<IAutocompleteProps & React.RefAttributes<IAutocomplete>> =
-    React.forwardRef<IAutocomplete, IAutocompleteProps>((props: IAutocompleteProps, ref: React.Ref<IAutocomplete>) => {
+export const Autocomplete: ForwardRefExoticComponent<IAutocompleteProps & RefAttributes<IAutocomplete>> =
+    forwardRef<IAutocomplete, IAutocompleteProps>((props: IAutocompleteProps, ref: Ref<IAutocomplete>) => {
         const {
-            id = `autocomplete_${useId()}`,
+            id,
             dataSource = [],
             fields,
             value,
@@ -148,20 +149,17 @@ export const Autocomplete: React.ForwardRefExoticComponent<IAutocompleteProps & 
             minLength = 0,
             maxSuggestions,
             valueTemplate,
-            onResize,
-            onOpen,
-            onClose,
-            onDataRequest,
-            onDataLoad,
-            onError,
-            onScroll,
-            onChange,
-            onFilter,
-            onCustomValueSelect,
+            prefix,
+            suffix,
+            helperText,
+            helperTextOnFocus = false,
+            helperTextDirection = 'Left',
             ...restProps
         } = props;
 
-        const baseRef: React.RefObject<IDropdown | null> = React.useRef<IDropdown>(null);
+        const generatedId: string = useStableId('sf-autocomplete');
+        const autocompleteId: string = id ?? generatedId;
+        const baseRef: RefObject<IDropdown | null> = useRef<IDropdown>(null);
 
         const publicAPI: Partial<IAutocomplete> = useMemo(() => ({
             dataSource,
@@ -206,12 +204,18 @@ export const Autocomplete: React.ForwardRefExoticComponent<IAutocompleteProps & 
             autoHighlight,
             resizable,
             minLength,
-            maxSuggestions
+            maxSuggestions,
+            prefix,
+            suffix,
+            helperText,
+            helperTextOnFocus,
+            helperTextDirection
         }), [dataSource, fields, value, defaultValue, placeholder, disabled, readOnly, labelMode, size, variant, className, required,
             inputProps, clearButton, loading, popupSettings, open, defaultOpen, query, sortOrder, allowObjectBinding,
             customValue, itemTemplate, headerTemplate, footerTemplate, groupTemplate, noRecordsTemplate, onErrorTemplate,
             virtualization, ignoreCase, ignoreAccent, filterType, debounceDelay, valid, validationMessage, validityStyles,
-            skipDisabledItems, autofill, autoHighlight, resizable, minLength, maxSuggestions, valueTemplate]);
+            skipDisabledItems, autofill, autoHighlight, resizable, minLength, maxSuggestions, prefix, suffix, helperText,
+            helperTextDirection, helperTextOnFocus, valueTemplate]);
 
         useImperativeHandle(ref, () => ({
             ...publicAPI,
@@ -225,71 +229,34 @@ export const Autocomplete: React.ForwardRefExoticComponent<IAutocompleteProps & 
         return (
             <Dropdown
                 {...restProps}
+                {...publicAPI}
                 ref={baseRef}
-                id={id}
+                id={autocompleteId}
                 spanClickable={false}
-                componentClassName='sf-autocomplete'
-                inputClassName='sf-autocomplete-input'
+                componentClassName={CSS_CLASSES.AUTOCOMPLETE_ROOT}
+                inputClassName={CSS_CLASSES.AUTOCOMPLETE_INPUT}
                 localeComponentName='autoComplete'
                 ariaLabel='autocomplete'
                 forceFilterOnOpen={true}
-                dataSource={dataSource}
-                clearButton={clearButton}
-                fields={fields}
-                value={value}
-                defaultValue={defaultValue}
-                placeholder={placeholder}
-                disabled={disabled}
-                readOnly={readOnly}
-                labelMode={labelMode}
-                size={size}
-                variant={variant}
-                className={className}
                 dropdownIcon={false}
-                popupSettings={popupSettings}
-                open={open}
-                defaultOpen={defaultOpen}
-                query={query}
-                sortOrder={sortOrder}
-                allowObjectBinding={allowObjectBinding}
-                customValue={customValue}
-                itemTemplate={itemTemplate}
-                headerTemplate={headerTemplate}
-                footerTemplate={footerTemplate}
-                groupTemplate={groupTemplate}
-                noRecordsTemplate={noRecordsTemplate}
-                onErrorTemplate={onErrorTemplate}
-                virtualization={virtualization}
-                ignoreCase={ignoreCase}
-                ignoreAccent={ignoreAccent}
                 filterable={true}
-                filterType={filterType}
-                debounceDelay={debounceDelay}
-                valid={valid}
-                validationMessage={validationMessage}
-                validityStyles={validityStyles}
-                skipDisabledItems={skipDisabledItems}
-                autofill={autofill}
-                autoHighlight={autoHighlight}
-                resizable={resizable}
-                minLength={minLength}
-                maxSuggestions={maxSuggestions}
-                inputProps={inputProps}
-                loading={loading}
-                required={required}
                 inputValueRenderer={valueTemplate}
-                onResize={onResize}
-                onOpen={onOpen}
-                onClose={onClose}
-                onDataRequest={onDataRequest}
-                onDataLoad={onDataLoad}
-                onError={onError}
-                onScroll={onScroll}
-                onChange={onChange}
-                onFilter={onFilter}
-                onCustomValueSelect={onCustomValueSelect}
-            />
+            >
+                <DropdownPrefix />
+                <DropdownInput />
+                <DropdownSuffix />
+                <span className={CSS_CLASSES.ICONS_WRAPPER}>
+                    <DropdownClearButton />
+                </span>
+                <DropdownMenu>
+                    <DropdownHeader />
+                    <DropdownListContent />
+                    <DropdownNoRecords />
+                    <DropdownError />
+                    <DropdownFooter />
+                </DropdownMenu>
+            </Dropdown>
         );
     });
 
-export default React.memo(Autocomplete);
+export default memo(Autocomplete);

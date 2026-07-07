@@ -4,18 +4,17 @@ import { useProviderContext } from '@syncfusion/react-base';
 import { useSchedulerPropsContext } from '../context/scheduler-context';
 import { useNavigate } from './useDateHeader';
 import { useEscapeKey } from './useQuickInfoPopup';
+import { useSchedulerPopupContext } from '../context/scheduler-popup-state-context';
 
 interface PopupState {
     date: Date | null;
     events: EventModel[];
-    visible: boolean;
     target: HTMLElement | null;
 }
 
 interface MorePopupHookResult {
     date: Date | null;
     events: EventModel[];
-    visible: boolean;
     target: HTMLElement | null;
     popupElement: RefObject<HTMLDivElement>;
     schedulerElement: RefObject<HTMLDivElement | null>;
@@ -36,9 +35,9 @@ export const useMorePopup: () => MorePopupHookResult = (): MorePopupHookResult =
     const [popupState, setPopupState] = useState<PopupState>({
         date: null,
         events: [],
-        visible: false,
         target: null
     });
+    const { morePopupShow, morePopupHide } = useSchedulerPopupContext();
     const popupElement: RefObject<HTMLDivElement> = useRef<HTMLDivElement>(null);
     const schedulerElement: RefObject<HTMLDivElement | null> = useRef<HTMLDivElement | null>(null);
 
@@ -62,9 +61,9 @@ export const useMorePopup: () => MorePopupHookResult = (): MorePopupHookResult =
         setPopupState({
             date: null,
             events: [],
-            target: null,
-            visible: false
+            target: null
         });
+        morePopupHide();
     };
 
     useEscapeKey(handleClose);
@@ -112,15 +111,14 @@ export const useMorePopup: () => MorePopupHookResult = (): MorePopupHookResult =
         setPopupState({
             date: moreDate,
             events: moreEvents,
-            target: element,
-            visible: true
+            target: element
         });
+        morePopupShow();
     };
 
     return {
         date: popupState.date,
         events: popupState.events,
-        visible: popupState.visible,
         target: popupState.target,
         popupElement,
         schedulerElement,

@@ -1,21 +1,30 @@
 @use 'theme-variables' as *;
 
 @include export-module('input-layout') {
-    .sf-large.sf-input-group {
+  .sf-large.sf-input-group {
     font-size: $input-large-font-size;
     line-height: $input-large-line-height;
     letter-spacing: $input-large-letter-spacing;
 
-    .sf-input {
+    .sf-input,
+    .sf-multiselect-values {
       padding: $input-large-padding;
     }
 
+    &.sf-float-input {
+      margin-top: $input-large-float-margin-top;
+    }
+
     .sf-float-text {
-      inset-block-start: $input-outlined-float-top;
+      inset-block-start: $input-large-outlined-float-top;
+      inset-inline-start: $input-large-float-left;
     }
 
     &.sf-float-input:has(.sf-label-top) .sf-float-text {
       transform: $input-large-float-focus-transition;
+      font-size: $input-large-float-font-size;
+      line-height: $input-large-float-line-height;
+      inset-inline-start: $input-float-prefix-focus-left;
     }
 
     &.sf-has-prefix {
@@ -41,6 +50,8 @@
     }
 
     &.sf-outline {
+      border-radius: $input-large-outlined-border-radius;
+
       .sf-input,
       .sf-multiselect-values {
         padding: $input-large-outlined-padding;
@@ -69,11 +80,13 @@
 
       &.sf-float-input:has(.sf-label-top) .sf-float-text {
         transform: $input-large-outlined-float-focus-transition;
+        inset-inline-start: $input-outlined-float-focus-left;
       }
 
     }
 
     &.sf-filled {
+      border-radius: $input-large-filled-border-radius;
       line-height: $input-large-filled-line-height;
       font-size: $input-large-filled-font-size;
 
@@ -97,16 +110,18 @@
         }
 
         &.sf-float-input .sf-input {
-        padding: $input-large-filled-float-prefix-padding;
-      }
+          padding: $input-large-filled-float-prefix-padding;
+        }
+
         .sf-float-text {
-        inset-inline-start: $input-large-close-icon-box-size;
-      }
+          inset-inline-start: $input-large-close-icon-box-size;
+        }
       }
 
       &:has(.sf-label-top) {
         .sf-float-text {
           transform: $input-large-filled-float-focus-transition;
+          inset-inline-start: $input-filled-float-focus-left;
         }
       }
 
@@ -118,16 +133,25 @@
     line-height: $input-medium-line-height;
     letter-spacing: $input-medium-letter-spacing;
 
-    .sf-input {
+    .sf-input,
+    .sf-multiselect-values {
       padding: $input-medium-padding;
     }
 
+    &.sf-float-input {
+      margin-top: $input-medium-float-margin-top;
+    }
+
     .sf-float-text {
-      inset-block-start: $input-outlined-float-top;
+      inset-block-start: $input-medium-outlined-float-top;
+      inset-inline-start: $input-medium-float-left;
     }
 
     &.sf-float-input:has(.sf-label-top) .sf-float-text {
       transform: $input-medium-float-focus-transition;
+      font-size: $input-medium-float-font-size;
+      line-height: $input-medium-float-line-height;
+      inset-inline-start: $input-float-prefix-focus-left;
     }
 
     &.sf-has-prefix {
@@ -153,6 +177,8 @@
     }
 
     &.sf-outline {
+      border-radius: $input-medium-outlined-border-radius;
+
       .sf-input,
       .sf-multiselect-values {
         padding: $input-medium-outlined-padding;
@@ -181,11 +207,13 @@
 
       &.sf-float-input:has(.sf-label-top) .sf-float-text {
         transform: $input-medium-outlined-float-focus-transition;
+        inset-inline-start: $input-outlined-float-focus-left;
       }
 
     }
 
     &.sf-filled {
+      border-radius: $input-medium-filled-border-radius;
       line-height: $input-medium-filled-line-height;
       font-size: $input-medium-filled-font-size;
 
@@ -211,6 +239,7 @@
       &:has(.sf-label-top) {
         .sf-float-text {
           transform: $input-medium-filled-float-focus-transition;
+          inset-inline-start: $input-filled-float-focus-left;
         }
       }
 
@@ -246,6 +275,10 @@
       margin-block: $input-close-icon-box-margin;
       position: relative;
       border: none;
+
+      &.sf-input-adornment-icon {
+        cursor: default;
+      }
     }
 
     .sf-clear-icon.sf-clear-icon-hide {
@@ -254,12 +287,15 @@
 
     &.sf-float-input {
       margin-top: $input-float-margin-top;
+      overflow-inline: visible;
 
       &:has(.sf-label-top) {
         .sf-float-text {
           font-size: $input-float-focus-font-size;
+          font-weight: $input-float-font-weight;
           transform: $input-float-focus-transition;
           line-height: $input-float-line-height;
+          inset-inline-start: $input-float-prefix-focus-left;
         }
       }
     }
@@ -277,7 +313,7 @@
       transition: 0.25s ease-in-out;
       inset-block-start: $input-float-top;
       letter-spacing: $input-float-text-letter-spacing;
-      inset-inline-start: $input-float-prefix-focus-left;
+      inset-inline-start: $input-float-left;
     }
 
     &.sf-has-prefix {
@@ -363,6 +399,7 @@
 
     &.sf-filled {
       border-radius: $input-filled-border-radius;
+      border-width: $input-filled-border-width;
       font-size: $input-filled-font-size;
       line-height: $input-filled-line-height;
 
@@ -398,6 +435,7 @@
       &:has(.sf-label-top) {
         .sf-float-text {
           transform: $input-filled-float-focus-transition;
+          inset-inline-start: $input-filled-float-focus-left
         }
       }
     }
@@ -415,6 +453,10 @@
     letter-spacing: inherit;
   }
 
+  .sf-multiselect-values {
+    padding: $input-padding;
+  }
+
   .sf-form-label {
     font-size: $input-form-label-font-size;
     line-height: $input-form-label-line-height;
@@ -425,5 +467,35 @@
   .sf-form-error {
     font-size: $input-form-error-font-size;
     color: $input-form-error-color;
+  }
+
+  .sf-helper-text {
+    font-weight: $input-helper-text-font-weight;
+    font-size: $input-helper-text-font-size;
+    line-height: $input-helper-text-line-height;
+    letter-spacing: $input-helper-text-letter-spacing;
+  }
+
+  .sf-helper-text-container {
+    overflow: hidden;
+  }
+
+  .sf-helper-text-on-focus {
+    transform: $input-helper-text-on-focus-transform;
+    transition: $input-helper-text-on-focus-transition;
+  }
+
+  .sf-helper-text-on-focus.sf-helper-text-focused {
+    transform: $input-helper-text-on-focused-transform;
+  }
+
+  .sf-input-group.sf-medium+.sf-helper-text-container .sf-helper-text {
+    font-size: $input-medium-helper-text-font-size;
+    line-height: $input-medium-helper-text-line-height;
+  }
+
+  .sf-input-group.sf-large+.sf-helper-text-container .sf-helper-text {
+    font-size: $input-large-helper-text-font-size;
+    line-height: $input-large-helper-text-line-height;
   }
 }

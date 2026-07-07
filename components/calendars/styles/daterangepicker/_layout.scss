@@ -17,6 +17,8 @@
   .sf-daterangepicker-header,
   .sf-daterangepicker-tab {
     padding: $daterangepicker-header-padding;
+    color: $daterangepicker-header-color;
+    background: $daterangepicker-header-bg-color;
   }
 
   .sf-daterangepicker-tab {
@@ -29,6 +31,7 @@
     flex-direction: column;
     text-align: center;
     color: $daterangepicker-count-color;
+    background: $daterangepicker-header-bg-color;
   }
 
   .sf-daterange-label {
@@ -52,6 +55,7 @@
     gap: $daterangepicker-dialog-header-gap;
     padding: $daterangepicker-footer-padding;
     clear: both;
+    background: $daterangepicker-footer-bg-color;
   }
 
   .sf-picker-popup {

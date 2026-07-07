@@ -1,3 +1,5 @@
+import { ConnectorType } from './enum';
+
 /**
  * Defines the appearance of the focus outline for interactive UI elements.
  */
@@ -7,7 +9,7 @@ export interface FocusOutlineProps {
      * Customizes the focus border color.
      * If not specified, the default focus border color is used.
      *
-     * @default null
+     * @default ''
      */
     color?: string;
 
@@ -55,4 +57,50 @@ export interface Animation {
      * @default 0
      */
     delay?: number;
+}
+
+/**
+ * Represents configuration options for connector lines in the chart.
+ */
+export interface ConnectorProps {
+
+    /**
+     * Specifies the type of connector line used in the chart.
+     * The available options are:
+     * - `Curve`: Renders a smooth curved connector line.
+     * - `Line`: Renders a straight connector line.
+     *
+     * @default 'Curve'
+     */
+    type?: ConnectorType;
+
+    /**
+     * Specifies the color of the connector line.
+     * Accepts any valid CSS color string (e.g., hex, rgba).
+     *
+     * @default ''
+     */
+    color?: string;
+
+    /**
+     * Specifies the width of the connector line in pixels.
+     *
+     * @default 1
+     */
+    width?: number;
+
+    /**
+     * Specifies the length of the connector line.
+     * Accepts CSS length values such as pixel values (e.g., `'100px'`) or percentage values (e.g., `'50%'`).
+     *
+     * @default ''
+     */
+    length?: string;
+
+    /**
+     * Specifies the dash pattern of the connector line.
+     *
+     * @default ''
+     */
+    dashArray?: string;
 }

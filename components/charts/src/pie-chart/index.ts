@@ -10,3 +10,4 @@ export * from './elements/PieChartDataLabel';
 export * from './user-interaction/PieChartTooltip';
 export * from './user-interaction/PieChartHighlight';
 export * from './user-interaction/PieChartSelection';
+export * from './chart-area/PieAnnotation';

@@ -5,12 +5,6 @@ $tooltip-wrapper-border-radius: $radius-4 !default;
 $tooltip-wrapper-max-width: calc(var(--sf-spacing) * 21.875) !default;
 $tooltip-wrapper-min-width: $spacing-30 !default;
 
-$tooltip-close-icon-border: 1px solid rgb($tooltip-text-color) !default;
-$tooltip-close-icon-border-radius: $radius-full !default;
-$tooltip-close-icon-box-shadow: $shadow-sm !default;
-$tooltip-close-icon-right: calc(var(--sf-spacing) * -0.625) !default;
-$tooltip-close-icon-top: calc(var(--sf-spacing) * -0.625) !default;
-$tooltip-close-icon-padding: $spacing-2 !default;
 $tooltip-close-icon-font-size: $font-size-sm !default;
 
 $tooltip-tip-directions: (
@@ -25,11 +19,9 @@ $tooltip-content-font-color: rgb($tooltip-text-color) !default;
 $tooltip-content-padding: $spacing-4 $spacing-8 !default;
 $tooltip-content-font-size: $font-size-xs !default;
 $tooltip-content-line-height: $line-height-xs !default;
+$tooltip-content-gap: $spacing-6;
 
 $tooltip-icon-color: rgb($tooltip-text-color) !default;
-$tooltip-icon-bg-color: rgb($tooltip-bg-color) !default;
-$tooltip-icon-hover-color: rgb($tooltip-bg-color) !default;
-$tooltip-icon-bg-hover: rgb($tooltip-text-color) !default;
 
 $tooltip-arrow-icon-positions: $spacing-16 !default;
 $tooltip-arrow-transparent-border: $spacing-8 solid transparent !default;

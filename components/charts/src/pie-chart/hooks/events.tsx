@@ -115,14 +115,6 @@ export function callChartEventHandlers(
         }
     }
 
-
-    // // Also call default handlers for backward compatibility
-    // if (chartId !== 'default' && chartEventHandlers['default'] &&
-    //     Object.prototype.hasOwnProperty.call(chartEventHandlers['default'], eventType)) {
-    //     for (const handler of chartEventHandlers['default'][eventType as string]) {
-    //         handler(e, chart, ...args);
-    //     }
-    // }
 }
 // For axis render version
 interface VersionInfo {
@@ -297,5 +289,38 @@ export const useLegendUpdateVersion: (chartId?: string) => VersionInfo = (chartI
         };
     }, []);
 
+    return versionInfo;
+};
+
+const pieAnnotationVersions: {[chartId: string]: number} = {};
+let pieAnnotationListeners: ((info: VersionInfo) => void)[] = [];
+export const useRegisterPieAnnotationRender : () => (chartId?: string) => void = () => {
+    return (chartId?: string) => {
+        const id: string = chartId as string;
+        if (!pieAnnotationVersions[id as string]) {
+            pieAnnotationVersions[id as string] = 0;
+        }
+        pieAnnotationVersions[id as string]++;
+        pieAnnotationListeners.forEach((fn: (info: VersionInfo) => void) => fn({version: pieAnnotationVersions[id as string], id}));
+    };
+};
+export const usePieAnnotationRenderVersion: (chartId?: string) => VersionInfo = (chartId?: string) => {
+    const id: string = chartId as string;
+    if (pieAnnotationVersions[id as string] === undefined) {
+        pieAnnotationVersions[id as string] = 0;
+    }
+    const [versionInfo, setVersionInfo] = useState<VersionInfo>({
+        version: pieAnnotationVersions[id as string] || 0,
+        id
+    });
+    useEffect(() => {
+        const updateVersion: (info: VersionInfo) => void = (info: VersionInfo) => {
+            setVersionInfo(info);
+        };
+        pieAnnotationListeners.push(updateVersion);
+        return () => {
+            pieAnnotationListeners = pieAnnotationListeners.filter((fn: (info: VersionInfo) => void) => fn !== updateVersion);
+        };
+    }, []);
     return versionInfo;
 };

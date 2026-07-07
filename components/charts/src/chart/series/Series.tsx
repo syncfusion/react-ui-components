@@ -3,13 +3,15 @@
  */
 import * as React from 'react';
 import { useContext, useEffect, useRef } from 'react';
-import { ChartDataLabelProps, ChartMarkerProps, ChartSeriesProps, SeriesProps, ChartErrorBarProps } from '../base/interfaces';
+import { ChartDataLabelProps, ChartMarkerProps, ChartSeriesProps, SeriesProps, ChartErrorBarProps, ChartSeriesLabelProps, ChartLastValueLabelProps } from '../base/interfaces';
 import { ChartContext } from '../layout/ChartProvider';
 import { defaultChartConfigs } from '../base/default-properties';
 import { ChartMarker } from './Marker';
 import { ChartErrorBar } from './ErrorBar';
+import { ChartLastValueLabel } from './ChartLastValueLabel';
 import { ChartTrendlineModel, SeriesProperties } from '../chart-area/chart-interfaces';
 import { ChartTrendline, ChartTrendlineCollection } from './Trendlines';
+import { ChartSeriesLabel } from './SeriesLabel';
 import { buildParetoSignature, handleParetoInGetSeries, handleParetoInDeepSignature } from '../utils/pareto';
 
 /**
@@ -35,7 +37,7 @@ export function pickPrimitiveProps(obj: ChartSeriesProperty): Partial<ChartSerie
  * Creates a replacer function for JSON.stringify that handles circular references.
  * Uses a WeakSet to track seen objects and avoid serializing circular structures.
  *
- * @returns {function} A replacer function that can be used with JSON.stringify.
+ * @returns {Function} A replacer function that can be used with JSON.stringify.
  * @private
  */
 export function getCircularReplacer(): (key: string, value: object | string | number | boolean | null) =>
@@ -143,6 +145,7 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
     const splineType: string = extractProperty(childArray, 'splineType');
     const legendShape: string = extractProperty(childArray, 'legendShape');
     const pointColorMapping: string = extractProperty(childArray, 'pointColorMapping');
+    const isClosedPath: string = extractProperty(childArray, 'isClosedPath');
 
     /**
      * String representation of marker configurations for all series.
@@ -206,15 +209,77 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
         })
     );
 
+    const seriesLabelSignature: string = JSON.stringify(
+        childArray.map((child: React.ReactNode) => {
+            if (
+                React.isValidElement(child) &&
+                child.type === ChartSeries &&
+                (child.props as ChartSeriesProperty).children
+            ) {
+                let slSignature: Partial<ChartSeriesLabelProps> = {};
+                React.Children.forEach((child.props as ChartSeriesProperty).children, (c: React.ReactNode) => {
+                    if (React.isValidElement(c)) {
+                        const type: React.ElementType = c.type as React.ElementType<keyof React.JSX.IntrinsicElements>;
+                        const isNamed: boolean =
+                            (typeof type === 'function') &&
+                            ('displayName' in type) &&
+                            ((type as { displayName?: string }).displayName === 'ChartSeriesLabel');
+
+                        if (c.type === ChartSeriesLabel || isNamed) {
+                            slSignature = {
+                                ...slSignature,
+                                ...(c.props as ChartSeriesLabelProps)
+                            };
+                        }
+                    }
+                });
+                return slSignature;
+            }
+            return null;
+        })
+    );
+
     // String representation of Pareto options (including nested marker and data label) for all series.
     const paretoSignature: string = buildParetoSignature(childArray);
+
+    // String representation of last value label configurations for all series.
+    // Captures full lastValueLabel object including nested properties (border, font, lineStyle).
+    const lastValueLabelSignature: string = JSON.stringify(
+        childArray.map((child: React.ReactNode) => {
+            if (
+                React.isValidElement(child) &&
+                child.type === ChartSeries &&
+                (child.props as ChartSeriesProperty).children
+            ) {
+                let lvlSignature: ChartLastValueLabelProps | null = null;
+                React.Children.forEach(
+                    (child.props as ChartSeriesProperty).children,
+                    (lvlChild: React.ReactNode) => {
+                        if (React.isValidElement(lvlChild)) {
+                            const type: React.ElementType = lvlChild.type as React.ElementType<keyof React.JSX.IntrinsicElements>;
+                            const isNamedComponent: boolean =
+                                (typeof type === 'function') &&
+                                ('displayName' in type) &&
+                                ((type as { displayName?: string }).displayName === 'ChartLastValueLabel');
+                            if (lvlChild.type === ChartLastValueLabel || isNamedComponent) {
+                                lvlSignature = { ...(lvlChild.props as ChartLastValueLabelProps) };
+                            }
+                        }
+                    }
+                );
+                return lvlSignature;
+            }
+            return null;
+        })
+    );
 
     /**
      * Extracts and processes the series array from child components.
      * This core method transforms React component hierarchy into a data structure
      * that can be consumed by the chart rendering engine.
+     *
      * @private
-     * @returns {Series[]} Array of processed Series objects ready for rendering.
+     * @returns {ChartSeriesProps[]} Array of processed Series objects ready for rendering.
      */
     const getSeriesArray: () => ChartSeriesProps[] = (): ChartSeriesProps[] => {
         return childArray
@@ -247,6 +312,18 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
                     Object.assign(seriesProps, restProps);
                 } else {
                     Object.assign(seriesProps, childProps);
+                }
+
+                // BoxAndWhisker settings for default value preserved
+                if (childProps.boxAndWhiskerSettings) {
+                    seriesProps.boxAndWhiskerSettings = {
+                        ...defaultChartConfigs.ChartSeries.boxAndWhiskerSettings,
+                        ...childProps.boxAndWhiskerSettings
+                    };
+                } else if (defaultChartConfigs.ChartSeries.boxAndWhiskerSettings) {
+                    seriesProps.boxAndWhiskerSettings = {
+                        ...defaultChartConfigs.ChartSeries.boxAndWhiskerSettings
+                    };
                 }
 
                 // Process marker and data label configuration
@@ -319,6 +396,66 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
                                     }
                                 };
                                 (seriesProps as SeriesProperties).errorBar = mergedErrorBar as ChartErrorBarProps;
+                            }
+                        }
+
+                        // Process last value label configuration
+                        if (React.isValidElement(seriesChild)) {
+                            const type: React.ElementType = seriesChild.type as React.ElementType<keyof React.JSX.IntrinsicElements>;
+                            const isLastValueLabelNamed: boolean =
+                                (typeof type === 'function') &&
+                                ('displayName' in type) &&
+                                ((type as { displayName?: string }).displayName === 'ChartLastValueLabel');
+
+                            if (seriesChild.type === ChartLastValueLabel || isLastValueLabelNamed) {
+                                const lvlProps: ChartLastValueLabelProps = seriesChild.props as ChartLastValueLabelProps;
+                                const defaultLastValueLabel: ChartLastValueLabelProps | undefined =
+                                    (defaultChartConfigs.ChartSeries as Partial<SeriesProperties>)
+                                        .lastValueLabel as ChartLastValueLabelProps | undefined;
+                                // Deep-merge to ensure nested properties fall back to defaults
+                                const mergedLastValueLabel: ChartLastValueLabelProps = {
+                                    ...(defaultLastValueLabel || {}),
+                                    ...lvlProps,
+                                    border: {
+                                        ...(defaultLastValueLabel?.border || {}),
+                                        ...(lvlProps?.border || {})
+                                    },
+                                    font: {
+                                        ...(defaultLastValueLabel?.font || {}),
+                                        ...(lvlProps?.font || {})
+                                    },
+                                    lineStyle: {
+                                        ...(defaultLastValueLabel?.lineStyle || {}),
+                                        ...(lvlProps?.lineStyle || {})
+                                    }
+                                };
+                                (seriesProps as SeriesProperties).lastValueLabel = mergedLastValueLabel as ChartLastValueLabelProps;
+                            }
+                        }
+
+                        // Process series label configuration
+                        if (React.isValidElement(seriesChild)) {
+                            const type: React.ElementType = seriesChild.type as React.ElementType<keyof React.JSX.IntrinsicElements>;
+                            const isSeriesLabelNamed: boolean = (typeof type === 'function') && ('displayName' in type) &&
+                                ((type as { displayName?: string }).displayName === 'ChartSeriesLabel');
+                            if (seriesChild.type === ChartSeriesLabel || isSeriesLabelNamed) {
+                                const seriesLabelProps: ChartSeriesLabelProps = seriesChild.props as ChartSeriesLabelProps;
+                                const defaultSeriesLabel: ChartSeriesLabelProps =
+                                    (defaultChartConfigs.ChartSeries as Partial<SeriesProperties>).seriesLabel as ChartSeriesLabelProps;
+                                // Deep-merge series label props with defaults
+                                const mergedSeriesLabel: ChartSeriesLabelProps = {
+                                    ...(defaultSeriesLabel),
+                                    ...(seriesLabelProps),
+                                    font: {
+                                        ...(defaultSeriesLabel?.font),
+                                        ...(seriesLabelProps?.font)
+                                    },
+                                    border: {
+                                        ...(defaultSeriesLabel?.border),
+                                        ...(seriesLabelProps?.border)
+                                    }
+                                } as ChartSeriesLabelProps;
+                                (seriesProps as SeriesProperties).seriesLabel = mergedSeriesLabel;
                             }
                         }
 
@@ -439,7 +576,7 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
                                                     }
 
                                                     // Add the trendline to the series
-                                                    (seriesProps).trendlines!.push(
+                                                    ((seriesProps).trendlines as  ChartTrendlineModel[]).push(
                                                         mergedTrendlineConfig as ChartTrendlineModel);
                                                 }
                                             }
@@ -516,6 +653,19 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
                             if (seriesChild.type === ChartErrorBar || isErrorBarNamed) {
                                 const ebProps: ChartErrorBarProps = { ...seriesChild.props as ChartErrorBarProps };
                                 (seriesPropsSignature as SeriesProperties).errorBar = ebProps;
+                            }
+                        }
+
+                        // Capture last value label props in deep signature
+                        if (React.isValidElement(seriesChild)) {
+                            const type: React.ElementType = seriesChild.type as React.ElementType<keyof React.JSX.IntrinsicElements>;
+                            const isLastValueLabelNamed: boolean =
+                                (typeof type === 'function') &&
+                                ('displayName' in type) &&
+                                ((type as { displayName?: string }).displayName === 'ChartLastValueLabel');
+                            if (seriesChild.type === ChartLastValueLabel || isLastValueLabelNamed) {
+                                const lvlProps: ChartLastValueLabelProps = { ...seriesChild.props as ChartLastValueLabelProps };
+                                (seriesPropsSignature as SeriesProperties).lastValueLabel = lvlProps;
                             }
                         }
 
@@ -608,7 +758,7 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
                                                     }
 
                                                     // Add trendline to signature
-                                                    (seriesPropsSignature).trendlines!.push(
+                                                    (seriesPropsSignature.trendlines as  ChartTrendlineModel[]).push(
                                                         trendlinePropsForSignature as ChartTrendlineModel);
                                                 }
                                             }
@@ -777,12 +927,15 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
         visible,
         markerSignature,
         errorBarSignature,
+        seriesLabelSignature,
+        lastValueLabelSignature,
         trendlineSignature,
         deepSignature,
         splineType,
         legendShape,
         pointColorMapping,
-        paretoSignature
+        paretoSignature,
+        isClosedPath
     ]);
 
     // The component itself doesn't render anything visible
@@ -801,7 +954,7 @@ type ChartSeriesProperty = ChartSeriesProps & { children?: React.ReactNode };
  *
  * @param {ChartSeriesProps} props - The properties for the chart series.
  * @param {React.ReactNode} [props.children] - Optional child components for this series.
- * @returns {JSX.Element} A React component that renders its children.
+ * @returns {Element} A React component that renders its children.
  */
 export const ChartSeries: React.FC<ChartSeriesProperty> = ({ children }: ChartSeriesProperty) => {
     return <>{children}</>;
