@@ -10,12 +10,17 @@ const CLS_SPACER: string = 'sf-toolbar-spacer';
  * The ToolbarSpacer component is used to render an adjustable space within a Toolbar.
  *
  * ```typescript
- * <Toolbar>
- *   <ToolbarItem><Button>New</Button></ToolbarItem>
- *   <ToolbarItem><Button>Open</Button></ToolbarItem>
- *   <ToolbarSpacer />
- *   <ToolbarItem><Button>Save</Button></ToolbarItem>
- * </Toolbar>
+ * import { Toolbar, ToolbarItem, ToolbarSpacer } from '@syncfusion/react-navigations';
+ * export default function App() {
+ *     return (
+ *         <Toolbar>
+ *             <ToolbarItem><button>New</button></ToolbarItem>
+ *             <ToolbarItem><button>Open</button></ToolbarItem>
+ *             <ToolbarSpacer />
+ *             <ToolbarItem><button>Save</button></ToolbarItem>
+ *         </Toolbar>
+ *     );
+ * }
  * ```
  */
 export interface ToolbarSpacerProps {

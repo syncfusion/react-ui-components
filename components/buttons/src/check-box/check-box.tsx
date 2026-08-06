@@ -177,7 +177,9 @@ type ICheckboxProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | '
  * ```typescript
  * import { Checkbox } from "@syncfusion/react-buttons";
  *
- * <Checkbox checked={true} label="Accept Terms and Conditions" />
+ * export default function App() {
+ *       <Checkbox checked={true} label="Accept Terms and Conditions" />
+ * }
  * ```
  */
 

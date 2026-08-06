@@ -36,13 +36,14 @@ const LABEL_CLASS_NAME: string = 'sf-label';
 const SWITCH_LABEL_BASE: string = 'sf-switch-label';
 
 /**
- * The Switch component is a binary toggle control for settings and standalone options
- * that take immediate effect. It follows the Material Design 3 specification.
+ * The Switch component is a binary toggle component for managing boolean values with support for checked states, labels, and interaction events. It is commonly used in settings, preferences, and standalone options to represent and update on/off states.
  *
  * ```typescript
  * import { Switch } from "@syncfusion/react-buttons";
  *
- * <Switch checked={true} label="Dark mode" />
+ * export default function App() {
+ *       <Switch checked={true} label="Dark mode" />
+ * }
  * ```
  */
 export const Switch: ForwardRefExoticComponent<ISwitchProps & RefAttributes<ISwitch>> =

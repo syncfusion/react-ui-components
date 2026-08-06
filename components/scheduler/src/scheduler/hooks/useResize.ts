@@ -2,7 +2,9 @@ import { useCallback, useRef, useEffect } from 'react';
 import { CSS_CLASSES } from '../common/constants';
 import { useSchedulerPropsContext } from '../context/scheduler-context';
 import { EventModel, SchedulerResizeEvent } from '../types/scheduler-types';
-import { useProviderContext, Position, EventHandler, extend } from '@syncfusion/react-base';
+import {
+    useProviderContext, Position, EventHandler, extend, initializeTelemetryFeature
+} from '@syncfusion/react-base';
 import { useSchedulerEventsContext } from '../context/scheduler-events-context';
 import { DateService, MINUTES_PER_HOUR } from '../services/DateService';
 import { Point, ProcessedEventsData } from '../types/internal-interface';
@@ -61,6 +63,7 @@ UseResizeResult {
     }> = useRef<{ startTime: Date; endTime: Date } | null>(null);
 
     useEffect(() => {
+        initializeTelemetryFeature('Resize', 'schedule');
         return () => {
             clearProperties();
             resizeInfo.current = null;

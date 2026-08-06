@@ -91,7 +91,7 @@ export const useMenu: (args: UseMenuArgs) => UseMenuReturn = (args: UseMenuArgs)
     const menuItemsRef: React.RefObject<Map<string, MenuItemRegistration>> = useRef<Map<string, MenuItemRegistration>>(new Map());
     const lastPopupPositionRef: React.RefObject<{ x: number; y: number } | null> = useRef<{ x: number; y: number } | null>(null);
     const { dir } = useProviderContext();
-    const { toLocalPosition, toPagePosition } = useMenuPosition({ parentRef, isPopup: !isEmbedded || submenuRenderMode === 'portal' });
+    const { toLocalPosition, toPagePosition } = useMenuPosition({ parentRef, isPopup: !isEmbedded || submenuRenderMode === 'Portal' });
 
     const closeAllSubmenus: () => void = useCallback((): void => {
         setOpenSubmenus([]);
@@ -183,7 +183,7 @@ export const useMenu: (args: UseMenuArgs) => UseMenuReturn = (args: UseMenuArgs)
         let top: number = popupPosition.y;
         if (isEmbedded) {
             const isMenubarRootSubmenu: boolean = orientation === Orientation.Horizontal && parentIndexPath.length === 1;
-            if (submenuRenderMode === 'portal' ) {
+            if (submenuRenderMode === 'Portal' ) {
                 const x: string = isMenubarRootSubmenu ? 'left' : dir === 'rtl' ? 'left' : 'right';
                 const y: string = isMenubarRootSubmenu ? 'bottom' : 'top';
                 const offset: OffsetPosition = calculatePosition(target, x, y);

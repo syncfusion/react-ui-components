@@ -44,7 +44,7 @@ export default function App() {
 
 **Resources**
 
-- [Scheduler Demo/Docs](https://react.syncfusion.com/react-ui/scheduler/overview)
+- [Scheduler Demo/Docs](https://react.syncfusion.com/scheduler/overview)
 - [Scheduler API](https://react-api.syncfusion.com/scheduler/overview)
 
 <p align="center">
@@ -62,7 +62,7 @@ Product support is available through following mediums.
 * Live chat
 
 ## Changelog
-Check the changelog [here](https://github.com/syncfusion/react-ui-components/blob/master/components/scheduler/CHANGELOG.md). Get minor improvements and bug fixes every week to stay up to date with frequent updates.
+Check the changelog [here](https://github.com/syncfusion/react-ui-components/blob/master/components/grid/CHANGELOG.md). Get minor improvements and bug fixes every week to stay up to date with frequent updates.
 
 ## License and copyright
 

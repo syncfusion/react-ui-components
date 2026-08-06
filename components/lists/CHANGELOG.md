@@ -1,6 +1,6 @@
 # Changelog
 
-## 33.1.44 (2026-03-16)
+## 34.1.29 (2026-07-06)
 
 ### ListView
 
@@ -11,7 +11,7 @@ The React ListView component renders a flexible, accessible list UI that support
 - **Flexible Data Sources:** Accepts arrays of primitives/objects or a `DataManager` with `Query` support for remote operations.
 - **Field Mapping:** `fields` mapping merges with sensible defaults to map `id`, `text`, `icon`, `imageUrl`, `groupBy`, and more.
 - **Templates:** `itemTemplate`, `groupTemplate`, `headerTemplate`, and `footerTemplate` for complete visual customization.
-- **Grouping & Sorting:** Group items by a field and control sort behavior with `sortOrder` and `fields.sortBy`.
+- **Grouping & Sorting:** Group items by a field and control sort behaviour with `sortOrder` and `fields.sortBy`.
 - **Virtualization & Performance:** Windowed rendering with `virtualization` props and scroll request callback for very large data sets.
 - **Data Events:** `onDataRequest` and `onDataLoad` hooks for request/response lifecycle; `onScroll` for virtualization-aware scrolling.
 - **Accessibility & RTL:** Supports provider `dir` (RTL) and includes focus/interaction-friendly structure.

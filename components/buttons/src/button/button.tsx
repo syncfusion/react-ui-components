@@ -99,7 +99,9 @@ type IButtonProps = IButton & ButtonHTMLAttributes<HTMLButtonElement>;
  * ```typescript
  * import { Button, Color } from '@syncfusion/react-buttons';
  *
- * <Button color={Color.Success}>Submit</Button>
+ * export default function App() {
+ *       <Button color={Color.Success}>Submit</Button>
+ * }
  * ```
  */
 export const Button: ForwardRefExoticComponent<IButtonProps & RefAttributes<IButton>> =

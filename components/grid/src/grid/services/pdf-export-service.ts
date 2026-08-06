@@ -3,6 +3,8 @@ import { PdfExportSettings, PdfExportResult, UseGridPdfExportOptions, PdfExportR
 import { ColumnProps } from '../types/column.interfaces';
 import { UseDataResult } from '../types/interfaces';
 import { GridRef } from '../types/grid.interfaces';
+import { GroupedData } from '../types/grouping.interfaces';
+import { getGroupLayoutFlattedData, isGroupedData } from '../utils/utils';
 
 // PDF Export Constants
 const PDF_RANGE_ALL: PdfExportRange = 'All';
@@ -20,13 +22,16 @@ const PDF_EXPORT_CANCELLED_ERROR: string = 'PDF export operation cancelled by on
  * @template T - The type of data records
  * @param {PdfExportSettings<T>} config - The PDF export configuration settings
  * @param {number} dataLength - The length of the data to be exported
+ * @param {boolean} enableDevMode - Flag indicating if development mode is enabled
  * @returns {void}
  */
-function validateMaxRowsThreshold<T>(config: PdfExportSettings<T>, dataLength: number): void {
+function validateMaxRowsThreshold<T>(config: PdfExportSettings<T>, dataLength: number, enableDevMode: boolean): void {
     if (config.maxRowsWarningThreshold && dataLength > config.maxRowsWarningThreshold) {
-        throw new Error(
-            `PDF Export service: Data size (${dataLength} rows) exceeds warning threshold (${config.maxRowsWarningThreshold} rows).`
-        );
+        const message: string = `PDF Export service: Data size (${dataLength} rows) exceeds warning threshold (${config.maxRowsWarningThreshold} rows).`;
+        if (enableDevMode) {
+            console.warn(message);
+            return;
+        }
     }
 }
 
@@ -111,13 +116,15 @@ export async function pdfExportService<T>(
     };
 
     const config: PdfExportSettings<T> = { ...defaultConfig, ...userConfig };
+    const enableDevMode: boolean = options.gridRef?.current?.enableDevMode ?? true;
 
     try {
         // Extract data based on range configuration
         let dataSource: T[] = await extractData(options, config);
 
-        // Get grid column definitions
-        const gridColumns: ColumnProps[] = options.getColumns?.() || options.gridRef.current.columns;
+        // Get grid column definitions using visible columns by default.
+        const gridColumns: ColumnProps[] = options.gridRef.current.getVisibleColumns?.() || options.getColumns?.() ||
+            options.gridRef.current.columns;
 
         // Merge grid columns with export column customizations
         let columns: ColumnProps[] = mergeExportColumns(
@@ -137,28 +144,65 @@ export async function pdfExportService<T>(
 
         // Check if export was cancelled
         if (beforeEvent.cancel) {
-            throw new Error(PDF_EXPORT_CANCELLED_ERROR);
+            const cancelledError: Error = new Error(PDF_EXPORT_CANCELLED_ERROR);
+            if (enableDevMode) {
+                console.warn(cancelledError.message);
+            }
+
+            config.onAfterPdfExport?.({
+                config,
+                success: false,
+                error: cancelledError
+            });
+
+            return {
+                success: false,
+                error: cancelledError
+            };
         }
 
         // Use modified data and columns from event if they were changed
         dataSource = beforeEvent.dataSource ?? dataSource;
         columns = beforeEvent.columns ?? columns;
 
+        const isGroupingEnabled: boolean = options.gridRef.current?.groupSettings?.enabled &&
+            options.gridRef.current?.groupSettings?.columns?.length > 0;
+        const groupingSettings: { enabled: boolean; columns: string[]; captionFormat: 'verbose' | 'compact' } | undefined =
+            isGroupingEnabled ? {
+                enabled: true,
+                columns: options.gridRef.current?.groupSettings?.columns ? [...options.gridRef.current.groupSettings.columns] : [],
+                captionFormat: options.gridRef.current?.groupSettings?.captionFormat || 'compact'
+            } : undefined;
+
+        let exportDataSource: T[] = dataSource;
+        if (groupingSettings && Array.isArray(dataSource) && dataSource.some((item: unknown) => isGroupedData(item))) {
+            const flattenResult: { currentViewData: Array<GroupedData<T> | T> } = getGroupLayoutFlattedData(
+                dataSource as GroupedData<T>[],
+                () => true,
+                options.gridRef.current?.groupSettings || {},
+                new Set(),
+                ''
+            );
+            exportDataSource = flattenResult.currentViewData as T[];
+        }
+
         // Validate data size after modification
-        validateMaxRowsThreshold(config, dataSource.length);
+        validateMaxRowsThreshold(config, exportDataSource.length, enableDevMode);
 
         // Generate PDF and trigger download
         const exportResult: PdfExportResult = await pdfWindowManager(
-            dataSource,
+            exportDataSource,
             columns,
-            config
+            config,
+            groupingSettings
         );
 
         // Trigger after export callback - only for successful exports
         if (exportResult.success) {
             config.onAfterPdfExport?.({
                 config,
-                success: true
+                success: true,
+                promise: exportResult.promise
             });
         }
 
@@ -166,6 +210,10 @@ export async function pdfExportService<T>(
     } catch (error) {
         // Trigger after export callback with error
         const errorObj: Error = error instanceof Error ? error : new Error(String(error));
+        if (enableDevMode) {
+            console.warn('PDF export failed:', errorObj);
+        }
+
         config.onAfterPdfExport?.({
             config,
             success: false,

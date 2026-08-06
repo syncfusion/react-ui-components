@@ -27,29 +27,32 @@ type ContextMenuComponentProps = ContextMenuProps & Omit<HTMLAttributes<HTMLDivE
  * A context menu component that displays options when triggered by a right-click or tap-hold action.
  * Supports nested submenus, keyboard navigation, icons, and various animation effects.
  *
- * ```tsx
- * import { ContextMenu, MenuItem, MenuItemLabel, MenuItemIcon } from "@syncfusion/react-navigations";
+ * ```typescript
+ * import { ContextMenu, MenuItem, MenuItemLabel, MenuItemIcon } from '@syncfusion/react-navigations';
+ * import { useRef } from 'react';
  *
- * const targetRef = useRef<HTMLDivElement>(null);
- * return (
- *   <div ref={targetRef}>
- *     <button>Right Click Me</button>
- *     <ContextMenu targetRef={targetRef as RefObject<HTMLElement>}>
- *       <MenuItem>
- *         <MenuItemIcon><CutIcon /></MenuItemIcon>
- *         <MenuItemLabel>Cut</MenuItemLabel>
- *       </MenuItem>
- *       <MenuItem>
- *         <MenuItemIcon><CopyIcon /></MenuItemIcon>
- *         <MenuItemLabel>Copy</MenuItemLabel>
- *       </MenuItem>
- *       <MenuItem>
- *         <MenuItemIcon><RenameIcon /></MenuItemIcon>
- *         <MenuItemLabel>Rename</MenuItemLabel>
- *       </MenuItem>
- *     </ContextMenu>
- *   </div>
- * );
+ * export default function App() {
+ *     const targetRef = useRef<HTMLDivElement>(null);
+ *     return (
+ *         <div ref={targetRef}>
+ *             <button>Right Click Me</button>
+ *             <ContextMenu targetRef={targetRef}>
+ *                 <MenuItem>
+ *                     <MenuItemIcon><CutIcon /></MenuItemIcon>
+ *                     <MenuItemLabel>Cut</MenuItemLabel>
+ *                 </MenuItem>
+ *                 <MenuItem>
+ *                     <MenuItemIcon><CopyIcon /></MenuItemIcon>
+ *                     <MenuItemLabel>Copy</MenuItemLabel>
+ *                 </MenuItem>
+ *                 <MenuItem>
+ *                     <MenuItemIcon><RenameIcon /></MenuItemIcon>
+ *                     <MenuItemLabel>Rename</MenuItemLabel>
+ *                 </MenuItem>
+ *             </ContextMenu>
+ *         </div>
+ *     );
+ * }
  * ```
  */
 export const ContextMenu: ForwardRefExoticComponent<ContextMenuComponentProps & RefAttributes<IContextMenu>> =

@@ -22,7 +22,7 @@ import { QuickInfoPopup } from './components/popup/quick-info-popup';
 import { MorePopup, IMorePopup } from './components/popup/more-popup';
 import { CSS_CLASSES } from './common/constants';
 import { useSchedulerLocalization } from './common/locale';
-import { useProviderContext, preRender } from '@syncfusion/react-base';
+import { useProviderContext, preRender, initializeTelemetry } from '@syncfusion/react-base';
 import useKeyboard from './hooks/useKeyboard';
 import { CloneEventProvider } from './context/clone-event-context';
 import { CloneEvent } from './components/clone-event';
@@ -120,13 +120,17 @@ export interface IScheduler extends SchedulerProps {
  * ```typescript
  * import { Scheduler, DayView, WeekView, WorkWeekView, MonthView, AgendaView } from '@syncfusion/react-scheduler';
  *
- * <Scheduler>
- *   <DayView />
- *   <WeekView />
- *   <WorkWeekView />
- *   <MonthView />
- *   <AgendaView />
- * </Scheduler>
+ * export default function App() {
+ *     return (
+ *         <Scheduler>
+ *             <DayView />
+ *             <WeekView />
+ *             <WorkWeekView />
+ *             <MonthView />
+ *             <AgendaView />
+ *         </Scheduler>
+ *     );
+ * }
  * ```
  */
 export const Scheduler: ForwardRefExoticComponent<SchedulerProps & RefAttributes<IScheduler>> =
@@ -432,6 +436,7 @@ export const Scheduler: ForwardRefExoticComponent<SchedulerProps & RefAttributes
         }, [APIs]);
 
         useEffect(() => {
+            initializeTelemetry('schedule');
             preRender('schedule');
         }, []);
 

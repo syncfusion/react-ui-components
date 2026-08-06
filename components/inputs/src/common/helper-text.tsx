@@ -16,21 +16,21 @@ const DIRECTION_CLASS_MAP: Record<string, string> = {
 
 export interface HelperTextProps {
     /**
-     * The helper text content to display below the input.
+     * Specifies the helper text content to display below the input.
      *
      * @default -
      */
     helperText?: ReactNode;
 
     /**
-     * If true, helper text is only visible when the input is focused.
+     * Specifies whether the helper text is only visible when the input is focused.
      *
      * @default false
      */
     helperTextOnFocus?: boolean;
 
     /**
-     * Passed by the parent component to indicate current focus state of the input.
+     * Specifies the current focus state of the input, passed by the parent component.
      *
      * @default false
      * @private
@@ -38,7 +38,7 @@ export interface HelperTextProps {
     isFocused?: boolean;
 
     /**
-     * Controls horizontal alignment of the helper text below the input.
+     * Specifies the horizontal alignment of the helper text below the input.
      *
      * @default 'Left'
      */

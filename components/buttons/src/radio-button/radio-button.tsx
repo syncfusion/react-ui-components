@@ -98,7 +98,9 @@ type IRadioButtonProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' 
  * ```typescript
  * import { RadioButton } from "@syncfusion/react-buttons";
  *
- * <RadioButton checked={true} label="Choose this option" name="choices" />
+ * export default function App() {
+ *       <RadioButton checked={true} label="Choose this option" name="choices" />
+ * }
  * ```
  */
 export const RadioButton: ForwardRefExoticComponent<IRadioButtonProps & RefAttributes<IRadioButton>> =
@@ -211,8 +213,11 @@ export const RadioButton: ForwardRefExoticComponent<IRadioButtonProps & RefAttri
                     {...domProps}
                 />
                 <label className={`sf-radio-label sf-control sf-radio-${size.toLowerCase().substring(0, 2)} ${labelBefore ? 'sf-right' : ''} ${labelBottom ? 'sf-bottom' : ''} ${isFocused ? 'sf-focus' : ''} ${rtlClass}`} htmlFor={inputId}>
-                    <span ref={rippleContainerRef} className="sf-ripple-container" >
+                    <span ref={rippleContainerRef} className="sf-ripple-container sf-content-center" >
                         {ripple && !disabled && <Ripple />}
+                        <span className="sf-radio-outer sf-content-center">
+                            <span className="sf-radio-inner" />
+                        </span>
                     </span>
                     <span className="sf-label">{label}</span>
                 </label>

@@ -4,6 +4,11 @@
 
 @include export-module('radiobutton-layout') {
 
+  .sf-radio-wrapper {
+    vertical-align: middle;
+    display: inline-flex;
+  }
+
   .sf-radio-label {
     color: $radio-btn-font-color;
     display: flex;
@@ -14,12 +19,19 @@
     line-height: normal;
     user-select: none;
     cursor: pointer;
-    &::before,
-    &::after {
+
+    .sf-radio-outer {
+      flex-shrink: 0;
       border: $radio-btn-border;
+      border-color: $radio-btn-border-color;
       border-radius: $radio-btn-border-radius;
-      box-sizing: border-box;
-      content: '';
+      background-color: $radio-btn-background-color;
+      position: relative;
+    }
+
+    .sf-radio-inner {
+      border-radius: $radio-btn-border-radius;
+      transform: scale(0);
       position: absolute;
     }
 
@@ -29,29 +41,33 @@
   }
 
   .sf-radio-label {
-    &::before {
-      border-color: $radio-btn-checked-border-color;
+    width: 100%;
+    &.sf-right {
+      flex-direction: row-reverse;
+    }
+    
+    &.sf-bottom {
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    &:hover {
+      .sf-ripple-container {
+        background: $radio-btn-checked-ripple-bgcolor;
+      }
     }
   }
 
   .sf-radio:checked {
     +label {
-      &::before {
+      .sf-radio-outer {
         background-color: $radio-btn-outer-checked-bg-color;
         border-color: $radio-btn-outer-checked-color;
       }
-      &::after {
+      .sf-radio-inner {
         background-color: $radio-btn-checked-color;
-        color: $radio-btn-checked-color;
-        transform: scale(1);
-      }
-    }
-  }
-
-  .sf-radio-label {
-    &:hover {
-      .sf-ripple-container {
-        background: $radio-btn-checked-ripple-bgcolor;
+        width: 100%;
+        height: 100%;
       }
     }
   }
@@ -62,16 +78,13 @@
     opacity: $radio-btn-opacity;
     width: 1px;
     +label {
-      &::before {
+      .sf-radio-outer {
         background-color: $radio-btn-background-color;
         border-color: $radio-btn-border-color;
       }
-      &::after {
-        transform: scale(0);
-      }
       & .sf-ripple-container {
         border-radius: $radio-btn-border-radius;
-        position: absolute;
+        position: relative;
         z-index: 1;
       }
     }
@@ -80,14 +93,14 @@
         cursor: default;
         pointer-events: none;
         opacity: $radio-btn-disabled-opacity;
-        &::before {
+        .sf-radio-outer {
           background-color: $radio-btn-disabled-background-color;
           border-color: $radio-btn-disabled-border-color;
         }
         & .sf-ripple-container {
           background-color: transparent;
 
-          &::after {
+          .sf-radio-inner {
             background-color: transparent;
           }
         }
@@ -98,7 +111,7 @@
     }
     &:active, &:focus {
       +label {
-        &::before {
+        .sf-radio-outer {
           box-shadow: $radio-pressed-box-shadow;
           border-color: $radio-pressed-border-color;
         }
@@ -106,7 +119,7 @@
     }
     &:focus-visible {
       +label {
-        &::before {
+        .sf-radio-outer {
           box-shadow: $radio-keyboard-focus-box-shadow;
         }
       }
@@ -117,23 +130,10 @@
   @include radio-base(
     $radio-btn-font-size,
     $radio-btn-line-height,
-    $radio-btn-padding-left,
     $radio-btn-height,
-    $radio-btn-icon-height,
-    $radio-btn-icon-left,
     $radio-btn-ripple-size,
-    $radio-btn-ripple-left-position
-  );
-
-  &.sf-bottom .sf-label {
-    padding-top: $radio-btn-medium-bottom-padding-top;
-    padding-inline-start: $radio-btn-bottom-padding-left;
-  }
-
-  @include radio-orientation(
-    $radio-btn-padding-left,
-    $radio-btn-icon-left,
-    $radio-btn-ripple-left-position
+    $radio-btn-scale,
+    $radio-btn-gap
   );
 }
 
@@ -141,23 +141,10 @@
   @include radio-base(
     $radio-btn-small-font-size,
     $radio-btn-small-line-height,
-    $radio-btn-small-padding,
     $radio-btn-small-height,
-    $radio-btn-small-icon-height,
-    $radio-btn-small-icon-left,
     $radio-btn-small-ripple-Width,
-    $radio-btn-small-ripple-position
-  );
-
-  &.sf-bottom .sf-label {
-    padding-top: $radio-btn-small-bottom-padding-top;
-    padding-inline-start: $radio-btn-bottom-padding-left;
-  }
-
-  @include radio-orientation(
-    $radio-btn-small-padding,
-    $radio-btn-small-icon-left,
-    $radio-btn-small-ripple-position
+    $radio-btn-small-scale,
+    $radio-btn-small-gap
   );
 }
 
@@ -165,35 +152,22 @@
   @include radio-base(
     $radio-btn-large-font-size,
     $radio-btn-line-height,
-    $radio-btn-large-padding,
     $radio-btn-large-height,
-    $radio-btn-large-icon-height,
-    $radio-btn-large-icon-left,
     $radio-btn-large-ripple-size,
-    $radio-btn-large-ripple-left-position
-  );
-
-  &.sf-bottom .sf-label {
-    padding-top: $radio-btn-medium-bottom-padding-top;
-    padding-inline-start: $radio-btn-bottom-padding-left;
-  }
-
-  @include radio-orientation(
-    $radio-btn-large-padding,
-    $radio-btn-large-icon-left,
-    $radio-btn-large-ripple-left-position
+    $radio-btn-large-scale,
+    $radio-btn-large-gap
   );
 }
 
 
   @each $variant, $colors in $radio-variants {
     .sf-radio-#{$variant} {
-      .sf-radio:checked + label::after {
+      .sf-radio:checked + label .sf-radio-inner {
         background-color: map.get($colors, bg-inner);
         border-color: map.get($colors, border-inner);
       }
 
-      .sf-radio:checked + label::before {
+      .sf-radio:checked + label .sf-radio-outer {
         border-color: map.get($colors, border-outer);
         background-color: map.get($colors, bg-outer);
       }
@@ -204,7 +178,7 @@
       .sf-radio{
         &:active, &:focus {
           +label {
-            &::before {
+            .sf-radio-outer {
               box-shadow: map.get($colors, pressed-box-shadow);
               border-color: map.get($colors, pressed-border-color);
             }
@@ -212,7 +186,7 @@
         }
         &:focus-visible {
           +label {
-            &::before {
+            .sf-radio-outer {
               box-shadow: map.get($colors, focus-box-shadow);
             }
           }

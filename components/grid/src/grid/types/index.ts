@@ -20,3 +20,4 @@ export * from './print.interfaces';
 export * from './pdf-export.interfaces';
 export * from './master-detail';
 export * from './grouping.interfaces';
+export * from './excel-export.interfaces';

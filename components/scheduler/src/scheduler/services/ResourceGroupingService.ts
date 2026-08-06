@@ -3,6 +3,8 @@ import { CellData } from '../types/internal-interface';
 
 /**
  * Represents a single resource in the hierarchy.
+ *
+ * @private
  */
 export interface ResourceLevel {
     /**
@@ -48,6 +50,8 @@ export interface ResourceLevel {
 
 /**
  * Metadata for resource grouping configuration.
+ *
+ * @private
  */
 export interface ResourceGroupingMetadata {
     /**
@@ -284,6 +288,8 @@ export class ResourceGroupingService {
      * @param {Date[] | CellData[]} slots - Generic slot data (Date objects OR weekday slots with CellData)
      * @param {ResourceLevel[]} [leafResources] - Pre-calculated leaf resources (avoids recalculation)
      * @returns {ColumnLevel[]} Hierarchical column level structure for rendering
+     *
+     * @private
      */
     static generateColumnLevels(
         resourceTree: ResourceLevel[],

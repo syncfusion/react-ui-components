@@ -1,5 +1,7 @@
 import { ForwardedRef, RefObject, useCallback, useEffect, useMemo, useRef } from 'react';
-import { useDraggable, useProviderContext, Touch, HelperEvent, isNullOrUndefined } from '@syncfusion/react-base';
+import {
+    useDraggable, useProviderContext, Touch, HelperEvent, isNullOrUndefined, initializeTelemetryFeature
+} from '@syncfusion/react-base';
 import { useSchedulerPropsContext } from '../context/scheduler-context';
 import { CSS_CLASSES } from '../common/constants';
 import { DateService, MINUTES_PER_HOUR, MS_PER_MINUTE, MS_PER_SECOND } from '../services/DateService';
@@ -73,6 +75,10 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
     Touch(elementRef, {
         tapHold: () => { isScrollingRef.current = false; }
     });
+
+    useEffect(() => {
+        initializeTelemetryFeature('DragAndDrop', 'schedule');
+    }, []);
 
     useEffect(() => {
         if (timeScale && dragInfo.current) {

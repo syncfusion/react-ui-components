@@ -9,15 +9,22 @@ import { Orientation } from '../../../menu/types';
  * Provides consistent styling and structure for displaying dividers within Menu components.
  *
  * ```typescript
- * <Menu orientation={Orientation.Horizontal} itemOnClick={false}>
- *   <MenuItem>
- *     <MenuItemLabel>File</MenuItemLabel>
- *   </MenuItem>
- *   <MenuSeparator />
- *   <MenuItem>
- *     <MenuItemLabel>Edit</MenuItemLabel>
- *   </MenuItem>
- * </Menu>
+ *  import { Menu, MenuItem, MenuItemLabel, MenuSeparator, Orientation } from '@syncfusion/react-navigations';
+ *  export default function App() {
+ *      return (
+ *         <>
+ *            <Menu orientation={Orientation.Horizontal} itemOnClick={false} >
+ *                  <MenuItem>
+ *                      <MenuItemLabel>File</MenuItemLabel>
+ *                  </MenuItem>
+ *                  <MenuSeparator />
+ *                  <MenuItem>
+ *                      <MenuItemLabel>Edit</MenuItemLabel>
+ *                  </MenuItem>
+ *             </Menu>
+ *          </>
+ *      );
+ *  }
  * ```
  */
 export interface MenuSeparatorProps {

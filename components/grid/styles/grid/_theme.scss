@@ -16,6 +16,10 @@
       border-left: transparent;
       border-right: transparent;
     }
+
+    .sf-grid-pager .sf-focused {
+      outline: none;
+    }
   }
 
   .sf-grid-content {
@@ -121,7 +125,7 @@
   }
 
   .sf-group-drop-area {
-    background: $grid-sort-order-bg;
+    background: $grid-group-drop-area-background-color;
   }
 
   .sf-group-drag-clone-hover {
@@ -137,7 +141,7 @@
     background-color: transparent;
 
     &:hover {
-      background-color: $grid-hover-bg-color;
+      background-color: $grid-group-togglebtn-hover-color;
     }
 
     &:active {
@@ -146,6 +150,22 @@
 
     &:focus {
       background-color: $content-bg-color-focus;
+    }
+  }
+  
+  .sf-active {
+    .sf-group-togglebtn, .sf-detail-toggle-icon {
+      &:hover {
+        background-color: $grid-group-togglebtn-selected-hover-color;
+      }
+    }
+  }
+
+  .sf-focused:not(.sf-active) {
+    .sf-group-togglebtn, .sf-detail-toggle-icon {
+      &:focus {
+        background-color: $grid-group-togglebtn-non-selected-focus-color;
+      }
     }
   }
 }

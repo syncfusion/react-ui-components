@@ -1,10 +1,14 @@
-import { FC } from 'react';
+import { FC, useEffect } from 'react';
+import { initializeTelemetryFeature } from '@syncfusion/react-base';
 import { MonthViewProps } from '../types/scheduler-types';
 import { WeekDayHeader } from '../components/week-day-header';
 import { MonthRow } from '../components/month-row';
 import { CSS_CLASSES } from '../common/constants';
 
 export const MonthView: FC<MonthViewProps> = () => {
+    useEffect(() => {
+        initializeTelemetryFeature('MonthView', 'schedule');
+    }, []);
 
     return (
         <div className={`${CSS_CLASSES.VERTICAL_VIEW} ${CSS_CLASSES.MONTH_VIEW}`}>

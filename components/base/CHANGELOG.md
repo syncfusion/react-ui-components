@@ -1,6 +1,42 @@
 # Changelog
 
-## 33.1.44 (2026-03-16)
+## 34.2.2 (2026-08-05)
+
+### Common
+
+#### Features
+
+- **Introducing Telemetry:** Starting with this release (v34.2.2), Syncfusion Pure React introduces telemetry (development-only) to help us better understand product usage, feature adoption, usage trends and make better product roadmap decisions.
+
+   Telemetry is enabled by default and collects only a limited set of anonymous usage data while applications are running in a development environment. Telemetry is automatically disabled in production environments, and no telemetry is collected from deployed production applications or end users.
+
+   For more details about Syncfusion Telemetry, including data collection practices, privacy information, and opt-out configuration, refer to the [Telemetry User Guide.](https://react.syncfusion.com/react-ui/telemetry)
+
+## 34.1.29 (2026-07-06)
+
+### Common
+
+#### Production-ready components
+
+The following Pure React components are production-ready:
+
+- Chart
+- DataGrid
+- ListView
+- **Buttons:** Button, ChipList, Chip, Floating Action Button, Radio Button, Split Button, Dropdown Button.
+- **Calendars:** Calendar, DatePicker, TimePicker, DateTime Picker, DateRangePicker.
+- **Dropdowns:** Autocomplete, ComboBox, Dropdown List, MultiSelect.
+- **Inputs:** Checkbox, Form, Numeric Textbox, TextArea, TextBox.
+- **Navigation:** Toolbar, Context Menu.
+- **Notifications:** Message, Skeleton, Toast, Spinner.
+- **Layout:** Tooltip, Dialog.
+
+### Theme support
+
+[Tailwind](https://react.syncfusion.com/react-ui/themes/tailwind/) and [Bootstrap](https://react.syncfusion.com/react-ui/themes/bootstrap/)
+ themes have been added for Pure React components. Developers can apply these themes to components to match their projects’ design.
+
+## 34.1.44 (2026-03-16)
 
 ### Common 
 

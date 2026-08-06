@@ -1,0 +1,154 @@
+@use 'theme-variables' as *;
+
+@include export-module('schedule-theme') {
+
+  .sf-schedule {
+    background: $schedule-header-bg-color;
+    border: $schedule-border-size $schedule-border-type $schedule-border-color;
+
+    .sf-btn-outlined {
+      border: 1px solid $schedule-border-color;
+    }
+
+    .sf-toolbar-selected.sf-btn-outlined {
+      border: 1px solid $schedule-active-border-color;
+      background: $schedule-toolbar-selected-bg;
+
+      &:hover {
+        background: $schedule-toolbar-selected-hover-bg;
+      }
+    }
+
+    .sf-date-header {
+      border-color: $schedule-border-color;
+      border-style: $schedule-border-type;
+      border-width: 0;
+
+      .sf-header-cells {
+        background: $schedule-header-bg-color;
+        color: $schedule-header-font-color;
+
+        &.sf-current-day {
+          color: $schedule-active-font-color;
+        }
+      }
+    }
+
+    .sf-all-day-appointment-section {
+      &:hover,
+      &:focus {
+        background: $schedule-cell-hover-bg;
+        border-radius: 100%;
+      }
+    }
+
+    .sf-left-indent,
+    .sf-right-section {
+      background: $schedule-header-bg-color;
+    }
+
+    .sf-time-cells-wrap {
+      background-color: $schedule-bg-color;
+    }
+
+    .sf-time-slots {
+      color: $schedule-text-color;
+      border-bottom: none;
+
+      &.sf-time-cells {
+        border-bottom: 1px solid $schedule-border-color;
+      }
+    }
+
+    .sf-work-cells-row {
+      background-color: $schedule-bg-color;
+      border-color: $schedule-border-color;
+      color: $schedule-text-color;
+    }
+
+    .sf-work-cells,
+    .sf-timescale-disabled .sf-day-wrapper {
+      background: $schedule-work-cells-bg-color;
+      color: $schedule-text-color;
+      padding: 0;
+
+      &.sf-weekend {
+        background: $schedule-work-cells-bg-color;
+      }
+
+      &.sf-work-hours,
+      &.sf-work-days {
+        background: $schedule-workhour-bg-color;
+      }
+
+      &:hover {
+        background-color: $schedule-cell-hover-bg;
+      }
+
+      &.sf-selected {
+        background-color: $schedule-cell-selected-bg;
+      }
+
+      &:focus {
+        background-color: $schedule-cell-focus-bg-color;
+      }
+    }
+
+    .sf-vertical-view div.sf-selected-cell {
+      background: $schedule-selected-cell-bg;
+    }
+
+    .sf-current-time {
+      color: $schedule-active-font-color;
+    }
+
+    .sf-appointment {
+        background: $schedule-appointment-bg-color;
+        border-radius: $schedule-appointment-border-radius;
+        color: $schedule-appointment-font-color;
+
+        &:focus {
+          border: $schedule-border-0;
+          box-shadow: $schedule-event-box-shadow-1, $schedule-event-box-shadow-2, $schedule-event-box-shadow-3;
+        }
+    }
+
+    .sf-block-appointment {
+      background: $schedule-block-appointment-bg-color;
+    }
+
+    .sf-other-month {
+      color: $content-text-color-disabled;
+    }
+
+    .sf-current-date .sf-date-header,
+    .sf-current-day .sf-header-date {
+      background-color: $schedule-focus-color;
+      color: $schedule-current-date-color;
+    }
+
+    .sf-quickinfo-popup-wrapper {
+      background: $schedule-quick-popup-bg;
+      box-shadow: $schedule-popup-box-shadow-1;
+    }
+
+    .sf-quickinfo-popup-content {
+      color: $schedule-popup-content-color;
+      .sf-cell-subject {
+        color: $schedule-text-color;
+        &::placeholder {
+          opacity: 0.6;
+        }
+      }
+    }
+
+    .sf-more-popup-wrapper {
+      background-color: $schedule-bg-color;
+      box-shadow: $schedule-popup-box-shadow-2;
+    }
+  }
+
+  .sf-schedule-dialog {
+    background: $schedule-bg-color;
+  }
+}

@@ -18,3 +18,4 @@ export * from './useSpanning';
 export * from './usePrint';
 export * from './usePdfExport';
 export * from './useGroup';
+export * from './useExcelExport';

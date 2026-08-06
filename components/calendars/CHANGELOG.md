@@ -48,7 +48,7 @@
 
 The React DateTimePicker component is a compact, accessible input that combines a text box with an integrated calendar and time panel for selecting a single date and time value. It supports flexible formatting and parsing, min/max date and time constraints, step intervals, strict mode validation, inline or dialog rendering, and full keyboard navigation. With localization, RTL support, and templating hooks for header, footer and cells, it fits both simple forms and advanced scheduling scenarios.
 
-Explore the demo <a href="https://react.syncfusion.com/react-ui/datetimepicker" target="_blank" rel="noopener noreferrer">here</a>
+Explore the demo <a href="https://react.syncfusion.com/datetimepicker" target="_blank" rel="noopener noreferrer">here</a>
 
 **Key features**
 
@@ -67,13 +67,13 @@ Explore the demo <a href="https://react.syncfusion.com/react-ui/datetimepicker" 
 
 The React DateRangePicker component is a dual‑date selector that provides a single input with a popup or inline panel to choose a start and end date. It supports presets, strict ranges, min/max constraints, optional min/max span limits, keyboard navigation, and customizable templates. With localization and RTL support it suits booking flows, analytics filters, and reporting interfaces.
 
-Explore the demo <a href="https://react.syncfusion.com/react-ui/daterangepicker" target="_blank" rel="noopener noreferrer">here</a>
+Explore the demo <a href="https://react.syncfusion.com/daterangepicker" target="_blank" rel="noopener noreferrer">here</a>
 
 **Key features**
 
 - **Start & End Selection:** Choose a contiguous date interval with intuitive start/end flow.
 - **Presets & Custom Ranges:** Built‑in preset ranges plus a custom range panel.
-- **Popup or Inline Modes:** Render as a centered dialog or anchored inline popup.
+	- **Popup or Inline Modes:** Render as a dialog overlay or an anchored inline popup.
 - **Controlled/Uncontrolled:** Use value or defaultValue to manage the selected range.
 - **Min/Max Date Constraints:** Clamp navigation and selection within allowed dates.
 - **Min/Max Range Length:** Enforce minimum or maximum number of days in a range.
@@ -87,7 +87,7 @@ Explore the demo <a href="https://react.syncfusion.com/react-ui/daterangepicker"
 
 The React Calendar component is a modern, accessible date browsing and selection UI. It supports Month, Year, and Decade views, single or multiple date selection, and rich keyboard navigation. With localization, RTL, min/max constraints, and customizable templates for header, footer, and cells, it fits everything from simple pickers to advanced scheduling user interfaces.
 
-Explore the demo <a href="https://react.syncfusion.com/react-ui/calendar" target="_blank" rel="noopener noreferrer">here</a>
+Explore the demo <a href="https://react.syncfusion.com/calendar" target="_blank" rel="noopener noreferrer">here</a>
 
 **Key features**
 
@@ -108,7 +108,7 @@ Explore the demo <a href="https://react.syncfusion.com/react-ui/calendar" target
 
 The React DatePicker component is a compact, accessible date input that combines a text box with a popup Calendar. It supports precise date formatting and parsing, min/max constraints, single-date selection, and full keyboard navigation. With localization, RTL, and templating options, it fits everything from simple forms to enterprise-grade workflows.
 
-Explore the demo <a href="https://react.syncfusion.com/react-ui/datepicker" target="_blank" rel="noopener noreferrer">here</a>
+Explore the demo <a href="https://react.syncfusion.com/datepicker" target="_blank" rel="noopener noreferrer">here</a>
 
 **Key features**
 
@@ -125,7 +125,7 @@ Explore the demo <a href="https://react.syncfusion.com/react-ui/datepicker" targ
 
 The React TimePicker component is a compact, accessible time input that combines a text box with a popup time list. It supports precise time formatting and parsing, min/max constraints, step intervals, and full keyboard navigation. With localization, RTL, and templating options, it fits everything from simple forms to enterprise-grade workflows.
 
-Explore the demo <a href="https://react.syncfusion.com/react-ui/timepicker" target="_blank" rel="noopener noreferrer">here</a>
+Explore the demo <a href="https://react.syncfusion.com/timepicker" target="_blank" rel="noopener noreferrer">here</a>
 
 **Key features**
 

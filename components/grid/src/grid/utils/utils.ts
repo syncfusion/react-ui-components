@@ -1,12 +1,12 @@
 
-import { DateFormatOptions, isNullOrUndefined, isUndefined, NumberFormatOptions, extend as baseExtend, getDatePattern, removeClass, addClass, extend } from '@syncfusion/react-base';
+import { DateFormatOptions, isNullOrUndefined, isUndefined, NumberFormatOptions, extend as baseExtend, getDatePattern, removeClass, addClass, extend, initializeTelemetryFeature } from '@syncfusion/react-base';
 import { DataManager, DataUtil, Predicate, Query } from '@syncfusion/react-data';
 import { EditSettings, IValueFormatter, ValueType, ColumnType, AutoSelectMode, VirtualSettings, IRow, GridProps, ChildInfoResult,
-    GroupedData, GroupSettings } from '../types';
+    GroupedData, GroupSettings, GridTelemetryFeatures, ScrollMode, AggregateRowProps} from '../types';
 import { FilterPredicates } from '../types/filter.interfaces';
 import { ServiceLocator } from '../types/interfaces';
 import { payload } from '../types/edit.interfaces';
-import { GridRef } from '../types/grid.interfaces';
+import { GridRef, IGridBase } from '../types/grid.interfaces';
 import { ColumnProps, HeaderValueAccessorProps, ValueAccessorProps, IColumnBase } from '../types/column.interfaces';
 import { RefObject } from 'react';
 /**
@@ -1018,3 +1018,58 @@ export const getPageFromRowIndex: (startRowIndex: number, endRowIndex: number, p
 export function getWithoutCheckBoxandCommandColumn(visibleColumns: ColumnProps[]): ColumnProps[] {
     return visibleColumns?.filter((column: ColumnProps) => column.type !== 'checkbox' && !column.getCommandItems);
 }
+
+// Type guard to check if an item is of type GroupedData<T>.
+export function isGroupedData<T>(item: unknown): item is GroupedData<T> {
+    return typeof item === 'object' && item !== null && 'items' in item && 'key' in item && 'count' in item;
+}
+
+/**
+ * @param {Partial<IGridBase<T>>} props - User provided Grid props
+ * @param {AggregateRowProps[]} reactChildNodeBasedProps - React child node based props values.
+ * @returns {void}
+ * @private
+ */
+export const setGridTelemetryFeatureList: <T>(props: Partial<IGridBase<T>>, reactChildNodeBasedProps: {
+    aggregates: AggregateRowProps[]
+}) => void =
+    <T>(props: Partial<IGridBase<T>>, reactChildNodeBasedProps: { aggregates: AggregateRowProps[] }): void => {
+        if (props.searchSettings?.enabled) {
+            initializeTelemetryFeature(GridTelemetryFeatures.Search, 'grid');
+        }
+        if (props.filterSettings?.enabled) {
+            initializeTelemetryFeature(GridTelemetryFeatures.Filter, 'grid');
+        }
+        if (props.sortSettings?.enabled) {
+            initializeTelemetryFeature(GridTelemetryFeatures.Sort, 'grid');
+        }
+        if (props.groupSettings?.enabled) {
+            initializeTelemetryFeature(GridTelemetryFeatures.Group, 'grid');
+        }
+        if (props.editSettings?.allowAdd || props.editSettings?.allowEdit || props.editSettings?.allowDelete) {
+            initializeTelemetryFeature(GridTelemetryFeatures.Crud, 'grid');
+        }
+        if (props.virtualizationSettings?.scrollMode === ScrollMode.Virtual) {
+            initializeTelemetryFeature(GridTelemetryFeatures.VirtualScroll, 'grid');
+        } else if (props.virtualizationSettings?.scrollMode === ScrollMode.Infinite) {
+            initializeTelemetryFeature(GridTelemetryFeatures.InfiniteScroll, 'grid');
+        }
+        if (props.pageSettings?.enabled) {
+            initializeTelemetryFeature(GridTelemetryFeatures.Pager, 'grid');
+        }
+        if (props.aggregates?.length || reactChildNodeBasedProps?.aggregates?.length) {
+            initializeTelemetryFeature(GridTelemetryFeatures.Aggregate, 'grid');
+        }
+        if (props.showColumnChooser) {
+            initializeTelemetryFeature(GridTelemetryFeatures.ColumnChooser, 'grid');
+        }
+        if (props.contextMenuSettings?.enabled) {
+            initializeTelemetryFeature(GridTelemetryFeatures.ContextMenu, 'grid');
+        }
+        if (props.selectionSettings?.enabled !== false) {
+            initializeTelemetryFeature(GridTelemetryFeatures.Selection, 'grid');
+        }
+        if (props?.isMasterDetail) {
+            initializeTelemetryFeature(GridTelemetryFeatures.DetailRow, 'grid');
+        }
+    };

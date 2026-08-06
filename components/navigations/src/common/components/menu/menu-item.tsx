@@ -16,11 +16,18 @@ import { MenuItemLink } from './menu-item-link';
  * Ensures consistent styling and structure for content, icons, links, and submenus in Menu components.
  *
  * ```typescript
- * <Menu orientation={Orientation.Horizontal} itemOnClick={false}>
- *   <MenuItem>
- *     <MenuItemIcon><FileIcon /></MenuItemIcon>
- *   </MenuItem>
- * </Menu>
+ * import { Menu, MenuItem, MenuItemIcon, Orientation } from '@syncfusion/react-navigations';
+ * import { FileIcon } from '@syncfusion/react-icons';
+ *
+ * export default function App() {
+ *      return (
+ *              <Menu orientation={Orientation.Horizontal} itemOnClick={false}>
+ *                      <MenuItem>
+ *                          <MenuItemIcon><FileIcon /></MenuItemIcon>
+ *                      </MenuItem>
+ *              </Menu>
+ *     );
+ * }
  * ```
  */
 export interface MenuItemProps extends HTMLAttributes<HTMLLIElement> {
@@ -352,7 +359,7 @@ export const MenuItem: FC<MenuItemProps> = memo((props: MenuItemProps) => {
         if (!currentSubmenu) {
             return null;
         }
-        const portalTarget: HTMLElement = embedded && submenuRenderMode === 'portal' ? document.body : portalContainerRef?.current || document.body;
+        const portalTarget: HTMLElement = embedded && submenuRenderMode === 'Portal' ? document.body : portalContainerRef?.current || document.body;
         const shouldShowHeader: boolean | undefined = !embedded && isDeviceMode;
         const parentText: string | undefined = shouldShowHeader ? getParentItemText() : undefined;
 
@@ -383,7 +390,7 @@ export const MenuItem: FC<MenuItemProps> = memo((props: MenuItemProps) => {
 
         return createPortal(
             <MenuContext.Provider value={childContextValue}>
-                {embedded && submenuRenderMode === 'portal' ? <div className={submenuWrapperClass}>{submenuContent}</div> : submenuContent}
+                {embedded && submenuRenderMode === 'Portal' ? <div className={submenuWrapperClass}>{submenuContent}</div> : submenuContent}
             </MenuContext.Provider>,
             portalTarget
         );

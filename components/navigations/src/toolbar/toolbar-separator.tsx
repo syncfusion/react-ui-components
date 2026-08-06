@@ -10,11 +10,16 @@ const CLS_SEPARATOR: string = 'sf-toolbar-separator';
  * The ToolbarSeparator component is used for rendering a visual separation between items in a Toolbar.
  *
  * ```typescript
- * <Toolbar>
- *   <ToolbarItem><Button>Cut</Button></ToolbarItem>
- *   <ToolbarSeparator />
- *   <ToolbarItem><Button>Copy</Button></ToolbarItem>
- * </Toolbar>
+ * import { Toolbar, ToolbarItem, ToolbarSeparator } from '@syncfusion/react-navigations';
+ * export default function App() {
+ *     return (
+ *         <Toolbar>
+ *             <ToolbarItem><button>Cut</button></ToolbarItem>
+ *             <ToolbarSeparator />
+ *             <ToolbarItem><button>Copy</button></ToolbarItem>
+ *         </Toolbar>
+ *     );
+ * }
  * ```
  */
 export interface ToolbarSeparatorProps {

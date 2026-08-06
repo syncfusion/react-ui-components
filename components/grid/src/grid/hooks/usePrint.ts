@@ -1,6 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { printService } from '../services/print-service';
 import { PrintResult, PrintSettings, UseGridPrintOptions, UseGridPrintReturn } from '../types/print.interfaces';
+import { initializeTelemetryFeature } from '@syncfusion/react-base';
+import { GridTelemetryFeatures } from '../types/enum';
 
 /**
  * Custom hook managing grid print operations and loading state
@@ -23,6 +25,10 @@ export function useGridPrint<T>(options: UseGridPrintOptions<T>): UseGridPrintRe
         },
         [options]
     );
+
+    useEffect(() => {
+        initializeTelemetryFeature(GridTelemetryFeatures.Print, 'grid');
+    }, []);
 
     /**
      * Return print APIs and state

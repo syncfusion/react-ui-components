@@ -28,6 +28,7 @@
   "module": "./index.js",
   "readme": "README.md",
   "dependencies": {
+    "@syncfusion/excel-export": "~34.1.29",
     "@syncfusion/pdf-export": "~34.1.29",
     "@syncfusion/react-base": "~34.1.29",
     "@syncfusion/react-buttons": "~34.1.29",

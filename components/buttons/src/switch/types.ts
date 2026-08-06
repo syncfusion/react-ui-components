@@ -76,16 +76,14 @@ export interface SwitchProps {
     offTrackLabel?: React.ReactNode;
 
     /**
-     * Specifies the Color style applied to the ON state track and handle.
-     * Options: 'Primary' | 'Secondary' | 'Warning' | 'Success' | 'Error' | 'Info'
+     * Specifies the Color style applied to the ON state track and handle. Options include 'Primary', 'Secondary', 'Warning', 'Success', 'Error', and 'Info'.
      *
      * @default Color.Primary
      */
     color?: Color;
 
     /**
-     * Specifies the Size preset controlling track and handle dimensions.
-     * Options: 'Small' | 'Medium' | 'Large'
+     * Specifies the Size preset controlling track and handle dimensions. Options include 'Small', 'Medium' and 'Large'.
      *
      * @default Size.Medium
      */

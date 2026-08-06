@@ -153,7 +153,9 @@ type IFabProps = FabButtonProps & ButtonHTMLAttributes<HTMLButtonElement>;
  * ```typescript
  * import { Fab, Color, FabPosition } from "@syncfusion/react-buttons";
  *
- * <Fab color={Color.Success} position={FabPosition.BottomLeft}>FAB</Fab>
+ * export default function App() {
+ *       <Fab color={Color.Success} position={FabPosition.BottomLeft}>FAB</Fab>
+ * }
  * ```
  */
 
