@@ -98,6 +98,69 @@ The library is designed with performance in mind, minimizing renders, optimizing
    </tr>
 </table>
 
+### Calendars
+
+<table>
+   <tr>
+       <td>
+           <b>Calendar</b>
+       </td>
+        <td rowspan="5">
+           <a href="https://www.npmjs.com/package/@syncfusion/react-calendars"><img src="https://ej2.syncfusion.com/github/images/npm-logo.png" alt="npm package @syncfusion/react-calendars" title="@syncfusion/react-calendars" style="height:20px;" />
+       </td>
+       <td>
+           <a href="components/calendars/src/calendar">Source</a>
+       </td>
+       <td>
+           <a href="https://react.syncfusion.com/react-ui/calendar">Live demo</a>
+       </td>
+   </tr>
+   <tr>
+       <td>
+          <b>DatePicker</b>
+       </td>
+       <td>
+           <a href="components/calendars/src/datepicker">Source</a>
+       </td>
+       <td>
+           <a href="https://react.syncfusion.com/react-ui/datepicker">Live demo</a>
+       </td>
+   </tr>
+   <tr>
+       <td>
+          <b>TimePicker</b>
+       </td>
+       <td>
+           <a href="components/calendars/src/timepicker">Source</a>
+       </td>
+       <td>
+           <a href="https://react.syncfusion.com/react-ui/timepicker">Live demo</a>
+       </td>
+   </tr>
+   <tr>
+       <td>
+          <b>DateTimePicker</b>
+       </td>
+       <td>
+           <a href="components/calendars/src/datetimepicker">Source</a>
+       </td>
+       <td>
+           <a href="https://react.syncfusion.com/react-ui/datetimepicker">Live demo</a>
+       </td>
+   </tr>
+   <tr>
+       <td>
+          <b>DateRangePicker</b>
+       </td>
+       <td>
+           <a href="components/calendars/src/daterangepicker">Source</a>
+       </td>
+       <td>
+           <a href="https://react.syncfusion.com/react-ui/daterangepicker">Live demo</a>
+       </td>
+   </tr>
+</table>
+
 ### Buttons
 
 <table>
@@ -193,69 +256,6 @@ The library is designed with performance in mind, minimizing renders, optimizing
        </td>
        <td>
            <a href="https://react.syncfusion.com/react-ui/split-button">Live demo</a>
-       </td>
-   </tr>
-</table>
-
-### Calendars
-
-<table>
-   <tr>
-       <td>
-           <b>Calendar</b>
-       </td>
-        <td rowspan="5">
-           <a href="https://www.npmjs.com/package/@syncfusion/react-calendars"><img src="https://ej2.syncfusion.com/github/images/npm-logo.png" alt="npm package @syncfusion/react-calendars" title="@syncfusion/react-calendars" style="height:20px;" />
-       </td>
-       <td>
-           <a href="components/calendars/src/calendar">Source</a>
-       </td>
-       <td>
-           <a href="https://react.syncfusion.com/react-ui/calendar">Live demo</a>
-       </td>
-   </tr>
-   <tr>
-       <td>
-          <b>DatePicker</b>
-       </td>
-       <td>
-           <a href="components/calendars/src/datepicker">Source</a>
-       </td>
-       <td>
-           <a href="https://react.syncfusion.com/react-ui/datepicker">Live demo</a>
-       </td>
-   </tr>
-   <tr>
-       <td>
-          <b>TimePicker</b>
-       </td>
-       <td>
-           <a href="components/calendars/src/timepicker">Source</a>
-       </td>
-       <td>
-           <a href="https://react.syncfusion.com/react-ui/timepicker">Live demo</a>
-       </td>
-   </tr>
-   <tr>
-       <td>
-          <b>DateTimePicker</b>
-       </td>
-       <td>
-           <a href="components/calendars/src/datetimepicker">Source</a>
-       </td>
-       <td>
-           <a href="https://react.syncfusion.com/react-ui/datetimepicker">Live demo</a>
-       </td>
-   </tr>
-   <tr>
-       <td>
-          <b>DateRangePicker</b>
-       </td>
-       <td>
-           <a href="components/calendars/src/daterangepicker">Source</a>
-       </td>
-       <td>
-           <a href="https://react.syncfusion.com/react-ui/daterangepicker">Live demo</a>
        </td>
    </tr>
 </table>
