@@ -58,7 +58,7 @@
 
 The React Autocomplete component is a compact, accessible single-input control that provides typed suggestions as users enter text. It supports local or remote data, autofill and highlighting, customizable rendering, and full keyboard navigation for quick, accurate entry in forms and search flows.
 
-Explore the demo <a href="https://react.syncfusion.com/autocomplete" target="_blank" rel="noopener noreferrer">here</a>
+Explore the demo <a href="https://react.syncfusion.com/react-ui/autocomplete" target="_blank" rel="noopener noreferrer">here</a>
 
 **Key features**
 
@@ -75,7 +75,7 @@ Explore the demo <a href="https://react.syncfusion.com/autocomplete" target="_bl
 
 The React ComboBox component combines a text input with a dropdown list to let users type to search or pick a single option. It includes filtering, optional custom values, templating, and icon support, making it suitable for compact single-select scenarios in forms and toolbars.
 
-Explore the demo <a href="https://react.syncfusion.com/combobox" target="_blank" rel="noopener noreferrer">here</a>
+Explore the demo <a href="https://react.syncfusion.com/react-ui/combobox" target="_blank" rel="noopener noreferrer">here</a>
 
 **Key features**
 
@@ -92,7 +92,7 @@ Explore the demo <a href="https://react.syncfusion.com/combobox" target="_blank"
 
 The React MultiSelect component enables selection of multiple options from a list with tag/chip or delimiter display. It supports filtering, select-all, checkboxes, custom templates, and flexible display modes for dense forms and tag-based inputs.
 
-Explore the demo <a href="https://react.syncfusion.com/multiselect" target="_blank" rel="noopener noreferrer">here</a>
+Explore the demo <a href="https://react.syncfusion.com/react-ui/multiselect" target="_blank" rel="noopener noreferrer">here</a>
 
 **Key features**
 
@@ -117,7 +117,7 @@ The Dropdown List now includes virtualization to efficiently render very large d
 
 The React Dropdown List component is a compact, accessible single-select input that combines a text box with a popup list. It supports fast data binding, search and filtering, grouping, and full keyboard navigation. With localization, RTL, and rich templating, it fits everything from simple forms to enterprise dashboards.
 
-Explore the demo <a href="https://react.syncfusion.com/dropdown-list" target="_blank" rel="noopener noreferrer">here</a>
+Explore the demo <a href="https://react.syncfusion.com/react-ui/dropdown-list" target="_blank" rel="noopener noreferrer">here</a>
 
 **Key features**
 

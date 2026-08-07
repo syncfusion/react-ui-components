@@ -6,7 +6,7 @@
 
 The React Spinner component is a lightweight, accessible loading indicator with multiple animated styles. It supports sizing, overlay mode, and customizable content, making it ideal for indicating progress across pages or specific UI sections.
 
-Explore the demo <a href="https://react.syncfusion.com/spinner" target="_blank" rel="noopener noreferrer">here</a>
+Explore the demo <a href="https://react.syncfusion.com/react-ui/spinner" target="_blank" rel="noopener noreferrer">here</a>
 
 **Key features**
 
@@ -25,7 +25,7 @@ Explore the demo <a href="https://react.syncfusion.com/spinner" target="_blank" 
 
 The Dialog component displays content in a modal or non-modal overlay above the main interface, requiring user attention or interaction. It provides a flexible way to create alerts, confirmation dialogs, forms, or any content that needs to be prominently displayed.
 
-Explore the demo <a href="https://react.syncfusion.com/dialog" target="_blank" rel="noopener noreferrer">here</a>
+Explore the demo <a href="https://react.syncfusion.com/react-ui/dialog" target="_blank" rel="noopener noreferrer">here</a>
 
 **Key features**
 
@@ -57,7 +57,7 @@ Explore the demo <a href="https://react.syncfusion.com/dialog" target="_blank" r
 
 The Tooltip component displays additional information when users hover, click, or focus on an element. It provides a flexible way to enhance user experience by showing contextual information.
 
-Explore the demo <a href="https://react.syncfusion.com/tooltip" target="_blank" rel="noopener noreferrer">here</a>
+Explore the demo <a href="https://react.syncfusion.com/react-ui/tooltip" target="_blank" rel="noopener noreferrer">here</a>
 
 **Key features**
 
