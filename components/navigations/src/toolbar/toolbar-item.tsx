@@ -9,9 +9,16 @@ const CLS_ITEM: string = 'sf-toolbar-item';
  * The ToolbarItem component allows for the rendering of individual items within a Toolbar.
  *
  * ```typescript
- * <Toolbar>
- *   <ToolbarItem className='action-button' style={{ backgroundColor: '#f0f0f0' }}><Button>Cut</Button></ToolbarItem>
- * </Toolbar>
+ * import { Toolbar, ToolbarItem } from '@syncfusion/react-navigations';
+ * export default function App() {
+ *     return (
+ *         <Toolbar>
+ *             <ToolbarItem className="action-button" style={{ backgroundColor: '#f0f0f0' }}>
+ *                 <button>Cut</button>
+ *             </ToolbarItem>
+ *         </Toolbar>
+ *     );
+ * }
  * ```
  */
 export interface ToolbarItemProps {

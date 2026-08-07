@@ -164,7 +164,9 @@ type ChipListComponentProps = ChipListProps & Omit<HTMLAttributes<HTMLDivElement
  * ```typescript
  * import { ChipList } from "@syncfusion/react-buttons";
  *
- * <ChipList chips={['Apple', 'Banana', 'Cherry']} selection='Multiple' removable={true} />
+ * export default function App() {
+ *       <ChipList chips={['Apple', 'Banana', 'Cherry']} selection='Multiple' removable={true} />
+ * }
  * ```
  */
 export const ChipList: ForwardRefExoticComponent<ChipListComponentProps & RefAttributes<IChipList>> =

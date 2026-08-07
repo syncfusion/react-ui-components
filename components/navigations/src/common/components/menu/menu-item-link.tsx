@@ -9,13 +9,18 @@ import {
  * Ensures consistent styling and structure for link content or nodes in MenuItem components.
  *
  * ```typescript
- * <Menu orientation={Orientation.Horizontal} itemOnClick={false}>
- *   <MenuItem>
- *     <MenuItemLink href="/help">
- *       <MenuItemLabel>Help</MenuItemLabel>
- *     </MenuItemLink>
- *   </MenuItem>
- * </Menu>
+ * import { Menu, MenuItem, MenuItemLabel, MenuItemLink, Orientation } from '@syncfusion/react-navigations';
+ * export default function App() {
+ *     return (
+ *         <Menu orientation={Orientation.Horizontal} itemOnClick={false}>
+ *             <MenuItem>
+ *                 <MenuItemLink href="/help">
+ *                     <MenuItemLabel>Help</MenuItemLabel>
+ *                 </MenuItemLink>
+ *             </MenuItem>
+ *         </Menu>
+ *     );
+ * }
  * ```
  */
 export interface MenuItemLinkProps {

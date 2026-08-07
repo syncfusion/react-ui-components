@@ -1,10 +1,42 @@
 # Changelog
 
+## 34.1.29 (2026-08-03)
+
+### Data Grid
+
+**Features**
+
+- **Excel Export:** Enables exporting Grid data to Excel format while preserving row and column structure for efficient data sharing and analysis. Supports Blob-based export operations and grouped records with outline layouts for enhanced export flexibility. View [Excel Export](https://react.syncfusion.com/react-ui/data-grid/excel-export) demo.
+- **PDF Export Enhancements:** Enables exporting grouped Grid data to PDF format and supports Blob-based export operations for greater flexibility in PDF generation workflows. View [PDF Export Blob](https://react.syncfusion.com/react-ui/data-grid/pdf-export#export-grid-as-blob) demo.
+
+**Breaking Changes**
+
+- Enhanced PDF export header and footer customization support. The `headerText` and `footerText` PDF export properties have been deprecated in favor of the new customization options.
+
+### Data Grid
+
+## 34.1.31 (2026-07-14)
+
+### Data Grid
+
+**Bug Fixes**
+
+- **#I854402** - Resolved an issue where sorting was not performed when clicking column headers while `selectionSettings.checkboxOnly` was enabled.
+- **#I854799** - Resolved an issue where clearing Excel and Checkbox filters resulted in incomplete data being displayed when using Infinite Scrolling.
+
+## 34.1.30 (2026-07-09)
+
+### Data Grid
+
+**Bug Fixes**
+
+- Fixed header icon misalignment during sorting by reserving dedicated space, ensuring consistent placement in both LTR and RTL layouts.
+
 ## 34.1.29 (2026-07-06)
 
 ### Data Grid
 
-**Feature**
+**Features**
 - **Infinite Scrolling:** Enables seamless data loading when the total record count is unknown by dynamically fetching additional data during scroll actions, without relying on pagination. This ensures a smooth and continuous scrolling experience for large datasets. View [Infinite Scrolling](https://react.syncfusion.com/react-ui/data-grid/scrolling/infinite-scroll/) demo.
 - **Cell Selection:** Enables selection of individual cells within the Grid for granular data interaction. Supports single and multiple cell selection modes and integrates seamlessly with existing selection functionalities. View [Cell Selection](https://react.syncfusion.com/react-ui/data-grid/selection/cell-selection/) demo.
 - **Column Chooser:** Provides an interactive interface to show or hide Grid columns dynamically, enabling users to customize the visible columns based on their preferences without affecting the underlying data. View [Column Chooser](https://react.syncfusion.com/react-ui/data-grid/columns/column-chooser/) demo.

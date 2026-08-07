@@ -6,15 +6,19 @@ import { COMMON_CLASSES } from '../../constants';
  * Provides consistent styling and structure for displaying text or nodes within MenuItem components.
  *
  * ```typescript
- * <Menu orientation={Orientation.Horizontal} itemOnClick={false}>
- *   <MenuItem>
- *     <MenuItemLabel>File</MenuItemLabel>
- *   </MenuItem>
- *
- *   <MenuItem>
- *     <MenuItemLabel>Edit</MenuItemLabel>
- *   </MenuItem>
- * </Menu>
+ * import { Menu, MenuItem, MenuItemLabel, Orientation } from '@syncfusion/react-navigations';
+ * export default function App() {
+ *     return (
+ *         <Menu orientation={Orientation.Horizontal} itemOnClick={false}>
+ *             <MenuItem>
+ *                 <MenuItemLabel>File</MenuItemLabel>
+ *             </MenuItem>
+ *             <MenuItem>
+ *                 <MenuItemLabel>Edit</MenuItemLabel>
+ *             </MenuItem>
+ *         </Menu>
+ *     );
+ * }
  * ```
  */
 export interface MenuItemLabelProps {

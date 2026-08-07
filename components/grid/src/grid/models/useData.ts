@@ -380,7 +380,7 @@ export const useData: <T>(gridInstance?: Partial<IGrid<T>> & Partial<MutableGrid
                         grid.onDataRequest?.(state);
                     }).catch(() => void 0);
                 } else {
-                    if (args.requestType === REQUEST_TYPE_FILTER_CHOICE) {
+                    if (args.requestType === REQUEST_TYPE_FILTER_CHOICE || args.requestType === 'getData') {
                         state.requestType = args.requestType;
                         state.dataSource = def.resolve;
                     } else {

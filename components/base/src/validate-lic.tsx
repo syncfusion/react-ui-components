@@ -38,6 +38,23 @@ export type ILicenseValidator = {
 }
 
 /**
+ * Product to components map - groups components by their product
+ * More efficient than component-to-product as it avoids duplication
+ */
+export const productToComponentsMap: { [key: string]: string[] } = {
+    'PDFViewer': ['PdfViewer', 'pdf', 'pdf-extract'],
+    'WordEditor': ['DocumentEditor'],
+    'SpreadsheetEditor': ['spreadsheet'],
+    'SchedulerSDK': ['schedule', 'calendar', 'daterangepicker', 'datepicker', 'datetimepicker', 'timepicker'],
+    'GanttSDK': ['gantt', 'kanban'],
+    'DiagramSDK': ['diagram'],
+    'FileManagerSDK': ['filemanager'],
+    'GridSDK': ['grid', 'pivotview', 'treegrid'],
+    'RichTextEditorSDK': ['richtexteditor', 'blockeditor'],
+    'ChartSDK': ['barcode', 'bulletChart', 'circularchart3d', 'circulargauge', 'DashboardLayout', 'heatmap', 'lineargauge', 'maps', 'rangeNavigator', 'sankey', 'smithchart', 'sparkline', 'stockChart', 'chart3d', 'treemap', 'chart']
+};
+
+/**
  * License validation module
  *
  * @param {string} key - License key to validate

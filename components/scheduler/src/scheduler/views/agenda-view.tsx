@@ -1,4 +1,5 @@
-import { FC, ReactNode } from 'react';
+import { FC, ReactNode, useEffect } from 'react';
+import { initializeTelemetryFeature } from '@syncfusion/react-base';
 import { CSS_CLASSES } from '../common/constants';
 import { AgendaViewProps } from '../types/scheduler-types';
 import { useAgendaView, AgendaDateGroup as AgendaDateGroupType } from '../hooks/useAgendaView';
@@ -22,6 +23,10 @@ import { AgendaEmptyState } from '../components/agenda-empty-state';
  */
 export const AgendaView: FC<AgendaViewProps> = (): ReactNode => {
     const { dateGroups } = useAgendaView();
+
+    useEffect(() => {
+        initializeTelemetryFeature('AgendaView', 'schedule');
+    }, []);
 
     return (
         <div className={`${CSS_CLASSES.AGENDA_VIEW}`}>

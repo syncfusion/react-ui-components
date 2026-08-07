@@ -93,7 +93,7 @@ export interface ToolbarProps {
      * Specifies the scrolling distance in pixels when the Toolbar items overflow in Scrollable mode.
      * This property is applicable only when the Toolbar is in `Scrollable` mode.
      *
-     * @default undefined
+     * @default -
      */
     scrollStep?: number;
 }
@@ -135,16 +135,19 @@ type IToolbarProps = ToolbarProps & HTMLAttributes<HTMLDivElement>;
  * It provides multiple overflow handling modes to accommodate different UI requirements and screen sizes.
  *
  * ```typescript
- * import { Toolbar, ToolbarItem, ToolbarSeparator, ToolbarSpacer, OverflowMode } from "@syncfusion/react-navigations";
- *
- * <Toolbar overflowMode={OverflowMode.Popup} style={{ width: '300px' }}>
- *   <ToolbarItem><Button>Cut</Button></ToolbarItem>
- *   <ToolbarItem><Button>Copy</Button></ToolbarItem>
- *   <ToolbarSeparator />
- *   <ToolbarItem><Button>Paste</Button></ToolbarItem>
- *   <ToolbarSpacer />
- *   <ToolbarItem><Button>Help</Button></ToolbarItem>
- * </Toolbar>
+ * import { Toolbar, ToolbarItem, ToolbarSeparator, ToolbarSpacer, OverflowMode } from '@syncfusion/react-navigations';
+ * export default function App() {
+ *     return (
+ *         <Toolbar overflowMode={OverflowMode.Popup} style={{ width: '300px' }}>
+ *             <ToolbarItem><Button>Cut</Button></ToolbarItem>
+ *             <ToolbarItem><Button>Copy</Button></ToolbarItem>
+ *             <ToolbarSeparator />
+ *             <ToolbarItem><Button>Paste</Button></ToolbarItem>
+ *             <ToolbarSpacer />
+ *             <ToolbarItem><Button>Help</Button></ToolbarItem>
+ *         </Toolbar>
+ *     );
+ * }
  * ```
  */
 export const Toolbar: ForwardRefExoticComponent<IToolbarProps & RefAttributes<IToolbar>> = memo(forwardRef<

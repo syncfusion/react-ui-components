@@ -1,6 +1,7 @@
 import { RefObject } from 'react';
 import { GridRef } from './grid.interfaces';
 import { ColumnProps } from './column.interfaces';
+import { PdfStandardFont, PdfStringFormat, PdfTrueTypeFont } from '@syncfusion/pdf-export';
 
 /**
  * Represents an image to be rendered in a PDF cell.
@@ -64,8 +65,6 @@ export interface PdfCellHyperLink {
 /**
  * Styling options for a PDF cell.
  * Allows customization of colors, fonts, alignment, and text decorations.
- *
- * @private
  */
 export interface PdfCellStyle {
     /**
@@ -156,14 +155,13 @@ export interface PdfCellStyle {
 }
 
 /**
- * Represents event arguments passed to the onPdfQueryCellInfo callback.
+ * Represents event arguments passed to the onPdfCellCustomize callback.
  * Allows cell-level customization including images, hyperlinks, and styling.
  * Triggered for each cell during PDF generation, enabling data-driven customization.
  *
- * @private
  * @example
  * ```tsx
- * const handlePdfQueryCellInfo = (event: PdfQueryCellInfoEvent) => {
+ * const handlePdfCellCustomize = (event: PdfCellCustomizeArgs) => {
  *   // Add images to specific columns
  *   if (event.column?.field === 'photo') {
  *     event.image = {
@@ -196,11 +194,11 @@ export interface PdfCellStyle {
  * };
  *
  * const config: PdfExportSettings = {
- *   onPdfQueryCellInfo: handlePdfQueryCellInfo
+ *   onPdfCellCustomize: handlePdfCellCustomize
  * };
  * ```
  */
-export interface PdfQueryCellInfoEvent<T = unknown> {
+export interface PdfCellCustomizeArgs<T = unknown> {
     /**
      * Row data object for the current cell.
      * Provides access to all fields in the record for conditional logic.
@@ -255,6 +253,31 @@ export interface PdfQueryCellInfoEvent<T = unknown> {
      * @default undefined
      */
     style?: PdfCellStyle;
+
+    /**
+     * Optional column spanning configuration for the PDF cell.
+     * When set on a group header cell, it controls how many visible columns the caption spans.
+     *
+     * @type {number}
+     * @default undefined
+     */
+    colSpan?: number;
+
+    /**
+     * Indicates whether the current cell belongs to a group header row created during grouped export.
+     *
+     * @type {boolean}
+     * @default false
+     */
+    isGroupHeader?: boolean;
+
+    /**
+     * Indicates the nesting depth of the group header for grouped exports.
+     *
+     * @type {number}
+     * @default 0
+     */
+    groupLevel?: number;
 }
 
 /**
@@ -288,6 +311,14 @@ export interface PdfExportResult {
      * @default undefined
      */
     error?: Error;
+
+    /**
+     * Promise resolving to blob data when `isBlob` is true in settings.
+     * Undefined when `isBlob` is false or not provided.
+     *
+     * @type {Promise<{ blobData: Blob }>}
+     */
+    promise?: Promise<{ blobData: Blob }>;
 }
 
 /**
@@ -306,7 +337,6 @@ export type PdfExportRange = 'All' | 'CurrentPage' | 'Custom';
  * Specifies a custom row range for PDF export.
  * Used in conjunction with `PdfExportSettings.range` set to `Custom` to specify exact row boundaries.
  *
- * @private
  * @example
  * ```tsx
  * const customRange: PdfExportCustomRange = {
@@ -431,6 +461,278 @@ export interface PdfExportAfterEvent extends PdfExportResult {
 }
 
 /**
+ * Represents position coordinates for PDF header and footer content.
+ */
+export interface PdfPosition {
+    /** Defines the x position */
+    x: number;
+    /** Defines the y position */
+    y: number;
+}
+
+/**
+ * Defines PDF ContentType.
+ * ```props
+ * * Image :- PDF content is Image type
+ * * Line :- PDF content is Line type
+ * * PageNumber :- PDF content is PageNumber type
+ * * Text :- PDF content is Text type
+ * ```
+ */
+export type ContentType = 'Image' | 'Line' | 'PageNumber' | 'Text';
+
+/**
+ * Defines PDF PageNumber Type.
+ * ```props
+ * * LowerLatin :- LowerCase Latin pageNumber
+ * * LowerRoman :- LowerCase Roman pageNumber
+ * * UpperLatin :- UpperCase Latin pageNumber
+ * * UpperRoman :- UpperCase Roman pageNumber
+ * * Numeric :- Numeric pageNumber
+ * * Arabic :- Arabic pageNumber
+ * ```
+ */
+export type PdfPageNumberType =
+    'LowerLatin' |
+    'LowerRoman' |
+    'UpperLatin' |
+    'UpperRoman' |
+    'Numeric' |
+    'Arabic';
+
+export interface PdfPoints {
+    /** Defines the x1 position */
+    x1: number;
+    /** Defines the y1 position */
+    y1: number;
+    /** Defines the x2 position */
+    x2: number;
+    /** Defines the y2 position */
+    y2: number;
+}
+
+/**
+ * Defines the PDF dash style.
+ * ```props
+ * * Solid :- Solid DashStyle
+ * * Dash :- Dash DashStyle
+ * * Dot :- Dot DashStyle
+ * * DashDot :- DashDot DashStyle
+ * * DashDotDot :- DashDotDot DashStyle
+ * ```
+ */
+export type PdfDashStyle =
+    'Solid' |
+    'Dash' |
+    'Dot' |
+    'DashDot' |
+    'DashDotDot';
+
+/**
+ * Defines PDF horizontal alignment.
+ * ```props
+ * * Left :- Aligns PDF content to left.
+ * * Right :- Aligns PDF content to right.
+ * * Center :- Aligns PDF content to center.
+ * * Justify :- Aligns PDF content to justify.
+ * ```
+ */
+export type PdfHAlign =
+    'Left' |
+    'Right' |
+    'Center' |
+    'Justify';
+
+/**
+ * Defines PDF vertical alignment.
+ * ```props
+ * * Top :- Aligns PDF content to top.
+ * * Bottom :- Aligns PDF content to bottom.
+ * * Middle :- Aligns PDF content to middle.
+ * ```
+ */
+export type PdfVAlign =
+    'Top' |
+    'Bottom' |
+    'Middle';
+
+export interface PdfContentStyle {
+    /** Line color as hex string or RGB array. */
+    penColor?: string | [number, number, number];
+    /** Defines the pen size. */
+    penSize?: number;
+    /** Defines the dash style. */
+    dashStyle?: PdfDashStyle;
+    /** Text color as RGB values `[R, G, B]` (0-255). */
+    textBrushColor?: [number, number, number];
+    /** Defines the text pen color. */
+    textPenColor?: string;
+    /** Defines the font size. */
+    fontSize?: number;
+    /** Defines the horizontal alignment. */
+    hAlign?: PdfHAlign;
+    /** Defines the vertical alignment. */
+    vAlign?: PdfVAlign;
+    /** Defines the bold of theme style. */
+    bold?: boolean;
+    /** Defines the italic of theme style. */
+    italic?: boolean;
+}
+
+export interface PdfSize {
+    /** Defines the height */
+    height: number;
+    /** Defines the width */
+    width: number;
+}
+
+export interface PdfHeaderFooterContent {
+    /** Defines the content type */
+    type: ContentType;
+    /** Defines the page number type */
+    pageNumberType?: PdfPageNumberType;
+    /** Defines the style of content */
+    style?: PdfContentStyle;
+    /** Defines the pdf points for drawing line */
+    points?: PdfPoints;
+    /** Defines the format for customizing page number */
+    format?: string;
+    /** Defines the position of the content */
+    position?: PdfPosition;
+    /** Defines the size of content */
+    size?: PdfSize;
+    /** Defines the base64 string for image content type */
+    src?: string;
+    /** Defines the value for content */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    value?: any;
+    /** Defines the font for the content */
+    font?: PdfStandardFont | PdfTrueTypeFont;
+    /** Defines the alignment of header */
+    stringFormat?: PdfStringFormat;
+}
+
+/**
+ * Defines border line style.
+ * ```props
+ * * thin :- Border line style as thin line.
+ * * thick :- Border line style as thick line.
+ * ```
+ */
+export type BorderLineStyle =
+    'Thin' |
+    'Thick';
+
+export interface PdfBorder {
+    /** Defines the border color */
+    color?: string;
+    /** Defines the border width */
+    width?: number;
+    /** Defines the border dash style */
+    dashStyle?: PdfDashStyle;
+    /**  Defines the line style of border */
+    lineStyle?: BorderLineStyle;
+}
+
+/**
+ * Represents a PDF header configuration for export.
+ * Allows complete customization of header content across all pages.
+ *
+ * @example
+ * ```tsx
+ * const header: PdfHeader = {
+ *   fromTop: 0,
+ *   height: 130,
+ *   contents: [
+ *     {
+ *       type: 'Line',
+ *       style: { penColor: '#000080', penSize: 2, dashStyle: 'Solid' },
+ *       points: { x1: 0, y1: 4, x2: 685, y2: 4 }
+ *     },
+ *     {
+ *       type: 'Text',
+ *       value: 'Exported Document',
+ *       position: { x: 200, y: 50 },
+ *       style: { fontSize: 20, bold: true }
+ *     }
+ *   ]
+ * };
+ * ```
+ */
+export interface PdfHeader {
+    /**
+     * Distance from the top of the page where the header starts (in points).
+     *
+     * @type {number}
+     */
+    fromTop?: number;
+
+    /**
+     * Height of the header area (in points).
+     *
+     * @type {number}
+     */
+    height?: number;
+
+    /**
+     * Array of content items to render in the header.
+     * Supports text, lines, images, and page numbers.
+     *
+     * @type {PdfHeaderFooterContent[]}
+     */
+    contents?: PdfHeaderFooterContent[];
+}
+
+/**
+ * Represents a PDF footer configuration for export.
+ * Allows complete customization of footer content across all pages.
+ *
+ * @example
+ * ```tsx
+ * const footer: PdfFooter = {
+ *   fromBottom: 160,
+ *   height: 150,
+ *   contents: [
+ *     {
+ *       type: 'PageNumber',
+ *       format: 'Page {$current} of {$total}',
+ *       position: { x: 0, y: 25 },
+ *       style: { fontSize: 15, hAlign: 'Center' }
+ *     },
+ *     {
+ *       type: 'Line',
+ *       style: { penColor: '#000080', penSize: 2, dashStyle: 'Dot' },
+ *       points: { x1: 0, y1: 4, x2: 685, y2: 4 }
+ *     }
+ *   ]
+ * };
+ * ```
+ */
+export interface PdfFooter {
+    /**
+     * Distance from the bottom of the page where the footer starts (in points).
+     *
+     * @type {number}
+     */
+    fromBottom?: number;
+
+    /**
+     * Height of the footer area (in points).
+     *
+     * @type {number}
+     */
+    height?: number;
+
+    /**
+     * Array of content items to render in the footer.
+     * Supports text, lines, images, and page numbers.
+     *
+     * @type {PdfHeaderFooterContent[]}
+     */
+    contents?: PdfHeaderFooterContent[];
+}
+
+/**
  * Configures the behavior and appearance of the PDF export operation.
  * Defines which data to export, file name, styling, and callbacks for customization.
  * Used as the configuration argument for the `pdfExport` method.
@@ -449,8 +751,6 @@ export interface PdfExportAfterEvent extends PdfExportResult {
  *   fileName: 'EmployeeReport.pdf',
  *   pageOrientation: 'Landscape',
  *   pageSize: 'A4',
- *   headerText: 'Employee Data Report',
- *   footerText: 'Page `{$current}` of `{$total}`',
  *   maxRowsWarningThreshold: 5000,
  *   onBeforePdfExport: (event) => {
  *     event.columns = event.columns.filter(col => col.visible !== false);
@@ -517,22 +817,68 @@ export interface PdfExportSettings<T = unknown> {
     fileName?: string;
 
     /**
-     * Text displayed in the PDF header on each page.
-     * Useful for adding titles, report names, or other header information.
+     * Header configuration for each page of the exported PDF.
+     * Use a `PdfHeader` object to define top margin, height, and multiple content items.
      *
-     * @type {string}
+     * @type {PdfHeader}
      * @default undefined
+     *
+     * @example
+     * ```tsx
+     * const config: PdfExportSettings = {
+     *   header: {
+     *     fromTop: 0,
+     *     height: 130,
+     *     contents: [
+     *       {
+     *         type: 'Line',
+     *         style: { penColor: '#000080', penSize: 2, dashStyle: 'Solid' },
+     *         points: { x1: 0, y1: 4, x2: 685, y2: 4 }
+     *       },
+     *       {
+     *         type: 'Text',
+     *         value: 'Report Title',
+     *         position: { x: 200, y: 50 },
+     *         style: { fontSize: 20, bold: true }
+     *       }
+     *     ]
+     *   }
+     * };
+     * ```
      */
-    headerText?: string;
+    header?: PdfHeader;
 
     /**
-     * Text displayed in the PDF footer on each page.
-     * Supports placeholders for page numbers (e.g., Page 1 of 100).
+     * Footer configuration for each page of the exported PDF.
+     * Use a `PdfFooter` object to define bottom margin, height, and content items.
      *
-     * @type {string}
+     * @type {PdfFooter}
      * @default undefined
+     *
+     * @example
+     * ```tsx
+     * const config: PdfExportSettings = {
+     *   footer: {
+     *     fromBottom: 160,
+     *     height: 150,
+     *     contents: [
+     *       {
+     *         type: 'PageNumber',
+     *         format: 'Page {$current} of {$total}',
+     *         position: { x: 0, y: 25 },
+     *         style: { fontSize: 15, hAlign: 'Center' }
+     *       },
+     *       {
+     *         type: 'Line',
+     *         style: { penColor: '#000080', penSize: 2, dashStyle: 'Dot' },
+     *         points: { x1: 0, y1: 4, x2: 685, y2: 4 }
+     *       }
+     *     ]
+     *   }
+     * };
+     * ```
      */
-    footerText?: string;
+    footer?: PdfFooter;
 
     /**
      * Page orientation for the PDF document.
@@ -581,6 +927,27 @@ export interface PdfExportSettings<T = unknown> {
     onAfterPdfExport?: (event: PdfExportAfterEvent) => void;
 
     /**
+     * Export mode for the generated PDF file.
+     * When `false` or not provided, the file is downloaded automatically.
+     * When `true`, the generated Blob is returned for custom handling (e.g., upload, in-memory processing).
+     *
+     * @type {boolean}
+     * @default false
+     * @example
+     * ```tsx
+     * // Download the file automatically
+     * await pdfExport({ fileName: 'employees.pdf', isBlob: false });
+     *
+     * // Return Blob for custom handling
+     * const result = await pdfExport({ fileName: 'employees.pdf', isBlob: true });
+     * if (result.promise) {
+     *   const { blobData } = await result.promise;
+     * }
+     * ```
+     */
+    isBlob?: boolean;
+
+    /**
      * Callback function triggered for each cell during PDF generation.
      * Enables cell-level customization. Typical uses:
      * - Add images to specific columns (e.g., product photos, employee pictures)
@@ -589,12 +956,11 @@ export interface PdfExportSettings<T = unknown> {
      * - Apply conditional styling (e.g., red for negative values, bold for high priority)
      * - Override cell display values based on data context
      *
-     * @type {(event: PdfQueryCellInfoEvent<T>) => void}
+     * @type {(event: PdfCellCustomizeArgs<T>) => void}
      * @default undefined
-     * @private
      * @example
      * ```tsx
-     * const handlePdfQueryCellInfo = (event: PdfQueryCellInfoEvent<Employee>) => {
+     * const handlePdfCellCustomize = (event: PdfCellCustomizeArgs<Employee>) => {
      *   // Format salary values as currency
      *   if (event.column?.field === 'salary') {
      *     event.value = `$${Number(event.value).toLocaleString()}`;
@@ -628,11 +994,11 @@ export interface PdfExportSettings<T = unknown> {
      * };
      *
      * const config: PdfExportSettings = {
-     *   onPdfQueryCellInfo: handlePdfQueryCellInfo
+     *   onPdfCellCustomize: handlePdfCellCustomize
      * };
      * ```
      */
-    onPdfQueryCellInfo?: (event: PdfQueryCellInfoEvent<T>) => void;
+    onPdfCellCustomize?: (event: PdfCellCustomizeArgs<T>) => void;
 
     /**
      * Defines columns to be customized for PDF export.
@@ -682,6 +1048,7 @@ export interface PdfExportSettings<T = unknown> {
  * Return value of the `useGridPdfExport` hook.
  * Provides the `pdfExport` executor and the current export state.
  * Designed for managing PDF export operations and UI state during export.
+ *
  * @example
  * ```tsx
  * const { pdfExport, isExporting } = useGridPdfExport(options);

@@ -17,7 +17,7 @@ import { ChartRowsRender } from '../renderer/AxesRenderer/ChartRowsRender';
 import { TooltipRenderer } from '../renderer/TooltipRenderer';
 import { callChartEventHandlers } from '../hooks/useClipRect';
 import { getData, PointData } from '../utils/getData';
-import { Browser, isNullOrUndefined } from '@syncfusion/react-base';
+import { Browser, initializeTelemetry, isNullOrUndefined } from '@syncfusion/react-base';
 import TrackballRenderer from '../renderer/TrackballRenderer';
 import { stringToNumber } from '../utils/helper';
 import { AxisOutsideRenderer } from '../renderer/AxesRenderer/AxisOutsideRenderer';
@@ -38,6 +38,7 @@ import { NoDataTemplateRenderer } from '../renderer/NoDataTemplateRenderer';
 import { ChartScrollbarsRenderer } from '../renderer/Zooming/scrollbarUtils';
 import { click as triggerMultiLevelLabelClick } from '../renderer/AxesRenderer/ChartMultiLevelLabelRender';
 import { Points } from '../chart-area/chart-interfaces';
+import { CHART_TELEMETRY_KEY, setChartTelemetryFeatureList } from '../base/telemetry';
 
 /**
  * Represents a mapping between layout keys and their corresponding layout state or chart instance.
@@ -149,6 +150,25 @@ export const LayoutProvider: React.FC = () => {
             triggerRemeasure();
         }
     }, [expectedKeys.length]);
+
+    const isTelemetryInitialized: React.MutableRefObject<boolean> = useRef<boolean>(false);
+
+    useEffect(() => {
+        if (isTelemetryInitialized.current || phase !== 'rendering') { return; }
+
+        initializeTelemetry(CHART_TELEMETRY_KEY);
+        isTelemetryInitialized.current = true;
+
+        setChartTelemetryFeatureList({
+            title: !!chartTitle?.text,
+            subTitle: !!chartSubTitle?.text,
+            legend: !!chartLegend?.visible,
+            series: chartSeries.length > 0,
+            stackLabels: !!chartStackLabels?.visible,
+            stripLines: striplineVisibility,
+            annotation: chartAnnotation.length > 0
+        });
+    }, [phase]);
 
     /**
      * Triggers a re-measurement of the chart layout.

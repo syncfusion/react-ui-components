@@ -1,7 +1,9 @@
 import * as React from 'react';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { pdfExportService } from '../services/pdf-export-service';
 import { UseGridPdfExportOptions, PdfExportSettings, PdfExportResult } from '../types/pdf-export.interfaces';
+import { GridTelemetryFeatures } from '../types/enum';
+import { initializeTelemetryFeature } from '@syncfusion/react-base';
 
 /**
  * React hook for Grid PDF export functionality.
@@ -80,6 +82,10 @@ export function useGridPdfExport<T>(
         },
         [options]
     );
+
+    useEffect(() => {
+        initializeTelemetryFeature(GridTelemetryFeatures.PDFExport, 'grid');
+    }, []);
 
     return {
         pdfExport,

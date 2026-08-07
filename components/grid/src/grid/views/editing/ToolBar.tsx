@@ -8,7 +8,7 @@ import { editModule } from '../../types/edit.interfaces';
 import { searchModule } from '../../types/search.interfaces';
 import { useGridComputedProvider, useGridMutableProvider } from '../../contexts';
 import { IL10n, Position } from '@syncfusion/react-base';
-import { ChevronDownFillIcon, CloseIcon, EditIcon, PlusIcon, SaveIcon, SearchIcon, TrashIcon, PrintIcon, ExportPdfIcon } from '@syncfusion/react-icons';
+import { ChevronDownFillIcon, CloseIcon, EditIcon, PlusIcon, SaveIcon, SearchIcon, TrashIcon, PrintIcon, ExportPdfIcon, ExportExcelIcon } from '@syncfusion/react-icons';
 import { InputBase, renderClearButton, renderFloatLabelElement } from '@syncfusion/react-inputs';
 
 // Constants for CSS classes to avoid hardcoding
@@ -337,6 +337,14 @@ export const GridToolbar: React.FC<ToolbarConfig> = ({
                         title: localization?.getConstant('pdfButtonLabel'),
                         text: localization?.getConstant('pdfButtonLabel'),
                         icon: <ExportPdfIcon key={`${gridId}_pdfexporticon`}/>
+                    };
+                    break;
+                case 'ExcelExport':
+                    itemConfig = {
+                        id: `${gridId}_excelexport`,
+                        title: localization?.getConstant('excelButtonLabel'),
+                        text: localization?.getConstant('excelButtonLabel'),
+                        icon: <ExportExcelIcon key={`${gridId}_excelexporticon`}/>
                     };
                     break;
                 case 'ColumnChooser':

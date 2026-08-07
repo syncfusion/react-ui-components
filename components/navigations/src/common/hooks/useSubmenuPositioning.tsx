@@ -182,7 +182,7 @@ export const useSubmenuPositionEffect: (args: UseSubmenuPositionArgs) => void = 
         const pathKey: string = activeSubmenu.parentIndex.join('-');
         const submenuElement: HTMLElement | null | undefined = submenuRefs.current.get(pathKey);
         if (!submenuElement) { return false; }
-        if (isEmbedded && submenuRenderMode === 'inline') {
+        if (isEmbedded && submenuRenderMode === 'Inline') {
             applyEmbeddedPosition(activeSubmenu, submenuElement);
         } else {
             applyPopupPosition(activeSubmenu, submenuElement);

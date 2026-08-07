@@ -24,7 +24,8 @@ import {
     RowSelectableParams,
     ThemeDefaults,
     Theme,
-    GroupType
+    GroupType,
+    ScrollMode
 } from '../types';
 import { GridRef, IGrid } from '../types/grid.interfaces';
 import { SortDescriptor } from '../types/sort.interfaces';
@@ -70,7 +71,8 @@ const CSS_GROUP_EXPAND_BTN: string = 'sf-group-togglebtn';
 const ColumnBase: <T>(props: Partial<IColumnBase<T>>) => JSX.Element = memo(<T, >(props: Partial<IColumnBase<T>>) => {
     const grid: Partial<IGrid<T>> & Partial<MutableGridSetter<T>> = useGridComputedProvider<T>();
     const { onHeaderCellRender, onCellRender, onAggregateCellRender, enableHtmlSanitizer, getColumnByField, getVisibleColumns,
-        isMasterDetail, textWrapSettings, clipMode, serviceLocator, selectionSettings, theme, groupSettings } = grid;
+        isMasterDetail, textWrapSettings, clipMode, serviceLocator, selectionSettings, theme, groupSettings,
+        virtualizationSettings, pageSettings } = grid;
     const { isInitialBeforePaint, cssClass, evaluateTooltipStatus, isInitialLoad, currentViewData,
         selectionModule, getParentElement, filterModule, expansionState, groupCaptionAggregateType } = useGridMutableProvider<T>();
     const localization: IL10n = serviceLocator?.getService<IL10n>('localization');
@@ -146,8 +148,13 @@ const ColumnBase: <T>(props: Partial<IColumnBase<T>>) => JSX.Element = memo(<T, 
 
     const updateFilterModel: (cell: React.RefObject<HTMLElement>) => ExcelFilterArgs = (
         cell: React.RefObject<HTMLElement>): ExcelFilterArgs => {
-        const dataSource: Object = grid.dataSource as DataManager | DataResult;
-        const gridDataManager: DataManager = grid?.dataSource instanceof DataManager ? grid.dataSource :
+        let dataSource: DataManager | DataResult = grid.dataSource as DataManager | DataResult;
+        if ((grid?.getDataModule?.() as UseDataResult)?.isRemote() && (virtualizationSettings?.scrollMode === ScrollMode.Virtual ||
+            virtualizationSettings?.scrollMode === ScrollMode.Infinite || pageSettings?.enabled) && virtualizationSettings?.enableCache) {
+            dataSource = new DataManager({ ...(grid?.dataSource as DataManager)?.dataSource, enableCache: false },
+                                         (dataSource as DataManager)?.defaultQuery, (dataSource as DataManager)?.adaptor);
+        }
+        const gridDataManager: DataManager = dataSource instanceof DataManager ? dataSource :
             new DataManager(grid?.dataSource as DataManager);
         const updateColumn: ColumnProps =  grid.getColumns().find((col: ColumnProps) => col.field === column.field);
         if (grid.filterSettings?.columns.length) {

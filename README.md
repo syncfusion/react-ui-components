@@ -2,7 +2,7 @@
 
 Syncfusion React UI Components library has been built from the ground up to be lightweight, responsive, modular and touch friendly. It offers 30+ UI components that every applications will ever need.
 
-> This is a commercial product requiring a paid license for possession or use. Syncfusion�s licensed software, including this library, is governed by the terms and conditions of Syncfusion's [EULA](https://www.syncfusion.com/eula/es/). To acquire a license for [React UI Components](https://www.syncfusion.com/react-components), you can [purchase one](https://www.syncfusion.com/sales/products) or [start a free 30-day trial](https://www.syncfusion.com/account/manage-trials/start-trials).
+> This is a commercial product requiring a paid license for possession or use. Syncfusion's licensed software, including this library, is governed by the terms and conditions of Syncfusion's [EULA](https://www.syncfusion.com/eula/es/). To acquire a license for [React UI Components](https://www.syncfusion.com/react-components), you can [purchase one](https://www.syncfusion.com/sales/products) or [start a free 30-day trial](https://www.syncfusion.com/account/manage-trials/start-trials).
 
 > A [free community license](https://www.syncfusion.com/products/communitylicense) is available for companies and individuals with less than $1 million USD in annual gross revenue and five or fewer developers.
 
@@ -15,7 +15,7 @@ For additional licensing details, refer to the [LICENSE FILE](https://github.com
 ## React Components Highlights
 
 ### Built for Modern React
-The components leverage React�s modern architecture, utilizing functional components and hooks instead of class-based components or wrappers. This ensures seamless integration with contemporary React applications and empowers developers with idiomatic React patterns.
+The components leverage React's modern architecture, utilizing functional components and hooks instead of class-based components or wrappers. This ensures seamless integration with contemporary React applications and empowers developers with idiomatic React patterns.
 
 ### Fully Reactive by Design
 Components are designed to automatically respond to changes in state and props, eliminating the need for manual refreshes and ensuring consistent, predictable UI updates.
@@ -27,7 +27,7 @@ Optimized rendering logic updates only the necessary parts of the UI, enhancing 
 User interactions, such as focused inputs or selected items, remain intact during state changes, preserving context and providing a seamless, uninterrupted experience.
 
 ### Native Template Rendering
-Templates are rendered using pure JSX, aligning with React�s rendering lifecycle for efficient and native integration.
+Templates are rendered using pure JSX, aligning with React's rendering lifecycle for efficient and native integration.
 
 ### Performance-Driven Architecture
 The library is designed with performance in mind, minimizing renders, optimizing updates, and implementing efficient state handling to deliver fast and responsive applications.
@@ -76,6 +76,87 @@ The library is designed with performance in mind, minimizing renders, optimizing
        </td>
        <td>
            <a href="https://react.syncfusion.com/react-ui/data-grid/overview">Live demo</a>
+       </td>
+   </tr>
+</table>
+
+### Scheduler
+<table>
+    <tr>
+       <td>
+          <b>Scheduler</b>
+       </td>
+       <td rowspan="1">
+           <a href="https://www.npmjs.com/package/@syncfusion/react-scheduler"><img src="https://ej2.syncfusion.com/github/images/npm-logo.png" alt="npm package @syncfusion/react-scheduler" title="@syncfusion/react-scheduler" style="height:20px;" />
+       </td>
+       <td>
+           <a href="components/scheduler/src/scheduler">Source</a>
+       </td>
+       <td>
+           <a href="https://react.syncfusion.com/react-ui/scheduler/overview">Live demo</a>
+       </td>
+   </tr>
+</table>
+
+### Calendars
+
+<table>
+   <tr>
+       <td>
+           <b>Calendar</b>
+       </td>
+        <td rowspan="5">
+           <a href="https://www.npmjs.com/package/@syncfusion/react-calendars"><img src="https://ej2.syncfusion.com/github/images/npm-logo.png" alt="npm package @syncfusion/react-calendars" title="@syncfusion/react-calendars" style="height:20px;" />
+       </td>
+       <td>
+           <a href="components/calendars/src/calendar">Source</a>
+       </td>
+       <td>
+           <a href="https://react.syncfusion.com/react-ui/calendar">Live demo</a>
+       </td>
+   </tr>
+   <tr>
+       <td>
+          <b>DatePicker</b>
+       </td>
+       <td>
+           <a href="components/calendars/src/datepicker">Source</a>
+       </td>
+       <td>
+           <a href="https://react.syncfusion.com/react-ui/datepicker">Live demo</a>
+       </td>
+   </tr>
+   <tr>
+       <td>
+          <b>TimePicker</b>
+       </td>
+       <td>
+           <a href="components/calendars/src/timepicker">Source</a>
+       </td>
+       <td>
+           <a href="https://react.syncfusion.com/react-ui/timepicker">Live demo</a>
+       </td>
+   </tr>
+   <tr>
+       <td>
+          <b>DateTimePicker</b>
+       </td>
+       <td>
+           <a href="components/calendars/src/datetimepicker">Source</a>
+       </td>
+       <td>
+           <a href="https://react.syncfusion.com/react-ui/datetimepicker">Live demo</a>
+       </td>
+   </tr>
+   <tr>
+       <td>
+          <b>DateRangePicker</b>
+       </td>
+       <td>
+           <a href="components/calendars/src/daterangepicker">Source</a>
+       </td>
+       <td>
+           <a href="https://react.syncfusion.com/react-ui/daterangepicker">Live demo</a>
        </td>
    </tr>
 </table>
@@ -175,83 +256,6 @@ The library is designed with performance in mind, minimizing renders, optimizing
        </td>
        <td>
            <a href="https://react.syncfusion.com/react-ui/split-button">Live demo</a>
-       </td>
-   </tr>
-</table>
-
-### Calendars
-
-<table>
-    <tr>
-       <td>
-          <b>Scheduler</b>
-       </td>
-       <td rowspan="1">
-           <a href="https://www.npmjs.com/package/@syncfusion/react-scheduler"><img src="https://ej2.syncfusion.com/github/images/npm-logo.png" alt="npm package @syncfusion/react-scheduler" title="@syncfusion/react-scheduler" style="height:20px;" />
-       </td>
-       <td>
-           <a href="components/scheduler/src/scheduler">Source</a>
-       </td>
-       <td>
-           <a href="https://react.syncfusion.com/react-ui/scheduler/overview">Live demo</a>
-       </td>
-   </tr>
-   <tr>
-       <td>
-           <b>Calendar</b>
-       </td>
-        <td rowspan="5">
-           <a href="https://www.npmjs.com/package/@syncfusion/react-calendars"><img src="https://ej2.syncfusion.com/github/images/npm-logo.png" alt="npm package @syncfusion/react-calendars" title="@syncfusion/react-calendars" style="height:20px;" />
-       </td>
-       <td>
-           <a href="components/calendars/src/calendar">Source</a>
-       </td>
-       <td>
-           <a href="https://react.syncfusion.com/react-ui/calendar">Live demo</a>
-       </td>
-   </tr>
-   <tr>
-       <td>
-          <b>DatePicker</b>
-       </td>
-       <td>
-           <a href="components/calendars/src/datepicker">Source</a>
-       </td>
-       <td>
-           <a href="https://react.syncfusion.com/react-ui/datepicker">Live demo</a>
-       </td>
-   </tr>
-   <tr>
-       <td>
-          <b>TimePicker</b>
-       </td>
-       <td>
-           <a href="components/calendars/src/timepicker">Source</a>
-       </td>
-       <td>
-           <a href="https://react.syncfusion.com/react-ui/timepicker">Live demo</a>
-       </td>
-   </tr>
-   <tr>
-       <td>
-          <b>DateTimePicker</b>
-       </td>
-       <td>
-           <a href="components/calendars/src/datetimepicker">Source</a>
-       </td>
-       <td>
-           <a href="https://react.syncfusion.com/react-ui/datetimepicker">Live demo</a>
-       </td>
-   </tr>
-   <tr>
-       <td>
-          <b>DateRangePicker</b>
-       </td>
-       <td>
-           <a href="components/calendars/src/daterangepicker">Source</a>
-       </td>
-       <td>
-           <a href="https://react.syncfusion.com/react-ui/daterangepicker">Live demo</a>
        </td>
    </tr>
 </table>

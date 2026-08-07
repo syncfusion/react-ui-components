@@ -2,7 +2,7 @@
 
 React SVG Tooltip is a lightweight and customizable component designed to enhance data visualizations with interactive overlays.
 
-Explore the demo [here](https://react.syncfusion.com/react-ui/chart/overview).
+Explore the demo [here](https://react.syncfusion.com/react-ui/charts/overview/?theme=material).
 
 **Key features**
 
@@ -26,8 +26,8 @@ npm install @syncfusion/react-svg-tooltip
 
 **Resources**
 
-- [Chart Demo/Docs](https://react.syncfusion.com/react-ui/chart/overview)
-- [Chart API](https://react.syncfusion.com/api/chart/overview)
+- [Chart Demo/Docs](https://react.syncfusion.com/react-ui/charts/overview/?theme=material)
+- [Chart API](https://react.syncfusion.com/api/chart/overview/)
 
 <p align="center">
 Trusted by the world's leading companies

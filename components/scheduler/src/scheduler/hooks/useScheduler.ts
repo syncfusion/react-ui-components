@@ -3,7 +3,7 @@ import { SchedulerProps, ViewSpecificProps, SchedulerViewChangeEvent, SchedulerD
 import { ViewsInfo, ActiveViewProps } from '../types/internal-interface';
 import { defaultSchedulerProps, defaultAgendaViewProps } from '../utils/default-props';
 import { mergeSchedulerProps } from '../utils/merge-utils';
-import { useProviderContext } from '@syncfusion/react-base';
+import { useProviderContext, initializeTelemetryFeature } from '@syncfusion/react-base';
 import { ViewService } from '../services/ViewService';
 import { DateService } from '../services/DateService';
 import { NavigationService, NavigationOptions  } from '../services/NavigationService';
@@ -156,6 +156,17 @@ export const useScheduler: (props: UseSchedulerProps) => UseSchedulerResult = (p
     const [showCalendar, setShowCalendar] = useState<boolean>(false);
     const [calendarView, setCalendarView] = useState<CalendarView>(CalendarView.Month);
     let currentSelectedDate: Date;
+
+    useEffect(() => {
+        if (props.timezone) {
+            initializeTelemetryFeature('Timezone', 'schedule');
+        }
+        const isResources: boolean = props.resources && props.resources.length > 0;
+        const isResourcesGrouping: boolean = props.group && props.group.resources && props.group.resources.length > 0;
+        if (isResources || isResourcesGrouping) {
+            initializeTelemetryFeature('ResourcesGrouping', 'schedule');
+        }
+    }, []);
 
     useEffect(() => {
         if (isSelectedDateControlled) {

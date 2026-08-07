@@ -25,7 +25,8 @@ import {
     useProviderContext,
     SanitizeHtmlHelper,
     createElement,
-    preRender
+    preRender,
+    initializeTelemetry
 } from '@syncfusion/react-base';
 import { useValueFormatter, createServiceLocator } from '../services';
 import { Query, DataManager, DataResult, QueryOptions, ReturnType as DataReturnType } from '@syncfusion/react-data';
@@ -73,7 +74,7 @@ import {
     UseGroupResult
 } from './index';
 import { useData } from '../models';
-import { iterateArrayOrObject } from '../utils';
+import { iterateArrayOrObject, setGridTelemetryFeatureList } from '../utils';
 import { ITooltip } from '@syncfusion/react-popups';
 import { useCommandColumn } from './useCommandColumn';
 import { ScrollMode, VirtualSettings } from '../types';
@@ -94,6 +95,7 @@ const defaultLocale: Record<string, string> = {
     cancelButtonLabel: 'Cancel',
     printButtonLabel: 'Print',
     pdfButtonLabel: 'PDF Export',
+    excelButtonLabel: 'Excel Export',
     updateButtonLabel: 'Update',
     deleteButtonLabel: 'Delete',
     editRowLabel: 'Edit this row',
@@ -1020,6 +1022,9 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         if (finalDataSource && dataModule.isRemote() && finalDataSource instanceof DataManager) {
             // Especially usefull for edit update whole data based aggregate
             return dataOperations?.getData?.({}, query) as Promise<DataReturnType>;
+        } else if ('result' in finalDataSource) {
+            // For custom binding, pass proper request object with requestType for data operations
+            return dataOperations?.getData?.({ requestType: 'getData' }, query) as Promise<DataReturnType>;
         } else {
             if (finalDataSource instanceof DataManager) {
                 return (finalDataSource as DataManager).executeLocal(query);
@@ -1329,6 +1334,7 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         const datePicker: boolean = target?.closest('.sf-datepicker')?.classList.contains('sf-popup-open');
         const dropDown: boolean = target?.closest('.sf-ddl')?.classList.contains('sf-popup-open');
         const checkbox: boolean = target?.tagName === 'INPUT' && (e.target as HTMLElement)?.classList.contains('sf-grid-checkselect');
+        const isHeaderCellClick: boolean = !!target?.closest('.sf-grid-header-row .sf-cell');
         const expansionIcon: HTMLElement = target?.closest('.sf-detail-toggle-icon');
         if (expansionIcon) {
             const clickedCell: HTMLTableCellElement = target.closest('td[role="gridcell"]') as HTMLTableCellElement;
@@ -1339,7 +1345,7 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         // Ensure grid is fully initialized before handling clicks
         // This fixes the initial rendering click issue
         if (isInitialLoad || !gridRef.current?.element || !currentViewData?.length || toolbarAction || datePicker || isGroupDropAreaAction
-            || editModule?.isDialogOpen || editModule?.isDeleteDialogOpen || checkbox || dropDown || selectionSettings?.checkboxOnly || (e.target as Element).closest('.sf-column-chooser-dialog')) {
+            || editModule?.isDialogOpen || editModule?.isDeleteDialogOpen || checkbox || dropDown || (selectionSettings?.checkboxOnly && !isHeaderCellClick) || (e.target as Element).closest('.sf-column-chooser-dialog')) {
             if (toolbarAction || isGroupDropAreaAction) {
                 if (isGroupDropAreaAction) {
                     sortModule?.handleGridClick?.(e);
@@ -2086,6 +2092,8 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         // Set the first focusable element's tabIndex to 0
         focusModule.setFirstFocusableTabIndex();
         preRender('grid');
+        initializeTelemetry('grid');
+        setGridTelemetryFeatureList<T>(props, { aggregates });
         if (props.onGridInit) {
             props.onGridInit(); // trigger only once on initial render, once Dom element mounted.
         }

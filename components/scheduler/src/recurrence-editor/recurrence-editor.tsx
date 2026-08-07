@@ -1,5 +1,5 @@
 import { ReactNode, useCallback, useEffect, memo, useId } from 'react';
-import { Color, useProviderContext, Variant } from '@syncfusion/react-base';
+import { Color, useProviderContext, Variant, initializeTelemetryFeature } from '@syncfusion/react-base';
 import { NumericTextBox } from '@syncfusion/react-inputs';
 import { DropDownList } from '@syncfusion/react-dropdowns';
 import { Button, RadioButton } from '@syncfusion/react-buttons';
@@ -47,6 +47,10 @@ export const RecurrenceEditor: React.FC<RecurrenceEditorProps> = (props: Recurre
         alertDialogOpen,
         setAlertDialogOpen
     } = useRecurrenceEditor(value, startDate, frequencies, endTypes, firstDayOfWeek);
+
+    useEffect(() => {
+        initializeTelemetryFeature('RecurrenceEditor', 'schedule');
+    }, []);
 
     useEffect(() => {
         if (!onChange) {

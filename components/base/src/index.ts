@@ -25,3 +25,4 @@ export * from './util';
 export * from './validate-lic';
 export * from './provider';
 export * from './svg-icon';
+export * from './telemetry';

@@ -16,7 +16,7 @@ export type MenuEffect = 'None' | 'SlideDown' | 'ZoomIn' | 'FadeIn';
 /**
  * Specifies the type for submenu mount location.
  */
-export type SubmenuRenderMode = 'inline' | 'portal';
+export type SubmenuRenderMode = 'Inline' | 'Portal';
 
 /**
  * Interface for Menu component instance.
@@ -37,29 +37,28 @@ type MenuComponentProps = MenuProps & Omit<HTMLAttributes<HTMLDivElement>, 'onSe
  * A layout navigation menu component with support for hierarchical menu items.
  * Manages submenu interactions and supports both horizontal and vertical orientations.
  *
- * @example
- * ```tsx
+ * ```typescript
  * import { Menu, MenuItem, MenuItemLabel, MenuItemIcon, Orientation } from "@syncfusion/react-navigations";
- *
- * return (
- *   <Menu orientation={Orientation.Horizontal} itemOnClick={false}>
- *     <MenuItem>
- *       <MenuItemIcon><FileIcon /></MenuItemIcon>
- *       <MenuItemLabel>File</MenuItemLabel>
- *       <MenuItem>
- *         <MenuItemLabel>New</MenuItemLabel>
- *       </MenuItem>
- *       <MenuItem>
- *         <MenuItemLabel>Open</MenuItemLabel>
- *       </MenuItem>
- *     </MenuItem>
- *     <MenuItem>
- *       <MenuItemLabel>Edit</MenuItemLabel>
- *     </MenuItem>
- *   </Menu>
- * );
+ * export default function App() {
+ *     return (
+ *         <Menu orientation={Orientation.Horizontal} itemOnClick={false}>
+ *             <MenuItem>
+ *                 <MenuItemIcon><FileIcon /></MenuItemIcon>
+ *                 <MenuItemLabel>File</MenuItemLabel>
+ *                 <MenuItem>
+ *                     <MenuItemLabel>New</MenuItemLabel>
+ *                 </MenuItem>
+ *             </MenuItem>
+ *             <MenuItem>
+ *                 <MenuItemLabel>Open</MenuItemLabel>
+ *             </MenuItem>
+ *             <MenuItem>
+ *                 <MenuItemLabel>Edit</MenuItemLabel>
+ *             </MenuItem>
+ *         </Menu>
+ *     );
+ * }
  * ```
- *
  */
 export const Menu: ForwardRefExoticComponent<MenuComponentProps & RefAttributes<IMenu>> =
     forwardRef<IMenu, MenuComponentProps>((props: MenuComponentProps, ref: Ref<IMenu>) => {
@@ -72,7 +71,7 @@ export const Menu: ForwardRefExoticComponent<MenuComponentProps & RefAttributes<
             closeOnScroll = true,
             itemOnClick = false,
             orientation = Orientation.Horizontal,
-            submenuRenderMode = 'inline',
+            submenuRenderMode = 'Inline',
             className,
             children,
             ...restProps

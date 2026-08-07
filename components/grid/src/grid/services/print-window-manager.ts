@@ -68,6 +68,9 @@ function buildHtmlBoilerplate(title: string, locale: string, enableRtl: boolean)
     .${PRINT_GRID_CLASS} .${PRINT_GRID_CONTENT_CLASS} {
         overflow-x: hidden;
     }
+    .${PRINT_GRID_CLASS} .sf-grid-content-row {
+        page-break-inside: avoid;
+    }
   </style>
 </head>
 <body>

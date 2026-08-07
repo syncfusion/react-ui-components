@@ -167,12 +167,14 @@ export interface IChip extends ChipProps {
 type ChipComponentProps = ChipProps & HTMLAttributes<HTMLDivElement>;
 
 /**
- * The Chip component represents information in a compact form, such as entity attribute, text, or action.
+ * The Chip component is a versatile element for representing information in a compact form, such as text, entity attributes, selections, filters, or actions, enhancing content presentation based on its configuration and state.
  *
  * ```typescript
  * import { Chip } from "@syncfusion/react-buttons";
  *
- * <Chip color="Primary" removable={true}>Anne</Chip>
+ * export default function App() {
+ *       <Chip color="Primary" removable={true}>Anne</Chip>
+ * }
  * ```
  */
 export const Chip: ForwardRefExoticComponent<ChipComponentProps & RefAttributes<IChip>> =

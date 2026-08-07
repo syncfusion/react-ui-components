@@ -1088,6 +1088,26 @@ export const ThemeDefaults: Record<Theme, { rowHeight: number, groupingIndent: n
     [Theme.Material]: { rowHeight: 50, groupingIndent: 20 }
 };
 
+/** @private */
+export enum GridTelemetryFeatures {
+    Sort = 'sort',
+    Filter = 'filter',
+    Search = 'search',
+    Group = 'group',
+    Crud = 'crud',
+    VirtualScroll = 'virtualScroll',
+    InfiniteScroll = 'infiniteScroll',
+    Aggregate = 'aggregate',
+    Selection = 'selection',
+    Pager = 'pager',
+    ColumnChooser = 'columnChooser',
+    ContextMenu = 'contextMenu',
+    DetailRow = 'detailRow',
+    PDFExport = 'pdfExport',
+    ExcelExport = 'excelExport',
+    Print = 'print'
+}
+
 /**
  * Defines the cell selection mode for rectangular range selection behavior.
  * Controls how cells are selected when creating ranges via mouse drag or keyboard shortcuts.

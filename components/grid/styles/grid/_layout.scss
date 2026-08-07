@@ -244,7 +244,7 @@
     display: flex;
     flex-flow: row nowrap;
     align-items: center;
-    justify-content: inherit;
+    justify-content: flex-start;
     overflow: hidden;
     border: $grid-border-0 none;
     text-transform: $grid-header-text-transform;
@@ -253,7 +253,7 @@
   .sf-grid-sort-container {
     margin-inline-start: $grid-spacing-5;
     flex-shrink: 0;
-    display: inline-block;
+    display: inline-flex;
   }
 
   .sf-grid-sort-order {
@@ -272,6 +272,7 @@
     @extend %no-wrap-styles;
     min-width: $grid-min-width-0;
     flex-shrink: 1;
+    flex-grow: 1;
   }
 
   .sf-vertical-lines {
@@ -639,7 +640,12 @@
 }
 
 .sf-grid-filter-container.sf-icons {
-  margin-left: $grid-spacing-5;
+  margin-left: auto;
+  margin-inline-start: $grid-spacing-5;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .sf-excel-shimmer {
@@ -761,4 +767,8 @@
   cursor: pointer;
   padding: $spacing-4;
   border-radius: $radius-full;
+}
+
+.sf-grid-edit-cell {
+  border-top: $grid-border-width $grid-border-style $grid-border-color;
 }

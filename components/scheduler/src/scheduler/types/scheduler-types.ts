@@ -1949,6 +1949,8 @@ export interface DateRangeProps {
  * Configures the base properties for scheduler toolbar buttons including styling, callbacks, and accessibility attributes.
  * Provides common button configuration options shared across all toolbar button types in the scheduler header.
  * Enables consistent styling and interaction handling for toolbar button customization across the scheduler.
+ *
+ * @private
  */
 export interface BaseToolbarButtonProps {
     /**

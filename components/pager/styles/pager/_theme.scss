@@ -32,6 +32,7 @@
   .sf-numeric-item.sf-focused,
   .sf-pager .sf-icons.sf-focused {
     background-color: $pager-focus-bg-color;
+    color: $pager-item-focus-text-color;
   }
 
   .sf-current-item,

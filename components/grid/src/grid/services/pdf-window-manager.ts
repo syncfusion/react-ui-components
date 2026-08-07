@@ -15,11 +15,9 @@ import {
     PdfGridCell,
     PdfGridColumn,
     PdfGridRow,
-    PdfPage,
     PdfTextWebLink,
-    PdfGridLayoutFormat,
-    PdfLayoutType,
-    PdfLayoutBreakType,
+    PdfPage,
+    PdfBitmap,
     RectangleF,
     PdfHorizontalOverflowType,
     SizeF,
@@ -30,10 +28,14 @@ import {
     PdfPageNumberField,
     PdfPageCountField,
     PdfCompositeField,
-    PointF
+    PointF,
+    PdfGridLayoutFormat,
+    PdfLayoutType,
+    PdfLayoutBreakType
 } from '@syncfusion/pdf-export';
 import { ColumnProps } from '../types/column.interfaces';
-import { PdfExportSettings, PdfExportResult, PdfQueryCellInfoEvent } from '../types/pdf-export.interfaces';
+import { GroupedData } from '../types/grouping.interfaces';
+import { PdfExportSettings, PdfExportResult, PdfCellCustomizeArgs, PdfFooter, PdfHeader, PdfHeaderFooterContent, PdfPosition, PdfContentStyle, PdfPoints, PdfSize } from '../types/pdf-export.interfaces';
 
 // PDF Page Size Constants
 const PDF_PAGE_SIZE_A3: string = 'A3';
@@ -59,21 +61,15 @@ const PDF_VALIGN_BOTTOM: string = 'Bottom';
 const PDF_FONT_FAMILY: PdfFontFamily = PdfFontFamily.Helvetica;
 const PDF_HEADER_FONT_SIZE: number = 11;
 const PDF_CELL_FONT_SIZE: number = 9.75;
-const PDF_FOOTER_FONT_SIZE: number = 9;
 const PDF_CELL_PADDING: number = 5;
 const PDF_CELL_PADDING_V: number = 2;
 const PDF_COLUMN_WIDTH_DEFAULT: number = 100;
 const PDF_PAGE_MARGIN: number = 10;
-const PDF_HEADER_POSITION_Y: number = 50;
-const PDF_INITIAL_POSITION_Y: number = 10;
 
 // PDF Color Constants
 const PDF_COLOR_HEADER_BG: [number, number, number] = [240, 240, 240];
 const PDF_COLOR_TEXT_BLACK: [number, number, number] = [0, 0, 0];
 const PDF_COLOR_LINK_BLUE: [number, number, number] = [51, 102, 187];
-const PDF_COLOR_ROW_EVEN: [number, number, number] = [255, 255, 255];
-const PDF_COLOR_ROW_ODD: [number, number, number] = [248, 248, 248];
-const PDF_COLOR_FOOTER_TEXT: [number, number, number] = [100, 100, 100];
 
 // PDF Text Placeholder Constants
 const PDF_DEFAULT_FILENAME: string = 'Grid.pdf';
@@ -155,19 +151,226 @@ function formatCellValue(value: unknown, column: ColumnProps): string {
 }
 
 /**
+ * Renders header or footer content items on a PDF template element.
+ * Supports text, lines, images, and page numbers with positioning and styling.
+ *
+ * @param {PdfPageTemplateElement} element - The template element to render content on
+ * @param {PdfHeaderFooterContent[]} contents - Array of content items to render
+ * @returns {void}
+ * @private
+ */
+function renderHeaderFooterContents(
+    element: PdfPageTemplateElement,
+    contents: PdfHeaderFooterContent[]
+): void {
+    for (const content of contents) {
+        if (!content || !content.type) { continue; }
+
+        switch (content.type) {
+        case 'Text':
+            renderHeaderFooterText(element, content);
+            break;
+        case 'Line':
+            renderHeaderFooterLine(element, content);
+            break;
+        case 'Image':
+            renderHeaderFooterImage(element, content);
+            break;
+        case 'PageNumber':
+            renderHeaderFooterPageNumber(element, content);
+            break;
+        }
+    }
+}
+
+/**
+ * Renders a text content item in PDF header/footer.
+ *
+ * @param {PdfPageTemplateElement} element - The template element to render content on
+ * @param {PdfHeaderFooterTextContent} content - Text content to render
+ * @returns {void}
+ * @private
+ */
+function renderHeaderFooterText(element: PdfPageTemplateElement, content: PdfHeaderFooterContent): void {
+    const position: PdfPosition = content.position || { x: 0, y: 0 };
+    const style: PdfContentStyle = content.style || {};
+    const fontSize: number = style.fontSize || 11;
+    const bold: boolean = style.bold || false;
+    const italic: boolean = style.italic || false;
+
+    let fontStyle: PdfFontStyle = PdfFontStyle.Regular;
+    if (bold) { fontStyle |= PdfFontStyle.Bold; }
+    if (italic) { fontStyle |= PdfFontStyle.Italic; }
+
+    const font: PdfStandardFont = new PdfStandardFont(PDF_FONT_FAMILY, fontSize, fontStyle);
+    const brush: PdfSolidBrush = style.textBrushColor
+        ? new PdfSolidBrush(new PdfColor(style.textBrushColor[0], style.textBrushColor[1], style.textBrushColor[2]))
+        : new PdfSolidBrush(new PdfColor(PDF_COLOR_TEXT_BLACK[0], PDF_COLOR_TEXT_BLACK[1], PDF_COLOR_TEXT_BLACK[2]));
+
+    let alignment: PdfTextAlignment = PdfTextAlignment.Left;
+    if (style.hAlign === 'Center') { alignment = PdfTextAlignment.Center; }
+    else if (style.hAlign === 'Right') { alignment = PdfTextAlignment.Right; }
+
+    const format: PdfStringFormat = new PdfStringFormat(alignment, PdfVerticalAlignment.Top);
+    element.graphics.drawString(content.value || '', font, new PdfPen(new PdfColor(0, 0, 0)), brush, position.x, position.y, format);
+}
+
+/**
+ * Renders a line content item in PDF header/footer.
+ *
+ * @param {PdfPageTemplateElement} element - The template element to render content on
+ * @param {PdfHeaderFooterLineContent} content - Line content to render
+ * @returns {void}
+ * @private
+ */
+function renderHeaderFooterLine(element: PdfPageTemplateElement, content: PdfHeaderFooterContent): void {
+    const points: PdfPoints = content.points || { x1: 0, y1: 0, x2: 100, y2: 0 };
+    const style: PdfContentStyle = content.style || {};
+    const penSize: number = style.penSize || 1;
+    const penColor: string | [number, number, number] = style.penColor || '#000000';
+
+    let color: PdfColor;
+    if (typeof penColor === 'string') {
+        // Parse hex color
+        const hex: string = penColor.replace('#', '');
+        const r: number = parseInt(hex.substring(0, 2), 16);
+        const g: number = parseInt(hex.substring(2, 4), 16);
+        const b: number = parseInt(hex.substring(4, 6), 16);
+        color = new PdfColor(r, g, b);
+    } else if (Array.isArray(penColor)) {
+        color = new PdfColor(penColor[0], penColor[1], penColor[2]);
+    } else {
+        color = new PdfColor(0, 0, 0);
+    }
+
+    const pen: PdfPen = new PdfPen(color, penSize);
+
+    // Handle dash style
+    if (style.dashStyle === 'Dot') {
+        pen.dashStyle = 2; // PdfDashStyle.Dot
+    } else if (style.dashStyle === 'Dash') {
+        pen.dashStyle = 1; // PdfDashStyle.Dash
+    } else if (style.dashStyle === 'DashDot') {
+        pen.dashStyle = 3; // PdfDashStyle.DashDot
+    } else if (style.dashStyle === 'DashDotDot') {
+        pen.dashStyle = 4; // PdfDashStyle.DashDotDot
+    }
+
+    element.graphics.drawLine(pen, points.x1, points.y1, points.x2, points.y2);
+}
+
+/**
+ * Renders an image content item in PDF header/footer.
+ *
+ * @param {PdfPageTemplateElement} element - The template element to render content on
+ * @param {PdfHeaderFooterImageContent} content - Image content to render
+ * @returns {void}
+ * @private
+ */
+function renderHeaderFooterImage(element: PdfPageTemplateElement, content: PdfHeaderFooterContent): void {
+    const position: PdfPosition = content.position || { x: 0, y: 0 };
+    const size: PdfSize | undefined = content.size;
+
+    try {
+        // Image rendering via PdfBitmap (supports base64 or URL depending on environment)
+        if (typeof PdfBitmap === 'function') {
+            const image: PdfBitmap = new PdfBitmap(content.src);
+            if (size && size.width && size.height) {
+                element.graphics.drawImage(image, position.x, position.y, size.width, size.height);
+            } else {
+                element.graphics.drawImage(image, position.x, position.y);
+            }
+        }
+    } catch (error) {
+        // Silently fail if image cannot be loaded
+    }
+}
+
+/**
+ * Renders a page number content item in PDF header/footer.
+ *
+ * @param {PdfPageTemplateElement} element - The template element to render content on
+ * @param {PdfHeaderFooterPageNumberContent} content - Page number content to render
+ * @returns {void}
+ * @private
+ */
+function renderHeaderFooterPageNumber(element: PdfPageTemplateElement, content: PdfHeaderFooterContent): void {
+    const position: PdfPosition = content.position || { x: 0, y: 0 };
+    const style: PdfContentStyle = content.style || {};
+    const fontSize: number = style.fontSize || 11;
+    const format: string = content.format || 'Page {$current}';
+
+    const brush: PdfSolidBrush = style.textBrushColor
+        ? new PdfSolidBrush(new PdfColor(style.textBrushColor[0], style.textBrushColor[1], style.textBrushColor[2]))
+        : new PdfSolidBrush(new PdfColor(...PDF_COLOR_TEXT_BLACK));
+
+    const font: PdfStandardFont = new PdfStandardFont(PDF_FONT_FAMILY, fontSize, PdfFontStyle.Regular);
+
+    let alignment: PdfTextAlignment = PdfTextAlignment.Left;
+    if (style.hAlign === 'Center') { alignment = PdfTextAlignment.Center; }
+    else if (style.hAlign === 'Right') { alignment = PdfTextAlignment.Right; }
+
+    const stringFormat: PdfStringFormat = new PdfStringFormat(alignment, PdfVerticalAlignment.Top);
+
+    // Create page number field
+    const pageNumber: PdfPageNumberField = new PdfPageNumberField(font, brush);
+
+    // Parse format string
+    const currentPlaceholder: string = '{$current}';
+    const totalPlaceholder: string = '{$total}';
+    const hasCurrent: boolean = format.indexOf(currentPlaceholder) !== -1;
+    const hasTotal: boolean = format.indexOf(totalPlaceholder) !== -1;
+
+    if (hasCurrent && hasTotal) {
+        const pageCount: PdfPageCountField = new PdfPageCountField(font, brush);
+        let compositeFormat: string = format;
+        const currentIndex: number = compositeFormat.indexOf(currentPlaceholder);
+        const totalIndex: number = compositeFormat.indexOf(totalPlaceholder);
+
+        if (currentIndex < totalIndex) {
+            compositeFormat = compositeFormat.replace(currentPlaceholder, '{0}').replace(totalPlaceholder, '{1}');
+            const compositeField: PdfCompositeField = new PdfCompositeField(font, brush, compositeFormat, pageNumber, pageCount);
+            compositeField.stringFormat = stringFormat;
+            compositeField.draw(element.graphics, new PointF(position.x, position.y));
+        } else {
+            compositeFormat = compositeFormat.replace(totalPlaceholder, '{0}').replace(currentPlaceholder, '{1}');
+            const compositeField: PdfCompositeField = new PdfCompositeField(font, brush, compositeFormat, pageCount, pageNumber);
+            compositeField.stringFormat = stringFormat;
+            compositeField.draw(element.graphics, new PointF(position.x, position.y));
+        }
+    } else if (hasCurrent) {
+        const compositeFormat: string = format.replace(currentPlaceholder, '{0}');
+        const compositeField: PdfCompositeField = new PdfCompositeField(font, brush, compositeFormat, pageNumber);
+        compositeField.stringFormat = stringFormat;
+        compositeField.draw(element.graphics, new PointF(position.x, position.y));
+    } else if (hasTotal) {
+        const pageCount: PdfPageCountField = new PdfPageCountField(font, brush);
+        const compositeFormat: string = format.replace(totalPlaceholder, '{0}');
+        const compositeField: PdfCompositeField = new PdfCompositeField(font, brush, compositeFormat, pageCount);
+        compositeField.stringFormat = stringFormat;
+        compositeField.draw(element.graphics, new PointF(position.x, position.y));
+    } else {
+        // No placeholders, just draw static text
+        element.graphics.drawString(format, font, new PdfPen(new PdfColor(0, 0, 0)), brush, position.x, position.y, stringFormat);
+    }
+}
+
+/**
  * Builds PDF grid from grid columns and data.
- * Supports cell customization via onPdfQueryCellInfo callback for images, hyperlinks, and styling.
+ * Supports cell customization via onPdfCellCustomize callback for images, hyperlinks, and styling.
  * Columns should be pre-merged with any export customizations before passing to this function.
  *
  * @param {ColumnProps[]} columns - The grid columns (already merged with export customizations)
  * @param {unknown[]} dataSource - The grid data
- * @param {Function} [onPdfQueryCellInfo] - Optional callback for cell-level customization
+ * @param {Function} [onPdfCellCustomize] - Optional callback for cell-level customization
+ * @param {Object} [groupingSettings] - Optional grouping settings for grouped data export
  * @returns {PdfGrid} Configured PDF grid
  */
 function buildPdfGrid(
     columns: ColumnProps[],
     dataSource: unknown[],
-    onPdfQueryCellInfo?: (event: PdfQueryCellInfoEvent) => void
+    onPdfCellCustomize?: (event: PdfCellCustomizeArgs) => void,
+    groupingSettings?: { enabled: boolean; columns: string[]; captionFormat: 'verbose' | 'compact' }
 ): PdfGrid {
     const pdfGrid: PdfGrid = new PdfGrid();
 
@@ -220,27 +423,66 @@ function buildPdfGrid(
     // Add data rows
     dataSource.forEach((row: unknown) => {
         const pdfRow: PdfGridRow = pdfGrid.rows.addRow();
+        const rowRecord: Record<string, unknown> = row as Record<string, unknown>;
+        const isGroupHeader: boolean = groupingSettings?.enabled && typeof row === 'object' && row !== null && 'items' in row && 'count' in row;
+        const groupLevel: number = isGroupHeader ? ((row as GroupedData).flattedLevel ? (row as GroupedData).flattedLevel! - 1 : 0) : 0;
+        const groupIndex: number = isGroupHeader ? ((row as GroupedData).flattedLevel ? (row as GroupedData).flattedLevel! - 1 : 0) : -1;
+        const groupColSpan: number = isGroupHeader ? columns.length - groupIndex : 1;
 
         columns.forEach((column: ColumnProps, index: number) => {
-            const rowRecord: Record<string, unknown> = row as Record<string, unknown>;
-            const fieldValue: string = column.field as string;
-            const cellValue: unknown = rowRecord?.[fieldValue as string] ?? '';
-            const displayValue: string | number | boolean = formatCellValue(cellValue, column);
-            const cell: PdfGridCell = pdfRow.cells.getCell(index);
+            if (isGroupHeader && index > groupIndex && index < groupIndex + groupColSpan) {
+                return;
+            }
 
-            // Create event object for cell customization callback
-            const cellEvent: PdfQueryCellInfoEvent = {
+            const fieldValue: string = column.field as string;
+            let cellValue: unknown = '';
+            let displayValue: string | number | boolean = '';
+            const cell: PdfGridCell = pdfRow.cells.getCell(index);
+            const cellEvent: PdfCellCustomizeArgs = {
                 data: rowRecord as unknown,
                 column: column,
                 value: displayValue,
                 image: undefined,
                 hyperLink: undefined,
-                style: undefined
+                style: undefined,
+                isGroupHeader,
+                groupLevel,
+                colSpan: isGroupHeader && index === groupIndex ? groupColSpan : undefined
             };
 
-            // Call onPdfQueryCellInfo callback if provided for cell-level customization
-            if (onPdfQueryCellInfo) {
-                onPdfQueryCellInfo(cellEvent);
+            if (isGroupHeader) {
+                if (index === groupIndex) {
+                    const groupedRow: GroupedData = row as GroupedData;
+                    const groupField: string | undefined = groupingSettings?.columns?.[groupedRow.flattedLevel ?
+                        groupedRow.flattedLevel - 1 : 0];
+                    const captionFormat: 'verbose' | 'compact' = groupingSettings?.captionFormat || 'compact';
+                    const captionText: string = captionFormat === 'verbose' && groupField
+                        ? `${groupField}: ${groupedRow.key} - ${groupedRow.count} items`
+                        : `${groupedRow.key} (${groupedRow.count})`;
+                    cellValue = captionText;
+                    displayValue = captionText;
+                    cellEvent.value = captionText;
+                } else {
+                    cellValue = '';
+                    displayValue = '';
+                    cellEvent.value = '';
+                }
+            } else {
+                cellValue = rowRecord?.[fieldValue as string] ?? '';
+                displayValue = formatCellValue(cellValue, column);
+                cellEvent.value = displayValue;
+            }
+
+            // Call onPdfCellCustomize callback if provided for cell-level customization
+            if (onPdfCellCustomize) {
+                onPdfCellCustomize(cellEvent);
+            }
+
+            if (isGroupHeader && index === groupIndex) {
+                const spanSize: number = cellEvent.colSpan && cellEvent.colSpan > 0 ? cellEvent.colSpan : groupColSpan;
+                if (spanSize > 1) {
+                    cell.columnSpan = spanSize;
+                }
             }
 
             // Handle hyperlink rendering
@@ -259,6 +501,13 @@ function buildPdfGrid(
 
             // Apply cell styling with text alignment
             const cellStyle: PdfGridCellStyle = new PdfGridCellStyle();
+
+            if (isGroupHeader) {
+                cellStyle.backgroundBrush = new PdfSolidBrush(new PdfColor(...PDF_COLOR_HEADER_BG));
+                cellStyle.font = new PdfStandardFont(PDF_FONT_FAMILY, PDF_HEADER_FONT_SIZE, PdfFontStyle.Bold);
+                cellStyle.textBrush = new PdfSolidBrush(new PdfColor(...PDF_COLOR_TEXT_BLACK));
+                cellStyle.stringFormat = new PdfStringFormat(PdfTextAlignment.Left, PdfVerticalAlignment.Middle);
+            }
 
             // Apply custom style from callback if provided
             if (cellEvent.style) {
@@ -311,7 +560,7 @@ function buildPdfGrid(
                 }
 
                 cellStyle.stringFormat = new PdfStringFormat(textAlignment, verticalAlignment);
-            } else {
+            } else if (!isGroupHeader) {
                 // Default styling: Set cell text alignment based on column type
                 let cellAlignment: PdfTextAlignment = PdfTextAlignment.Left;
                 if (column.textAlign === PDF_ALIGN_RIGHT || column.type === 'number') {
@@ -320,13 +569,6 @@ function buildPdfGrid(
                     cellAlignment = PdfTextAlignment.Center;
                 }
                 cellStyle.stringFormat = new PdfStringFormat(cellAlignment, PdfVerticalAlignment.Middle);
-
-                // Apply alternating row colors for better readability (only if no custom background)
-                if (index % 2 === 0) {
-                    cellStyle.backgroundBrush = new PdfSolidBrush(new PdfColor(...PDF_COLOR_ROW_EVEN));
-                } else {
-                    cellStyle.backgroundBrush = new PdfSolidBrush(new PdfColor(...PDF_COLOR_ROW_ODD));
-                }
             }
 
             cell.style = cellStyle;
@@ -358,7 +600,7 @@ function getPageSize(pageSize: string): SizeF {
 
 /**
  * Executes PDF export strategy using EJ2 PdfExport.
- * Supports cell customization via onPdfQueryCellInfo callback.
+ * Supports cell customization via onPdfCellCustomize callback.
  *
  * @template T - The type of data records
  * @param {T[]} dataSource - The data to export
@@ -392,78 +634,33 @@ async function executePdfExportStrategy<T>(
         // Apply page settings to section
         section.setPageSettings(pageSettings);
 
-        // Configure header if headerText is provided
-        if (config.headerText) {
-            const headerBounds: RectangleF = new RectangleF(PDF_PAGE_MARGIN, PDF_PAGE_MARGIN, section.pageSettings.width -
-                (PDF_PAGE_MARGIN * 2), 30);
+        // Determine header configuration - support both new header/footer objects and legacy formats
+        const headerConfig: PdfHeader = config.header;
+        const footerConfig: PdfFooter = config.footer;
+
+        // Configure header
+        if (headerConfig) {
+            const headerBounds: RectangleF = new RectangleF(
+                PDF_PAGE_MARGIN,
+                headerConfig.fromTop ?? PDF_PAGE_MARGIN,
+                section.pageSettings.width - (PDF_PAGE_MARGIN * 2),
+                headerConfig.height
+            );
             const headerElement: PdfPageTemplateElement = new PdfPageTemplateElement(headerBounds);
-
-            const headerBrush: PdfSolidBrush = new PdfSolidBrush(new PdfColor(...PDF_COLOR_TEXT_BLACK));
-            const headerPen: PdfPen = new PdfPen(new PdfColor(...PDF_COLOR_TEXT_BLACK));
-            const headerFont: PdfStandardFont = new PdfStandardFont(PDF_FONT_FAMILY, PDF_HEADER_FONT_SIZE, PdfFontStyle.Bold);
-            const headerFormat: PdfStringFormat = new PdfStringFormat(PdfTextAlignment.Left, PdfVerticalAlignment.Top);
-
-            headerElement.graphics.drawString(config.headerText, headerFont, headerPen, headerBrush, 0, 5, headerFormat);
+            renderHeaderFooterContents(headerElement, headerConfig.contents);
             section.template.top = headerElement;
         }
 
-        // Configure footer if footerText is provided
-        if (config.footerText) {
-            const footerBounds: RectangleF = new RectangleF(PDF_PAGE_MARGIN, section.pageSettings.height - 30, section.pageSettings.width -
-                (PDF_PAGE_MARGIN * 2), 20);
+        // Configure footer
+        if (footerConfig) {
+            const footerBounds: RectangleF = new RectangleF(
+                PDF_PAGE_MARGIN,
+                section.pageSettings.height - (footerConfig.fromBottom ?? 0) - footerConfig.height,
+                section.pageSettings.width - (PDF_PAGE_MARGIN * 2),
+                footerConfig.height
+            );
             const footerElement: PdfPageTemplateElement = new PdfPageTemplateElement(footerBounds);
-
-            const footerBrush: PdfSolidBrush = new PdfSolidBrush(new PdfColor(...PDF_COLOR_FOOTER_TEXT));
-            const footerPen: PdfPen = new PdfPen(new PdfColor(...PDF_COLOR_FOOTER_TEXT));
-            const footerFont: PdfStandardFont = new PdfStandardFont(PDF_FONT_FAMILY, PDF_FOOTER_FONT_SIZE);
-            const footerStringFormat: PdfStringFormat = new PdfStringFormat(PdfTextAlignment.Center, PdfVerticalAlignment.Bottom);
-
-            // Check if footer text contains page number placeholders
-            const currentPlaceholder: string = '{$current}';
-            const totalPlaceholder: string = '{$total}';
-            const hasCurrent: boolean = config.footerText.indexOf(currentPlaceholder) !== -1;
-            const hasTotal: boolean = config.footerText.indexOf(totalPlaceholder) !== -1;
-
-            if (hasCurrent && hasTotal) {
-                // Use PdfCompositeField for dynamic page numbers with both current and total
-                const pageNumber: PdfPageNumberField = new PdfPageNumberField(footerFont, footerBrush);
-                const pageCount: PdfPageCountField = new PdfPageCountField(footerFont, footerBrush);
-
-                // Determine format string: replace {$current} with {0} and {$total} with {1} or {0} depending on order
-                let format: string = config.footerText;
-                const currentIndex: number = format.indexOf(currentPlaceholder);
-                const totalIndex: number = format.indexOf(totalPlaceholder);
-
-                if (currentIndex < totalIndex) {
-                    format = format.replace(currentPlaceholder, '{0}').replace(totalPlaceholder, '{1}');
-                    const compositeField: PdfCompositeField = new PdfCompositeField(footerFont, footerBrush, format, pageNumber, pageCount);
-                    compositeField.stringFormat = footerStringFormat;
-                    compositeField.draw(footerElement.graphics, new PointF(0, 0));
-                } else {
-                    format = format.replace(totalPlaceholder, '{0}').replace(currentPlaceholder, '{1}');
-                    const compositeField: PdfCompositeField = new PdfCompositeField(footerFont, footerBrush, format, pageCount, pageNumber);
-                    compositeField.stringFormat = footerStringFormat;
-                    compositeField.draw(footerElement.graphics, new PointF(0, 0));
-                }
-            } else if (hasCurrent) {
-                // Use PdfPageNumberField for current page only
-                const pageNumber: PdfPageNumberField = new PdfPageNumberField(footerFont, footerBrush);
-                const format: string = config.footerText.replace(currentPlaceholder, '{0}');
-                const compositeField: PdfCompositeField = new PdfCompositeField(footerFont, footerBrush, format, pageNumber);
-                compositeField.stringFormat = footerStringFormat;
-                compositeField.draw(footerElement.graphics, new PointF(0, 0));
-            } else if (hasTotal) {
-                // Use PdfPageCountField for total pages only
-                const pageCount: PdfPageCountField = new PdfPageCountField(footerFont, footerBrush);
-                const format: string = config.footerText.replace(totalPlaceholder, '{0}');
-                const compositeField: PdfCompositeField = new PdfCompositeField(footerFont, footerBrush, format, pageCount);
-                compositeField.stringFormat = footerStringFormat;
-                compositeField.draw(footerElement.graphics, new PointF(0, 0));
-            } else {
-                // No placeholders, just draw static text
-                footerElement.graphics.drawString(config.footerText, footerFont, footerPen, footerBrush, 0, 0, footerStringFormat);
-            }
-
+            renderHeaderFooterContents(footerElement, footerConfig.contents);
             section.template.bottom = footerElement;
         }
 
@@ -475,7 +672,8 @@ async function executePdfExportStrategy<T>(
         const pdfGrid: PdfGrid = buildPdfGrid(
             columns,
             dataSource,
-            config.onPdfQueryCellInfo
+            config.onPdfCellCustomize,
+            (config as PdfExportSettings<T> & { groupingSettings?: { enabled: boolean; columns: string[]; captionFormat: 'verbose' | 'compact' } }).groupingSettings
         );
 
         // Create layout format for pagination (handles column overflow onto next pages)
@@ -483,17 +681,28 @@ async function executePdfExportStrategy<T>(
         layoutFormat.layout = PdfLayoutType.Paginate;
         layoutFormat.break = PdfLayoutBreakType.FitPage;
 
-        // Set pagination bounds to fit within page margins
+        // Use the page client area directly; getClientSize() already excludes page margins and header/footer template regions
         const pageClientSize: SizeF = page.getClientSize();
-        layoutFormat.paginateBounds = new RectangleF(0, 0, pageClientSize.width, pageClientSize.height);
+        const gridWidth: number = pageClientSize.width;
+        const availableHeight: number = pageClientSize.height;
 
-        // Draw grid on page at position (10, 50) with pagination layout
-        // Adjusted Y position to account for header space
-        const yPosition: number = config.headerText ? PDF_HEADER_POSITION_Y : PDF_INITIAL_POSITION_Y;
-        pdfGrid.draw(page, PDF_PAGE_MARGIN, yPosition, layoutFormat);
+        layoutFormat.paginateBounds = new RectangleF(0, 0, gridWidth, availableHeight);
 
-        // Save PDF file
+        const yPosition: number = 0;
+        pdfGrid.draw(page, 0, yPosition, layoutFormat);
+
         const fileName: string = config.fileName || PDF_DEFAULT_FILENAME;
+        let blobPromise: Promise<{ blobData: Blob }> | undefined;
+
+        if (config.isBlob === true) {
+            blobPromise = pdfDocument.save() as Promise<{ blobData: Blob }>;
+            const result: { blobData: Blob } = await blobPromise;
+            return {
+                success: true,
+                promise: Promise.resolve(result)
+            };
+        }
+
         pdfDocument.save(fileName);
 
         return {
@@ -515,16 +724,18 @@ async function executePdfExportStrategy<T>(
  * @param {T[]} dataSource - The data to export
  * @param {ColumnProps[]} columns - The grid columns
  * @param {PdfExportSettings} config - The PDF export configuration
+ * @param {Object} [groupingSettings] - Optional grouping settings for grouped data export
  * @returns {Promise<PdfExportResult>} PDF export result
  */
 export async function pdfWindowManager<T>(
     dataSource: T[],
     columns: ColumnProps[],
-    config: PdfExportSettings<T>
+    config: PdfExportSettings<T>,
+    groupingSettings?: { enabled: boolean; columns: string[]; captionFormat: 'verbose' | 'compact' }
 ): Promise<PdfExportResult> {
     try {
         // Execute PDF export
-        return await executePdfExportStrategy(dataSource, columns, config);
+        return await executePdfExportStrategy(dataSource, columns, { ...config, groupingSettings } as PdfExportSettings<T>);
     } catch (error) {
         return {
             success: false,

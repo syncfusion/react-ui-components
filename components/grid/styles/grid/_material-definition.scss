@@ -109,3 +109,7 @@ $excel-seperator-border-top-color: rgb($border-light) !default;
 $excel-virtual-bottom-border-color: rgba($on-surface-variant, 0.12) !default;
 $grid-group-drop-area-height: 56px !default;
 $grid-cell-range-selection-border-color: rgba($primary) !default;
+$grid-group-togglebtn-hover-color: $content-bg-color-hover !default;
+$grid-group-drop-area-background-color: $content-bg-color-alt2 !default;
+$grid-group-togglebtn-selected-hover-color: $grid-hover-bg-color !default;
+$grid-group-togglebtn-non-selected-focus-color: $content-bg-color-focus !default;

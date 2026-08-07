@@ -62,7 +62,7 @@ export const MenuList: ForwardRefExoticComponent<MenuListProps & RefAttributes<I
             subMenuContainerRef,
             container,
             className,
-            submenuRenderMode = 'portal',
+            submenuRenderMode = 'Portal',
             ...restUlProps
         } = props;
 

@@ -6,15 +6,23 @@ import { COMMON_CLASSES } from '../../constants';
  * Ensures consistent styling and structure for icon content or nodes in MenuItem components.
  *
  * ```typescript
- * <Menu orientation={Orientation.Horizontal} itemOnClick={false}>
- *   <MenuItem>
- *     <MenuItemLabel>Open</MenuItemLabel>
- *     <MenuItemIcon><FileIcon /></MenuItemIcon>
- *   </MenuItem>
- * </Menu>
+ * import { Menu, MenuItem, MenuItemLabel, MenuItemIcon, Orientation } from '@syncfusion/react-navigations';
+ * import { FileIcon } from '@syncfusion/react-icons';
+ *
+ * export default function App() {
+ *     return (
+ *         <Menu orientation={Orientation.Horizontal} itemOnClick={false}>
+ *             <MenuItem>
+ *                 <MenuItemLabel>Open</MenuItemLabel>
+ *                 <MenuItemIcon>
+ *                     <FileIcon />
+ *                 </MenuItemIcon>
+ *             </MenuItem>
+ *         </Menu>
+ *     );
+ * }
  * ```
  */
-
 export interface MenuItemIconProps {
     /**
      * Specifies an optional CSS class to apply to the icon container.
