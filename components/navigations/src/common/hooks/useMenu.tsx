@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
-import { calculatePosition, isCollide, fit } from '@syncfusion/react-popups';
+import { AlignmentPoint, calculateAlignmentPosition, fit, getCollisions } from '@syncfusion/react-popups';
 import { Browser, Orientation, useProviderContext } from '@syncfusion/react-base';
 import type { CommonMenuProps, SubmenuType, FocusHoverState } from '../../menu/types';
 import { useMenuAnimation, useMenuPosition, useSubmenuPositionEffect } from '.';
@@ -132,7 +132,7 @@ export const useMenu: (args: UseMenuArgs) => UseMenuReturn = (args: UseMenuArgs)
         let top: number = popupPosition.y;
         const collisionBoundary: HTMLElement = getCollisionBoundary(container);
         const menuWidth: number = rootEl.offsetWidth || 0;
-        const collide: string[] = isCollide(rootEl, collisionBoundary, left, top);
+        const collide: string[] = getCollisions(rootEl, collisionBoundary, left, top);
         const isDefaultContainer: boolean = isRootContainer(container);
         const customRightCollision: boolean = !isDefaultContainer && menuWidth > 0 && collisionBoundary.clientWidth > 0 &&
             left + menuWidth > collisionBoundary.scrollLeft + collisionBoundary.clientWidth;
@@ -141,7 +141,7 @@ export const useMenu: (args: UseMenuArgs) => UseMenuReturn = (args: UseMenuArgs)
         }
         if (isDefaultContainer && collide.includes('bottom')) {
             const fitBoundary: HTMLElement | null = isDefaultContainer ? null : collisionBoundary;
-            const position: OffsetPosition = fit(rootEl, fitBoundary, { X: false, Y: true }, { top: top, left: left }) as OffsetPosition;
+            const position: OffsetPosition = fit(rootEl, fitBoundary, { top: top, left: left }, { X: false, Y: true });
             top = position.top;
         }
         if (!isDefaultContainer) {
@@ -184,9 +184,11 @@ export const useMenu: (args: UseMenuArgs) => UseMenuReturn = (args: UseMenuArgs)
         if (isEmbedded) {
             const isMenubarRootSubmenu: boolean = orientation === Orientation.Horizontal && parentIndexPath.length === 1;
             if (submenuRenderMode === 'Portal' ) {
-                const x: string = isMenubarRootSubmenu ? 'left' : dir === 'rtl' ? 'left' : 'right';
-                const y: string = isMenubarRootSubmenu ? 'bottom' : 'top';
-                const offset: OffsetPosition = calculatePosition(target, x, y);
+                const anchorAlign: AlignmentPoint = {
+                    horizontal: isMenubarRootSubmenu ? 'left' : (dir === 'rtl' ? 'left' : 'right'),
+                    vertical: isMenubarRootSubmenu ? 'bottom' : 'top'
+                };
+                const offset: OffsetPosition = calculateAlignmentPosition(target, anchorAlign, container);
                 const localPosition: { x: number; y: number } = toLocalPosition({ x: offset.left, y: offset.top });
                 left = localPosition.x;
                 top = localPosition.y;
@@ -203,10 +205,19 @@ export const useMenu: (args: UseMenuArgs) => UseMenuReturn = (args: UseMenuArgs)
                 }
             }
         } else if (!Browser.isDevice) {
-            const offset: OffsetPosition = calculatePosition(target, dir === 'rtl' ? 'left' : 'right', 'top');
-            const { x, y }: { x: number; y: number } = getContainerPosition(offset.left, offset.top, container);
-            left = x;
-            top = y;
+            const anchorAlign: AlignmentPoint = {
+                horizontal: dir === 'rtl' ? 'left' : 'right',
+                vertical: 'top'
+            };
+            const offset: OffsetPosition = calculateAlignmentPosition(target, anchorAlign, container);
+            if (!container || isRootContainer(container)) {
+                const { x, y }: { x: number; y: number } = getContainerPosition(offset.left, offset.top, container);
+                left = x;
+                top = y;
+            } else {
+                left = offset.left;
+                top = offset.top;
+            }
         }
         const position: { x: number; y: number } = isEmbedded ? { x: left, y: top } : toLocalPosition({ x: left, y: top });
         setOpenSubmenus((prev: SubmenuType[]) => [

@@ -1,10 +1,22 @@
 import { RefObject } from 'react';
 import { CSS_CLASSES } from '../common/constants';
-import { DateService } from '../services/DateService';
-import { EventService } from '../services/EventService';
+import { DateService, MINUTES_PER_DAY, MINUTES_PER_HOUR } from '../services/DateService';
+import { EVENT_GAP, EventService, SLOT_ROW_HEIGHT } from '../services/EventService';
 import { SchedulerEventClickEvent, EventModel, TimeScaleProps, SchedulerScrollToProps } from '../types/scheduler-types';
+import { TimelineProcessedEvent } from '../types/internal-interface';
 import { ScrollToMode } from '../types/enums';
-import { isNullOrUndefined } from '@syncfusion/react-base';
+import { CloneBase } from './clone-manager';
+import { addClass, isNullOrUndefined, removeClass } from '@syncfusion/react-base';
+
+type EventVisibilityBounds = {
+    isOverflowLeft: boolean; isOverflowRight: boolean; visibleStart: number; visibleEnd: number; isVisibleOnDate: boolean;
+};
+
+export function parseHourStringToMinutes(hour?: string): number {
+    if (!hour) { return 0; }
+    const [h, m]: number[] = hour.split(':').map(Number);
+    return (h || 0) * MINUTES_PER_HOUR + (m || 0);
+}
 
 // Ensures only one cell is selected at any time per Scheduler instance.
 export const clearAndSelect: (target: HTMLElement) => void = (target: HTMLElement): void => {
@@ -114,31 +126,68 @@ export const getScrollContainer: (root: HTMLElement) => HTMLElement = (root: HTM
     return scrollElement;
 };
 
+function isTimelineView(root: HTMLElement | null): boolean {
+    if (!root) { return false; }
+    return !!root.querySelector(`.${CSS_CLASSES.TIMELINE_VIEW}`);
+}
+
+function resetScrollPosition(root: HTMLElement): void {
+    const scrollElement: HTMLElement | null = getScrollContainer(root);
+    if (!scrollElement) { return; }
+    if (isTimelineView(root)) {
+        scrollElement.scrollLeft = 0;
+    } else {
+        scrollElement.scrollTop = 0;
+    }
+}
+
 export const setScroll: (root: HTMLElement, target: HTMLElement | null, offset?: number) =>
 void = (root: HTMLElement, target: HTMLElement | null, offset?: number) => {
     if (!root || !target) { return; }
     const scrollElement: HTMLElement | null = getScrollContainer(root);
     if (!scrollElement) { return; }
-    scrollElement.scrollTop = Math.max(0, target.offsetTop - (offset ?? 10));
+    const safeOffset: number = offset ?? 10;
+    if (isTimelineView(root)) {
+        scrollElement.scrollLeft = Math.max(0, target.offsetLeft - safeOffset);
+    } else {
+        scrollElement.scrollTop = Math.max(0, target.offsetTop - safeOffset);
+    }
 };
 
-export const scrollToWorkHour: (scrollTo: SchedulerScrollToProps, schedulerElementRef: RefObject<HTMLDivElement>) =>
-void = (scrollTo: SchedulerScrollToProps, schedulerElementRef: RefObject<HTMLDivElement>): void => {
+export const scrollToWorkHour: (scrollTo: SchedulerScrollToProps, schedulerElementRef: RefObject<HTMLDivElement>, selectedDate?: Date) =>
+void = (scrollTo: SchedulerScrollToProps, schedulerElementRef: RefObject<HTMLDivElement>, selectedDate?: Date): void => {
     const root: HTMLElement | null = schedulerElementRef.current ?? null;
     if (!root || !scrollTo?.enable) { return; }
     let targetEl: HTMLElement | null = null;
+
+    const getCellForSelectedDate: () => HTMLElement | null = (): HTMLElement | null => {
+        if (!selectedDate) { return null; }
+        const dateKey: string = `[data-date-key="${DateService.generateDateKey(selectedDate)}"]`;
+        return root.querySelector(`.${CSS_CLASSES.WORK_HOURS}${dateKey}, .${CSS_CLASSES.WORK_DAYS}${dateKey},
+            .${CSS_CLASSES.WEEKEND}${dateKey}`);
+    };
+
     if (scrollTo.mode === ScrollToMode.WorkHour) {
-        targetEl = root.querySelector(`.${CSS_CLASSES.WORK_HOURS}`);
-    } else {
-        targetEl = root.querySelector(`.${CSS_CLASSES.CURRENT_TIMELINE}`) || root.querySelector(`.${CSS_CLASSES.WORK_HOURS}`);
+        targetEl = getCellForSelectedDate() ?? root.querySelector(`.${CSS_CLASSES.WORK_HOURS}`);
+    }
+    if (!targetEl && selectedDate && DateService.isToday(selectedDate)) {
+        targetEl = root.querySelector(`.${CSS_CLASSES.CURRENT_TIMELINE}`);
+    }
+    if (!targetEl && selectedDate && isTimelineView(root)) {
+        targetEl = getCellForSelectedDate();
+    }
+    else if (!targetEl) {
+        targetEl = root.querySelector(`.${CSS_CLASSES.CURRENT_TIMELINE}`)
+            || root.querySelector(`.${CSS_CLASSES.WORK_HOURS}`)
+            || root.querySelector(`.${CSS_CLASSES.CURRENT_DATE}`);
     }
     if (!targetEl) {
-        const scrollElement: HTMLElement | null = getScrollContainer(root);
-        if (scrollElement) { scrollElement.scrollTop = 0; }
+        resetScrollPosition(root);
         return;
     }
     setScroll(root, targetEl, scrollTo.offset);
 };
+
 export const scrollToHour: (hour: string, date: Date | undefined, schedulerElementRef: RefObject<HTMLDivElement>) => void = (
     hour: string,
     date: Date | undefined,
@@ -168,8 +217,7 @@ export const scrollToHour: (hour: string, date: Date | undefined, schedulerEleme
     const dateValue: number = targetDateTime.getTime();
     const targetElement: HTMLElement | null = root.querySelector(`.${CSS_CLASSES.WORK_CELLS}[data-date="${dateValue}"]`);
     if (!targetElement) {
-        const scrollElement: HTMLElement | null = getScrollContainer(root);
-        if (scrollElement) { scrollElement.scrollTop = 0; }
+        resetScrollPosition(root);
         return;
     }
     setScroll(root, targetElement);
@@ -229,4 +277,216 @@ export function getGroupIndexFromElement(element: HTMLElement | null): number | 
     const groupIndexAttr: string | null = element.getAttribute('data-group-index');
     const index: number | undefined = !isNullOrUndefined(groupIndexAttr) ? parseInt(groupIndexAttr, 10) : undefined;
     return Number.isFinite(index) ? index : undefined;
+}
+
+export function getCloneTop(element: HTMLElement | null, groupIndex: number | null | undefined, cloneInfo: CloneBase): number {
+    if (!cloneInfo.isTimelineView || isNullOrUndefined(groupIndex)) {
+        return cloneInfo.sourceTopPx;
+    }
+    const targetResourceSelector: string = `.${CSS_CLASSES.TIMELINE_EVENT_ROW}[data-group-index="${groupIndex}"]`;
+    const destinationRow: HTMLElement | null = element?.querySelector(targetResourceSelector) ?? null;
+    return destinationRow ? destinationRow.offsetTop : cloneInfo.sourceTopPx;
+}
+
+export const applyClassToElements: (element: HTMLElement | null, selector: string, className: string) => void =
+    (element: HTMLElement | null, selector: string, className: string): void => {
+        if (!element) { return; }
+        const elements: NodeListOf<Element> = element.querySelectorAll(selector);
+        addClass(elements, className);
+    };
+
+export const removeClassFromElements: (element: HTMLElement | null, selector: string, className: string) => void =
+    (element: HTMLElement | null, selector: string, className: string): void => {
+        if (!element) { return; }
+        const elements: NodeListOf<Element> = element.querySelectorAll(selector);
+        removeClass(elements, className);
+    };
+
+export function getEventVisibilityBounds(
+    startMins: number, endMins: number, schedulerStartMinutes: number, schedulerEndMinutes: number
+): EventVisibilityBounds {
+    return {
+        isOverflowLeft: startMins < schedulerStartMinutes, isOverflowRight: endMins > schedulerEndMinutes,
+        visibleStart: Math.max(startMins, schedulerStartMinutes), visibleEnd: Math.min(endMins, schedulerEndMinutes),
+        isVisibleOnDate: endMins > schedulerStartMinutes && startMins < schedulerEndMinutes
+    };
+}
+
+export function getDayBounds(date: Date): { dayStart: Date; dayEnd: Date } {
+    const dayStart: Date = DateService.normalizeDate(date);
+    const dayEnd: Date = DateService.normalizeDate(date);
+    dayEnd.setDate(dayEnd.getDate() + 1);
+    return { dayStart, dayEnd };
+}
+
+export function getClampedEventMinutesInRange(
+    eventStart: Date, eventEnd: Date, rangeStart: Date, rangeEnd: Date
+): { startMins: number; endMins: number } {
+    return {
+        startMins: eventStart.getTime() <= rangeStart.getTime() ? 0 : DateService.getTimeOfDayInMinutes(eventStart),
+        endMins: eventEnd.getTime() >= rangeEnd.getTime() ? MINUTES_PER_DAY : DateService.getTimeOfDayInMinutes(eventEnd)
+    };
+}
+
+export function isBlockEventIndicator(event: EventModel, startDate: Date, endDate: Date): boolean {
+    return Boolean(event.isBlock && !event.isAllDay && !DateService.isFullDayEvent(startDate, endDate));
+}
+
+export function getEventOverlappingInfo(
+    eventStart?: Date | number | null, eventEnd?: Date | number | null, rangeStart?: Date | number | null, rangeEnd?: Date | number | null
+): boolean {
+    if (isNullOrUndefined(eventStart) || isNullOrUndefined(eventEnd) || isNullOrUndefined(rangeStart) || isNullOrUndefined(rangeEnd)) {
+        return false;
+    }
+    const startMs: number = eventStart instanceof Date ? eventStart.getTime() : eventStart;
+    const endMs: number = eventEnd instanceof Date ? eventEnd.getTime() : eventEnd;
+    const rangeStartMs: number = rangeStart instanceof Date ? rangeStart.getTime() : rangeStart;
+    const rangeEndMs: number = rangeEnd instanceof Date ? rangeEnd.getTime() : rangeEnd;
+    if (!startMs || !endMs) { return false; }
+    return (startMs >= rangeStartMs && endMs >= rangeStartMs && startMs < rangeEndMs)
+        || (startMs <= rangeStartMs && endMs > rangeStartMs);
+}
+
+/** @private */
+export type TimelineEventMetadata = {
+    isMultiDay: boolean; isFirstDay: boolean; isLastDay: boolean; firstIdx?: number; lastIdx?: number; isAllDay?: boolean;
+};
+
+/** @private */
+export type TimelineEventsByDateMap = {
+    multiDayEventMap: Map<string, { event: EventModel; firstIdx: number; lastIdx: number }>;
+    singleDayEventsPerDate: Map<number, EventModel[]>; allDayEventsPerDate: Map<number, EventModel[]>;
+};
+
+/** @private */
+export type TimelineEventBuilders = {
+    buildMultiDayEventForRender: (
+        event: EventModel, firstDateIndex: number, lastDateIndex: number, positionIndex: number
+    ) => TimelineProcessedEvent | null;
+    buildAllDayEventForRender: (
+        dateIndex: number, date: Date, event: EventModel, positionIndex: number
+    ) => TimelineProcessedEvent | null;
+    buildMultiDayAllDayEventForRender: (
+        event: EventModel, firstDateIndex: number, lastDateIndex: number, positionIndex: number
+    ) => TimelineProcessedEvent | null;
+    buildSingleDayEventForRender: (
+        dateIndex: number, date: Date, event: EventModel, isFirstDay: boolean, isLastDay: boolean, positionIndex: number
+    ) => TimelineProcessedEvent | null;
+};
+
+export function collectTimelineEventsForDate(
+    dateIndex: number, eventsByDateMap: TimelineEventsByDateMap
+): { eventsOnThisDate: EventModel[]; eventMetadata: Map<string, TimelineEventMetadata> } {
+    const eventsOnThisDate: EventModel[] = [];
+    const eventMetadata: Map<string, TimelineEventMetadata> = new Map();
+    const addEvent: (event: EventModel, meta: TimelineEventMetadata) => void = (
+        event: EventModel, meta: TimelineEventMetadata
+    ): void => {
+        eventsOnThisDate.push(event);
+        const lookupKey: string = meta.isAllDay
+            ? EventService.getEventIdentityKeys(event).eventKey
+            : EventService.getEventIdentityKeys(event).eventID;
+        eventMetadata.set(lookupKey, meta);
+    };
+    for (const { event, firstIdx, lastIdx } of eventsByDateMap.multiDayEventMap.values()) {
+        if (dateIndex >= firstIdx && dateIndex <= lastIdx) {
+            const { isAllDay } = EventService.getEventIdentityKeys(event);
+            addEvent(event, {
+                isMultiDay: true, isFirstDay: dateIndex === firstIdx, isLastDay: dateIndex === lastIdx,
+                firstIdx, lastIdx, isAllDay
+            });
+        }
+    }
+    for (const event of eventsByDateMap.singleDayEventsPerDate.get(dateIndex) ?? []) {
+        addEvent(event, { isMultiDay: false, isFirstDay: true, isLastDay: true });
+    }
+    for (const event of eventsByDateMap.allDayEventsPerDate.get(dateIndex) ?? []) {
+        addEvent(event, { isMultiDay: false, isFirstDay: true, isLastDay: true, isAllDay: true });
+    }
+    return { eventsOnThisDate, eventMetadata };
+}
+
+export function assignTimelineEventPositions(
+    sortedEvents: EventModel[], eventMetadata: Map<string, TimelineEventMetadata>,
+    multiDayPositionCache: Map<string, number>, eventsOverlap?: (eventA: EventModel, eventB: EventModel) => boolean
+): Map<string, number> {
+    const eventPositions: Map<string, number> = new Map();
+    for (const event of sortedEvents) {
+        const { eventID, eventKey } = EventService.getEventIdentityKeys(event);
+        const meta: TimelineEventMetadata | undefined =
+            eventMetadata.get(eventKey) ?? eventMetadata.get(eventID);
+        if (event.isBlock) {
+            eventPositions.set(eventKey, 0);
+            if (meta?.isMultiDay) { multiDayPositionCache.set(eventID, 0); }
+            continue;
+        }
+        if (meta?.isMultiDay && multiDayPositionCache.has(eventID)) {
+            eventPositions.set(eventKey, multiDayPositionCache.get(eventID)!);
+            continue;
+        }
+        const overlappingPositions: number[] = [];
+        for (const otherEvent of sortedEvents) {
+            if (event === otherEvent || otherEvent.isBlock) { continue; }
+            if (eventsOverlap && !eventsOverlap(event, otherEvent)) { continue; }
+            const { eventKey: otherEventKey } = EventService.getEventIdentityKeys(otherEvent);
+            const otherPosition: number | undefined = eventPositions.get(otherEventKey);
+            if (otherPosition !== undefined) {
+                overlappingPositions.push(otherPosition);
+            }
+        }
+        const assignedPosition: number = EventService.getSmallestMissingNumber(overlappingPositions);
+        eventPositions.set(eventKey, assignedPosition);
+        if (meta?.isMultiDay) {
+            multiDayPositionCache.set(eventID, assignedPosition);
+        }
+    }
+    return eventPositions;
+}
+
+export function buildPositionedTimelineEvent(
+    event: EventModel, meta: TimelineEventMetadata, positionIndex: number, dateIndex: number, date: Date,
+    eventBuilders: TimelineEventBuilders, multiDayPositionedCache?: Map<string, TimelineProcessedEvent>
+): TimelineProcessedEvent | null {
+    const { eventID, isAllDay, eventKey } = EventService.getEventIdentityKeys(event);
+    if (isAllDay) {
+        if (meta.isMultiDay) {
+            if (multiDayPositionedCache?.has(eventKey)) {
+                return multiDayPositionedCache.get(eventKey)!;
+            }
+            const positioned: TimelineProcessedEvent | null = eventBuilders.buildMultiDayAllDayEventForRender(
+                event, meta.firstIdx!, meta.lastIdx!, positionIndex
+            );
+            if (positioned && multiDayPositionedCache) {
+                multiDayPositionedCache.set(eventKey, positioned);
+            }
+            return positioned;
+        }
+        return eventBuilders.buildAllDayEventForRender(dateIndex, date, event, positionIndex);
+    }
+    if (meta.isMultiDay) {
+        if (multiDayPositionedCache?.has(eventID)) {
+            return multiDayPositionedCache.get(eventID)!;
+        }
+        const positioned: TimelineProcessedEvent | null = eventBuilders.buildMultiDayEventForRender(
+            event, meta.firstIdx!, meta.lastIdx!, positionIndex
+        );
+        if (positioned && multiDayPositionedCache) {
+            multiDayPositionedCache.set(eventID, positioned);
+        }
+        return positioned;
+    }
+    return eventBuilders.buildSingleDayEventForRender(
+        dateIndex, date, event, meta.isFirstDay, meta.isLastDay, positionIndex
+    );
+}
+
+export function calculateTimelineEventRowHeight(
+    visibleStackCount: number, eventHeight: number, hasMoreIndicator: boolean, ignoreWhitespace: boolean = false
+): number {
+    if (visibleStackCount === 0) {
+        return SLOT_ROW_HEIGHT;
+    }
+    const heightCalc: number = (EVENT_GAP * 2) + ((visibleStackCount + (ignoreWhitespace ? 0 : 1)) * eventHeight) +
+        (Math.max(0, visibleStackCount - 1) * EVENT_GAP) + (hasMoreIndicator ? EVENT_GAP : 0);
+    return Math.max(SLOT_ROW_HEIGHT, heightCalc);
 }

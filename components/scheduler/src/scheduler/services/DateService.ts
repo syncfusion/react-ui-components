@@ -1,6 +1,6 @@
 import { View, WeekRule } from '../types/enums';
-import { ActiveViewProps } from '../types/internal-interface';
-import { WorkHoursProps, EventModel } from '../types/scheduler-types';
+import { ActiveViewProps, TimelineProcessedEvent, TimelineSlot, TimeSlot } from '../types/internal-interface';
+import { TimeScaleProps, WorkHoursProps, EventModel } from '../types/scheduler-types';
 import { cldrData, formatDate, getDefaultDateObject, getValue } from '@syncfusion/react-base';
 import { useSchedulerLocalization } from '../../scheduler/common/locale';
 import { Timezone } from './Timezone';
@@ -63,17 +63,19 @@ export class DateService {
 
         let dates: Date[] = [];
         selectedDate = this.setValidDate(selectedDate);
-        const startDate: Date = (viewType === 'Week' || viewType === 'WorkWeek')
+        const isWeekViews: boolean = viewType === 'Week' || viewType === 'WorkWeek' ||
+            viewType === 'TimelineWeek' || viewType === 'TimelineWorkWeek';
+        const startDate: Date = isWeekViews
             ? this.getWeekFirstDate(selectedDate, firstDayOfWeek)
             : new Date(selectedDate);
-        const totalDays: number = viewType === 'Week' || viewType === 'WorkWeek'
+        const totalDays: number = isWeekViews
             ? DAYS_PER_WEEK * interval
             : viewType === 'Agenda'
                 ? (agendaDaysCount * interval)
                 : interval;
 
         let currentDate: Date = new Date(startDate);
-        if (viewType === 'Week') {
+        if (viewType === 'Week' || viewType === 'TimelineWeek') {
             for (let i: number = 0; i < totalDays; i++) {
                 if (showWeekend || this.isWorkDay(currentDate, workDays)) {
                     dates.push(new Date(currentDate));
@@ -81,7 +83,7 @@ export class DateService {
                 currentDate = this.addDays(currentDate, 1);
             }
         }
-        else if (viewType === 'WorkWeek') {
+        else if (viewType === 'WorkWeek' || viewType === 'TimelineWorkWeek') {
             for (let i: number = 0; i < totalDays; i++) {
                 const dayOfWeek: number = currentDate.getDay();
                 if (workDays.includes(dayOfWeek)) {
@@ -90,13 +92,16 @@ export class DateService {
                 currentDate = this.addDays(currentDate, 1);
             }
         }
-        else if (viewType === 'Day') {
+        else if (viewType === 'Day' || viewType === 'TimelineDay') {
             do {
                 if (showWeekend || this.isWorkDay(currentDate, workDays)) {
                     dates.push(new Date(currentDate));
                 }
                 currentDate = this.addDays(currentDate, 1);
             } while (interval !== dates.length);
+        }
+        else if (viewType === 'TimelineMonth') {
+            dates = this.getTimelineMonthRenderDates(selectedDate, interval, workDays, showWeekend);
         }
         else if (viewType === 'Agenda') {
             for (let i: number = 0; i < totalDays; i++) {
@@ -110,6 +115,27 @@ export class DateService {
             dates = this.getMonthRenderDates(selectedDate, interval, firstDayOfWeek, workDays, showWeekend,
                                              displayDate, numberOfWeeks, startCellDate, endCellDate, useDisplayDate);
         }
+        return dates;
+    }
+
+    static getTimelineMonthRenderDates(
+        selectedDate: Date,
+        interval: number,
+        workDays: number[],
+        showWeekend: boolean
+    ): Date[] {
+        const dates: Date[] = [];
+        const startDate: Date = this.firstDateOfMonth(this.normalizeDate(selectedDate));
+        const endDate: Date = this.lastDateOfMonth(this.addMonths(startDate, Math.max(0, interval - 1)));
+        let currentDate: Date = new Date(startDate);
+
+        while (currentDate.getTime() <= endDate.getTime()) {
+            if (showWeekend || this.isWorkDay(currentDate, workDays)) {
+                dates.push(new Date(currentDate));
+            }
+            currentDate = this.addDays(currentDate, 1);
+        }
+
         return dates;
     }
 
@@ -458,7 +484,7 @@ export class DateService {
      * @returns {boolean} True if the date is a work day, false otherwise
      */
     static isWorkDay(date: Date, workDays: number[]): boolean {
-        return workDays.includes(date.getDay());
+        return !!workDays && workDays.includes(date.getDay());
     }
 
     /**
@@ -503,7 +529,7 @@ export class DateService {
      * @param {string} timeString - The time string (e.g., '09:00', '24:00')
      * @returns {Date} A date object with the correct time set
      */
-    static getStartEndHours(timeString: string): Date {
+    static getStartEndHours(timeString: string = '00:00'): Date {
         const [hourStr, minuteStr] = timeString.split(':');
         const hour: number = parseInt(hourStr, 10);
         const minute: number = parseInt(minuteStr, 10);
@@ -525,11 +551,23 @@ export class DateService {
         const startHourDate: Date = this.getStartEndHours(startHour);
         const endHourDate: Date = this.getStartEndHours(endHour);
         const schedulerStartMinutes: number = startHour === '00:00' ? 0 :
-            startHourDate.getHours() * MINUTES_PER_HOUR + startHourDate.getMinutes();
+            DateService.getTimeOfDayInMinutes(startHourDate);
         const schedulerEndMinutes: number = endHour === '24:00' ? MINUTES_PER_DAY :
-            endHourDate.getHours() * MINUTES_PER_HOUR + endHourDate.getMinutes();
+            DateService.getTimeOfDayInMinutes(endHourDate);
 
         return { schedulerStartMinutes, schedulerEndMinutes};
+    }
+
+    static getEventRange(evt: TimelineProcessedEvent): { start: Date; end: Date } {
+        const startTime: Date = evt.event?.startTime ?? evt.startDate;
+        const endTime: Date = evt.event?.endTime ?? evt.endDate;
+        if (evt.event?.isAllDay) {
+            return {
+                start: DateService.normalizeDate(startTime),
+                end: DateService.addDays(DateService.normalizeDate(endTime), 1)
+            };
+        }
+        return { start: startTime, end: endTime };
     }
 
     /**
@@ -543,6 +581,20 @@ export class DateService {
             return null;
         }
         return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    }
+
+    /**
+     * Converts a date's time portion (hours and minutes) to absolute minutes from midnight.
+     * Use this for time-of-day math such as overlap detection, slot snapping, and view-boundary
+     * calculations. Returns `NaN` for null/invalid inputs so that invalidity propagates naturally
+     * to downstream calculations (mirroring the prior inline `getHours() * 60 + getMinutes()` behavior).
+     *
+     * @param {Date | null | undefined} date - The date whose time-of-day is converted
+     * @returns {number} Minutes from midnight (0-1439), or `NaN` when `date` is null/invalid
+     */
+    static getTimeOfDayInMinutes(date: Date | null | undefined): number {
+        if (!date || !(date instanceof Date) || isNaN(date.getTime())) { return NaN; }
+        return date.getHours() * MINUTES_PER_HOUR + date.getMinutes();
     }
 
     /**
@@ -660,7 +712,9 @@ export class DateService {
             if (!a.startTime || !b.startTime) {
                 return 0;
             }
-            const startDiff: number = a.startTime.getTime() - b.startTime.getTime();
+            const aStartMs: number = a.isAllDay ? this.normalizeDate(a.startTime).getTime() : a.startTime.getTime();
+            const bStartMs: number = b.isAllDay ? this.normalizeDate(b.startTime).getTime() : b.startTime.getTime();
+            const startDiff: number = aStartMs - bStartMs;
             if (startDiff !== 0) {
                 return startDiff;
             }
@@ -907,33 +961,6 @@ export class DateService {
         }
         return monthNames;
     }
-    /**
-     * Format date range for cell popup as shown in the design
-     *
-     * @param {Date} startDate Start date and time
-     * @param {Date} endDate End date and time
-     * @param {string} locale Locale string for formatting
-     * @param {string} timeFormat Optional time format
-     * @returns {string} Formatted date range string for cell popup (e.g., "July 14, 2025 (9:30 AM - 10:00 AM)")
-     */
-    static formatCellDateRange(
-        startDate: Date,
-        endDate: Date,
-        locale: string,
-        timeFormat?: string
-    ): string {
-        const monthNames: string[] = this.getMonthNames(locale);
-        const month: string = monthNames[startDate.getMonth()];
-        const day: number = startDate.getDate();
-        const year: number = startDate.getFullYear();
-        const startTime: string = timeFormat
-            ? formatDate(startDate, { type: 'time', format: timeFormat, locale })
-            : formatDate(startDate, { type: 'time', skeleton: 'short', locale });
-        const endTime: string = timeFormat
-            ? formatDate(endDate, { type: 'time', format: timeFormat, locale })
-            : formatDate(endDate, { type: 'time', skeleton: 'short', locale });
-        return `${month} ${day}, ${year} (${startTime} - ${endTime})`;
-    }
 
     static getVisibleAndStartDays(renderDates: Date[], eventStartDay: Date, eventEndDay: Date, originalEvent: EventModel):
     { visibleDayCount: number, startDayIndex: number } {
@@ -1015,5 +1042,106 @@ export class DateService {
     static getCurrentTime(timezone?: string): Date {
         const base: Date = new Date();
         return timezone ? Timezone.add(base, timezone) : base;
+    }
+
+    /**
+     * Generates core slot metadata shared by vertical and timeline views.
+     *
+     * @param {string} startHour - Start hour in HH:mm format
+     * @param {string} endHour - End hour in HH:mm format
+     * @param {number} interval - Interval in minutes between slots
+     * @param {number} slotCount - Number of slots to generate
+     * @returns {TimeSlot[]} Array of time slot metadata
+     */
+    static getSlotMetadata(
+        startHour: string,
+        endHour: string,
+        interval: number,
+        slotCount: number
+    ): TimeSlot[] {
+        const { schedulerStartMinutes, schedulerEndMinutes } = this.getSchedulerStartAndEndMinutes(startHour, endHour);
+        const endMinutes: number = schedulerEndMinutes > schedulerStartMinutes ? schedulerEndMinutes : schedulerStartMinutes + interval;
+        const minorStep: number = interval / slotCount;
+        const majorCount: number = Math.max(1, Math.ceil((endMinutes - schedulerStartMinutes) / Math.max(1, interval ?? 60)));
+        const totalMinorSlots: number = majorCount * slotCount;
+        const slots: TimeSlot[] = [];
+
+        for (let i: number = 0; i < totalMinorSlots; i++) {
+            const minutesFromStart: number = i * minorStep;
+            const absMinutes: number = schedulerStartMinutes + minutesFromStart;
+
+            if (absMinutes >= endMinutes) {
+                break;
+            }
+
+            const currentHourValue: number = Math.floor(absMinutes / MINUTES_PER_HOUR) % 24;
+            const currentMinuteValue: number = Math.floor(absMinutes % MINUTES_PER_HOUR);
+            const date: Date = new Date();
+            date.setHours(currentHourValue, currentMinuteValue, 0, 0);
+            const slotIdx: number = i % slotCount;
+            const isMajorSlot: boolean = slotIdx === 0;
+            const isLastSlotOfInterval: boolean = slotIdx === slotCount - 1;
+            const nextSlotTimeInMinutes: number = absMinutes + minorStep;
+            const isLastSlotBeforeEnd: boolean = nextSlotTimeInMinutes >= endMinutes;
+
+            slots.push({
+                date,
+                hour: currentHourValue,
+                minute: currentMinuteValue,
+                index: i,
+                slotIndex: slotIdx,
+                isMajorSlot,
+                isLastSlotOfInterval,
+                isLastSlotBeforeEnd,
+                minutesFromStart
+            } as TimeSlot);
+        }
+        return slots;
+    }
+
+    static getTimelineSlots(
+        view: View | string,
+        startHour: string = '00:00',
+        endHour: string = '24:00',
+        timeScale?: TimeScaleProps,
+        timeFormat?: string,
+        locale?: string
+    ): { timeSlots: TimelineSlot[]; slotCount: number } {
+        if (view === 'TimelineMonth') {
+            return {
+                timeSlots: [{
+                    hour: 0,
+                    minute: 0,
+                    slotIndex: 0,
+                    isMajorBoundary: true,
+                    minutesFromStart: 0,
+                    state: true,
+                    // Matches EventService.BASE_COLUMN_WIDTH without importing EventService (avoids cycle).
+                    width: 50,
+                    label: 'Day'
+                }],
+                slotCount: 1
+            };
+        }
+
+        const { interval = 60, slotCount = 2 } = timeScale ?? {};
+        const metadata: TimeSlot[] = DateService.getSlotMetadata(startHour ?? '00:00', endHour ?? '24:00', interval, slotCount);
+        const timeSlots: TimelineSlot[] = metadata.map((item: TimeSlot) => ({
+            hour: item.hour,
+            minute: item.minute,
+            slotIndex: item.slotIndex,
+            isMajorBoundary: !item.isMajorSlot,
+            minutesFromStart: item.minutesFromStart,
+            state: true,
+            date: item.date,
+            templateProps: { date: item.date, type: item.isMajorSlot ? 'majorSlot' : 'minorSlot' },
+            label: item.isMajorSlot
+                ? (timeFormat
+                    ? formatDate(item.date, { type: 'time', format: timeFormat, locale })
+                    : formatDate(item.date, { type: 'time', skeleton: 'short', locale }))
+                : undefined
+        }));
+
+        return { timeSlots, slotCount };
     }
 }

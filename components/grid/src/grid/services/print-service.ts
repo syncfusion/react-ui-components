@@ -1,7 +1,10 @@
-import { ColumnProps, GridRef, PrintRange, UseDataResult } from '../types';
+import { ColumnProps } from '../types/column.interfaces';
+import { GridRef } from '../types/grid.interfaces';
+import { UseDataResult } from '../types/interfaces';
+import { PrintRange } from '../types/enum';
 import { PrintResult, PrintSettings, UseGridPrintOptions, PrintBeforeEvent } from '../types/print.interfaces';
 import { printWindowManager } from './print-window-manager';
-import { ReturnType } from '@syncfusion/react-data';
+import { ReturnType } from '@syncfusion/react-data/src/adaptors';
 
 // Print service constants
 const PRINT_RANGE_ALL: PrintRange = 'All';

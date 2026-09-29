@@ -1,4 +1,4 @@
-import { FC, useCallback, ReactNode, MouseEvent, KeyboardEvent } from 'react';
+import { FC, useCallback, ReactNode, MouseEvent, KeyboardEvent, useMemo, CSSProperties } from 'react';
 import { CSS_CLASSES } from '../common/constants';
 import { ProcessedEventsData } from '../types/internal-interface';
 import { useSchedulerPropsContext } from '../context/scheduler-context';
@@ -23,6 +23,20 @@ interface AgendaEventItemProps {
      * Format: ${date.toISOString()}-${event.id}
      */
     eventKey?: string;
+
+    /**
+     * Optional group index for resource grouping
+     * Set when rendering within a resource-grouped agenda view
+     * Used to set data-group-index attribute for testing and styling
+     */
+    groupIndex?: number;
+
+    /**
+     * Optional group order (resource hierarchy path) for resource grouping
+     * Set when rendering within a resource-grouped agenda view
+     * Used to retrieve resource color for border-inline-start style
+     */
+    groupOrder?: (number | string)[];
 }
 
 /**
@@ -40,14 +54,19 @@ interface AgendaEventItemProps {
  *
  * @example
  * ```tsx
- * <AgendaEventItem eventData={eventDataObject} eventKey="2026-04-15T00:00:00.000Z-123" />
+ * <AgendaEventItem
+ *   eventData={eventDataObject}
+ *   eventKey="2026-04-15T00:00:00.000Z-123"
+ *   groupIndex={0}
+ *   groupOrder={[1]}
+ * />
  * ```
  *
  * @param {AgendaEventItemProps} props - AgendaEventItemProps
  * @returns {ReactNode} The rendered event item component
  */
-export const AgendaEventItem: FC<AgendaEventItemProps> = ({ eventData }: AgendaEventItemProps): ReactNode => {
-    const { eventTemplate, timeFormat, readOnly } = useSchedulerPropsContext();
+export const AgendaEventItem: FC<AgendaEventItemProps> = ({ eventData, groupIndex, groupOrder }: AgendaEventItemProps): ReactNode => {
+    const { eventTemplate, timeFormat, readOnly, resources, eventSettings } = useSchedulerPropsContext();
     const { event, startDate, endDate, segmentIndex = 0, totalSegments = 1 } = eventData;
     const { subject, location } = event;
     const { locale } = useProviderContext();
@@ -57,6 +76,10 @@ export const AgendaEventItem: FC<AgendaEventItemProps> = ({ eventData }: AgendaE
     const dayLabel: string = getString('day');
     const addTitleLabel: string = getString('addTitle');
     const ariaLabel: string = EventService.getAriaLabel(event);
+
+    const resourceColor: string = useMemo<string>((): string => {
+        return EventService.getResourceColor(event, resources, eventSettings?.resourceColorField, groupOrder);
+    }, [event, resources, eventSettings?.resourceColorField, groupOrder]);
 
     const getTimeString: () => string = (): string => {
         if (!startDate || !endDate) {
@@ -118,7 +141,7 @@ export const AgendaEventItem: FC<AgendaEventItemProps> = ({ eventData }: AgendaE
         }
 
         return (
-            <div className={CSS_CLASSES.APPOINTMENT_DETAILS}>
+            <div className={CSS_CLASSES.APPOINTMENT_DETAILS} style={{ '--sf-event-color': resourceColor } as CSSProperties}>
                 <div className={CSS_CLASSES.AGENDA_EVENT_SUBJECT_WRAP}>
                     <div className={CSS_CLASSES.SUBJECT}>
                         {subject || addTitleLabel}{location ? ', ' : ''}
@@ -143,6 +166,7 @@ export const AgendaEventItem: FC<AgendaEventItemProps> = ({ eventData }: AgendaE
             onKeyDown={handleKeyDown}
             data-id={event.id}
             data-guid={event.guid}
+            data-group-index={groupIndex}
             tabIndex={0}
             aria-label={ariaLabel}
             aria-disabled={event.isReadonly || readOnly ? 'true' : 'false'}

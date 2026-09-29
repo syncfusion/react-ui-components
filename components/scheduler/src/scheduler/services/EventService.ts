@@ -1,18 +1,25 @@
 import { CSSProperties } from 'react';
-import { EventFields, EventModel, SchedulerResource, TimeScaleProps } from '../types/scheduler-types';
+import { EventFields, EventModel, SchedulerGroup, SchedulerResource, TimeScaleProps } from '../types/scheduler-types';
 import { ProcessedEventsData, CellData } from '../types/internal-interface';
 import { DateService, MS_PER_DAY } from './DateService';
 import { PositioningService } from './PositioningService';
 import { Timezone } from './Timezone';
 import { getCellFromIndex, getEventMaxID } from '../utils/actions';
 import { CSS_CLASSES } from '../common/constants';
-import { DEFAULT_FIELDS } from '../utils/default-props';
-import { ResourceGroupingMetadata, ResourceLevel } from './ResourceGroupingService';
+import { DEFAULT_FIELDS, MAX_EVENTS_STACK_ALLDAY } from '../utils/default-props';
+import { ResourceGroupingMetadata, ResourceLevel, TimelineResourceRowMeta } from './ResourceGroupingService';
 import { isNullOrUndefined } from '@syncfusion/react-base';
 
 export const ALL_DAY_EVENT_HEIGHT: number = 24;
 export const EVENTS_GAP: number = 4;
 export const ROW_HEIGHT: number = 40;
+export const DEFAULT_TIMELINE_EVENT_HEIGHT: number = 38;
+export const DEFAULT_SCROLLBAR_HEIGHT: number = 16;
+export const HEADER_ROW_HEIGHT: number = 36;
+export const SLOT_ROW_HEIGHT: number = 80;
+export const BASE_COLUMN_WIDTH: number = 86;
+export const EVENT_GAP: number = 2;
+export const BLOCKINDICATOR_WIDTH: number = 18;
 
 /** @private */
 export class EventService {
@@ -547,7 +554,10 @@ export class EventService {
     static splitEventByDay(event: EventModel, renderDates: Date[]): ProcessedEventsData[] {
         const processedEvents: ProcessedEventsData[] = [];
         const startDate: Date = DateService.normalizeDate(event.startTime);
-        const endDate: Date = DateService.normalizeDate(event.endTime);
+        let endDate: Date = DateService.normalizeDate(event.endTime);
+        if (!event.isAllDay && endDate.getTime() > startDate.getTime() && DateService.isMidnight(event.endTime)) {
+            endDate = DateService.addDays(endDate, -1);
+        }
 
         // Count total segments (days) for this event
         const totalSegments: number = renderDates.filter((date: Date) => {
@@ -595,20 +605,31 @@ export class EventService {
     /**
      * Processes events specifically for Agenda View to calculate segments.
      * Matches EJ2 AgendaBase.processAgendaEvents logic.
+     * When `resourceLeaf` is provided (compact view active resource), events are
+     * scoped to that leaf before segmentation, so per-date filtering downstream
+     * is unnecessary.
      *
      * @param {EventModel[]} events - Events to process
      * @param {Date[]} dates - Current view dates
+     * @param {SchedulerResource[]} [resources] - Resource configurations (field mappings)
+     * @param {ResourceLevel} [resourceLeaf] - Active leaf (compact view) to scope events to
      * @returns {Map<string, ProcessedEventsData[]>} Processed events grouped by date key
      */
     static processAgendaEvents(
         events: EventModel[],
-        dates: Date[]
+        dates: Date[],
+        resources?: SchedulerResource[],
+        resourceLeaf?: ResourceLevel
     ): Map<string, ProcessedEventsData[]> {
         const eventsByDate: Map<string, ProcessedEventsData[]> = new Map();
         if (!events?.length || !dates?.length) { return eventsByDate; }
 
+        const scopedEvents: EventModel[] = resources && resourceLeaf
+            ? events.filter((event: EventModel) => this.matchesResource(event, resourceLeaf, resources))
+            : events;
+
         const filteredEvents: EventModel[] = this.filterEventsByDateRange(
-            events.filter((event: EventModel) => !event.isBlock),
+            scopedEvents.filter((event: EventModel) => !event.isBlock),
             dates
         );
 
@@ -660,7 +681,7 @@ export class EventService {
 
         eventsByDate.forEach((events: ProcessedEventsData[]): void => {
             events.sort((a: ProcessedEventsData, b: ProcessedEventsData): number => {
-                return (a.startDate as any) - (b.startDate as any);
+                return (a.startDate as Date).getTime() - (b.startDate as Date).getTime();
             });
         });
 
@@ -672,18 +693,18 @@ export class EventService {
      *
      * @param {Date[]} renderDates - The dates being rendered
      * @param {Map<string, ProcessedEventsData[]>} eventsByDate - Map of events by date
-     * @param {number} maxEventsPerRow - Maximum events allowed per row.
+     * @param {number} maxEventsStack - Maximum events allowed per row.
      * @returns {boolean} True if any date has more events than allowed
      */
     static isAlldayHasMoreEvents(
         renderDates: Date[],
         eventsByDate: Map<string, ProcessedEventsData[]>,
-        maxEventsPerRow: number = 2): boolean {
+        maxEventsStack: number = MAX_EVENTS_STACK_ALLDAY): boolean {
         let hasExceedingEvents: boolean = false;
         renderDates.forEach((date: Date) => {
             const dateKey: string = DateService.generateDateKey(date);
             const dateEvents: ProcessedEventsData[] = eventsByDate.get(dateKey) || [];
-            if (dateEvents.length > maxEventsPerRow) {
+            if (dateEvents.length > maxEventsStack) {
                 hasExceedingEvents = true;
             }
         });
@@ -810,17 +831,20 @@ export class EventService {
         renderDates: Date[],
         eventsData: EventModel[],
         resources?: SchedulerResource[],
-        isGroupingEnabled?: boolean,
-        resourceColorField?: string
+        groupingConfig?: SchedulerGroup,
+        groupIndex?: number
     ): ProcessedEventsData[] {
         if (!renderDates?.length || !eventsData?.length) { return []; }
+        const isResourceScoped: boolean = typeof groupIndex === 'number';
 
         // Filter events within the render dates range
-        const filteredEvents: EventModel[] = EventService.filterEventsByDateRange(eventsData, renderDates);
+        const filteredEvents: EventModel[] = isResourceScoped ? eventsData : EventService.filterEventsByDateRange(eventsData, renderDates);
         const events: ProcessedEventsData[] = [];
 
+        const usePerResourcePositioning: boolean = Boolean(groupingConfig?.resources?.length) && !isResourceScoped;
+
         const { sharedPositionMap, positionMapsPerResource } =
-            PositioningService.initializePositionMaps(renderDates, isGroupingEnabled);
+            PositioningService.initializePositionMaps(renderDates, usePerResourcePositioning);
 
         const sortedEventsByTime: EventModel[] = DateService.sortByTimeAndSpan(filteredEvents);
 
@@ -877,8 +901,6 @@ export class EventService {
                         new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 1, 0, 0, 0);
 
                     const eventKey: string = `${date.toISOString()}-${event.id}`;
-                    const resourceColor: string = EventService.getResourceColor(event, resources, resourceColorField);
-
                     events.push({
                         event: event,
                         startDate: segmentStartTime,
@@ -887,12 +909,12 @@ export class EventService {
                         isLastDay,
                         isFirstSegmentInRenderRange,
                         segmentIndex,
-                        totalSegments,
+                        totalSegments: groupingConfig?.byDate ? 1 : totalSegments,
                         positionIndex,
                         eventClasses,
                         eventKey,
                         isMonthEvent: true,
-                        eventStyle: resourceColor ? { backgroundColor: resourceColor } : undefined
+                        groupIndex
                     });
                 }
             } else {
@@ -900,7 +922,6 @@ export class EventService {
                     PositioningService.setIndexPosition(positionMapForEvent, startDate, positionIndex);
                 }
                 const eventKey: string = `${startDate.toISOString()}-${event.id}`;
-                const resourceColor: string = EventService.getResourceColor(event, resources, resourceColorField);
                 events.push({
                     event: event,
                     startDate: event.startTime,
@@ -909,7 +930,7 @@ export class EventService {
                     eventClasses,
                     eventKey,
                     isMonthEvent: true,
-                    eventStyle: resourceColor ? { backgroundColor: resourceColor } : undefined
+                    groupIndex
                 });
             }
         });
@@ -928,7 +949,7 @@ export class EventService {
         rowLength: number,
         groupingConfig?: ResourceGroupingMetadata
     ): number {
-        if (!groupingConfig || groupIndex === undefined) {
+        if (!groupingConfig || isNullOrUndefined(groupIndex) || groupingConfig.enableCompactView) {
             return columnIndex;
         }
         if (groupingConfig.byDate) {
@@ -962,8 +983,13 @@ export class EventService {
     ): CSSProperties {
         const eventStartDay: Date = DateService.normalizeDate(eventInfo.startDate);
         const eventEndDay: Date = DateService.normalizeDate(eventInfo.endDate);
-        const { visibleDayCount } = DateService.getVisibleAndStartDays(eventInfo.week, eventStartDay, eventEndDay, eventInfo.event);
-        const widthPx: number = Math.max(0, (cellWidth * visibleDayCount) - EVENTS_GAP);
+        let widthPx: number;
+        if (groupingConfig?.byDate) {
+            widthPx = Math.max(0, cellWidth - EVENTS_GAP);
+        } else {
+            const { visibleDayCount } = DateService.getVisibleAndStartDays(eventInfo.week, eventStartDay, eventEndDay, eventInfo.event);
+            widthPx = Math.max(0, (cellWidth * visibleDayCount) - EVENTS_GAP);
+        }
 
         let targetCell: HTMLElement;
         let topPx: number;
@@ -975,8 +1001,8 @@ export class EventService {
             groupingConfig
         );
 
-        if (isAllDaySource) {
-            const alldayRow: HTMLElement = schedulerRef?.querySelector(`.${CSS_CLASSES.ALL_DAY_ROW}`);
+        const alldayRow: HTMLElement | null = schedulerRef?.querySelector(`.${CSS_CLASSES.ALL_DAY_ROW}`) ?? null;
+        if (isAllDaySource && alldayRow) {
             const alldayCells: NodeListOf<HTMLElement> = alldayRow.querySelectorAll<HTMLElement>(`.${CSS_CLASSES.ALL_DAY_CELL}`);
             targetCell = alldayCells.item(absoluteColumnIndex);
             topPx = alldayRow.offsetTop;
@@ -1013,7 +1039,9 @@ export class EventService {
             const weekEnd: Date = DateService.normalizeDate(week[week.length - 1]);
             const weekEndExclusive: Date = DateService.addDays(weekEnd, 1);
 
-            const overlaps: boolean = (originalEventStart <= weekEndExclusive) && (originalEventEnd >= weekStart);
+            const isZeroDurationEvent: boolean = originalEventStart.getTime() === originalEventEnd.getTime();
+            const overlaps: boolean = (originalEventStart < weekEndExclusive) &&
+                (isZeroDurationEvent ? (originalEventEnd >= weekStart) : (originalEventEnd > weekStart));
             if (!overlaps) { return; }
 
             const isStartInThisWeek: boolean = eventStartDate >= weekStart && eventStartDate <= weekEnd;
@@ -1029,7 +1057,7 @@ export class EventService {
 
             // Overflow flags relative to this week's render range
             const isOverflowLeft: boolean = eventStartDate.getTime() < weekStart.getTime();
-            const isOverflowRight: boolean = eventEndDate.getTime() > weekEnd.getTime();
+            const isOverflowRight: boolean = originalEventEnd.getTime() > weekEndExclusive.getTime();
 
             const segment: ProcessedEventsData = {
                 event,
@@ -1045,6 +1073,30 @@ export class EventService {
         });
 
         return segments;
+    }
+
+    private static applyResourceColorToSegment(
+        segment: ProcessedEventsData,
+        event: EventModel,
+        resources?: SchedulerResource[],
+        resourceColorField?: string,
+        groupIndex?: number,
+        groupingConfig?: ResourceGroupingMetadata
+    ): void {
+        if (!groupingConfig) { return; }
+        let groupOrder: (string | number)[] | undefined;
+        if (!isNullOrUndefined(groupIndex) && groupingConfig.groupEdit) {
+            const leafResource: ResourceLevel = groupingConfig.leafResources.find(
+                (r: ResourceLevel) => r.groupIndex === groupIndex
+            );
+            groupOrder = leafResource?.groupOrder;
+        }
+        const resourceColor: string | undefined = EventService.getResourceColor(
+            event, resources, resourceColorField, groupOrder
+        );
+        if (resourceColor) {
+            segment.eventStyle.backgroundColor = resourceColor;
+        }
     }
 
     static processCloneEvent(
@@ -1063,9 +1115,40 @@ export class EventService {
         groupingConfig?: ResourceGroupingMetadata,
         resourceColorField?: string
     ): ProcessedEventsData[] {
-        const rowDates: Date[][] = isAllDaySource ? [renderDates] :
+        const rowDates: Date[][] = (isAllDaySource || schedulerRef?.querySelector(`.${CSS_CLASSES.TIMELINE_VIEW}`)) ? [renderDates] :
             DateService.getRenderWeeks(renderDates, showWeekend, workDays);
-        const segments: ProcessedEventsData[] = this.splitEventByWeek(rowDates, event);
+        let segments: ProcessedEventsData[];
+
+        if (groupingConfig?.byDate) {
+            segments = this.splitEventByDay(event, renderDates);
+
+            const weekBounds: { start: Date; end: Date; week: Date[] }[] =
+                rowDates.map((week: Date[]) => ({
+                    start: DateService.normalizeDate(week[0]),
+                    end: DateService.normalizeDate(week[week.length - 1]),
+                    week
+                }));
+
+            segments.forEach((segment: ProcessedEventsData) => {
+                segment.rowIndex = 0;
+                const segmentDate: Date = DateService.normalizeDate(segment.startDate);
+
+                for (let i: number = 0; i < weekBounds.length; i++) {
+                    const { start, end, week }: { start: Date; end: Date; week: Date[] } = weekBounds[parseInt(i.toString(), 10)];
+                    if (segmentDate >= start && segmentDate <= end) {
+                        segment.rowIndex = i;
+                        const columnIndexInWeek: number = week.findIndex((d: Date) =>
+                            DateService.normalizeDate(d).getTime() === segmentDate.getTime()
+                        );
+                        segment.columnIndex = Math.max(0, columnIndexInWeek);
+                        break;
+                    }
+                }
+            });
+        } else {
+            segments = this.splitEventByWeek(rowDates, event);
+        }
+
         const isMultiDay: boolean = EventService.isMultiDayEvent(event);
 
         segments.forEach((segment: ProcessedEventsData) => {
@@ -1083,10 +1166,7 @@ export class EventService {
                 groupingConfig
             );
             segment.totalSegments = isMultiDay ? DateService.getDaysCount(segment.startDate, segment.endDate, segment.event?.isAllDay) : 1;
-            const resourceColor: string | undefined = EventService.getResourceColor(event, resources, resourceColorField);
-            if (resourceColor) {
-                segment.eventStyle.backgroundColor = resourceColor;
-            }
+            this.applyResourceColorToSegment(segment, event, resources, resourceColorField, groupIndex, groupingConfig);
         });
 
         return segments;
@@ -1133,10 +1213,7 @@ export class EventService {
             } else {
                 segment.eventStyle.left = `${targetCell.offsetLeft}px`;
             }
-            const resourceColor: string | undefined = EventService.getResourceColor(event, resources, resourceColorField);
-            if (resourceColor) {
-                segment.eventStyle.backgroundColor = resourceColor;
-            }
+            this.applyResourceColorToSegment(segment, event, resources, resourceColorField, groupIndex, groupingConfig);
         });
 
         return segments;
@@ -1232,36 +1309,47 @@ export class EventService {
      * @param {EventModel} event - The event to get the color for
      * @param {SchedulerResource[]} resources - Array of resource configurations
      * @param {string} [resourceColorField] - Optional name of the resource level to use for coloring
+     * @param {(string | number)[]} [groupOrder] - Optional array representing the current resource group context
      * @returns {string | undefined} The color value from the resource, or undefined if no resources or no color field
      */
-    static getResourceColor(event: EventModel, resources?: SchedulerResource[], resourceColorField?: string): string | undefined {
+    static getResourceColor(
+        event: EventModel,
+        resources?: SchedulerResource[],
+        resourceColorField?: string,
+        groupOrder?: (string | number)[]
+    ): string | undefined {
         if (!resources || resources.length === 0) {
             return undefined;
         }
-        let targetResource: SchedulerResource;
+        let targetResourceLevel: SchedulerResource;
         if (resourceColorField) {
-            targetResource = resources.find((resource: SchedulerResource) => resource.name === resourceColorField);
-            if (!targetResource || !targetResource.colorField) {
-                targetResource = resources[resources.length - 1];
+            targetResourceLevel = resources.find((resource: SchedulerResource) => resource.name === resourceColorField);
+            if (!targetResourceLevel || !targetResourceLevel.colorField) {
+                targetResourceLevel = resources[resources.length - 1];
             }
         } else {
-            targetResource = resources[resources.length - 1];
+            targetResourceLevel = resources[resources.length - 1];
         }
-        if (!targetResource.colorField) { return undefined; }
+        if (!targetResourceLevel.colorField) { return undefined; }
         let resourceID: string | number | (string | number)[] =
-            event[targetResource.field] as string | number | (string | number)[];
-        resourceID = typeof (resourceID) === 'object' ? resourceID[0] : resourceID;
+            event[targetResourceLevel.field] as string | number | (string | number)[];
+        if (!isNullOrUndefined(groupOrder) && typeof resourceID === 'object' && Array.isArray(resourceID)) {
+            const resourceIndex: number = resources.indexOf(targetResourceLevel);
+            if (resourceIndex >= 0 && resourceIndex < groupOrder.length) {
+                resourceID = groupOrder[parseInt(resourceIndex.toString(), 10)];
+            }
+        }
         if (isNullOrUndefined(resourceID)) {
             return undefined;
         }
         const resourceData: Record<string, unknown> | undefined = this.findResourceData(
-            targetResource,
+            targetResourceLevel,
             resourceID
         );
         if (!resourceData) {
-            return this.getDefaultResourceColor(targetResource);
+            return this.getDefaultResourceColor(targetResourceLevel);
         }
-        return resourceData[targetResource.colorField] as string | undefined;
+        return resourceData[targetResourceLevel.colorField] as string | undefined;
     }
 
     /**
@@ -1304,10 +1392,12 @@ export class EventService {
      * @param {EventModel} event - The event to split
      * @param {SchedulerResource[]} resources - The resource configurations
      * @param {EventModel[]} [eventsData] - Optional array of existing events for ID generation
+     * @param {boolean} groupEdit - Indicates whether group editing is enabled.
      * @returns {EventModel[]} Array of events, one per resource ID, each with unique ID and GUID
      */
-    static splitEventForMultipleResources(event: EventModel, resources?: SchedulerResource[], eventsData?: EventModel[]): EventModel[] {
-        if (!resources || resources.length === 0) {
+    static splitEventForMultipleResources(event: EventModel, resources?: SchedulerResource[], eventsData?: EventModel[],
+                                          groupEdit?: boolean): EventModel[] {
+        if (!resources || resources.length === 0 || groupEdit) {
             return [event];
         }
         let splitEvents: EventModel[] = [event];
@@ -1317,7 +1407,11 @@ export class EventService {
         for (const resource of resources) {
             if (resource.multiple === true) {
                 const resourceIds: string | number | (string | number)[] = event[resource.field] as string | number | (string | number)[];
-                if (Array.isArray(resourceIds) && resourceIds.length > 1) {
+                if (Array.isArray(resourceIds) && resourceIds.length === 1) {
+                    splitEvents.forEach((currentEvent: EventModel) => {
+                        currentEvent[resource.field] = resourceIds[0];
+                    });
+                } else if (Array.isArray(resourceIds) && resourceIds.length > 1) {
                     const newSplitEvents: EventModel[] = [];
 
                     splitEvents.forEach((currentEvent: EventModel) => {
@@ -1355,7 +1449,7 @@ export class EventService {
      */
     static matchesResource(
         event: EventModel,
-        resourceLeaf: CellData | ResourceLevel,
+        resourceLeaf: CellData | ResourceLevel | TimelineResourceRowMeta,
         resources?: SchedulerResource[]
     ): boolean {
         if (!resources || resources.length === 0 || !resourceLeaf || !resourceLeaf.groupOrder
@@ -1381,5 +1475,81 @@ export class EventService {
             }
         }
         return true;
+    }
+
+    /**
+     * Get smallest missing number from array (EJ2 algorithm).
+     * Used for calculating event stack positions without gaps.
+     *
+     * @param {number[]} array - Array of occupied position indices
+     * @returns {number} Smallest non-negative integer not in array
+     * @private
+     */
+    static getSmallestMissingNumber(array: number[]): number {
+        if (array.length === 0) { return 0; }
+        const max: number = Math.max(...array);
+        for (let i: number = 0; i < max; i++) {
+            if (array.indexOf(i) === -1) {
+                return i;
+            }
+        }
+        return max + 1;
+    }
+
+    /**
+     * Calculates the content height for the timeline view based on the available scheduler height,
+     * the calculated timeline height, and the horizontal scrollbar height (if present).
+     *
+     * When the scrollable container overflows horizontally, the default scrollbar height is
+     * subtracted from the available scheduler height so the content fits within the viewport.
+     *
+     * @param {number} schedulerHeight - Available height within the scheduler container (excluding header).
+     * @param {number} calculatedTimelineHeight - Height computed from event rows / max events stack.
+     * @param {HTMLElement | null} scrollElement - The scrollable container element to inspect for horizontal overflow.
+     * @param {number} defaultScrollbarHeight - The default scrollbar height to subtract when horizontal overflow is present.
+     * @returns {number} The content height to apply to the timeline content section.
+     */
+    static calculateTimelineContentHeight(
+        schedulerHeight: number, calculatedTimelineHeight: number, scrollElement: HTMLElement | null, defaultScrollbarHeight: number
+    ): number {
+        const scrollbarHeight: number = (scrollElement && scrollElement.scrollWidth > scrollElement.clientWidth)
+            ? defaultScrollbarHeight : 0;
+        if (schedulerHeight > calculatedTimelineHeight) { return schedulerHeight - scrollbarHeight; }
+        return calculatedTimelineHeight;
+    }
+
+    /**
+     * Resolve event identity keys used by timeline positioning maps.
+     *
+     * @param {EventModel} event - Event to derive keys from
+     * @returns {Object} Event identity keys
+     * @private
+     */
+    static getEventIdentityKeys(event: EventModel): { eventID: string; isAllDay: boolean; eventKey: string } {
+        const eventID: string = event.id?.toString() ?? event.guid ?? '';
+        const isAllDay: boolean = event.isAllDay ?? false;
+        const eventKey: string = isAllDay ? `${eventID}-allday` : eventID;
+        return { eventID, isAllDay, eventKey };
+    }
+
+    static createEventStyle(
+        positionPx: number, widthPx: number, topPx: number, isRtl: boolean, totalWidthPx: number = 0
+    ): CSSProperties {
+        const leftOrRight: string = isRtl ? 'right' : 'left';
+        if (totalWidthPx > 0) {
+            const leftPercent: number = (positionPx / totalWidthPx) * 100;
+            const widthPercent: number = (widthPx / totalWidthPx) * 100;
+            return {
+                [leftOrRight]: `calc(${leftPercent}% + 1px)`,
+                width: `calc(${widthPercent}% - 1px)`,
+                top: `${topPx}px`
+            };
+        }
+        const colVar: string = `var(--sf-timeline-column-width, ${BASE_COLUMN_WIDTH}px)`;
+        const insetValue: string = `calc(${colVar} * ${positionPx / BASE_COLUMN_WIDTH})`;
+        const width: string = `calc(${colVar} * ${widthPx / BASE_COLUMN_WIDTH})`;
+        return {
+            [leftOrRight]: insetValue, width: width, top: `${topPx}px`
+        };
     }
 }

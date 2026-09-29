@@ -465,6 +465,17 @@ export const EditorPopupFields: FC<EditorPopupFieldsProps> = ({ fields }: Editor
             const extraProps: Record<string, any> = overrides.props ?? {};
             const filteredData: Record<string, unknown>[] = getFilteredResourceData(resourceIndex);
             const currentValue: string | number | (string | number)[] = resourceValues[`${fieldName}`];
+
+            const itemTemplate: ((data: Record<string, unknown>) => JSX.Element) | undefined =
+                (data: Record<string, unknown>) => (
+                    <div className="sf-resource-item-template">
+                        {resource.colorField && data[resource.colorField] && (<span className="sf-resource-color-indicator"
+                            style={{ '--sf-resource-color': data[resource.colorField as string] as string } as React.CSSProperties} />)}
+                        {resource.textField && data[resource.textField] && (<span className="sf-resource-item-text">
+                            {data[resource.textField] as string} </span>)}
+                    </div>
+                );
+
             if (resource.multiple) {
                 return (
                     <FormField name={fieldName}>
@@ -477,6 +488,7 @@ export const EditorPopupFields: FC<EditorPopupFieldsProps> = ({ fields }: Editor
                             value={extraProps.value ?? (Array.isArray(currentValue) ? currentValue : (currentValue ? [currentValue] : []))}
                             onChange={extraProps.onChange ?? handleResourceChange(resourceIndex)}
                             key={`${fieldName}-${resourceIndex}-${Array.isArray(currentValue) ? currentValue.join(',') : currentValue}`}
+                            itemTemplate={extraProps.itemTemplate ?? itemTemplate}
                             {...extraProps}
                         />
                     </FormField>
@@ -493,6 +505,7 @@ export const EditorPopupFields: FC<EditorPopupFieldsProps> = ({ fields }: Editor
                             value={extraProps.value ?? (currentValue as string | number)}
                             onChange={extraProps.onChange ?? handleResourceChange(resourceIndex)}
                             key={`${fieldName}-${resourceIndex}-${currentValue}`}
+                            itemTemplate={extraProps.itemTemplate ?? itemTemplate}
                             {...extraProps}
                         />
                     </FormField>

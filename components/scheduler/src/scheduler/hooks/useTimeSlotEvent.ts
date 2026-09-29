@@ -11,6 +11,7 @@ import { EventModel } from '../types/scheduler-types';
 import { PositioningService } from '../services/PositioningService';
 import { getCellDimensions } from '../utils/dimension-util';
 import { useResourceGroupingContext } from '../context/resource-grouping-context';
+import { MAX_EVENTS_STACK_TIMESLOT } from '../utils/default-props';
 
 const DISABLED_TIME_SCALE_EVENT_HEIGHT: number = 118; // px
 const DISABLED_TIME_SCALE_GAP: number = 2; // px gap between stacked items in disabled mode
@@ -71,7 +72,7 @@ export const useTimeSlotEvent: () => UseTimeSlotEventResult = (): UseTimeSlotEve
         timeScale,
         startHour,
         endHour,
-        maxEventsPerRow = 3,
+        maxEventsStack = MAX_EVENTS_STACK_TIMESLOT,
         startHourTuple, endHourTuple,
         schedulerRef, resources
     } = useSchedulerPropsContext();
@@ -79,7 +80,7 @@ export const useTimeSlotEvent: () => UseTimeSlotEventResult = (): UseTimeSlotEve
     const { renderDates } = useSchedulerRenderDatesContext();
     const { eventsData } = useSchedulerEventsContext();
     const { locale, dir } = useProviderContext();
-    const { isGroupingEnabled, columnLevels } = useResourceGroupingContext();
+    const { isGroupingEnabled, columnLevels, groupConfig } = useResourceGroupingContext();
     const columnLastLevelData: CellData[] = isGroupingEnabled && columnLevels.length > 0
         ? columnLevels[columnLevels.length - 1]
         : [];
@@ -92,8 +93,8 @@ export const useTimeSlotEvent: () => UseTimeSlotEventResult = (): UseTimeSlotEve
     /**
      * Process events for time slot rendering
      */
-    const processTimeSlotEvents: (date: Date, eventsData: EventModel[]) => ProcessedEventsData[] =
-    useCallback((date: Date, eventsData: EventModel[]): ProcessedEventsData[] => {
+    const processTimeSlotEvents: (date: Date, eventsData: EventModel[], groupOrder?: (string | number)[]) => ProcessedEventsData[] =
+    useCallback((date: Date, eventsData: EventModel[], groupOrder?: (string | number)[]): ProcessedEventsData[] => {
 
         const occursWithinSchedulerHours: (start: Date, end: Date) => boolean = (start: Date, end: Date): boolean => {
             if (startHourTuple && endHourTuple) {
@@ -141,9 +142,7 @@ export const useTimeSlotEvent: () => UseTimeSlotEventResult = (): UseTimeSlotEve
 
             const eventGroups: ProcessedEventsData[][] = EventService.calculateOverlappingEvents(eventsToRender);
 
-            // Block events- filtered separately
-            const blockEvents: EventModel[] = eventsData.filter((event: EventModel) =>
-                event.isBlock && DateService.isSameDay(new Date(event.startTime), date));
+            const blockEvents: EventModel[] = eventsData.filter((event: EventModel) => event.isBlock);
 
             const processedData: ProcessedEventsData[] = [];
 
@@ -168,9 +167,12 @@ export const useTimeSlotEvent: () => UseTimeSlotEventResult = (): UseTimeSlotEve
                         height: `${eventPosition.height}`,
                         top: (eventPosition.top || '0px')
                     };
-                    const resourceColor: string = EventService.getResourceColor(event, resources, eventSettings?.resourceColorField);
-                    if (resourceColor) {
-                        eventStyle.backgroundColor = resourceColor;
+                    if (!event.isBlock) {
+                        const resourceColor: string = EventService.getResourceColor(event, resources, eventSettings?.resourceColorField,
+                                                                                    groupOrder);
+                        if (resourceColor) {
+                            eventStyle.backgroundColor = resourceColor;
+                        }
                     }
                     if (dir === 'rtl') {
                         eventStyle.right = eventPosition.left || '0%';
@@ -202,22 +204,18 @@ export const useTimeSlotEvent: () => UseTimeSlotEventResult = (): UseTimeSlotEve
                 });
             });
 
-            // Process block events individually
-            blockEvents.forEach((event: EventModel) => {
-                const blockSegment: ProcessedEventsData = {
-                    event,
-                    startDate: event.startTime,
-                    endDate: event.endTime
-                };
-                prepareEventForRender(blockSegment);
+            blockEvents.forEach((event: EventModel): void => {
+                const blockSegment: ProcessedEventsData | undefined = EventService.splitEventByDay(event, [date])[0];
+                if (blockSegment && (event.isAllDay || occursWithinSchedulerHours(blockSegment.startDate, blockSegment.endDate))) {
+                    prepareEventForRender(blockSegment);
+                }
             });
 
             return processedData;
         }
 
         const processedEvents: ProcessedEventsData[] =
-            EventService.processDayEvents(effectiveRenderDates, eventsData, resources, isGroupingEnabled,
-                                          eventSettings?.resourceColorField);
+             EventService.processDayEvents(effectiveRenderDates, eventsData, resources, groupConfig);
 
         const events: ProcessedEventsData[] = [];
         processedEvents.forEach((seg: ProcessedEventsData) => {
@@ -232,8 +230,10 @@ export const useTimeSlotEvent: () => UseTimeSlotEventResult = (): UseTimeSlotEve
                 top: `${topIndex * (DISABLED_TIME_SCALE_EVENT_HEIGHT + DISABLED_TIME_SCALE_GAP)}px`,
                 width: width || '96%'
             };
-            if (resources) {
-                eventStyle.backgroundColor = seg.eventStyle?.backgroundColor;
+            if (resources && !seg.event.isBlock) {
+                const resourceColor: string =
+                    EventService.getResourceColor(seg.event, resources, eventSettings?.resourceColorField, groupOrder);
+                eventStyle.backgroundColor = resourceColor;
             }
             if (dir === 'rtl') {
                 eventStyle.right = '0%';
@@ -268,16 +268,14 @@ export const useTimeSlotEvent: () => UseTimeSlotEventResult = (): UseTimeSlotEve
             let columnEvents: EventModel[] = eventsData;
             if (isGroupingEnabled) {
                 columnEvents = eventsData.filter((event: EventModel) =>
-                    EventService.matchesResource(event, column, resources)
-                );
+                    EventService.matchesResource(event, column, resources));
             }
-
-            const timeSlotEvents: ProcessedEventsData[] = processTimeSlotEvents(date, columnEvents);
+            const timeSlotEvents: ProcessedEventsData[] = processTimeSlotEvents(date, columnEvents, column.groupOrder);
 
             // Calculate inline top position for More indicator when timeScale is disabled
             let moreIndicatorTopPx: number | undefined = undefined;
             if (!timeScale.enable) {
-                moreIndicatorTopPx = maxEventsPerRow * (DISABLED_TIME_SCALE_EVENT_HEIGHT + DISABLED_TIME_SCALE_GAP); // 118px per spec
+                moreIndicatorTopPx = maxEventsStack * (DISABLED_TIME_SCALE_EVENT_HEIGHT + DISABLED_TIME_SCALE_GAP); // 118px per spec
             }
 
             const compositeKey: string = isGroupingEnabled && !isNullOrUndefined(column.groupIndex)

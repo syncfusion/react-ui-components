@@ -43,6 +43,41 @@ export enum TextAlign {
 }
 
 /**
+ * Specifies which pinning dimensions the grid operates on.
+ * Determines whether rows, columns, or both are eligible for pinning.
+ *
+ * @example
+ * ```tsx
+ * <Grid pinningSettings={{ type: PinScope.Columns }} />
+ * ```
+ */
+export enum PinScope {
+    /**
+     * Pins only rows to the top or bottom sections.
+     * Column pinning interactions are ignored.
+     *
+     * @default 'Row'
+     */
+    Row = 'Row',
+
+    /**
+     * Pins only columns to the left or right sections.
+     * Row pinning interactions are ignored.
+     *
+     * @default 'Column'
+     */
+    Column = 'Column',
+
+    /**
+     * Enables both row and column pinning.
+     * Recommended for grids needing both dimensions pinned simultaneously.
+     *
+     * @default 'Both'
+     */
+    Both = 'Both'
+}
+
+/**
  * Defines various types of cells in the grid.
  *
  * @private
@@ -163,6 +198,15 @@ export enum ColumnType {
     Checkbox = 'checkbox',
 
     /**
+     * Represents a special column type for pinning and unpinning rows.
+     * Renders a pin action for unpinned rows and an unpin action for pinned rows.
+     *
+     * @private
+     * @default 'pin'
+     */
+    Pin = 'pin',
+
+    /**
      * Represents a special column type for rendering group captions in grouped data scenarios.
      *
      * @default 'singlegroup'
@@ -175,7 +219,24 @@ export enum ColumnType {
      *
      * @default 'command'
      */
-    Command = 'command'
+    Command = 'command',
+
+    /**
+     * Represents a special column type for rendering drag and drop icons instead of data values.
+     * Used to define a column that displays drag and drop functionality.
+     *
+     * @private
+     * @default 'rowdraganddrop'
+     */
+    RowDragAndDrop = 'rowdraganddrop',
+
+    /**
+     * Represents a special column type for rendering row numbers in the grid.
+     * Used to display sequential row indices for better navigation and reference.
+     *
+     * @private
+     */
+    RowNumber = 'rownumber'
 }
 
 /**
@@ -222,6 +283,12 @@ export enum SortDirection {
     Descending = 'Descending'
 }
 
+export enum ColumnPinDirection {
+    None = 'None',
+    Left = 'Left',
+    Right = 'Right'
+}
+
 /**
  * Defines the type of filter UI to be used in the Data Grid component.
  * Controls the visual interface and behavior for applying filters to columns.
@@ -229,6 +296,7 @@ export enum SortDirection {
  * * FilterBar :- Specifies the filter type as filter bar.
  * * Excel :- Specifies the filter type as excel filter.
  * * CheckBox :- Specifies the filter type as checkbox filter.
+ * * Menu :- Specifies the filter type as menu filter.
  * ```
  *
  * @default 'FilterBar'
@@ -236,7 +304,8 @@ export enum SortDirection {
 export type FilterType =
     'FilterBar' |
     'Excel' |
-    'CheckBox';
+    'CheckBox' |
+    'Menu';
 
 /**
  * Defines Loading Indicator of the Grid.
@@ -427,6 +496,32 @@ export enum AutoSelectMode {
      * Particularly useful for partial selection scenarios.
      */
     Intermediate = 'Intermediate'
+}
+
+/**
+ * Defines group selection behavior in hierarchical or grouped data scenarios.
+ * Controls whether selection applies only to the group item itself or also includes its child records.
+ *
+ * @default GroupSelectType.Self
+ * @example
+ * ```tsx
+ * <Grid selectionSettings={{ groupSelects: GroupSelectType.Descendants }} />
+ * ```
+ */
+export enum GroupSelectType {
+    /**
+     * Selects only the group record itself.
+     * Child rows or descendant records are not affected by the selection operation.
+     */
+    Self = 'Self',
+
+    /**
+     * Selects the group record and all its descendant rows.
+     * Ensures that selection is propagated to child records within the group hierarchy.
+     *
+     * @private
+     */
+    Descendants = 'Descendants'
 }
 
 /**
@@ -670,6 +765,31 @@ export enum NewRowPosition {
      * @default 'Bottom'
      */
     Bottom = 'Bottom'
+}
+
+/**
+ * Defines the available PageSizeMode options for pagination in a tree grid structure.
+ *
+ * @default PageSizeMode.All
+ * @example
+ * ```tsx
+ * <Grid pageSettings={{PageSizeMode: PageSizeMode.All, enabled: true}} />
+ * ```
+ */
+export enum PageSizeMode {
+    /**
+     * Considers all records, including both parent and child records, when calculating the number of records per page.
+     *
+     * @default 'All'
+     */
+    All = 'All',
+
+    /**
+     * Considers only root-level parent records, excluding child records, when calculating the number of records per page.
+     *
+     * @default 'Root'
+     */
+    Root = 'Root'
 }
 
 /**
@@ -1090,22 +1210,25 @@ export const ThemeDefaults: Record<Theme, { rowHeight: number, groupingIndent: n
 
 /** @private */
 export enum GridTelemetryFeatures {
-    Sort = 'sort',
-    Filter = 'filter',
-    Search = 'search',
-    Group = 'group',
-    Crud = 'crud',
-    VirtualScroll = 'virtualScroll',
-    InfiniteScroll = 'infiniteScroll',
-    Aggregate = 'aggregate',
-    Selection = 'selection',
-    Pager = 'pager',
-    ColumnChooser = 'columnChooser',
-    ContextMenu = 'contextMenu',
-    DetailRow = 'detailRow',
-    PDFExport = 'pdfExport',
-    ExcelExport = 'excelExport',
-    Print = 'print'
+    Sort = 'Sort',
+    Filter = 'Filter',
+    Search = 'Search',
+    Group = 'Group',
+    Crud = 'Edit',
+    Resize = 'Resize',
+    Reorder = 'Reorder',
+    VirtualScroll = 'VirtualScroll',
+    InfiniteScroll = 'InfiniteScroll',
+    Aggregate = 'Aggregate',
+    Selection = 'Selection',
+    Pager = 'Pager',
+    ColumnChooser = 'ColumnChooser',
+    ContextMenu = 'ContextMenu',
+    DetailRow = 'DetailRow',
+    PDFExport = 'PdfExport',
+    ExcelExport = 'ExcelExport',
+    Print = 'Print',
+    TreeData = 'TreeData'
 }
 
 /**
@@ -1189,8 +1312,28 @@ export enum CellSelectionType {
  * * `TrueCount` - Adds TrueCount aggregation to the aggregate cell (boolean columns only).
  * * `FalseCount` - Adds FalseCount aggregation to the aggregate cell (boolean columns only).
  * * `Custom` - Adds Custom aggregation to the aggregate cell (for columns with customAggregate property).
+ * * `UnpinRow` - Unpins the row from the pinned section.
+ * * `PinToTop` - Pins the row to the top section.
+ * * `PinToBottom` - Pins the row to the bottom section.
+ * * `UnpinColumn` - Unpins the column from its pinned side.
+ * * `PinToLeft` - Pins the column to the left section.
+ * * `PinToRight` - Pins the column to the right section.
+ * * `Bar` - Renders a Bar chart.
+ * * `StackingBar` - Renders a Stacking Bar chart.
+ * * `StackingBar100` - Renders a 100% Stacking Bar chart.
+ * * `Pie` - Renders a Pie chart.
+ * * `Column` - Renders a Column chart.
+ * * `StackingColumn` - Renders a Stacking Column chart.
+ * * `StackingColumn100` - Renders a 100% Stacking Column chart.
+ * * `Line` - Renders a Line chart.
+ * * `StackingLine` - Renders a Stacking Line chart.
+ * * `StackingLine100` - Renders a 100% Stacking Line chart.
+ * * `Area` - Renders an Area chart.
+ * * `StackingArea` - Renders a Stacking Area chart.
+ * * `StackingArea100` - Renders a 100% Stacking Area chart.
+ * * `Scatter` - Renders a Scatter chart.
  */
-export type ContextMenuItem = 'Edit' | 'Delete' | 'Save' | 'Cancel' | 'SortAscending' | 'SortDescending' | 'ClearSort' | 'FirstPage' | 'PrevPage' | 'LastPage' | 'NextPage' | 'SelectRow' | 'ClearRowSelection' | 'ClearSelection' | 'Sum' | 'Average' | 'Min' | 'Max' | 'Count' | 'TrueCount' | 'FalseCount' | 'Custom';
+export type ContextMenuItem = 'Edit' | 'Delete' | 'Save' | 'Cancel' | 'SortAscending' | 'SortDescending' | 'ClearSort' | 'FirstPage' | 'PrevPage' | 'LastPage' | 'NextPage' | 'SelectRow' | 'ClearRowSelection' | 'ClearSelection' | 'Sum' | 'Average' | 'Min' | 'Max' | 'Count' | 'TrueCount' | 'FalseCount' | 'Custom' | 'UnpinRow' | 'PinToTop' | 'PinToBottom' | 'UnpinColumn' | 'PinToLeft' | 'PinToRight' | 'Bar' | 'StackingBar' | 'StackingBar100' | 'Pie' | 'Column' | 'StackingColumn' | 'StackingColumn100' | 'Line' | 'StackingLine' | 'StackingLine100' | 'Area' | 'StackingArea' | 'StackingArea100' | 'Scatter';
 
 /**
  * Defines the range of rows to include in the print operation.
@@ -1201,3 +1344,103 @@ export type ContextMenuItem = 'Edit' | 'Delete' | 'Save' | 'Cancel' | 'SortAscen
  * ```
  */
 export type PrintRange = 'All' | 'CurrentPage' | 'Custom';
+
+/**
+ * Defines the position of group summary rows in the Data Grid component.
+ * Determines whether summary rows for grouped data appear at the top or bottom of each group.
+ * Used to configure the visual placement of summary information in grouped sections of the grid.
+ *
+ * @default GroupSummaryPosition.Undefined
+ * @example
+ * ```tsx
+ * <Grid enableGroupSummary={GroupSummaryPosition.Top} />
+ * ```
+ */
+export enum GroupSummaryPosition {
+    /**
+     * Displays group summary rows at the top of each group.
+     * Provides immediate visibility of summary information before the group’s data rows.
+     *
+     * @default 'Top'
+     */
+    Top = 'Top',
+    /**
+     * Displays group summary rows at the bottom of each group.
+     * Provides summary information after the group’s data rows, suitable for end-of-group summaries.
+     *
+     * @default 'Bottom'
+     */
+    Bottom = 'Bottom',
+    /**
+     * Indicates that the position of group summary rows is not explicitly defined.
+     * The grid will use its default behavior or configuration to determine where to place summary rows.
+     * This option allows for flexibility in summary row placement based on other settings or user preferences.
+     *
+     * @default 'Undefined'
+     */
+    Undefined = 'Undefined'
+}
+
+/**
+ * Defines the column resize behavior used by the resize feature.
+ * Determines how width changes propagate to the rest of the columns when a single column is resized.
+ *
+ * @default ResizeMode.Auto
+ * @example
+ * ```tsx
+ * <Grid resizeSettings={{ enabled: true, mode: ResizeMode.Normal }} />
+ * ```
+ */
+export enum ResizeMode {
+    /**
+     * Redistributes the width delta across the following columns that use `width: 'auto' | ''`.
+     * Keeps the total table width stable by freezing columns that reach their `minWidth` or `maxWidth` limit during redistribution.
+     *
+     * @default 'Auto'
+     */
+    Auto = 'Auto',
+
+    /**
+     * Adjusts only the resized column.
+     * The total table width grows or shrinks by the same delta applied to the active column.
+     *
+     * @default 'Normal'
+     */
+    Normal = 'Normal'
+}
+
+/**
+ * Defines the cell scope measured when auto-fitting a column to its content.
+ * Determines whether the measurement considers the header cell only, the content cells only, or the widest of both.
+ *
+ * @default AutoFitMode.All
+ * @example
+ * ```tsx
+ * <Column field="Email" autoFit={AutoFitMode.Header} />
+ * ```
+ */
+export enum AutoFitMode {
+    /**
+     * Measures the widest rendered value across the header cell and the content cells.
+     * Sets the column width to the maximum of the two measurements, clamped to `minWidth`/`maxWidth`.
+     *
+     * @default 'All'
+     */
+    All = 'All',
+
+    /**
+     * Measures the header cell only.
+     * Sets the column width to fit the header text, clamped to `minWidth`/`maxWidth`.
+     *
+     * @default 'Header'
+     */
+    Header = 'Header',
+
+    /**
+     * Measures the visible content cells only.
+     * Sets the column width to fit the widest cell value, clamped to `minWidth`/`maxWidth`.
+     *
+     * @default 'Content'
+     */
+    Content = 'Content'
+}

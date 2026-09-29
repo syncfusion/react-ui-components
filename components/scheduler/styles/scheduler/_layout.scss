@@ -24,6 +24,19 @@
   inset: $scheduler-day-event-position;
 }
 
+@mixin location-details {
+  font-size: $scheduler-event-time-font-size;
+  padding-inline: $scheduler-time-slot-event-padding-inline;
+  padding-block-end: $scheduler-time-slot-event-padding-block;
+  line-height: $scheduler-event-sub-content-line-height;
+}
+
+@mixin time-details {
+  font-size: $scheduler-event-time-font-size;
+  line-height: $scheduler-event-sub-content-line-height;
+  white-space: nowrap;
+}
+
 @mixin appointment-details {
   display: block;
   align-items: center;
@@ -37,19 +50,6 @@
   padding-inline: $scheduler-time-slot-event-padding-inline;
   padding-block-start: $scheduler-time-slot-event-padding-block;
   word-wrap: break-word;
-}
-
-@mixin location-details {
-  font-size: $scheduler-event-time-font-size;
-  padding-inline: $scheduler-time-slot-event-padding-inline;
-  padding-block-end: $scheduler-time-slot-event-padding-block;
-  line-height: $scheduler-event-sub-content-line-height;
-}
-
-@mixin time-details {
-  font-size: $scheduler-event-time-font-size;
-  line-height: $scheduler-event-sub-content-line-height;
-  white-space: nowrap;
 }
 
 @mixin ellipsis-style {
@@ -249,7 +249,6 @@
 
     .sf-date-header-container {
       flex: 1;
-      overflow: hidden;
       position: relative;
     }
 
@@ -289,7 +288,7 @@
       height: 100%;
     }
 
-    .sf-time-slots {
+    .sf-vertical-view .sf-time-slots {
       @include center-align;
       height: $scheduler-cells-height;
       padding: $scheduler-time-slots-padding;
@@ -353,10 +352,12 @@
       @include flex-column;
     }
 
-    .sf-vertical-view .sf-content-section {
-      @include flex-row;
-      flex: 1;
-      min-width: max-content;
+    .sf-table-wrap> :not(.sf-agenda-view) {
+      .sf-content-section {
+        @include flex-row;
+        flex: 1;
+        min-width: max-content;
+      }
     }
 
     .sf-work-cells-container {
@@ -630,6 +631,57 @@
           width: 100%;
         }
       }
+
+      .sf-agenda-resource-rows,
+      .sf-agenda-resource-children {
+        width: 100%;
+      }
+ 
+      .sf-agenda-resource-row.sf-agenda-resource-row-leaf {
+        display: flex;
+
+        >.sf-agenda-events-container {
+          padding-inline-start: $scheduler-agenda-resource-padding;
+        }
+      }
+ 
+      .sf-agenda-resource-row.sf-agenda-resource-row-branch {
+        display: flex;
+      }
+ 
+      .sf-agenda-date-group {
+        display: flex;
+ 
+        .sf-agenda-resource-rows {
+          border-inline-start: 1px solid $scheduler-border-color;
+        }
+
+        .sf-agenda-resource-group-by-date {
+          border-block-end: 1px solid $scheduler-border-color;
+        }
+      }
+ 
+      .sf-agenda-resource-name {
+        padding: $scheduler-agenda-resource-padding;
+        min-width: $scheduler-agenda-resource-min-width;
+        width: $scheduler-agenda-resource-min-width;
+        border-inline-end: 1px solid $scheduler-border-color;
+        border-block-end: 1px solid $scheduler-border-color;
+      }
+ 
+      .sf-agenda-resource-content {
+        width: 100%;
+
+        > .sf-agenda-date-group:last-child {
+          .sf-agenda-date-label {
+            border-bottom: 1px solid $scheduler-border-color;
+          }
+        }
+ 
+        &:has(.sf-empty-state) {
+          border-bottom: 1px solid $scheduler-border-color;
+        }
+      }
     }
 
     .sf-custom-weeks {
@@ -647,8 +699,7 @@
       position: relative;
     }
 
-    .sf-vertical-view,
-    .sf-more-popup-wrapper {
+    .sf-table-wrap> :not(.sf-agenda-view), .sf-more-popup-wrapper {
       .sf-subject {
         padding: 0;
         flex: 1;
@@ -662,7 +713,7 @@
       }
     }
 
-    .sf-event-container {
+    .sf-content-wrap .sf-event-container {
       display: flex;
 
       .sf-subject {
@@ -701,22 +752,12 @@
     .sf-current-timeline,
     .sf-previous-timeline {
       position: absolute;
-      height: 1px;
-      width: 100%;
-      z-index: $scheduler-current-time-z-index;
       pointer-events: none;
-    }
-
-    .sf-current-timeline {
-      border-top: 1px solid $scheduler-active-font-color;
-    }
-    
-    .sf-previous-timeline {
-      border-top: 1px dashed $scheduler-active-font-color;
+      z-index: $scheduler-current-time-z-index;
     }
 
     .sf-vertical-view,
-    .sf-more-popup-wrapper {
+    .sf-timeline-view {
       .sf-appointment {
         @include appointment-style;
         z-index: 2;
@@ -735,6 +776,49 @@
         .sf-time {
           @include time-details;
         }
+      }
+    }
+
+    .sf-vertical-view {
+      .sf-block-appointment .sf-inner-appointment {
+        height: 100%;
+        overflow: hidden;
+      }
+
+      .sf-current-timeline,
+      .sf-previous-timeline {
+        height: 1px;
+        width: 100%;
+      }
+
+      .sf-current-timeline {
+        border-top: 1px solid $scheduler-active-font-color;
+      }
+
+      .sf-previous-timeline {
+        border-top: 1px dashed $scheduler-active-font-color;
+      }
+    }
+
+    .sf-timeline-view {
+      .sf-appointment {
+        height: $scheduler-timeline-event-height;
+      }
+
+      .sf-block-appointment {
+        height: calc(100% - 1px);
+
+        .sf-inner-appointment {
+          overflow: hidden;
+        }
+      }
+
+      .sf-current-time {
+        top: 50%;
+        width: max-content;
+        transform: translateY(0);
+        z-index: $scheduler-current-time-z-index;
+        inset-inline-start: calc(var(--sf-timeline-indicator-position, 0) - 20px);
       }
     }
 
@@ -777,7 +861,7 @@
       }
     }
 
-    .sf-content-wrap, .sf-time-slot-clone-container {
+    .sf-content-wrap, .sf-time-slot-clone-container, .sf-content-table {
       .sf-event-recurrence-icon, .sf-event-recurrence-edit-icon {
         position: absolute;
         inset-block-end: $spacing-5;
@@ -787,6 +871,10 @@
 
     .sf-block-indicator {
       line-height: $scheduler-block-indicator-line-height;
+    }
+
+    .sf-table-wrap> :not(.sf-agenda-view) .sf-content-section .sf-subject {
+        padding-inline: $scheduler-time-slot-event-padding-inline;
     }
 
     .sf-block-appointment {
@@ -819,7 +907,7 @@
     }
 
     .sf-timescale-disabled {
-      
+    
       .sf-work-cells-row {
         height: 100%;
       }
@@ -878,6 +966,202 @@
       overflow: hidden;
     }
 
+    .sf-timeline-grid {
+      @include flex-column;
+      height: 100%;
+      position: relative;
+
+      .sf-timeline-events-container {
+        @include flex-column;
+        position: absolute;
+        inset: 0;
+
+        .sf-timeline-event-row {
+          position: relative;
+          flex: 1 0 auto;
+          min-height: $scheduler-timeline-resource-min-height;
+        }
+      }
+    }
+
+    .sf-timeline-view {
+      height: 100%;
+      --sf-timeline-resource-column-width: #{$scheduler-timeline-resource-column-width};
+
+      .sf-main-scroll-container {
+        display: block;
+      }
+    
+      .sf-appointment {
+        border: $scheduler-timeline-cells-border;
+    
+        .sf-inner-appointment {
+          @include flex-row;
+        }
+    
+        .sf-appointment-details {
+          width: 100%;
+          padding: $scheduler-timeline-event-padding;
+
+          .sf-subject {
+            @include ellipsis-style;
+          }
+        }
+      }
+    
+      .sf-work-cells-row {
+        height: 100%;
+        min-height: $scheduler-timeline-resource-min-height;
+        position: relative;
+        z-index: 1;
+      }
+    
+      .sf-sticky-header {
+        display: flex;
+        min-width: max-content;
+        background: $scheduler-header-bg-color;
+      }
+
+      .sf-header-row span {
+        @include ellipsis-style;
+      }
+
+      .sf-header-row {
+        position: relative;
+        border-bottom: $scheduler-timeline-cells-border;
+        min-width: max-content;
+        height: auto;
+        min-height: auto;
+        font-size: $scheduler-timeline-header-font-size;
+
+        .sf-time-slots {
+          padding: $scheduler-timeline-header-padding;
+          white-space: nowrap;
+          min-width: $scheduler-timeline-work-cells-width;
+          width: $scheduler-timeline-work-cells-width;
+          height: var(--sf-timeline-header-height, auto);
+          flex: 1 0 auto;
+          border-inline-start: $scheduler-timeline-cells-border;
+
+          &.sf-time-cells {
+              border-inline-start: none;
+          }
+
+          &:first-child {
+            border-inline-start: none;
+          }
+        }
+
+        .sf-header-row-cells {
+          display: flex;
+          align-items: center;
+          border-inline-start: $scheduler-timeline-cells-border;
+          height: $scheduler-timeline-event-height;
+          min-width: $scheduler-timeline-work-cells-width;
+          width: calc($scheduler-timeline-work-cells-width * var(--sf-scheduler-col-span, 1));
+          flex: var(--sf-scheduler-col-span, 1) 0 auto;
+
+          >span {
+            position: sticky;
+            padding: $scheduler-timeline-header-row-cell-padding;
+            white-space: nowrap;
+            inset-inline-start: 0;
+          }
+
+          &:first-child {
+            border-inline-start: none;
+          }
+        }
+
+        .sf-day-header.sf-header-row-cells {
+          min-width: $scheduler-timeline-work-cells-width;
+          width: $scheduler-timeline-work-cells-width;
+          flex: 1 0 auto;
+        }
+      }
+
+      .sf-work-cells {
+        border-bottom: $scheduler-timeline-cells-border;
+        min-width: $scheduler-timeline-work-cells-width;
+        width: calc($scheduler-timeline-work-cells-width * var(--sf-scheduler-col-span, 1));
+        border-inline-start: $scheduler-timeline-cells-border;
+        flex: var(--sf-scheduler-col-span, 1) 0 auto;
+      
+        &.sf-alternate-cells {
+          border-inline-start: $scheduler-timeline-minor-border-start;
+        }
+
+        &:first-child {
+          border-inline-start: none;
+        }
+      }
+
+      .sf-resource-left-indent {
+        left: 0;
+        right: 0;
+        width: $scheduler-timeline-resource-column-width;
+        border-inline-end: 1px solid $scheduler-border-color;
+        border-bottom: 1px solid $scheduler-border-color;
+      }
+
+      .sf-timeline-resource-column-wrapper {
+        left: 0;
+        right: 0;
+        z-index: 5;
+      }
+
+      .sf-timeline-resource-column {
+        @include flex-column;
+        width: 100%;
+        height: 100%;
+        width: $scheduler-timeline-resource-column-width;
+      }
+
+      .sf-timeline-resource-row {
+        display: flex;
+        align-items: center;
+        flex: 1;
+        font-size: $scheduler-font-size-sm;
+        background: $scheduler-header-bg-color;
+        border-bottom: 1px solid $scheduler-border-color;
+        border-inline-end: 1px solid $scheduler-border-color;
+        min-height: $scheduler-timeline-resource-min-height;
+        padding-inline-start: calc(var(--sf-scheduler-resource-level, 1) * $scheduler-resource-name-padding);
+        padding-inline-end: $scheduler-timeline-resource-row-padding;
+      }
+
+      .sf-resource-tree-icon {
+        cursor: pointer;
+        padding-inline-end: $scheduler-timeline-resource-row-padding;
+      }
+
+      .sf-block-indicator {
+        position: absolute;
+        inset-block-end: 2px;
+        z-index: 2;
+      }
+
+      .sf-more-indicator {
+        padding-inline-start: $scheduler-more-indicator-padding;
+      }
+
+      .sf-resource-row-auto-height {
+
+        .sf-work-cells-row,
+        .sf-timeline-event-row,
+        .sf-timeline-resource-row {
+          flex: 0 0 auto;
+          height: var(--sf-scheduler-resource-row-height);
+        }
+      }
+
+      .sf-current-timeline {
+        top: 0;
+        bottom: 0;
+        border-inline-start: $scheduler-timeline-indicator-border;
+      }
+    }
+
     .sf-resource-header {
       display: flex;
       flex-direction: row;
@@ -906,6 +1190,39 @@
       border-inline-end: 1px solid $scheduler-border-color;
       box-sizing: border-box;
     }
+    
+        .sf-sidebar {
+          width: $scheduler-sidebar-drawer-width;
+          box-shadow: $scheduler-sidebar-drawer-shadow;
+          overflow: auto;
+        }
+    
+        .sf-compact-header {
+          display: flex;
+          padding: $scheduler-compact-header-padding;
+          align-items: center;
+        }
+    
+        .sf-compact-menu-btn {
+          width: $scheduler-compact-btn-size;
+          height: $scheduler-compact-btn-size;
+          cursor: pointer;
+        }
+    
+        .sf-compact-breadcrumb {
+          overflow: hidden;
+          padding: $scheduler-compact-breadcrumb-padding;
+        }
+    
+        .sf-compact-breadcrumb-level {
+          display: inline-flex;
+          align-items: center;
+        }
+    
+        .sf-resource-name {
+          padding: $scheduler-compact-resource-name-padding;
+          letter-spacing: $scheduler-compact-resource-name-letter-spacing;
+        }
   }
 
   .sf-scheduler-dialog {
@@ -942,8 +1259,6 @@
   }
 
   .sf-quickinfo-popup-wrapper {
-    padding: $scheduler-popup-content-padding;
-
     &.sf-popup {
       border-radius: $scheduler-popup-radius;
       min-width: $scheduler-popup-min-width;
@@ -959,6 +1274,7 @@
       justify-content: end;
       gap: $scheduler-popup-button-gap;
       border-top: $scheduler-popup-footer-border;
+      border-radius: $scheduler-popup-footer-border-radius;
     }
 
     .sf-quickinfo-popup-header {
@@ -972,6 +1288,14 @@
         line-height: $scheduler-popup-subject-line-height;
         font-weight: $scheduler-popup-subject-font-weight;
       }
+
+      .sf-btn.sf-popup-close {
+        padding: $scheduler-popup-close-btn-padding;
+        
+        .sf-btn-icon svg {
+          font-size: $scheduler-popup-close-btn-font-size;
+        }
+      }
     }
 
     .sf-icon-size {
@@ -979,9 +1303,11 @@
     }
 
     .sf-quickinfo-popup-content {
+      @include flex-column;
       font-size: $scheduler-font-size-sm;
       line-height: $scheduler-popup-content-line-height;
       padding: $scheduler-quickinfo-popup-content-padding;
+      gap: $scheduler-event-popup-content-gap;
     }
 
     .sf-cell-time,
@@ -990,7 +1316,6 @@
     .sf-rule-summary,
     .sf-description,
     .sf-resource-details {
-      padding-top: $scheduler-event-popup-content-padding;
       align-items: center;
       gap: $scheduler-popup-icon-gap;
     }
@@ -1001,11 +1326,13 @@
     min-width: $scheduler-more-popup-width;
     max-height: $scheduler-more-popup-height;
     padding: $scheduler-more-popup-padding;
-    overflow-y: auto;
 
     &.sf-popup .sf-appointment {
       display: flex;
       position: relative;
+      cursor: pointer;
+      height: $scheduler-day-event-height;
+      width: $scheduler-day-event-width;
       padding: $scheduler-more-popup-event-padding;
     }
 
@@ -1024,8 +1351,9 @@
     .sf-more-event-content {
       @include flex-column;
       gap: $scheduler-more-popup-event-gap;
+      overflow-y: auto;
+      max-height: $scheduler-more-popup-event-content-max-height;
     }
-
   }
 
   .sf-mobile-popup {
@@ -1062,6 +1390,17 @@
     }
   }
 
+  .sf-resource-item-template {
+    @include center-align;
+    gap: $scheduler-resource-item-template-gap;
+
+    .sf-resource-color-indicator {
+      width: $scheduler-resource-color-indicator-width;
+      height: $scheduler-resource-color-indicator-width;
+      background-color: var(--sf-resource-color);
+    }
+  }
+
   @media (max-width: 560px) {
     .sf-scheduler {
       .sf-time-cells-wrap,
@@ -1069,7 +1408,7 @@
         width: $scheduler-time-cell-width-sm;
       }
 
-      .sf-time-slots {
+      .sf-vertical-view .sf-time-slots {
         padding: $scheduler-border-0;
       }
 

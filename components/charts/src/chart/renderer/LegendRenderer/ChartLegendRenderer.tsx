@@ -10,7 +10,9 @@ import {
     renderSymbol,
     calculateLegendTitle,
     changePage,
-    LegendClick
+    LegendClick,
+    getLegendGradientDefsForChart,
+    legendGradientDefsByChartId
 } from './CommonLegend';
 import { IThemeStyle } from '../../utils/theme';
 import { extractRangeColorSignature, getTextAnchor } from '../../utils/helper';
@@ -20,6 +22,8 @@ import { LegendMode, LegendShape } from '../../base/enum';
 import { HorizontalAlignment } from '@syncfusion/react-base';
 import { TextAnchor } from '../../../common';
 import { ChartContext } from '../../layout/ChartProvider';
+import { getSeriesGradientUrl } from '../../utils/gradient/gradientPipeline';
+import { GradientDefs } from '../SeriesRenderer/GradientDefs';
 
 // Define reducer state and action types
 type LegendState = {
@@ -70,6 +74,7 @@ export const ChartLegendRenderer: React.FC<ChartLegendProps> = (props: ChartLege
     const rangeColorSignature: ChartRangeColorProps[] = useMemo(() => {
         return extractRangeColorSignature(chartRangeColor);
     }, [chartRangeColor]);
+
     // Memoize dependencies to prevent unnecessary re-renders
     const propsToWatch: {
         visible: boolean;
@@ -189,7 +194,7 @@ export const ChartLegendRenderer: React.FC<ChartLegendProps> = (props: ChartLege
         if (phase !== 'measuring') {
             triggerRemeasure();
         }
-    }, [propsToWatch, shapeProps, rangeColorSignature]);
+    }, [propsToWatch, shapeProps, rangeColorSignature ]);
 
     useEffect(() => {
         if (phase !== 'measuring' && layoutRef.current.chart && layoutRef.current.chartLegend) {
@@ -751,11 +756,15 @@ forwardRef<SVGGElement, ChartLegendProps>((props: ChartLegendProps, ref: React.R
         legendShapeVersion.id === (layoutRef.current.chart as Chart).element.id) {
             const chart: Chart = layoutRef.current.chart as Chart;
             const legend: BaseLegend = layoutRef.current.chartLegend as BaseLegend;
+            legendGradientDefsByChartId[chart.element.id as string] = [];
 
             for (const series of chart.visibleSeries as SeriesProperties[]) {
                 if (series.name !== '' && (legend.legendCollections as LegendOptions[]) && !(series.category === 'TrendLine' && chart.visibleSeries[series.sourceIndex].name === '') && series.category !== 'Indicator') {
                     (legend.legendCollections as LegendOptions[])[series.index as number].shape =
                         series.legendShape as LegendShape;
+                    (legend.legendCollections as LegendOptions[])[series.index as number].fill =
+                        getSeriesGradientUrl(series, chart.element.id) ?? (legend.legendCollections as
+                            LegendOptions[])[series.index as number].fill;
                 }
             }
 
@@ -901,6 +910,7 @@ forwardRef<SVGGElement, ChartLegendProps>((props: ChartLegendProps, ref: React.R
                         ry={clipRect.ry}
                     />
                 </clipPath>
+                <GradientDefs specs={getLegendGradientDefsForChart(chart.element.id)} />
             </defs>
             <g id={`${legend.legendID}_g`} >
                 <rect

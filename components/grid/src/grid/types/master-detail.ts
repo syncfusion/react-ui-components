@@ -1,5 +1,6 @@
 
 import { ReactNode } from 'react';
+import { TreeGridRow } from './treeData.interfaces';
 
 
 /**
@@ -58,7 +59,7 @@ export interface RowExpandEvent<T = unknown> {
     /**
      * Represents the complete data object for the expanded row.
      */
-    data: T;
+    data: T | TreeGridRow;
 
     /**
      * Indicates whether the current expand action should be canceled.
@@ -79,7 +80,7 @@ export interface RowCollapseEvent<T = unknown> {
     /**
      * Represents the complete data object for the collapsed row.
      */
-    data: T;
+    data: T | TreeGridRow;
 
     /**
      * Indicates whether the current collapse action should be canceled.

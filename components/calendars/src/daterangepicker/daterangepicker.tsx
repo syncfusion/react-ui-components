@@ -43,7 +43,7 @@ type IDateRangePickerProps = IDateRangePicker & Omit<React.InputHTMLAttributes<H
  * import { DateRangePicker } from '@syncfusion/react-calendars';
  *
  * export default function App() {
- *   return <DateRangePicker />;
+ *          return <DateRangePicker />;
  * }
  * ```
  */
@@ -502,13 +502,31 @@ export const DateRangePicker: React.ForwardRefExoticComponent<IDateRangePickerPr
             setHoverDate(d);
         }, [draft[0]?.getTime(), draft[1]?.getTime()]);
 
-        const previewRange: [Date | null, Date | null] = useMemo(() => {
+        const isForwardHover: boolean = useMemo((): boolean => {
             const [start, end] = draft;
-            if (start && !end && hoverDate) {
+            if (!isValidDateObj(start) || isValidDateObj(end) || !isValidDateObj(hoverDate)) {
+                return false;
+            }
+            const startYear: number = calendarSystem.getYear(start);
+            const hoverYear: number = calendarSystem.getYear(hoverDate);
+            if (isYearRangePicker) {
+                return hoverYear > startYear;
+            }
+            if (isMonthRangePicker) {
+                const startMonth: number = calendarSystem.getMonth(start);
+                const hoverMonth: number = calendarSystem.getMonth(hoverDate);
+                return hoverYear > startYear || (hoverYear === startYear && hoverMonth > startMonth);
+            }
+            return hoverDate.getTime() > start.getTime();
+        }, [draft[0]?.getTime(), draft[1]?.getTime(), hoverDate?.getTime(), isMonthRangePicker, isYearRangePicker, calendarSystem]);
+
+        const previewRange: [Date | null, Date | null] = useMemo(() => {
+            const [start] = draft;
+            if (isForwardHover && isValidDateObj(start) && isValidDateObj(hoverDate)) {
                 return [start, hoverDate];
             }
             return draft;
-        }, [draft[0]?.getTime(), draft[1]?.getTime(), hoverDate?.getTime()]);
+        }, [draft[0]?.getTime(), draft[1]?.getTime(), hoverDate?.getTime(), isForwardHover]);
 
         const isRangePreview: boolean = useMemo((): boolean => {
             const [start, end] = draft;
@@ -572,7 +590,7 @@ export const DateRangePicker: React.ForwardRefExoticComponent<IDateRangePickerPr
                 disableOtherMonthNavigation: true,
                 onOutOfRangeNavigation: handleLeftBoundaryNavigation,
                 suppressRangeSelection: !isLeftActive
-            } as CalendarProps & { suppressRangeSelection?: boolean };
+            } as CalendarProps & { suppressRangeSelection?: boolean; isRangePreview?: boolean };
             return p;
         }, [
             previewRange[0]?.getTime(), previewRange[1]?.getTime(),
@@ -606,7 +624,7 @@ export const DateRangePicker: React.ForwardRefExoticComponent<IDateRangePickerPr
                 disableOtherMonthNavigation: true,
                 onOutOfRangeNavigation: handleRightBoundaryNavigation,
                 suppressRangeSelection: !isRightActive
-            } as CalendarProps & { suppressRangeSelection?: boolean };
+            } as CalendarProps & { suppressRangeSelection?: boolean; isRangePreview?: boolean };
             return p;
         }, [
             previewRange[0]?.getTime(), previewRange[1]?.getTime(),

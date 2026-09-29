@@ -16,10 +16,10 @@ import { useSchedulerLocalization } from '../common/locale';
 import { IScheduler } from '../scheduler';
 import { View, AlertType } from '../types/enums';
 import { getRecurrenceStringFromDate } from '../../recurrence-editor/util';
-import { editOccurrenceValidation, updateDatasource } from '../utils/event-base';
+import { buildGroupEditResourceFields, editOccurrenceValidation, updateDatasource } from '../utils/event-base';
 import { useResourceGroupingContext } from '../context/resource-grouping-context';
 import { useSetResourceValues } from './useResourceGrouping';
-import { getGroupIndexFromElement } from '../utils/actions';
+import { applyClassToElements, getGroupIndexFromElement, removeClassFromElements, getCloneTop } from '../utils/actions';
 
 type UseDragAndDropResult = { mergedRef: (node: HTMLDivElement) => void; composedProps: React.HTMLAttributes<HTMLDivElement>; };
 type UseDragAndDropParams = { ref: ForwardedRef<HTMLDivElement>; data: EventModel;
@@ -36,7 +36,7 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
     const activeViewProps: ActiveViewProps = useSchedulerPropsContext();
     const { timeScale, startHour, endHour, schedulerRef, eventSettings, showWeekend, workDays,
         onDragStart, onDrag, onDragStop, eventOverlap, confirmationDialog, eventDrag, enableRecurrenceValidation,
-        handleNextClick, handlePreviousClick, timezone, resources } = activeViewProps;
+        handleNextClick, handlePreviousClick, timezone, resources, isTimelineView, isMonthView } = activeViewProps;
     const eventData: EventModel = useMemo(() => {
         return {
             ...data,
@@ -57,8 +57,8 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
     const dragInfo: RefObject<CloneBase | null> = useRef<CloneBase | null>(null);
     const dragStateRef: RefObject<{ lastDragEvent?: MouseEvent | TouchEvent }> = useRef({});
     const dragStateValuesRef: RefObject<{ minutesPerPixel: number; dragAnchorOffsetPx: number | null; dragAnchorOffsetX: number | null;
-        finalDragStartTime: Date | null; finalDragEndTime: Date | null; }> = useRef({ minutesPerPixel: 0,
-        dragAnchorOffsetPx: null, dragAnchorOffsetX: null, finalDragStartTime: null, finalDragEndTime: null });
+        finalDragStartTime: Date | null; finalDragEndTime: Date | null; originalInterval: number }> = useRef({ minutesPerPixel: 0,
+        dragAnchorOffsetPx: null, dragAnchorOffsetX: null, finalDragStartTime: null, finalDragEndTime: null, originalInterval: 0 });
     const scrollAnimationRef: RefObject<number | null> = useRef<number | null>(null);
     const cellHeightRef: RefObject<number> = useRef<number>(0);
     const durationRef: RefObject<number> = useRef<number>(0);
@@ -71,13 +71,14 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
     const navigationIntervalRef: RefObject<number | null> = useRef<number | null>(null);
     const clientXRef: RefObject<number | null> = useRef<number | null>(null);
     const targetGroupIndex: RefObject<number | undefined> = useRef<number | undefined>(undefined);
+    const sourceGroupIndex: RefObject<number | undefined> = useRef<number | undefined>(undefined);
 
     Touch(elementRef, {
         tapHold: () => { isScrollingRef.current = false; }
     });
 
     useEffect(() => {
-        initializeTelemetryFeature('DragAndDrop', 'schedule');
+        initializeTelemetryFeature('DragAndDrop', 'Scheduler');
     }, []);
 
     useEffect(() => {
@@ -98,7 +99,6 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
         [ref, cloneEventState]
     );
 
-    // This function used for day view autoscroll
     const getSnapPosition: (target: HTMLElement | null) => { left?: string | number; top?: string | number } = useCallback(
         (target: HTMLElement | null): { left?: string | number; top?: string | number } => {
             if (!target || !dragInfo.current) { return {}; }
@@ -124,6 +124,7 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
             dragInfo.current.setCursorClass('default');
             dragInfo.current.isActionPerformed = false;
             dragInfo.current.enableScroll = true;
+            dragInfo.current.sourceTopPx = 0;
             if (dragInfo.current.scrollInterval != null) {
                 cancelAnimationFrame(dragInfo.current.scrollInterval);
                 dragInfo.current.scrollInterval = null;
@@ -143,7 +144,8 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
             dragAnchorOffsetPx: null,
             dragAnchorOffsetX: null,
             finalDragStartTime: null,
-            finalDragEndTime: null
+            finalDragEndTime: null,
+            originalInterval: 0
         };
     }, []);
 
@@ -162,11 +164,11 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
                 cell = dragInfo.current.getCurrentTargetCell(target);
             }
             if (cell && dragInfo.current.currentCell) {
-                let newStartDate: Date = new Date(Number(cell.getAttribute('data-date')));
+                let newStartDate: Date = dragInfo.current.getDateFromPointer(lastEvt, cell);
                 if (dragInfo.current.isAllDaySource) {
                     newStartDate = DateService.normalizeDate(newStartDate);
                 }
-                if (!dragInfo.current.isMonthView && !dragInfo.current.isAllDaySource) {
+                if (dragInfo.current.isTimelineView || (!dragInfo.current.isMonthView && !dragInfo.current.isAllDaySource)) {
                     updateTimeLabel(cell);
                     if (dragStateValuesRef.current.finalDragStartTime) {
                         newStartDate = dragStateValuesRef.current.finalDragStartTime;
@@ -182,17 +184,31 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
 
     const handleAutoScroll: (e: MouseEvent | TouchEvent) => void = useCallback((e: MouseEvent | TouchEvent): void => {
         if (!dragInfo.current) { return; }
-        const element: HTMLElement = eventDrag.externalDragAndDrop ?
-            dragInfo.current.getCellUnderPointer(e) || elementRef.current : elementRef.current || dragInfo.current.currentCell;
-        dragInfo.current.performAutoScrolling(e, element);
-        if (dragInfo.current.scrollInterval !== null && scrollAnimationRef.current === null && !dragInfo.current.isMonthView) {
-            (scrollAnimationRef).current = requestAnimationFrame(getSyncClone);
+        if ((!dragInfo.current.isAllDaySource || (dragInfo.current.isTimelineView &&
+            (dragInfo.current.isAllDaySource || dragInfo.current.isMonthView))) && dragInfo.current.enableScroll) {
+            let element: HTMLElement = null;
+            if (dragInfo.current.isTimelineView) {
+                const schedulerEl: HTMLElement = elementRef.current?.closest(`.${CSS_CLASSES.SCHEDULER}`) as HTMLElement;
+                element =
+                    (elementRef.current?.closest(`.${CSS_CLASSES.MAIN_SCROLL_CONTAINER}`) as HTMLElement)
+                    || (schedulerEl?.querySelector(`.${CSS_CLASSES.MAIN_SCROLL_CONTAINER}`) as HTMLElement);
+            } else {
+                element = eventDrag.externalDragAndDrop ?
+                    dragInfo.current.getCellUnderPointer(e) || elementRef.current : elementRef.current || dragInfo.current.currentCell;
+            }
+            dragInfo.current.performAutoScrolling(e, element);
+            if (dragInfo.current.scrollInterval !== null && scrollAnimationRef.current === null &&
+                (dragInfo.current.isTimelineView || !dragInfo.current.isMonthView)) {
+                (scrollAnimationRef).current = requestAnimationFrame(getSyncClone);
+            }
         }
     }, [getSnapPosition]);
 
     const initDragSource: (source: HTMLElement) => HTMLElement | null = (source: HTMLElement): HTMLElement | null => {
         const contentWrap: HTMLElement | null = dragInfo.current.getContentWrap(source);
-        dragInfo.current.isAllDaySource = isAllDayEvent.current = source.classList.contains(`${CSS_CLASSES.ALL_DAY_APPOINTMENT}`);
+        const isAllDaySourceRaw: boolean = source.classList.contains(`${CSS_CLASSES.ALL_DAY_APPOINTMENT}`);
+        dragInfo.current.isAllDaySource = isAllDayEvent.current = isAllDaySourceRaw;
+        dragInfo.current.isTimelineView = isTimelineView && timeScale?.enable;
         if (dragInfo.current.isAllDaySource) {
             const eventInfo: EventModel = EventService.getEventByGuid(eventsData, data.guid);
             eventInfo.endTime =
@@ -204,10 +220,18 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
                 cellHeightRef.current = cell.offsetHeight ?? 0;
                 dragInfo.current.cellWidth = cell.offsetWidth ?? 0;
             }
+            const span: number = CloneBase.getColSpan(cell);
+            dragInfo.current.isSpannedCell = span > 1;
+            if (span > 1) {
+                dragInfo.current.dayWidth = dragInfo.current.cellWidth > 0 ? dragInfo.current.cellWidth / span : 0;
+            }
         }
-        dragStateValuesRef.current.minutesPerPixel =
-            cellHeightRef.current > 0 ? dragInfo.current.slotInterval / cellHeightRef.current : 0;
-        dragInfo.current.isMonthView = !!(source as HTMLElement)?.closest(`.${CSS_CLASSES.MONTH_VIEW}`);
+        dragStateValuesRef.current.originalInterval = dragInfo.current.slotInterval;
+        dragStateValuesRef.current.minutesPerPixel = dragInfo.current.isTimelineView
+            ? (dragInfo.current.cellWidth > 0 ? dragInfo.current.slotInterval / dragInfo.current.cellWidth : 0)
+            : (cellHeightRef.current > 0 ? dragInfo.current.slotInterval / cellHeightRef.current : 0);
+
+        dragInfo.current.isMonthView = isMonthView;
         (source as HTMLElement & { draggable?: boolean }).draggable = false;
         return contentWrap;
     };
@@ -280,8 +304,11 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
         let currentRenderDates: Date[] = renderDates;
         if (newStartDate) {
             const durationMs: number = getDuration(eventInfo);
-            eventInfo.startTime = new Date(newStartDate);
-            eventInfo.endTime = new Date(eventInfo.startTime.getTime() + durationMs);
+            const effectiveStart: Date = !dragInfo.current.isMonthView && dragInfo.current.isTimelineView && dragInfo.current.isAllDaySource
+                ? DateService.normalizeDate(newStartDate)
+                : new Date(newStartDate);
+            eventInfo.startTime = effectiveStart;
+            eventInfo.endTime = new Date(effectiveStart.getTime() + durationMs);
         }
         if ((isExternal || eventDrag?.navigation?.enable) && newStartDate) {
             const normalizedCurrentDate: number = DateService.normalizeDate(currentCellDate ?? newStartDate).getTime();
@@ -297,6 +324,17 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
                 );
             }
         }
+
+        if ((dragInfo.current.isTimelineView || dragInfo.current.isSpannedCell) && newStartDate) {
+            const isDayEvent: boolean = dragInfo.current.isAllDaySource || dragInfo.current.isMonthView;
+            const cloneTop: number = getCloneTop(schedulerRef.current?.element, targetGroupIndex.current, dragInfo.current);
+            cloneEventState?.show({
+                guid: data.guid, draggedEvent: { ...eventInfo },
+                sourceTopPx: cloneTop, isDayEvent
+            });
+            return;
+        }
+
         const isDayEvent: boolean = dragInfo.current.isMonthView || dragInfo.current.isAllDaySource;
         if (isDayEvent || !timeScale.enable) {
             const segments: ProcessedEventsData[] = EventService.processCloneEvent(isExternal ?
@@ -330,16 +368,25 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
         return;
     };
 
+    const clearCurrentDragInfo: () => void = (): void => {
+        if (!dragInfo.current) { return; }
+        dragInfo.current.removeDocListenersRef?.();
+        if (dragInfo.current.cloneRef?.parentElement) {
+            dragInfo.current.cloneRef.parentElement.removeChild(dragInfo.current.cloneRef);
+        }
+        dragInfo.current.cloneRef = null;
+    };
+
     const createHelperClone: (args: HelperEvent) => HTMLElement | null = (args: HelperEvent): HTMLElement | null => {
         if (!elementRef.current || (args.sender?.type === 'touchmove' && isScrollingRef.current)) {
             return null;
         }
-        if (dragInfo.current?.cloneRef?.parentElement) {
-            dragInfo.current.cloneRef.parentElement.removeChild(dragInfo.current.cloneRef);
-        }
+        clearCurrentDragInfo();
         dragInfo.current = new CloneBase();
         dragInfo.current.direction = dir;
         dragInfo.current.slotInterval = timeScale?.interval / timeScale?.slotCount;
+        dragInfo.current.startHour = startHour ?? '0:00';
+        dragInfo.current.endHour = endHour ?? '24:00';
         currenView.current = activeViewProps.view as View;
         const source: HTMLElement = elementRef.current;
         const contentWrap: HTMLElement | null = initDragSource(source);
@@ -354,8 +401,14 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
         const info: CloneBase = dragInfo.current;
         info.isActionPerformed = true;
         getDiffDuration(args);
+        sourceGroupIndex.current = getGroupIndexFromElement(elementRef.current);
+        dragInfo.current.sourceTopPx = (elementRef.current?.offsetTop ?? 0);
         info.addDocSuppressors();
-        elementRef.current?.classList.add(CSS_CLASSES.DRAGGING);
+        if (metadata?.groupEdit) {
+            applyClassToElements(schedulerRef.current.element, `[data-guid="${data.guid}"]`, CSS_CLASSES.DRAGGING);
+        } else {
+            elementRef.current?.classList.add(CSS_CLASSES.DRAGGING);
+        }
         dragInfo.current.setCursorClass('move');
         dragStateRef.current.lastDragEvent = args.event;
         getUpdateDragOffsets(args);
@@ -402,12 +455,6 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
         }
     };
 
-    const getAutoScroll: (args: SchedulerDragEvent) => void = (args: SchedulerDragEvent): void => {
-        if (!dragInfo.current?.isAllDaySource && dragInfo.current.enableScroll) {
-            handleAutoScroll(args.event);
-        }
-    };
-
     const updateTimeLabel: (cell: HTMLElement | null) => void = (cell: HTMLElement | null): void => {
         if (!(dragInfo.current?.cloneRef && cell && dragInfo.current)) { return; }
         const info: CloneBase = dragInfo.current;
@@ -416,15 +463,28 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
         if (containerRect) {
             targetGroupIndex.current = getGroupIndexFromElement(cell);
             if (data) {
-                let cellDateAttr: number | null = Number(cell.getAttribute('data-date'));
+                let cellDateAttr: number | null = Number(info.getDateFromPointer(dragStateRef.current.lastDragEvent, cell));
                 if (!cellDateAttr || isNaN(cellDateAttr)) { return; }
                 if (info.isAllDaySource) {
                     cellDateAttr = Number(DateService.normalizeDate(new Date(cellDateAttr)));
                 }
                 let cellDate: Date = new Date();
-                if (activeViewProps.view === currenView.current) {
-                    if (isAllDayEvent.current && !info.isAllDaySource) {
+                if (activeViewProps.view === currenView.current && !info.isSpannedCell) {
+                    if ((isAllDayEvent.current && !info.isAllDaySource) ||
+                        (info.isTimelineView && !info.isMonthView && info.isAllDaySource)) {
                         cellDate = new Date(cellDateAttr);
+                    } else if (info.isTimelineView) {
+                        if (isStepDragging.current && !dragInfo.current.isMonthView) {
+                            const cellSlotDate: Date = new Date(cellDateAttr);
+                            const cellStartMinutes: number = cellSlotDate.getHours() * MINUTES_PER_HOUR + cellSlotDate.getMinutes();
+                            cellDate = dragInfo.current.getSteppedCellDate(
+                                cellStartMinutes, dragStateRef.current.lastDragEvent, durationRef.current,
+                                dragStateValuesRef.current.minutesPerPixel, cellDateAttr, containerEl, { cell, direction: dir }
+                            );
+                        } else {
+                            cellDateAttr = cellDateAttr - durationRef.current;
+                            cellDate = new Date(cellDateAttr);
+                        }
                     } else if (isStepDragging.current && !info.isAllDaySource && !info.isMonthView) {
                         const { schedulerStartMinutes } = DateService.getSchedulerStartAndEndMinutes(startHour, endHour);
                         cellDate = dragInfo.current.getSteppedCellDate(schedulerStartMinutes, dragStateRef.current.lastDragEvent,
@@ -438,7 +498,7 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
                     }
                 } else {
                     cellDate = new Date(cellDateAttr);
-                    if (eventDrag.externalDragAndDrop && currenView.current === 'Month') {
+                    if ((eventDrag.externalDragAndDrop && currenView.current === 'Month') || info.isSpannedCell) {
                         DateService.setHours(cellDate, eventData.startTime);
                     }
                 }
@@ -485,28 +545,33 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
             } else if ((cell || args.target)?.closest(`.${CSS_CLASSES.WORK_WEEK_VIEW}`)) {
                 currenView.current = 'WorkWeek';
             } else if (dragInfo.current.isMonthView) {
-                currenView.current = 'Month';
+                currenView.current = dragInfo.current.isTimelineView ? 'TimelineMonth' : 'Month';
+            } else if ((cell || args.target)?.closest(`.${CSS_CLASSES.TIMELINE_DAY_VIEW}`)) {
+                currenView.current = 'TimelineDay';
+            } else if ((cell || args.target)?.closest(`.${CSS_CLASSES.TIMELINE_WEEK_VIEW}`)) {
+                currenView.current = 'TimelineWeek';
+            } else if ((cell || args.target)?.closest(`.${CSS_CLASSES.TIMELINE_WORKWEEK_VIEW}`)) {
+                currenView.current = 'TimelineWorkWeek';
             }
         }
         dragInfo.current.currentCell = cell;
-        if (!dragInfo.current.isMonthView) {
-            dragInfo.current.isAllDaySource = data.isAllDay = (cell || args.target)?.classList.contains(CSS_CLASSES.ALL_DAY_CELL) ||
+        if (!dragInfo.current.isMonthView && !dragInfo.current.isTimelineView) {
+            const isAllDayTarget: boolean = (cell || args.target)?.classList.contains(CSS_CLASSES.ALL_DAY_CELL) ||
                 !!args.target?.closest(`.${CSS_CLASSES.DATE_HEADER_CONTAINER}`);
+            dragInfo.current.isAllDaySource = isAllDayTarget;
+            data.isAllDay = isAllDayTarget === isAllDayEvent.current ? eventData.isAllDay : isAllDayTarget;
         }
         if (cell) {
             dragInfo.current.setCursorClass('move');
             clientXRef.current = (args.event as MouseEvent).clientX;
             updateNavigatingPosition();
-            getAutoScroll(args);
+            handleAutoScroll(args.event);
             if (eventDrag.externalDragAndDrop) {
                 currentTarget.current = cell.closest(`.${CSS_CLASSES.SCHEDULER}`) as HTMLElement;
                 dragInfo.current.cloneRef.classList.add(CSS_CLASSES.DRAG_CLONE);
             }
-            const targetCellHeight: number = cell.offsetHeight ?? 0;
-            if (targetCellHeight > 0) {
-                cellHeightRef.current = targetCellHeight;
-            }
-            let currentCellDate: Date = new Date(Number(cell.getAttribute('data-date')));
+            if (cell.offsetHeight > 0) { cellHeightRef.current = cell.offsetHeight; }
+            let currentCellDate: Date = dragInfo.current.getDateFromPointer(args.event, cell);
             let newStartDate: Date = currentCellDate;
             let lastCellDate: Date = currentCellDate;
             if (dragInfo.current.isMonthView) {
@@ -539,7 +604,11 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
 
     const resetElementDragState: () => void = (): void => {
         elementRef.current?.removeAttribute('aria-grabbed');
-        elementRef.current?.classList.remove(CSS_CLASSES.DRAGGING);
+        if (metadata?.groupEdit) {
+            removeClassFromElements(schedulerRef.current.element, `[data-guid="${data.guid}"]`, CSS_CLASSES.DRAGGING);
+        } else {
+            elementRef.current?.classList.remove(CSS_CLASSES.DRAGGING);
+        }
         dragInfo.current.setCursorClass('default');
         if (dragInfo.current?.cloneRef?.parentElement) {
             dragInfo.current.cloneRef.parentElement.removeChild(dragInfo.current.cloneRef);
@@ -580,7 +649,12 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
         const originalEnd: Date = new Date(original.endTime);
         const durationMs: number = Math.max(0, originalEnd.getTime() - originalStart.getTime());
         let newStartTime: Date = new Date(finalDropTimestamp);
-        if (dragInfo.current?.isAllDaySource) {
+        if (dragInfo.current?.isSpannedCell) {
+            newStartTime = DateService.normalizeDate(newStartTime);
+            DateService.setHours(newStartTime, originalStart);
+        } else if (dragInfo.current?.isTimelineView && dragInfo.current?.isAllDaySource) {
+            newStartTime = DateService.normalizeDate(newStartTime);
+        } else if (dragInfo.current?.isAllDaySource) {
             DateService.setHours(newStartTime, originalStart);
         } else if (dragInfo.current?.isMonthView) {
             newStartTime = DateService.normalizeDate(newStartTime);
@@ -599,12 +673,15 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
     const getUpdateEvent: (original: EventModel, newStartTime: Date, newEndTime: Date, args: SchedulerDragEvent) => void =
         (original: EventModel, newStartTime: Date, newEndTime: Date, args: SchedulerDragEvent) => {
             if (!dragInfo.current) { return; }
-            const resourceFields: Record<string, any> = (!isNullOrUndefined(targetGroupIndex.current))
-                ? setResourceValues(targetGroupIndex.current) :
-                {};
+            let resourceFields: Record<string, any> = {};
+            if (!isNullOrUndefined(targetGroupIndex.current)) {
+                resourceFields = metadata?.groupEdit
+                    ? buildGroupEditResourceFields(original, sourceGroupIndex.current, targetGroupIndex.current, setResourceValues)
+                    : setResourceValues(targetGroupIndex.current);
+            }
             const updatedEvent: EventModel =
-                updateDatasource(original, newStartTime, newEndTime, schedulerRef, eventSettings.fields, eventsData, timezone,
-                                 resourceFields);
+                updateDatasource(original, newStartTime, newEndTime, schedulerRef, eventSettings.fields,
+                                 eventsData, timezone, resourceFields);
             endDragCleanup();
             args.cancel = true;
             onDragStop?.({ ...args, data: updatedEvent });
@@ -687,7 +764,8 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
                     revertAndAlert('alert', 'blockAlert');
                     return;
                 }
-                if (isAllDayEvent.current && dragInfo.current.isMonthView) {
+                if ((isAllDayEvent.current || (dragInfo.current.isTimelineView && dragInfo.current?.isAllDaySource)) &&
+                    dragInfo.current.isMonthView) {
                     data.isAllDay = true;
                 }
                 if (original.recurrenceID && original.recurrenceRule) {
@@ -720,7 +798,8 @@ export function useDragAndDrop({ ref, data, containerProps }: UseDragAndDropPara
     useDraggable(dragTargetRef, {
         clone: true,
         cursorAt: eventDrag?.externalDragAndDrop ? { left: -20, top: -20 } : { left: -5, top: -5 },
-        dragArea: eventDrag?.eventDragArea ?? `.${CSS_CLASSES.CONTENT_WRAP}, .${CSS_CLASSES.CONTENT_TABLE}`,
+        dragArea: eventDrag?.eventDragArea
+            ?? `.${CSS_CLASSES.CONTENT_WRAP}, .${CSS_CLASSES.CONTENT_TABLE}, .${CSS_CLASSES.MAIN_SCROLL_CONTAINER}, .${CSS_CLASSES.TIMELINE_CONTAINER}`,
         abort: `.${CSS_CLASSES.EVENT_RESIZE_CLASS}, .${CSS_CLASSES.LEFT_RESIZE_HANDLER}, .${CSS_CLASSES.RIGHT_RESIZE_HANDLER}, .${CSS_CLASSES.TOP_RESIZE_HANDLER}, .${CSS_CLASSES.BOTTOM_RESIZE_HANDLER}, .${CSS_CLASSES.BLOCK_APPOINTMENT}`,
         distance: 5,
         helper: (args: HelperEvent) => createHelperClone(args),

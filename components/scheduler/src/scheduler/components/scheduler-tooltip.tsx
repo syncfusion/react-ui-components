@@ -7,7 +7,7 @@ import { RefObject, useCallback, useEffect, useRef, useState } from 'react';
 import { Tooltip } from '@syncfusion/react-popups';
 import { DateService } from '../services/DateService';
 import { useSchedulerPropsContext } from '../context/scheduler-context';
-import { useProviderContext, initializeTelemetryFeature } from '@syncfusion/react-base';
+import { useProviderContext } from '@syncfusion/react-base';
 import { useSchedulerEventsContext } from '../context/scheduler-events-context';
 
 type SchedulerTooltipProps = SchedulerTooltipInputProps & {
@@ -39,10 +39,6 @@ export const SchedulerTooltip: React.FC<SchedulerTooltipProps> = ({
     const { timeFormat } = useSchedulerPropsContext();
     const { eventsData } = useSchedulerEventsContext();
     const eventsDataRef: RefObject<EventModel[]> = useRef<EventModel[]>(eventsData);
-
-    useEffect(() => {
-        initializeTelemetryFeature('SchedulerTooltip', 'schedule');
-    }, []);
 
     useEffect(() => {
         eventsDataRef.current = eventsData;

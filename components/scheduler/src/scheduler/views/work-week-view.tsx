@@ -5,9 +5,8 @@ import { WorkWeekViewProps } from '../types/scheduler-types';
 
 export const WorkWeekView: FC<WorkWeekViewProps> = () => {
     useEffect(() => {
-        initializeTelemetryFeature('WorkWeekView', 'schedule');
+        initializeTelemetryFeature('WorkWeekView', 'Scheduler');
     }, []);
-
     return <VerticalView viewType={'WorkWeek'} />;
 };
 WorkWeekView.displayName = 'WorkWeekView';

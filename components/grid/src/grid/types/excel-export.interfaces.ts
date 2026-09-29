@@ -1,4 +1,4 @@
-import { CellStyle } from '@syncfusion/excel-export';
+import { CellStyle } from '@syncfusion/excel-export/src/cell-style';
 import type { GridRef } from './grid.interfaces';
 import type { ColumnProps } from './column.interfaces';
 
@@ -683,6 +683,44 @@ export interface ExcelExportSettings<T = Record<string, unknown>> {
      * ```
      */
     isBlob?: boolean;
+
+    /**
+     * Enable multiple grid export mode.
+     * When `true`, use `exportGrids` array instead of single `gridRef` in UseGridExcelExportOptions.
+     * Requires `multipleExport` configuration for layout and spacing options.
+     *
+     * @type {boolean}
+     * @default false
+     */
+    isMultipleExport?: boolean;
+
+    /**
+     * Array of grid references for multiple grid export.
+     * Only applicable when `isMultipleExport` is `true`.
+     * Grids are exported sequentially as configured by `multipleExport` options.
+     *
+     * @type {React.RefObject<GridRef<T>>[]}
+     * @example
+     * ```typescript
+     * const settings: ExcelExportSettings<Employee> = {
+     *   isMultipleExport: true,
+     *   exportGrids: [gridRef1, gridRef2, gridRef3],
+     *   multipleExport: {
+     *     type: 'AppendToPage',
+     *     blankRows: 3
+     *   }
+     * };
+     * ```
+     */
+    exportGrids?: React.RefObject<GridRef<T>>[];
+
+    /**
+     * Configuration for multiple grid export arrangement and spacing.
+     * Only applicable when `isMultipleExport` is `true`.
+     *
+     * @type {MultipleGridExportOptions}
+     */
+    multipleExport?: MultipleGridExportOptions;
 }
 
 /**
@@ -886,4 +924,36 @@ export interface ExcelGroupingSettings {
      * @default true
      */
     boldHeaders?: boolean;
+}
+
+/**
+ * Specifies export mode for multiple grids.
+ *
+ * - `AppendToPage` — Appends all grids to the same worksheet with blank rows between them.
+ * - `NewPage` — Creates a separate worksheet for each grid.
+ */
+export type MultipleGridExportMode = 'AppendToPage' | 'NewPage';
+
+/**
+ * Configuration for multiple grid Excel export spacing and layout.
+ */
+export interface MultipleGridExportOptions {
+    /**
+     * Export mode determining how grids are arranged.
+     *
+     * - `AppendToPage` — All grids on the same worksheet (default).
+     * - `NewPage` — Each grid on a separate worksheet.
+     *
+     * @type {MultipleGridExportMode}
+     * @default 'AppendToPage'
+     */
+    type?: MultipleGridExportMode;
+
+    /**
+     * Number of blank rows to insert between grids when using `AppendToPage` mode.
+     *
+     * @type {number}
+     * @default 5
+     */
+    blankRows?: number;
 }

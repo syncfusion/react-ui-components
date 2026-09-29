@@ -1,10 +1,13 @@
 import { Context, createContext, useCallback, useContext, useMemo, useState, FC, ReactNode } from 'react';
 import { ProcessedEventsData } from '../types/internal-interface';
+import { EventModel } from '../types/scheduler-types';
 
 interface CloneEventData {
     guid?: string;
     segments?: ProcessedEventsData[];
     isDayEvent?: boolean;
+    draggedEvent?: EventModel;
+    sourceTopPx?: number;
 }
 
 interface CloneEventState extends CloneEventData {
@@ -24,7 +27,9 @@ export const CloneEventProvider: FC<{ children: ReactNode }> = ({ children }: { 
         visible: false,
         guid: null,
         segments: [],
-        isDayEvent: false
+        isDayEvent: false,
+        draggedEvent: null,
+        sourceTopPx: 0
     });
 
     const show: (payload: CloneEventData) => void = useCallback((payload: CloneEventData) => {
@@ -32,7 +37,9 @@ export const CloneEventProvider: FC<{ children: ReactNode }> = ({ children }: { 
             visible: true,
             guid: payload?.guid,
             segments: payload?.segments ?? [],
-            isDayEvent: !!payload?.isDayEvent
+            isDayEvent: !!payload?.isDayEvent,
+            draggedEvent: payload?.draggedEvent ?? null,
+            sourceTopPx: payload?.sourceTopPx ?? 0
         });
     }, []);
 
@@ -41,7 +48,9 @@ export const CloneEventProvider: FC<{ children: ReactNode }> = ({ children }: { 
             visible: false,
             guid: null,
             segments: [],
-            isDayEvent: false
+            isDayEvent: false,
+            draggedEvent: null,
+            sourceTopPx: 0
         });
     }, []);
 

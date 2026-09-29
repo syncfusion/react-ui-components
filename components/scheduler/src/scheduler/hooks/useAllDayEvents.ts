@@ -9,22 +9,20 @@ import { useSchedulerPropsContext } from '../context/scheduler-context';
 import { useSchedulerRenderDatesContext } from '../context/scheduler-render-dates-context';
 import { useSchedulerEventsContext } from '../context/scheduler-events-context';
 import { useResourceGroupingContext } from '../context/resource-grouping-context';
+import { MAX_EVENTS_STACK_ALLDAY } from '../utils/default-props';
+
+type ResourceEventsByDate = Map<number, Map<string, ProcessedEventsData[]>>;
 
 /**
  * Custom hook to process all-day events and provide related functionalities
  *
  * @param {boolean} isCollapsed - Whether the all-day row is collapsed
- * @param {number} maxEventsPerRow - Maximum number of events to display per cell
+ * @param {number} maxEventsStack - Maximum number of events to display per cell
  * @returns {AllDayEventsResult} Processed events data and related functions
  *
  * @private
  */
 interface AllDayEventsResult {
-    /**
-     * The processed all-day events
-     */
-    allDayRowEvents: ProcessedEventsData[];
-
     /**
      * Events mapped by date
      */
@@ -122,60 +120,56 @@ const findNonConflictingPosition: (
  * Process all-day events and provide related functionalities
  *
  * @param {boolean} isCollapsed - Whether the all-day row is collapsed
- * @param {number} maxEventsPerRow - Maximum number of events to display per cell
+ * @param {number} maxEventsStack - Maximum number of events to display per cell
  * @returns {AllDayEventsResult} Processed events data and related functions
  * @private
  */
 export const useAllDayEvents: (
     isCollapsed: boolean,
-    maxEventsPerRow?: number
+    maxEventsStack?: number
 ) => AllDayEventsResult = (
     isCollapsed: boolean,
-    maxEventsPerRow: number = 2
+    maxEventsStack: number = MAX_EVENTS_STACK_ALLDAY
 ): AllDayEventsResult => {
 
     const { eventSettings, resources } = useSchedulerPropsContext();
     const { renderDates } = useSchedulerRenderDatesContext();
     const { eventsData } = useSchedulerEventsContext();
-    const { leafResources, isGroupingEnabled } = useResourceGroupingContext();
-
-    // Process all-day events - exported so that it can be used directly from the component if needed
-    const allDayRowEvents: ProcessedEventsData[] = useMemo((): ProcessedEventsData[] => {
+    const { leafResources, isGroupingEnabled, groupConfig } = useResourceGroupingContext();
+    const isAllDayPlacement: boolean = eventSettings.spannedEventPlacement === 'AllDayRow';
+    const eligibleEvents: EventModel[] = useMemo((): EventModel[] => {
         if (!renderDates?.length || !eventsData?.length) {
             return [];
         }
 
-        // Get all-day events (single day)
-        const allDayOnlyEvents: EventModel[] = eventsData.filter((event: EventModel) => {
+        return EventService.filterEventsByDateRange(eventsData, renderDates).filter((event: EventModel): boolean => {
             if (!event.startTime || !event.endTime || event.isBlock) {
                 return false;
             }
-            return event.isAllDay && !EventService.isMultiDayEvent(event);
-        });
-
-        // Get multi-day events based on spanned event placement
-        const multiDayEvents: EventModel[] = eventsData.filter((event: EventModel) => {
-            if (!event.startTime || !event.endTime) {
-                return false;
+            if (event.isAllDay) {
+                return true;
             }
-
-            if (eventSettings.spannedEventPlacement === 'AllDayRow') {
-                if (!event.isAllDay && DateService.isLessthan24Hours(event.startTime, event.endTime)) {
-                    return false;
-                }
-                return EventService.isMultiDayEvent(event);
-            } else {
-                return event.isAllDay && EventService.isMultiDayEvent(event);
-            }
+            return isAllDayPlacement && !DateService.isLessthan24Hours(event.startTime, event.endTime) &&
+                EventService.isMultiDayEvent(event);
         });
+    }, [eventsData, renderDates, isAllDayPlacement]);
 
-        const { sharedPositionMap, positionMapsPerResource } = PositioningService.initializePositionMaps(renderDates, isGroupingEnabled);
-
+    const processAllDayCollection: (
+        sourceEvents: EventModel[],
+        groupIndex?: number
+    ) => ProcessedEventsData[] = useCallback((
+        sourceEvents: EventModel[],
+        groupIndex?: number
+    ): ProcessedEventsData[] => {
+        if (!sourceEvents?.length || !renderDates?.length) {
+            return [];
+        }
+        const { sharedPositionMap } = PositioningService.initializePositionMaps(renderDates, false);
+        const positionMap: Map<string, boolean[]> = sharedPositionMap;
         const processedEvents: ProcessedEventsData[] = [];
-        const allEventsTogether: EventModel[] = [...allDayOnlyEvents, ...multiDayEvents];
-        const sortedEventsByTime: EventModel[] = DateService.sortByTimeAndSpan(allEventsTogether);
+        const sortedEventsByTime: EventModel[] = DateService.sortByTimeAndSpan(sourceEvents);
 
-        sortedEventsByTime.forEach((event: EventModel) => {
+        sortedEventsByTime.forEach((event: EventModel): void => {
             if (!event.startTime || !event.endTime) {
                 return;
             }
@@ -183,16 +177,12 @@ export const useAllDayEvents: (
             const startDate: Date = DateService.normalizeDate(event.startTime);
             const endDate: Date = DateService.normalizeDate(event.endTime);
             const isMultiDay: boolean = EventService.isMultiDayEvent(event);
-            const totalSegments: number = isMultiDay ? DateService.getDaysCount(startDate, endDate) + 1 : 1;
-            const resourceColor: string = EventService.getResourceColor(event, resources, eventSettings?.resourceColorField);
+            const renderEndDate: Date = (!event.isAllDay && DateService.isMidnight(event.endTime)) ?
+                DateService.addDays(endDate, -1) : endDate;
+            const totalSegments: number = isMultiDay ? DateService.getDaysCount(event.startTime, event.endTime, event.isAllDay) : 1;
 
-            const positionMapForEvent: Map<string, boolean[]> = PositioningService.getPositionMapForEvent(
-                event, resources, positionMapsPerResource, renderDates, sharedPositionMap
-            );
-
-            // Find a non-conflicting position for the event
             const positionIndex: number = findNonConflictingPosition(
-                renderDates, startDate, endDate, positionMapForEvent
+                renderDates, startDate, renderEndDate, positionMap
             );
 
             const eventClasses: string[] = ['sf-appointment'];
@@ -206,57 +196,60 @@ export const useAllDayEvents: (
             }
 
             if (isMultiDay) {
-                // Process multi-day events as segments
+                const firstVisibleSegmentIndex: number = renderDates.findIndex((renderDate: Date): boolean => {
+                    const normalizedRenderDate: Date = DateService.normalizeDate(renderDate);
+                    return normalizedRenderDate >= startDate && normalizedRenderDate <= renderEndDate;
+                });
+
                 for (const date of renderDates) {
                     const currentDate: Date = DateService.normalizeDate(date);
 
-                    if (currentDate >= startDate && currentDate <= endDate) {
-                        PositioningService.setIndexPosition(positionMapForEvent, date, positionIndex);
-
-                        const isFirstDay: boolean = currentDate.getTime() === startDate.getTime();
-                        const isLastDay: boolean = currentDate.getTime() === endDate.getTime();
-                        const segmentIndex: number = Math.floor(
-                            (currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
-                        );
-
-                        const isFirstSegmentInRenderRange: boolean = renderDates.findIndex((renderDate: Date) => {
-                            const normalizedRenderDate: Date = DateService.normalizeDate(renderDate);
-                            return normalizedRenderDate >= startDate && normalizedRenderDate <= endDate;
-                        }) === renderDates.findIndex((renderDate: Date) => {
-                            const normalizedRenderDate: Date = DateService.normalizeDate(renderDate);
-                            return normalizedRenderDate.getTime() === currentDate.getTime();
-                        });
-
-                        // Calculate segment start and end times
-                        const segmentStartTime: Date = isFirstDay ?
-                            new Date(event.startTime.getTime()) :
-                            new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), 0, 0, 0);
-
-                        const segmentEndTime: Date = isLastDay ?
-                            new Date(event.endTime.getTime()) :
-                            new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), 0, 0, 0);
-
-                        const eventKey: string = `${date.toISOString()}-${event.id}`;
-
-                        processedEvents.push({
-                            event: event,
-                            startDate: segmentStartTime,
-                            endDate: segmentEndTime,
-                            isFirstDay: isFirstDay,
-                            isLastDay: isLastDay,
-                            isFirstSegmentInRenderRange: isFirstSegmentInRenderRange,
-                            segmentIndex: segmentIndex,
-                            totalSegments: totalSegments,
-                            positionIndex: positionIndex,
-                            eventClasses,
-                            eventKey,
-                            eventStyle: resourceColor ? { backgroundColor: resourceColor } : undefined
-                        });
+                    if (currentDate < startDate || currentDate > renderEndDate) {
+                        continue;
                     }
+
+                    PositioningService.setIndexPosition(positionMap, date, positionIndex);
+
+                    const isFirstDay: boolean = currentDate.getTime() === startDate.getTime();
+                    const isLastDay: boolean = currentDate.getTime() === renderEndDate.getTime();
+                    const segmentIndex: number = Math.floor(
+                        (currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+                    );
+                    const currentRenderIndex: number = renderDates.findIndex((renderDate: Date): boolean =>
+                        DateService.normalizeDate(renderDate).getTime() === currentDate.getTime()
+                    );
+                    const isFirstSegmentInRenderRange: boolean = firstVisibleSegmentIndex === currentRenderIndex;
+
+                    const segmentStartTime: Date = isFirstDay ?
+                        new Date(event.startTime.getTime()) :
+                        new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), 0, 0, 0);
+
+                    const segmentEndTime: Date = isLastDay ?
+                        new Date(event.endTime.getTime()) :
+                        new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), 0, 0, 0);
+
+                    const eventKey: string = typeof groupIndex === 'number' ?
+                        `${date.toISOString()}-${event.id}-${groupIndex}` : `${date.toISOString()}-${event.id}`;
+
+                    processedEvents.push({
+                        event: event,
+                        startDate: segmentStartTime,
+                        endDate: segmentEndTime,
+                        isFirstDay: isFirstDay,
+                        isLastDay: isLastDay,
+                        isFirstSegmentInRenderRange: isFirstSegmentInRenderRange,
+                        segmentIndex: segmentIndex,
+                        totalSegments: groupConfig?.byDate ? 1 : totalSegments,
+                        positionIndex: positionIndex,
+                        eventClasses,
+                        eventKey,
+                        groupIndex
+                    });
                 }
             } else {
-                PositioningService.setIndexPosition(positionMapForEvent, startDate, positionIndex);
-                const eventKey: string = `${startDate.toISOString()}-${event.id}`;
+                PositioningService.setIndexPosition(positionMap, startDate, positionIndex);
+                const eventKey: string = typeof groupIndex === 'number' ?
+                    `${startDate.toISOString()}-${event.id}-${groupIndex}` : `${startDate.toISOString()}-${event.id}`;
 
                 processedEvents.push({
                     event: event,
@@ -265,63 +258,103 @@ export const useAllDayEvents: (
                     positionIndex: positionIndex,
                     eventClasses,
                     eventKey,
-                    eventStyle: resourceColor ? { backgroundColor: resourceColor } : undefined
+                    groupIndex
                 });
             }
         });
 
-        // Sort by position index
-        return processedEvents.sort((a: ProcessedEventsData, b: ProcessedEventsData) => {
+        return processedEvents.sort((a: ProcessedEventsData, b: ProcessedEventsData): number => {
             const aIndex: number = a.positionIndex ?? 0;
             const bIndex: number = b.positionIndex ?? 0;
             return aIndex - bIndex;
         });
-    }, [eventsData, renderDates, eventSettings.spannedEventPlacement, eventSettings.fields, resources]);
+    }, [renderDates, groupConfig?.byDate]);
+
+    const eventsByResource: ResourceEventsByDate = useMemo((): ResourceEventsByDate => {
+        const result: ResourceEventsByDate = new Map();
+
+        if (!isGroupingEnabled || !leafResources?.length || !renderDates?.length) {
+            return result;
+        }
+
+        leafResources.forEach((resourceLeaf: ResourceLevel): void => {
+            if (typeof resourceLeaf.groupIndex !== 'number') {
+                return;
+            }
+            const resourceEvents: EventModel[] = eligibleEvents.filter((event: EventModel): boolean =>
+                EventService.matchesResource(event, resourceLeaf, resources)
+            );
+            const processedResourceEvents: ProcessedEventsData[] = processAllDayCollection(
+                resourceEvents, resourceLeaf.groupIndex
+            );
+            result.set(
+                resourceLeaf.groupIndex,
+                EventService.getEventsMap(renderDates, processedResourceEvents)
+            );
+        });
+
+        return result;
+    }, [isGroupingEnabled, leafResources, renderDates, eligibleEvents, resources, processAllDayCollection]);
 
     // Group events by date
     const eventsByDate: Map<string, ProcessedEventsData[]> = useMemo((): Map<string, ProcessedEventsData[]> => {
-        return EventService.getEventsMap(renderDates, allDayRowEvents);
-    }, [renderDates, allDayRowEvents]);
+        if (isGroupingEnabled) {
+            return new Map<string, ProcessedEventsData[]>();
+        }
+        const processed: ProcessedEventsData[] = processAllDayCollection(eligibleEvents);
+        return EventService.getEventsMap(renderDates, processed);
+    }, [isGroupingEnabled, renderDates, eligibleEvents, processAllDayCollection]);
 
-    // Check if any date has more events than allowed
-    const hasEventsExceedingMaxCount: boolean = useMemo((): boolean => {
-        return EventService.isAlldayHasMoreEvents(renderDates, eventsByDate, maxEventsPerRow);
-    }, [eventsByDate, maxEventsPerRow, renderDates]);
+    const getResourceScopedEvents: (
+        dateKey: string,
+        resourceLeaf?: CellData | ResourceLevel
+    ) => ProcessedEventsData[] = useCallback((
+        dateKey: string,
+        resourceLeaf?: CellData | ResourceLevel
+    ): ProcessedEventsData[] => {
+        if (!isGroupingEnabled) {
+            return eventsByDate.get(dateKey) || [];
+        }
+        if (!resourceLeaf || typeof resourceLeaf.groupIndex !== 'number') {
+            return [];
+        }
+        return eventsByResource.get(resourceLeaf.groupIndex)?.get(dateKey) || [];
+    }, [isGroupingEnabled, eventsByDate, eventsByResource]);
 
-    // Get the maximum number of events in any column
     const maxEventsInAnyColumn: number = useMemo((): number => {
         if (!isGroupingEnabled) {
             return EventService.getMaxEventsInCell(eventsByDate, renderDates);
         }
         let maxPerResource: number = 0;
 
-        renderDates?.forEach((date: Date) => {
-            const dateKey: string = DateService.generateDateKey(date);
-            const dateEvents: ProcessedEventsData[] = eventsByDate.get(dateKey) || [];
-            if (leafResources) {
-                leafResources.forEach((resourceLeaf: ResourceLevel) => {
-                    const resourceEventCount: number = dateEvents.filter(
-                        (eventData: ProcessedEventsData) =>
-                            !eventData.event.isBlock &&
-                            EventService.matchesResource(eventData.event, resourceLeaf, resources)
-                    ).length;
-                    maxPerResource = Math.max(maxPerResource, resourceEventCount);
-                });
-            }
+        eventsByResource.forEach((dateMap: Map<string, ProcessedEventsData[]>): void => {
+            dateMap.forEach((dateEvents: ProcessedEventsData[]): void => {
+                const eventCount: number = dateEvents.filter(
+                    (eventData: ProcessedEventsData): boolean => !eventData.event.isBlock
+                ).length;
+                maxPerResource = Math.max(maxPerResource, eventCount);
+            });
         });
         return maxPerResource;
-    }, [eventsByDate, renderDates, resources, leafResources]);
+    }, [isGroupingEnabled, eventsByDate, renderDates, eventsByResource]);
+
+    const hasEventsExceedingMaxCount: boolean = useMemo((): boolean => {
+        if (isGroupingEnabled) {
+            return maxEventsInAnyColumn > maxEventsStack;
+        }
+        return EventService.isAlldayHasMoreEvents(renderDates, eventsByDate, maxEventsStack);
+    }, [eventsByDate, maxEventsStack, renderDates, isGroupingEnabled, maxEventsInAnyColumn]);
 
     // Calculate the limit for visible events based on collapsed state
     const visibleEventLimit: number = useMemo((): number => {
         if (!isCollapsed) {
             return Infinity;
         }
-        if (maxEventsInAnyColumn > maxEventsPerRow) {
-            return maxEventsPerRow - 1;
+        if (maxEventsInAnyColumn > maxEventsStack) {
+            return maxEventsStack - 1;
         }
-        return maxEventsPerRow;
-    }, [isCollapsed, maxEventsInAnyColumn, maxEventsPerRow]);
+        return maxEventsStack;
+    }, [isCollapsed, maxEventsInAnyColumn, maxEventsStack]);
 
     // Calculate height based on events and collapsed state
     const calculateHeight: () => number = useCallback((): number => {
@@ -334,47 +367,33 @@ export const useAllDayEvents: (
 
     const getVisibleEvents: (dateKey: string, resourceLeaf?: CellData | ResourceLevel) => ProcessedEventsData[] = useCallback(
         (dateKey: string, resourceLeaf?: CellData | ResourceLevel): ProcessedEventsData[] => {
-            const dateEvents: ProcessedEventsData[] = eventsByDate.get(dateKey) || [];
+            let filteredEvents: ProcessedEventsData[] = getResourceScopedEvents(dateKey, resourceLeaf);
+            const groupOrder: (string | number)[] | undefined = resourceLeaf?.groupOrder;
 
-            if (!resourceLeaf) {
-                const sortedEvents: ProcessedEventsData[] = [...dateEvents].sort(
-                    (a: ProcessedEventsData, b: ProcessedEventsData) => (a.positionIndex ?? 0) - (b.positionIndex ?? 0)
+            filteredEvents = filteredEvents.map((eventData: ProcessedEventsData): ProcessedEventsData => {
+                const resourceColor: string | undefined = EventService.getResourceColor(
+                    eventData.event, resources, eventSettings?.resourceColorField, groupOrder
                 );
-                return sortedEvents.slice(0, visibleEventLimit);
-            }
-
-            const filteredEvents: ProcessedEventsData[] = dateEvents.filter((eventData: ProcessedEventsData) =>
-                EventService.matchesResource(eventData.event, resourceLeaf, resources)
-            );
+                return resourceColor ? { ...eventData, eventStyle: { backgroundColor: resourceColor } } : eventData;
+            });
 
             const sortedEvents: ProcessedEventsData[] = [...filteredEvents].sort(
-                (a: ProcessedEventsData, b: ProcessedEventsData) => (a.positionIndex ?? 0) - (b.positionIndex ?? 0)
+                (a: ProcessedEventsData, b: ProcessedEventsData): number => (a.positionIndex ?? 0) - (b.positionIndex ?? 0)
             );
             return sortedEvents.slice(0, visibleEventLimit);
         },
-        [eventsByDate, visibleEventLimit, resources]
+        [getResourceScopedEvents, visibleEventLimit, resources, eventSettings?.resourceColorField]
     );
 
     const getHiddenEventCount: (dateKey: string, resourceLeaf?: CellData | ResourceLevel) => number = useCallback(
         (dateKey: string, resourceLeaf?: CellData | ResourceLevel): number => {
-            const dateEvents: ProcessedEventsData[] = eventsByDate.get(dateKey) || [];
-
-            if (!resourceLeaf) {
-                return Math.max(0, dateEvents.length - visibleEventLimit);
-            }
-
-            const filteredEvents: ProcessedEventsData[] = dateEvents.filter((eventData: ProcessedEventsData) =>
-                EventService.matchesResource(eventData.event, resourceLeaf, resources)
-            );
-
-            return Math.max(0, filteredEvents.length - visibleEventLimit);
+            const scopedEvents: ProcessedEventsData[] = getResourceScopedEvents(dateKey, resourceLeaf);
+            return Math.max(0, scopedEvents.length - visibleEventLimit);
         },
-        [eventsByDate, visibleEventLimit, resources]
+        [getResourceScopedEvents, visibleEventLimit]
     );
 
-
     return {
-        allDayRowEvents,
         eventsByDate,
         hasEventsExceedingMaxCount,
         maxEventsInAnyColumn,

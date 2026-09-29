@@ -1,7 +1,16 @@
 import { useCallback, RefObject, Dispatch, SetStateAction, useState, useEffect } from 'react';
-import { ActionType, ValueType, GroupedData, IRow, FocusedCellInfo, UseDataResult, ColumnProps, GridRef, EditSettings, EditState,
-    CellEditEvent, HandleCellEditKeyDown, CellContext, CellEditModule, UseCellEditHook, FocusStrategyResult } from '../types';
-import { isNullOrUndefined } from '@syncfusion/react-base';
+import { ActionType } from '../types/enum';
+import { ValueType, IRow, UseDataResult } from '../types/interfaces';
+import { GroupedData } from '../types/grouping.interfaces';
+import { FocusedCellInfo, FocusStrategyResult, IFocusMatrix } from '../types/focus.interfaces';
+import { GridRef } from '../types/grid.interfaces';
+import { ColumnProps } from '../types/column.interfaces';
+import { EditSettings, EditState, CellEditEvent, HandleCellEditKeyDown, CellContext, CellEditModule, UseCellEditHook } from '../types/edit.interfaces';
+import { UndoRedoAction, UndoRedoState, UseUndoRedoResult } from '../types/undoredo.interfaces';
+import { isNullOrUndefined } from '@syncfusion/react-base/src/util';
+import { PinningModuleResult, PinningSettings } from '../types/pinning.interfaces';
+import { DataManager } from '@syncfusion/react-data';
+import { isRowPinningEnabled } from '../utils/utils';
 
 /**
  * Cell Edit Mode hook - manages cell-level editing functionality
@@ -17,6 +26,10 @@ import { isNullOrUndefined } from '@syncfusion/react-base';
  * @param {RefObject<Object>} editDataRef - Reference to current edit data
  * @param {Function} getPrimaryKeyField - Function to get primary key field name
  * @param {Function} updateEditData - Function to update edit data
+ * @param {Function} setResponseData - Optional function to update response data
+ * @param {PinningModuleResult} pinningModule - Optional row pinning module for pinned row support
+ * @param {UseBatchEditResult} batchEditModule - Optional batch edit module for batch editing support
+ * @param {UseUndoRedoResult} undoRedoModule - Optional undo/redo module for undo/redo support
  * @returns {CellEditModule<Object>} Cell edit methods and state
  */
 export const useCellEdit: UseCellEditHook = <T>(
@@ -29,7 +42,11 @@ export const useCellEdit: UseCellEditHook = <T>(
     setGridAction: Dispatch<SetStateAction<Object>>,
     editDataRef: RefObject<T>,
     getPrimaryKeyField: () => string,
-    updateEditData: (field: string, value: ValueType, rowObject?: IRow<ColumnProps<T>>) => void
+    updateEditData: (field: string, value: ValueType, rowObject?: IRow<ColumnProps<T>>) => void,
+    setResponseData?: Dispatch<SetStateAction<Object>>,
+    pinningModule?: PinningModuleResult<T>,
+    batchEditModule?: import('../types/batch-edit.interfaces').UseBatchEditResult<T>,
+    undoRedoModule?: UseUndoRedoResult
 ): CellEditModule => {
     const viewData: T[] = currentViewData;
     const [focusCell, setFocusCell] = useState<boolean>(false);
@@ -98,10 +115,10 @@ export const useCellEdit: UseCellEditHook = <T>(
      * Initiates Cell edit mode for a specific cell identified by primary key and field name.
      * Uses field-based tracking for stability across column operations.
      */
-    const editCell: (primaryKeyValue: string | number, field: string) => Promise<void> =
-        useCallback(async (primaryKeyValue: string | number, field: string) => {
-            // Only allowed in Cell mode
-            if (editSettings.mode !== 'Cell') {
+    const editCell: (primaryKeyValue: string | number, field: string, rowUid?: string, initialValue?: ValueType) => Promise<void> =
+        useCallback(async (primaryKeyValue: string | number, field: string, rowUid?: string, initialValue?: ValueType) => {
+            // Cell mode and allowBatchSave use the cell editor surface.
+            if (editSettings.mode !== 'Cell' && !editSettings.allowBatchSave) {
                 return;
             }
 
@@ -113,20 +130,46 @@ export const useCellEdit: UseCellEditHook = <T>(
             // If already editing a cell, save it first before editing the new cell
             if (editState.isEdit && editState.editCellIndex) {
                 // Check if it's the same cell - if so, do nothing
-                if (editState.editCellIndex.primaryKeyValue === primaryKeyValue &&
-                    editState.editCellIndex.field === field) {
+                const isSameCell: boolean = editState.editCellIndex.primaryKeyValue === primaryKeyValue &&
+                    editState.editCellIndex.field === field &&
+                    (rowUid === undefined || editState.editCellIndex.rowUid === rowUid ||
+                        (editState.editCellIndex.rowUid === undefined && rowUid === undefined));
+                if (isSameCell) {
                     return;
                 }
             }
 
-            // Find row by primary key
-            const primaryKeyColumn: string = getPrimaryKeyField();
-            const rowIndex: number = viewData.findIndex((row: T) => row[primaryKeyColumn as string] === primaryKeyValue);
+            let rowIndex: number = -1;
+            let rowElement: HTMLElement | null = null;
+            let rowobject: IRow<ColumnProps<T>> | null = null;
+            const pinningSettings: PinningSettings = _gridRef?.current?.pinningSettings;
+            if (isRowPinningEnabled(pinningSettings) && rowUid) {
+                rowobject =  _gridRef?.current.getRowObjectFromUID(rowUid);
+                rowIndex = rowobject.rowIndex;
+                rowElement = rowobject.element;
+            } else {
+                const primaryKeyColumn: string = getPrimaryKeyField();
+                rowIndex = viewData.findIndex((row: T) => row[primaryKeyColumn as string] === primaryKeyValue);
+            }
+
             if (rowIndex === -1 || isNullOrUndefined(rowIndex)) {
                 return;
             }
 
-            const row: T = viewData[rowIndex as number];
+            const isPinnedRowEdit: boolean = !!rowElement?.closest?.('.sf-pinned-rows-top-container') ||
+                !!rowElement?.closest?.('.sf-pinned-rows-bottom-container');
+            const topPinnedRowCount: number = _gridRef.current?.getPinnedTopTableRowsObject?.()?.length ?? 0;
+
+            let row: T = null;
+            if (isPinnedRowEdit) {
+                row = rowobject?.data as T;
+            } else {
+                row = viewData[rowIndex - topPinnedRowCount];
+            }
+
+            if (editSettings.allowBatchSave && batchEditModule) {
+                row = batchEditModule.getBatchEditedRowData(primaryKeyValue, row);
+            }
 
             // Get visible columns for optimization
             const visibleColumns: ColumnProps<T>[] = _gridRef.current?.getVisibleColumns();
@@ -151,17 +194,24 @@ export const useCellEdit: UseCellEditHook = <T>(
             }
 
             // Set Cell edit state with field-based tracking
+            const originalCellValue: ValueType = row[field as string];
+            const currentCellValue: ValueType = isNullOrUndefined(initialValue) ? originalCellValue : initialValue;
+
             setEditState((prev: EditState<T>) => ({
                 ...prev,
                 isEdit: true,
                 editRowIndex: rowIndex,
-                editData: { [field]: row[field as string] } as T,
-                originalData: { [field]: row[field as string] } as T,
+                editData: { [field]: currentCellValue } as T,
+                originalData: { [field]: originalCellValue } as T,
                 validationErrors: {},
-                editCellIndex: { primaryKeyValue, field }
+                editCellIndex: { primaryKeyValue, field, rowUid }
             }));
 
-            editDataRef.current = { [field]: row?.[field as string] } as T;
+            editDataRef.current = { [field]: currentCellValue } as T;
+
+            if (editSettings.allowBatchSave) {
+                await batchEditModule?.openEditor(primaryKeyValue, field, currentCellValue, originalCellValue, rowUid);
+            }
 
             // Dispatch editStateChanged event
             const editGridElement: HTMLDivElement | null | undefined = _gridRef?.current?.element;
@@ -169,19 +219,19 @@ export const useCellEdit: UseCellEditHook = <T>(
                 detail: { isEdit: true, editRowIndex: rowIndex }
             });
             editGridElement?.dispatchEvent(editStateEvent);
-        }, [editSettings.mode, editSettings.allowEdit, getPrimaryKeyField, viewData, _gridRef, editState]);
+        }, [editSettings.mode, editSettings.allowEdit, getPrimaryKeyField, viewData, _gridRef, editState, batchEditModule]);
 
     /**
      * Saves changes made in Cell edit mode and exits edit state.
      * Follows the same validation and error handling pattern as saveDataChanges.
      */
     const saveCellChanges: () => Promise<boolean> = useCallback(async () => {
-        // Only applicable in Cell mode
-        if (editSettings.mode !== 'Cell' || !editState.isEdit || !editState.editCellIndex) {
+        // Cell mode and allowBatchSave use the cell editor surface.
+        if ((editSettings.mode !== 'Cell' && !editSettings.allowBatchSave) || !editState.isEdit || !editState.editCellIndex) {
             return false;
         }
 
-        const isValid: boolean = _gridRef.current.editCellFormRef?.current.formRef?.current.validate();
+        const isValid: boolean = _gridRef.current.editCellFormRef?.current?.formRef?.current?.validate();
         // Check validation errors before saving
         // If there are validation errors, prevent save and return false
         if ((editState.validationErrors && Object.keys(editState.validationErrors).length > 0)
@@ -189,24 +239,44 @@ export const useCellEdit: UseCellEditHook = <T>(
             return false;
         }
 
-        const { primaryKeyValue, field } = editState.editCellIndex;
-        const primaryKeyColumn: string = getPrimaryKeyField();
+        let rowIndex: number = -1;
+        let rowobject: IRow<ColumnProps<T>> | null = null;
+        const { primaryKeyValue, field, rowUid } = editState.editCellIndex;
+        const pinningSettings: PinningSettings = _gridRef?.current?.pinningSettings;
+        if (isRowPinningEnabled(pinningSettings) && !isNullOrUndefined(editState.editRowIndex) &&
+            editState.editRowIndex >= 0) {
+            const resolvedRowUid: string | null = rowUid ??
+                _gridRef?.current.getRowByIndex(editState.editRowIndex)?.getAttribute('data-uid') ?? null;
+            rowobject = resolvedRowUid ? _gridRef?.current.getRowObjectFromUID(resolvedRowUid) : null;
+            rowIndex = editState.editRowIndex;
+        }
 
-        // Get full row data
-        const rowIndex: number = viewData.findIndex((row: T) => row[primaryKeyColumn as string] === primaryKeyValue);
+        if (rowIndex === -1 || isNullOrUndefined(rowIndex)) {
+            const primaryKeyColumn: string = getPrimaryKeyField();
+            rowIndex = viewData.findIndex((row: T) => row[primaryKeyColumn as string] === primaryKeyValue);
+        }
+
         if (rowIndex === -1 || isNullOrUndefined(rowIndex)) {
             return false;
         }
 
-        const row: T = viewData[rowIndex as number];
-        const updatedRowData: T = { ...row, [field]: editState.editData[field as string] };
+        const topPinnedRowCount: number = _gridRef.current?.getPinnedTopTableRowsObject?.()?.length ?? 0;
+        const rowData: T | GroupedData<T> = rowobject?.data ?? viewData[(rowIndex - topPinnedRowCount)] ?? viewData[rowIndex as number];
+        const row: T = editSettings.allowBatchSave && batchEditModule
+            ? batchEditModule.getBatchEditedRowData(primaryKeyValue, rowData as T)
+            : rowData as T;
+        const previousCellValue: ValueType = Object.prototype.hasOwnProperty.call(editState.originalData ?? {}, field)
+            ? editState.originalData[field as string]
+            : row[field as string];
+        const previousRowData: T = { ...row, [field]: previousCellValue } as T;
+        const updatedRowData: T = { ...row, [field]: editState.editData[field as string] } as T;
 
         // Fire onDataChangeStart callback
         const saveArgs: { cancel: boolean; data: T; rowIndex: number; previousData: T; action: string } = {
             cancel: false,
             data: updatedRowData,
             rowIndex: rowIndex,
-            previousData: row,
+            previousData: previousRowData,
             action: ActionType.Edit
         };
         _gridRef?.current?.onDataChangeStart?.(saveArgs);
@@ -218,19 +288,98 @@ export const useCellEdit: UseCellEditHook = <T>(
 
         setGridAction({});
 
-        // Update data
-        await dataOperations.getData({
-            requestType: 'update',
-            data: saveArgs.data
-        });
+        if (editSettings.allowBatchSave) {
+            await batchEditModule?.saveAndCloseEditor();
+        } else {
+            // Check if custom binding is enabled
+            const customBinding: boolean = dataOperations.dataManager && 'result' in dataOperations.dataManager;
+
+            // Update data with custom binding support
+            await dataOperations.getData(customBinding ? { requestType: 'save', ...saveArgs } : {
+                requestType: 'update',
+                data: saveArgs.data
+            });
+        }
+
+        // Sync updates to the exact combined-row object so pinned/content clones remain aligned.
+        const resolvedRowObject: IRow<ColumnProps<T>> | null | undefined = rowobject ??
+            (rowUid ? _gridRef.current?.getRowObjectFromUID(rowUid) : undefined) ??
+            _gridRef.current?.getRowsObject?.()?.[rowIndex as number] ?? null;
+
+        if ((editSettings.mode === 'Cell' || editSettings.allowBatchSave) && resolvedRowObject) {
+            if (editSettings.allowBatchSave && resolvedRowObject.isPinned) {
+                pinningModule?.updatePinnedRowObjectsData(resolvedRowObject, saveArgs);
+            } else if (typeof resolvedRowObject.setRowObject === 'function') {
+                resolvedRowObject.setRowObject?.((previousRowObject: IRow<ColumnProps<T>>) => ({
+                    ...previousRowObject,
+                    data: saveArgs.data
+                }));
+            }
+            if (editSettings.allowBatchSave &&
+                (_gridRef.current?.scrollMode === 'Virtual' || _gridRef.current?.scrollMode === 'Infinite')) {
+                _gridRef.current?.setVirtualCachedViewData?.((previousData: Map<number, T>) => {
+                    const updatedData: Map<number, T> = new Map(previousData);
+                    updatedData.set(rowIndex, saveArgs.data);
+                    return updatedData;
+                });
+            }
+        } else if (resolvedRowObject?.isPinned) {
+            pinningModule?.updatePinnedRowObjectsData(resolvedRowObject, saveArgs, true);
+        }
+        if (editSettings.allowBatchSave && setResponseData) {
+            const primaryKeyField: string = getPrimaryKeyField();
+            const customBinding: boolean = !!dataOperations.dataManager && 'result' in dataOperations.dataManager;
+            const sourceData: T[] = customBinding ? currentViewData : dataOperations.dataManager instanceof DataManager
+                ? dataOperations.dataManager.dataSource.json as T[] : currentViewData;
+            /* eslint-disable security/detect-object-injection */
+            setResponseData((previousData: Object) => ({
+                ...previousData,
+                aggregates: customBinding ? (previousData as { aggregates?: Object }).aggregates : undefined,
+                result: sourceData.map((viewRow: T) =>
+                    // eslint-disable-next-line security/detect-object-injection
+                    viewRow[primaryKeyField] === saveArgs.data[primaryKeyField] ? saveArgs.data :
+                        (editSettings.allowBatchSave
+                            ? batchEditModule?.getBatchEditedRowData(viewRow[primaryKeyField], viewRow) ?? viewRow
+                            : viewRow))
+            }));
+            /* eslint-enable security/detect-object-injection */
+        }
 
         // Fire onDataChangeComplete callback
         _gridRef?.current?.onDataChangeComplete?.({
             data: saveArgs.data,
             rowIndex: rowIndex,
-            previousData: row,
+            previousData: previousRowData,
             action: ActionType.Edit
         });
+
+        if (undoRedoModule && editSettings.allowUndoRedo && !editSettings.allowBatchSave &&
+            previousCellValue !== saveArgs.data[field as string]) {
+            const previousState: UndoRedoState<T> = {
+                rows: [saveArgs.previousData],
+                rowIndices: [rowIndex],
+                rowKeys: [primaryKeyValue],
+                cellField: field,
+                cellPreviousValue: previousCellValue,
+                cellCurrentValue: saveArgs.data[field as string]
+            };
+            const currentState: UndoRedoState<T> = {
+                rows: [saveArgs.data],
+                rowIndices: [rowIndex],
+                rowKeys: [primaryKeyValue],
+                cellField: field,
+                cellPreviousValue: previousCellValue,
+                cellCurrentValue: saveArgs.data[field as string]
+            };
+            const action: UndoRedoAction<T> = {
+                id: `${Date.now()}-${Math.random()}`,
+                actionType: 'edit',
+                previousState,
+                currentState,
+                timestamp: Date.now()
+            };
+            undoRedoModule.recordAction(action);
+        }
 
         // Reset edit state
         setEditState((prev: EditState<T>) => ({
@@ -253,14 +402,15 @@ export const useCellEdit: UseCellEditHook = <T>(
         editGridElement?.dispatchEvent(editStateEvent);
         restoreCellFocus();
         return true;
-    }, [editSettings.mode, editState, getPrimaryKeyField, viewData, dataOperations, _gridRef]);
+    }, [editSettings.mode, editSettings.allowUndoRedo, editSettings.allowBatchSave, editState, getPrimaryKeyField,
+        viewData, dataOperations, _gridRef, pinningModule, batchEditModule, undoRedoModule, setResponseData, currentViewData]);
 
     /**
      * Cancels Cell edit mode and discards changes.
      */
     const cancelCellChanges: () => Promise<void> = useCallback(async () => {
-        // Only applicable in Cell mode
-        if (editSettings.mode !== 'Cell' || !editState.isEdit || !editState.editCellIndex) {
+        // Cell mode and allowBatchSave use the cell editor surface.
+        if ((editSettings.mode !== 'Cell' && !editSettings.allowBatchSave) || !editState.isEdit || !editState.editCellIndex) {
             return;
         }
 
@@ -314,7 +464,7 @@ export const useCellEdit: UseCellEditHook = <T>(
     const editFocusedCell: () => void = useCallback(() => {
         const cellContext: CellContext<T> = getCellContext();
         if (cellContext && !cellContext.column.isPrimaryKey && cellContext?.column?.field) {
-            editCell(cellContext.primaryKeyValue, cellContext.column.field);
+            editCell(cellContext.primaryKeyValue, cellContext.column.field, cellContext.row?.uid);
         }
     }, [_gridRef, getCellContext, editCell]);
 
@@ -326,10 +476,10 @@ export const useCellEdit: UseCellEditHook = <T>(
         const cellContext: CellContext<T> = getCellContext();
         if (cellContext && !cellContext.column.isPrimaryKey) {
             if (cellContext?.column?.field) {
-                editCell(cellContext.primaryKeyValue, cellContext.column.field);
+                editCell(cellContext.primaryKeyValue, cellContext.column.field, cellContext.row?.uid);
             }
             setTimeout(() => {
-                _gridRef.current.editCellFormRef.current.editCellRef.current.setValue(null);
+                _gridRef.current?.editCellFormRef.current?.editCellRef.current?.setValue(null);
                 requestAnimationFrame(() => {
                     setSaveCell(true);
                 });
@@ -346,8 +496,9 @@ export const useCellEdit: UseCellEditHook = <T>(
         navigateToNextCell?: (direction: 'nextCell' | 'prevCell') => void
     ): Promise<void> => {
 
-        // Guard: Only allow Cell edit mode
-        if (editSettings.mode !== 'Cell' || !editSettings.allowEdit) {
+        // Cell mode and legacy batch editing both use the cell editor keyboard flow.
+        // Normal row editing without batch save remains on the row editor path.
+        if ((editSettings.mode !== 'Cell' && !editSettings.allowBatchSave) || !editSettings.allowEdit) {
             return;
         }
 
@@ -370,7 +521,7 @@ export const useCellEdit: UseCellEditHook = <T>(
             focusInfo: FocusedCellInfo;
         }): void => {
             if (cellContext?.column?.field) {
-                editCell(cellContext.primaryKeyValue, cellContext.column.field);
+                editCell(cellContext.primaryKeyValue, cellContext.column.field, cellContext.row?.uid);
             }
         };
 
@@ -381,6 +532,14 @@ export const useCellEdit: UseCellEditHook = <T>(
             const isSaved: boolean = await saveCellChanges();
 
             if (isSaved !== false) {
+                const focusModule: FocusStrategyResult | undefined = _gridRef.current?.focusModule;
+                const lastFocusedCell: FocusedCellInfo | undefined = focusModule?.getLastFocusedCell?.();
+                if (focusModule && lastFocusedCell && !lastFocusedCell.isHeader && !lastFocusedCell.isAggregate) {
+                    const contentMatrix: IFocusMatrix = focusModule.getContentMatrix();
+                    focusModule.setActiveMatrix('Content');
+                    contentMatrix.select(lastFocusedCell.rowIndex, lastFocusedCell.colIndex);
+                    contentMatrix.current = [lastFocusedCell.rowIndex, lastFocusedCell.colIndex];
+                }
                 const direction: 'prevCell' | 'nextCell' = e.shiftKey ? 'prevCell' : 'nextCell';
                 navigateToNextCell(direction);
 

@@ -48,7 +48,7 @@ export interface ICalendar extends CalendarProps {
  * import { Calendar } from '@syncfusion/react-calendars';
  *
  * export default function App() {
- *   return <Calendar />;
+ *          return <Calendar />;
  * }
  * ```
  */

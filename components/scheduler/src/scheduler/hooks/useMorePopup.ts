@@ -10,19 +10,21 @@ interface PopupState {
     date: Date | null;
     events: EventModel[];
     target: HTMLElement | null;
+    groupOrder?: (string | number)[];
 }
 
 interface MorePopupHookResult {
     date: Date | null;
     events: EventModel[];
     target: HTMLElement | null;
+    groupOrder?: (string | number)[];
     popupElement: RefObject<HTMLDivElement>;
     schedulerElement: RefObject<HTMLDivElement | null>;
     locale: string | undefined;
     handleClose: () => void;
     handleEventClick: (event: EventModel, element: HTMLElement) => void;
     handleNavigation: (event: MouseEvent<HTMLElement>, isDayViewAvailable: boolean) => void;
-    open: (moreDate: Date, moreEvents: EventModel[], element: HTMLElement) => void;
+    open: (moreDate: Date, moreEvents: EventModel[], element: HTMLElement, groupOrder?: (string | number)[]) => void;
 }
 
 /**
@@ -35,7 +37,8 @@ export const useMorePopup: () => MorePopupHookResult = (): MorePopupHookResult =
     const [popupState, setPopupState] = useState<PopupState>({
         date: null,
         events: [],
-        target: null
+        target: null,
+        groupOrder: undefined
     });
     const { morePopupShow, morePopupHide } = useSchedulerPopupContext();
     const popupElement: RefObject<HTMLDivElement> = useRef<HTMLDivElement>(null);
@@ -61,7 +64,8 @@ export const useMorePopup: () => MorePopupHookResult = (): MorePopupHookResult =
         setPopupState({
             date: null,
             events: [],
-            target: null
+            target: null,
+            groupOrder: undefined
         });
         morePopupHide();
     };
@@ -101,17 +105,20 @@ export const useMorePopup: () => MorePopupHookResult = (): MorePopupHookResult =
      * @param {Date} moreDate - Date of more popup
      * @param {EventModel[]} moreEvents - Events of more popup
      * @param {HTMLElement} element - Target element
+     * @param {(string | number)[]} [groupOrder] - Optional resource group order for context-aware color rendering
      * @returns {void}
      */
-    const open: (moreDate: Date, moreEvents: EventModel[], element: HTMLElement) => void = (
+    const open: (moreDate: Date, moreEvents: EventModel[], element: HTMLElement, groupOrder?: (string | number)[]) => void = (
         moreDate: Date,
         moreEvents: EventModel[],
-        element: HTMLElement
+        element: HTMLElement,
+        groupOrder?: (string | number)[]
     ): void => {
         setPopupState({
             date: moreDate,
             events: moreEvents,
-            target: element
+            target: element,
+            groupOrder: groupOrder
         });
         morePopupShow();
     };
@@ -120,6 +127,7 @@ export const useMorePopup: () => MorePopupHookResult = (): MorePopupHookResult =
         date: popupState.date,
         events: popupState.events,
         target: popupState.target,
+        groupOrder: popupState.groupOrder,
         popupElement,
         schedulerElement,
         locale,

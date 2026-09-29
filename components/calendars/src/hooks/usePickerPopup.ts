@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { formatUnit } from '@syncfusion/react-base';
 import { getZindexPartial, PopupSettings } from '@syncfusion/react-popups';
 
 export interface UsePickerPopupOptions {
@@ -16,6 +17,7 @@ export interface UsePickerPopupOptions {
     enableAltUpToClose?: boolean;
     enableEscapeToClose?: boolean;
     popupSettings?: PopupSettings;
+    matchTargetWidth?: boolean;
     onAltDownGlobal?: () => void;
     onAltUpGlobal?: () => void;
     onEscapeGlobal?: () => void;
@@ -28,6 +30,20 @@ export interface UsePickerPopupResult {
     togglePopup: () => void;
     resolvedPopupSettings?: PopupSettings;
 }
+
+const resolvePopupWidth: (rawWidth: PopupSettings['width'] | undefined, target: HTMLElement | null) => string | undefined = (
+    rawWidth: PopupSettings['width'] | undefined, target: HTMLElement | null): string | undefined => {
+    const baseWidth: number = target ? target.offsetWidth || target.getBoundingClientRect().width : 0;
+    if (rawWidth === undefined || rawWidth === null) {
+        return baseWidth ? `${baseWidth}px` : undefined;
+    }
+    const widthUnit: string = formatUnit(rawWidth);
+    if (!widthUnit.includes('%')) {
+        return widthUnit;
+    }
+    const percent: number = parseFloat(widthUnit);
+    return !Number.isNaN(percent) && baseWidth ? `${(baseWidth * percent) / 100}px` : widthUnit;
+};
 
 /**
  * Hook for managing picker popup open/close state, outside-click detection, and keyboard interactions.
@@ -51,6 +67,7 @@ export default function usePickerPopup(opts: UsePickerPopupOptions): UsePickerPo
         enableAltUpToClose = true,
         enableEscapeToClose = true,
         popupSettings,
+        matchTargetWidth = false,
         onAltDownGlobal,
         onAltUpGlobal,
         onEscapeGlobal
@@ -62,19 +79,28 @@ export default function usePickerPopup(opts: UsePickerPopupOptions): UsePickerPo
 
     const resolvedPopupSettings: PopupSettings | undefined = useMemo(() => {
         const baseZIndex: number = popupSettings && typeof popupSettings.zIndex === 'number' ? popupSettings.zIndex : 1000;
+        let resolved: PopupSettings;
         if (baseZIndex === 1000) {
             const calculatedZIndex: number = containerRef.current ? getZindexPartial(containerRef.current) : 1000;
-            return {
+            resolved = {
                 ...popupSettings,
                 zIndex: Math.max(3, calculatedZIndex + 1)
             };
         } else {
-            return {
+            resolved = {
                 ...popupSettings,
                 zIndex: baseZIndex
             };
         }
-    }, [popupSettings, containerRef.current]);
+        if (matchTargetWidth) {
+            const target: HTMLElement | null = containerRef.current || inputRef?.current || null;
+            const matchedWidth: string | undefined = resolvePopupWidth(popupSettings?.width, target);
+            if (matchedWidth) {
+                resolved.width = matchedWidth;
+            }
+        }
+        return resolved;
+    }, [popupSettings, containerRef, inputRef, matchTargetWidth, isOpen]);
 
     const showPopup: () => void = useCallback((): void => {
         if (disabled || readOnly) {

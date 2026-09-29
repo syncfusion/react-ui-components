@@ -111,6 +111,7 @@ export interface ToolbarAPI {
      * @default null
      */
     toolbarRef: React.RefObject<IToolbar>;
+    GridToolbar: React.FC<ToolbarConfig>;
 }
 
 /**

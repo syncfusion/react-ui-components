@@ -4,6 +4,8 @@ import { PieChartSizeProps, PieChartComponentProps } from './base/interfaces';
 import { stringToNumber } from './utils/helper';
 import { ChartProvider } from './layout/ChartProvider';
 import { ElementWithSize } from './base/internal-interfaces';
+import { ExportSourceContext } from '../common/interfaces';
+import type { ExportSource } from '../common/interfaces';
 
 /**
  * Extends the base chart component properties with optional lifecycle methods.
@@ -17,6 +19,19 @@ export interface IPieChart extends PieChartComponentProps {
      * @private
      */
     element?: HTMLElement | null;
+
+    /**
+     * Returns the latest snapshot of the PieChart's post-process state,
+     * published by the renderer during the `useLayoutEffect` commit.
+     *
+     * `undefined` until the first layout commit has run.
+     *
+     * @returns {ExportSource | undefined}
+     * Current export snapshot, or `undefined` when unmeasured.
+     *
+     * @private
+     */
+    getExportSource?: () => ExportSource | undefined;
 }
 
 /**
@@ -40,6 +55,9 @@ export const PieChart: React.ForwardRefExoticComponent<PieChartComponentProps & 
     forwardRef<IPieChart, PieChartComponentProps>((props: PieChartComponentProps, ref: Ref<IPieChart>) => {
 
         const chartRef: React.RefObject<HTMLDivElement | null> = useRef<HTMLDivElement>(null);
+        // Stores the latest processed data for spreadsheet export.
+        const exportSourceRef: React.MutableRefObject<ExportSource | undefined> =
+            useRef<ExportSource | undefined>(undefined);
         const { dir } = useProviderContext();
         const [element, setElement] = useState<ElementWithSize | null>(null);
         useEffect(() => {
@@ -49,23 +67,34 @@ export const PieChart: React.ForwardRefExoticComponent<PieChartComponentProps & 
             container.style.webkitUserSelect = 'none';
             container.style.position = 'relative';
             container.style.display = 'block';
-            container.style.height = 'inherit';
+            // Apply width and height props to the container div
+            if (props.width && props.width.indexOf('%') > -1) {
+                container.style.width = props.width;
+            }
+            if (props.height && props.height.indexOf('%') > -1) {
+                container.style.height = props.height;
+            }
+            // If no explicit height prop provided, inherit from parent
+            if (!props.height) {
+                container.style.height = 'inherit';
+            }
             const containerWidth: number = container?.clientWidth || container?.offsetWidth || 600;
             const containerHeight: number = container?.clientHeight || 450;
             container.id = sanitizeElementIds(container.id);
             const availableSize: PieChartSizeProps = {
-                width: stringToNumber(props.width, containerWidth) || containerWidth,
+                width: (props.width && props.width.indexOf('%') > -1) ? containerWidth : (stringToNumber(props.width, containerWidth) || containerWidth),
                 height: stringToNumber(props.height, containerHeight) || containerHeight
             };
             if (!container.classList.contains('sf-chart-focused')) {
                 container.classList.add('sf-chart-focused');
             }
             setElement({ element: container, availableSize });
-        }, [props.height, props.width]);
+        }, [props.height, props.width, props.background]);
 
         useImperativeHandle(ref, () => ({
             element: chartRef.current,
-            theme: props.theme || 'Material'
+            theme: props.theme || 'Material',
+            getExportSource: (): ExportSource | undefined => exportSourceRef.current
         }), [props.theme]);
 
         useEffect(() => {
@@ -76,20 +105,21 @@ export const PieChart: React.ForwardRefExoticComponent<PieChartComponentProps & 
         chartProps.accessibility = { ...props.accessibility };
         return (
             (
-                <div ref={chartRef}
-                    dir={dir}
-                    id={props.id}
-                    className="sf-control sf-chart sf-lib sf-touch"
-                    aria-label={chartProps.accessibility?.ariaLabel || '. Syncfusion interactive chart.'}
-                    role={chartProps.accessibility?.role || 'region'}
-                    tabIndex={chartProps.accessibility?.focusable ? (chartProps.accessibility?.tabIndex) : -1}
-                    style={{ outline: 'none' }}
-
-                >
-                    {element && (
-                        <ChartProvider chartProps={chartProps} parentElement={element} />
-                    )}
-                </div>
+                <ExportSourceContext.Provider value={exportSourceRef}>
+                    <div ref={chartRef}
+                        dir={dir}
+                        id={props.id}
+                        className="sf-control sf-chart sf-lib sf-touch"
+                        aria-label={chartProps.accessibility?.ariaLabel || '. Syncfusion interactive chart.'}
+                        role={chartProps.accessibility?.role || 'region'}
+                        tabIndex={chartProps.accessibility?.focusable ? (chartProps.accessibility?.tabIndex) : -1}
+                        style={{ outline: 'none' }}
+                    >
+                        {element && (
+                            <ChartProvider chartProps={chartProps} parentElement={element} />
+                        )}
+                    </div>
+                </ExportSourceContext.Provider>
             )
         );
     });

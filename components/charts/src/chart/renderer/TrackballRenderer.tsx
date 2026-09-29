@@ -123,7 +123,9 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
                             y: 0, // Will be updated when showing
                             fill: seriesMarker?.filled === false
                                 ? 'transparent'
-                                : (seriesMarker?.fill || series.interior),
+                                : (series.gradientFill
+                                    || seriesMarker?.fill
+                                    || series.interior),
                             border: {
                                 width: seriesMarker?.border?.width || 1,
                                 color: seriesMarker?.border?.color || series.interior
@@ -744,8 +746,12 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
                                 currentPointIndex: point.index || 0,
                                 fill: series.marker?.filled === false
                                     ? 'transparent'
-                                    : ( point.interior || marker.fill || point.color || (explodeSeries ? series.interior : '#ffffff')),
-                                stroke: borderColor,
+                                    : (series.gradientFill
+                                        || point.interior
+                                        || marker.fill
+                                        || point.color
+                                        || (explodeSeries ? series.interior : '#ffffff')),
+                                stroke: series.gradientFill || borderColor,
                                 markerShadow: markerShadow,
                                 currentRadius: markerRadius,
                                 animationState: 'appearing' as const
@@ -838,8 +844,11 @@ export const TrackballRenderer: React.ForwardRefExoticComponent<ChartTooltipProp
                             visible: true,
                             currentPointIndex: matchingPoint.index || 0,
                             // Update fill and other properties from the specific point if needed
-                            fill: (matchingPoint.marker.fill || matchingPoint.color || (explodeSeries ? series.interior : '#ffffff')),
-                            stroke: borderColor,
+                            fill: (series.gradientFill
+                                || matchingPoint.marker.fill
+                                || matchingPoint.color
+                                || (explodeSeries ? series.interior : '#ffffff')),
+                            stroke: series.gradientFill || borderColor,
                             markerShadow: markerShadow,
                             currentRadius: markerRadius,
                             animationState: 'appearing' as const

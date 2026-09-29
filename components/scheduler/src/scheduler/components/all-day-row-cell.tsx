@@ -7,6 +7,7 @@ import { useSchedulerLocalization } from '../common/locale';
 import { Browser, useProviderContext } from '@syncfusion/react-base';
 import { DateService } from '../services/DateService';
 import { useCellInteraction } from '../hooks/useCellInteraction';
+import { useResourceGroupingContext } from '../context/resource-grouping-context';
 
 interface AllDayRowCellProps {
     /**
@@ -48,6 +49,7 @@ export const AllDayRowCell: FC<AllDayRowCellProps> = (props: AllDayRowCellProps)
     const { locale } = useProviderContext();
     const { getString } = useSchedulerLocalization(locale || 'en-US');
     const { handleCellClick, handleCellDoubleClick } = useCellInteraction();
+    const { groupConfig } = useResourceGroupingContext();
 
     const renderMoreIndicator: () => ReactNode = (): ReactNode => {
         if (hiddenEventCount <= 0) {
@@ -84,7 +86,7 @@ export const AllDayRowCell: FC<AllDayRowCellProps> = (props: AllDayRowCellProps)
         return visibleEvents.map((eventInfo: ProcessedEventsData) => {
             const { totalSegments, isFirstSegmentInRenderRange, event, eventKey } = eventInfo;
 
-            if ((totalSegments && totalSegments > 1 && isFirstSegmentInRenderRange) ||
+            if ((totalSegments && totalSegments > 1 && isFirstSegmentInRenderRange) || groupConfig?.byDate ||
                 ((!totalSegments || totalSegments <= 1) && event.isAllDay && !event.isBlock)) {
                 return (
                     <DayEvent

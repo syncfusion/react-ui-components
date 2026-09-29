@@ -1,10 +1,18 @@
-import { Button } from '@syncfusion/react-buttons';
+import { Button } from '@syncfusion/react-buttons/src/button/button';
 import * as React from 'react';
 import { CommandItemType } from './enum';
 import { ColumnProps } from './column.interfaces';
-import { IRow } from './interfaces';
-import { RefObject } from 'react';
-import { EditState, InlineEditFormRef } from './edit.interfaces';
+import { IRow, ServiceLocator, UseDataResult } from './interfaces';
+import { Dispatch, JSX, RefObject, SetStateAction } from 'react';
+import { EditSettings, EditState, InlineEditFormRef, UseEditResult } from './edit.interfaces';
+import { VirtualSettings } from './virtualization.interface';
+import { GridRef } from './grid.interfaces';
+import { GroupedData } from './grouping.interfaces';
+import { FocusStrategyResult } from './focus.interfaces';
+import { selectionModule } from  './selection.interfaces';
+import { PinningModuleResult } from './pinning.interfaces';
+import { UseUndoRedoResult } from './undoredo.interfaces';
+import { StagedRowData } from './batch-edit.interfaces';
 
 /**
  * Defines the properties for configuring individual command items (buttons) in a command column.
@@ -173,4 +181,23 @@ export interface UseCommandColumnResult<T = unknown> {
      * @default {}
      */
     commandAddInlineFormRef: RefObject<{ [key: string]: RefObject<InlineEditFormRef>; }>;
+    CommandColumnBase: (props: Partial<ICommandColumnBase>) => JSX.Element;
+    EditModule: <T>(
+        _gridRef: RefObject<GridRef<T>>,
+        serviceLocator: ServiceLocator,
+        columns: ColumnProps<T>[],
+        currentViewData: (GroupedData<T> | T)[],
+        dataOperations: UseDataResult<T>,
+        focusModule: FocusStrategyResult,
+        selectionModule: selectionModule<T>,
+        editSettings: EditSettings<T>,
+        setGridAction: Dispatch<SetStateAction<Object>>,
+        setCurrentPage: Dispatch<SetStateAction<number>>,
+        setResponseData: Dispatch<SetStateAction<Object>>,
+        commandColumnModule: UseCommandColumnResult<T>,
+        virtualSettings: VirtualSettings,
+        pinningModule?: PinningModuleResult<T>,
+        batchEditStagedRowsRef?: RefObject<Map<string | number, StagedRowData<T>>>,
+        undoRedoModule?: UseUndoRedoResult
+    ) => UseEditResult<T>;
 }

@@ -243,6 +243,7 @@ export function deleteFollowingEvents(
  *
  * @param {EventModel} eventData - Event to validate
  * @returns {string | null} Message key if invalid, null if valid
+ * @private
  */
 export function validateRecurrencePattern(eventData: EventModel): string | null {
     const recurrenceRule: string = eventData.recurrenceRule as string;
@@ -302,6 +303,7 @@ export function validateRecurrencePattern(eventData: EventModel): string | null 
  * @param {string | number} recurrenceID The recurrence ID to match against
  * @param {boolean} forFollowingEvent Filter parent related events
  * @returns {Object} Filtered events and parent event
+ * @private
  */
 export function filterEventsByRecurrenceIdWithParent(
     events: EventModel[],

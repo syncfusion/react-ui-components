@@ -25,7 +25,7 @@ export interface IMorePopup {
     /**
      * Open the popup to show more events
      */
-    open: (date: Date, events: EventModel[], element: HTMLElement) => void;
+    open: (date: Date, events: EventModel[], element: HTMLElement, groupOrder?: (string | number)[]) => void;
 }
 
 /**
@@ -38,6 +38,7 @@ export const MorePopup: ForwardRefExoticComponent<RefAttributes<IMorePopup>
         date,
         events,
         target,
+        groupOrder,
         popupElement,
         schedulerElement,
         locale,
@@ -91,7 +92,7 @@ export const MorePopup: ForwardRefExoticComponent<RefAttributes<IMorePopup>
             <div className={CSS_CLASSES.MORE_EVENT_CONTENT}>
                 {events.map((event: EventModel): ReactElement => {
                     const resourceColor: string | undefined =
-                        EventService.getResourceColor(event, resources, eventSettings?.resourceColorField);
+                        EventService.getResourceColor(event, resources, eventSettings?.resourceColorField, groupOrder);
                     return (
                         <div
                             className={CSS_CLASSES.APPOINTMENT}
@@ -134,10 +135,11 @@ export const MorePopup: ForwardRefExoticComponent<RefAttributes<IMorePopup>
         <Popup
             open={morePopupVisible}
             relateTo={target}
-            position={{ X: 'right', Y: 'top' }}
+            popupAlign={{ horizontal: 'right', vertical: 'top' }}
+            anchorAlign={{ horizontal: 'right', vertical: 'top' }}
             collision={{
-                X: CollisionType.Flip,
-                Y: CollisionType.Flip
+                X: CollisionType.Fit,
+                Y: CollisionType.Fit
             }}
             autoReposition={true}
             onClose={handleClose}

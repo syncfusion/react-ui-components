@@ -603,12 +603,13 @@ ToolbarPopupRef, IToolbarPopupProps
                     className={popupClasses}
                     relateTo={toolbarRef.current as HTMLElement}
                     offsetY={orientation === Orientation.Vertical ? 0 : getElementOffsetY()}
+                    viewPortElementRef={toolbarRef}
                     open={isPopupOpen}
                     onOpen={onPopupOpen}
                     onClose={onPopupClose}
-                    targetType='container'
                     collision={{ Y: collision ? CollisionType.None : CollisionType.None, X: CollisionType.None }}
-                    position={dir === 'rtl' ? { X: 'left', Y: 'top' } : { X: 'right', Y: 'top' }}
+                    anchorAlign={ dir === 'rtl' ? { horizontal: 'left', vertical: 'top' } : { horizontal: 'right', vertical: 'top' }}
+                    popupAlign={ dir === 'rtl' ?  { horizontal: 'left', vertical: 'top' } : { horizontal: 'right', vertical: 'top' }}
                     width={
                         overflowMode === OverflowMode.Extended && orientation === Orientation.Horizontal ?
                             getToolbarPopupWidth() : undefined

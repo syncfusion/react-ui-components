@@ -38,6 +38,11 @@
     }
   }
 
+  .sf-timepicker-inline > .sf-timepicker-list {
+    width: 100%;
+    min-width: 0;
+  }
+
   .sf-timepicker-item {
     cursor: default;
     font-size: $timepicker-list-normal-font-size;

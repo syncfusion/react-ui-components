@@ -1,10 +1,15 @@
 import { useCallback, useState, RefObject, Dispatch, SetStateAction, useRef, useMemo } from 'react';
 import { GridRef, IGridBase, RowInfo } from '../types/grid.interfaces';
-import { ActionType, GroupType, ScrollMode } from '../types/enum';
-import { getExpandedCountBeforePage, getGroupLayoutFlattedData, updatePageWiseStartEndIndexes } from '../utils';
-import { ColumnProps, IRow, VirtualizationSettings, GroupSettings, IGroupModule, GroupedData, ShouldExpandGroupEvent, OnGroupArgs,
-    ChildInfoResult } from '../types';
-import { isNullOrUndefined } from '@syncfusion/react-base';
+import { ColumnProps } from '../types/column.interfaces';
+import { VirtualizationSettings } from '../types/virtualization.interface';
+import { IRow } from '../types/interfaces';
+import { ActionType, GroupSummaryPosition, GroupType, ScrollMode } from '../types/enum';
+import { getExpandedCountBeforePage, getGroupLayoutFlattedData, updatePageWiseStartEndIndexes, executeGridAsyncAction } from '../utils/utils';
+import { GroupSettings, GroupedData, ShouldExpandGroupEvent, OnGroupArgs,
+    ChildInfoResult, UseGroupResult,
+    GroupSummary} from '../types/grouping.interfaces';
+import { isNullOrUndefined } from '@syncfusion/react-base/src/util';
+import { GroupDropArea } from '../views/GroupDropArea';
 
 /**
  * Action type constants for group operations
@@ -17,37 +22,6 @@ const GROUP_ACTION_ADD: 'add' = 'add' as const;
 const GROUP_ACTION_REMOVE: 'remove' = 'remove' as const;
 const GROUP_ACTION_REMOVE_ALL: 'removeall' = 'removeall' as const;
 const GROUP_ACTION_REFRESH: 'refresh' = 'refresh' as const;
-
-/**
- * Return type for useGroup hook
- *
- * @template T - Data type of grid rows
- * @private
- */
-export interface UseGroupResult<T = unknown> extends IGroupModule {
-    /** Set of currently expanded group keys */
-    expandedGroups: Set<string>;
-    /** Set of currently collapsed group keys */
-    collapsedGroups: Set<string>;
-    /** All currently grouped column field names (ordered) */
-    groupedColumns: string[];
-    fieldBasedExpandedGroupKeysRef: RefObject<Map<string, Set<string>>>;
-    fieldBasedCollapsedGroupKeysRef: RefObject<Map<string, Set<string>>>;
-    /** Toggle a single group row expanded/collapsed. Updates expandedGroupCountRef based on rowObject.items.length */
-    toggleGroup: (rowObject: RowInfo<T>) => void;
-    /** Determine if a group key is expanded */
-    isGroupExpanded: (key: string, field?: string) => boolean;
-    /** Current groupSettings snapshot */
-    groupSettings: GroupSettings;
-    /** Internal: update grouped columns list */
-    setGroupedColumns: (columns: string[]) => void;
-    /** Internal: update expanded groups Set */
-    setExpandedGroups: Dispatch<SetStateAction<Set<string>>>;
-    /** Internal: update collapsed groups Set */
-    setCollapsedGroups: Dispatch<SetStateAction<Set<string>>>;
-    /** Ref for the group drop area element, used for height calculations in Render */
-    groupDropAreaRef: RefObject<HTMLDivElement>;
-}
 
 /**
  * Custom hook to manage grouping state, expansion/collapse, and GroupModule API methods.
@@ -73,9 +47,11 @@ export interface UseGroupResult<T = unknown> extends IGroupModule {
  * @param {Function} setCurrentPage - State Dispatch Function to update grid currentPage
  * @param {RefObject<ColumnProps[]>} uiColumns - Ref to current UI columns for access in callbacks
  * @param {Dispatch<SetStateAction<object>>} setColumnChooserState - change column visibility for multiplecolumns type state change
+ * @param {GroupSummary} groupSummary - Function to determine group summary position for a given row
+ * @param {Map<string, string[]>} groupCaptionAggregateType - Map of group caption aggregate types for each field
  * @returns {UseGroupResult} UseGroupResult containing state and API methods
  */
-export const useGroup: <T = unknown>(
+const useGroup: <T = unknown>(
     _gridRef?: RefObject<GridRef<T>>,
     groupSettingsProp?: GroupSettings,
     setGridAction?: (action: OnGroupArgs & { requestType: ActionType }) => void,
@@ -93,7 +69,9 @@ export const useGroup: <T = unknown>(
     gridProps?: Partial<IGridBase<T>>,
     setCurrentPage?: Dispatch<SetStateAction<number>>,
     uiColumns?: RefObject<ColumnProps<T>[]>,
-    setColumnChooserState?: Dispatch<SetStateAction<object>>
+    setColumnChooserState?: Dispatch<SetStateAction<object>>,
+    groupSummary?: GroupSummary | GroupSummaryPosition,
+    groupCaptionAggregateType?: Map<string, string[]>
 ) => UseGroupResult<T> = <T = unknown>(
     _gridRef?: RefObject<GridRef<T>>,
     groupSettingsProp?: GroupSettings,
@@ -112,7 +90,9 @@ export const useGroup: <T = unknown>(
     gridProps?: Partial<IGridBase<T>>,
     setCurrentPage?: Dispatch<SetStateAction<number>>,
     uiColumns?: RefObject<ColumnProps<T>[]>,
-    setColumnChooserState?: Dispatch<SetStateAction<object>>
+    setColumnChooserState?: Dispatch<SetStateAction<object>>,
+    groupSummary?: GroupSummary,
+    groupCaptionAggregateType?: Map<string, string[]>
 ): UseGroupResult<T> => {
     const [groupSettings, setGroupSettings] = useState<GroupSettings>(groupSettingsProp);
     const [groupedColumns, setGroupedColumns] = useState<string[]>(groupSettingsProp?.columns);
@@ -158,7 +138,7 @@ export const useGroup: <T = unknown>(
         useCallback(async (args: OnGroupArgs & { requestType: ActionType, cancel: boolean }): Promise<boolean> => {
             const confirmResult: boolean = virtualizationSettings?.scrollMode === ScrollMode.Virtual ||
                 virtualizationSettings?.scrollMode === ScrollMode.Infinite ? true :
-                await _gridRef.current?.editModule?.checkUnsavedChanges?.();
+                await _gridRef.current?.editModule?.checkUnsavedChanges?.() ?? true;
             gridProps?.onGroupStart?.(args);
             if (args.cancel || !confirmResult) { return false; }
             delete args.cancel;
@@ -218,10 +198,14 @@ export const useGroup: <T = unknown>(
                     return expandedGroups.has('ALL') ? event.groupKey !== key : (collapsedGroups.has('ALL') ? event.groupKey === key :
                         (expandedGroups.has(event.groupKey as string) && !collapsedGroups.has(event.groupKey as string)));
                 },
+                groupSummary,
+                groupCaptionAggregateType,
                 groupSettings,
                 !currentlyExpanded ? new Set(collapsedGroupArray) : collapsedGroups,
                 // false,
-                key
+                key,
+                true,
+                rowData?.aggregates
             );
         const itemCount: number = childInfo?.currentViewData?.length;
         const nextRowObjects: Map<string | number, IRow<ColumnProps<T>>> =
@@ -410,6 +394,8 @@ export const useGroup: <T = unknown>(
                 (): boolean => {
                     return true;
                 },
+                groupSummary,
+                groupCaptionAggregateType,
                 groupSettings
             );
         groupedColumns.forEach((field: string) => {
@@ -439,6 +425,8 @@ export const useGroup: <T = unknown>(
                     (): boolean => {
                         return true;
                     },
+                    groupSummary,
+                    groupCaptionAggregateType,
                     groupSettings
                 );
                 loadedPageWiseGroupExpandedCountRef.current?.set(currentPage, childInfo.count);
@@ -493,6 +481,8 @@ export const useGroup: <T = unknown>(
                 (): boolean => {
                     return false;
                 },
+                groupSummary,
+                groupCaptionAggregateType,
                 groupSettings
             );
         groupedColumns.forEach((field: string) => {
@@ -522,6 +512,8 @@ export const useGroup: <T = unknown>(
                     (): boolean => {
                         return false;
                     },
+                    groupSummary,
+                    groupCaptionAggregateType,
                     groupSettings
                 );
                 loadedPageWiseGroupExpandedCountRef.current?.set(currentPage, childInfo.count);
@@ -571,6 +563,8 @@ export const useGroup: <T = unknown>(
             };
             if (!await triggerStartEvent(args)) { return; }
             if (!fields?.length || !fields.filter((field: string) => !groupedColumns.includes(field))?.length) { return; }
+            if (_gridRef.current?.editModule?.editSettings?.allowUndoRedo &&
+                !await _gridRef.current?.editModule?.confirmUndoRedoClear?.()) { return; }
             const updatedColumns: string[] = isResetRequired ? fields : [...new Set([...groupedColumns, ...fields])];
             setGroupedColumns(updatedColumns);
             loadedPageWiseGroupExpandedCountRef.current = new Map<number, number>();
@@ -585,7 +579,8 @@ export const useGroup: <T = unknown>(
             }
             setGroupSettings((prev: GroupSettings) => ({ ...prev, columns: updatedColumns}));
             setGridAction?.(args);
-        }, [groupedColumns, setGridAction, currentViewData]);
+            _gridRef.current?.clearUndoRedoHistory?.();
+        }, [groupedColumns, setGridAction, currentViewData, _gridRef]);
 
     /**
      * `ungroupColumn` – IGroupModule API method.
@@ -602,6 +597,8 @@ export const useGroup: <T = unknown>(
             cancel: false
         };
         if (!await triggerStartEvent(args) || !groupedColumns?.length) { return; }
+        if (_gridRef.current?.editModule?.editSettings?.allowUndoRedo &&
+            !await _gridRef.current?.editModule?.confirmUndoRedoClear?.()) { return; }
         const isVirtualOrInfinite: boolean = virtualizationSettings?.scrollMode === ScrollMode.Virtual ||
             virtualizationSettings?.scrollMode === ScrollMode.Infinite;
         const updatedColumns: string[] = groupedColumns.filter((col: string) => !fields.includes(col));
@@ -644,7 +641,8 @@ export const useGroup: <T = unknown>(
             columns: groupSettings?.columns?.filter((groupField: string) => !fields.includes(groupField))
         }));
         setGridAction?.(args);
-    }, [groupedColumns, setGridAction, currentViewData, expandedGroups, collapsedGroups]);
+        _gridRef.current?.clearUndoRedoHistory?.();
+    }, [groupedColumns, setGridAction, currentViewData, expandedGroups, collapsedGroups, _gridRef]);
 
     /**
      * `clearGrouping` – IGroupModule API method.
@@ -659,6 +657,8 @@ export const useGroup: <T = unknown>(
             cancel: false
         };
         if (!await triggerStartEvent(args) || !groupedColumns?.length) { return; }
+        if (_gridRef.current?.editModule?.editSettings?.allowUndoRedo &&
+            !await _gridRef.current?.editModule?.confirmUndoRedoClear?.()) { return; }
         setGroupedColumns([]);
         if (fieldBasedExpandedGroupKeysRef.current?.size) {
             setCurrentPage(1);
@@ -674,7 +674,8 @@ export const useGroup: <T = unknown>(
         }
         setGroupSettings((prev: GroupSettings) => ({ ...prev, columns: []}));
         setGridAction?.(args);
-    }, [setGridAction, groupedColumns, currentViewData]);
+        _gridRef.current?.clearUndoRedoHistory?.();
+    }, [setGridAction, groupedColumns, currentViewData, _gridRef]);
 
     return {
         expandedGroups,
@@ -694,6 +695,14 @@ export const useGroup: <T = unknown>(
         groupColumn,
         ungroupColumn,
         clearGrouping,
-        groupDropAreaRef
+        groupDropAreaRef,
+        GroupDropArea,
+        groupColumnAsync: (fields: string[], isResetRequired?: boolean): Promise<void> =>
+            executeGridAsyncAction(_gridRef, ActionType.Grouping, () => groupColumn(fields, isResetRequired)),
+        ungroupColumnAsync: (fields: string[]): Promise<void> =>
+            executeGridAsyncAction(_gridRef, ActionType.Grouping, () => ungroupColumn(fields)),
+        clearGroupingAsync: (): Promise<void> =>
+            executeGridAsyncAction(_gridRef, ActionType.Grouping, () => clearGrouping())
     };
 };
+export { useGroup as GroupModule };

@@ -1,69 +1,41 @@
 import * as React from 'react';
 import { useState, useCallback, useEffect, useMemo, UIEvent, useRef, JSX } from 'react';
-import { Dialog, IDialog, Spinner, calculatePosition, calculateRelativeBasedPosition } from '@syncfusion/react-popups';
-import { Button, Color, Variant, Checkbox,  RadioButton, RadioButtonChangeEvent, CheckboxChangeEvent } from '@syncfusion/react-buttons';
-import { useGridComputedProvider, useGridMutableProvider } from '../../contexts';
-import { ActionType, FilterDialogAfterOpenEvent, ColumnProps, FilterPredicates, IColumnBase, IGrid, IValueFormatter, MutableGridSetter, MutableGridBase, SearchSettings, ScrollMode, ServiceLocator, ValueType} from '../../types';
-import { SortAscendingIcon, SortDescendingIcon, FilterClearIcon, FilterIcon, SearchIcon } from '@syncfusion/react-icons';
-import { closest, DateFormatOptions, extend, getNumberPattern, getValue, IL10n, isNullOrUndefined, NumberFormatOptions, SanitizeHtmlHelper, Size } from '@syncfusion/react-base';
-import { DropDownList,  ChangeEvent as DDLChangeEvent } from '@syncfusion/react-dropdowns';
-import { InputBase, NumericChangeEvent, NumericTextBox, NumericTextBoxProps, renderClearButton, renderFloatLabelElement, TextBox, TextBoxChangeEvent, TextBoxProps } from '@syncfusion/react-inputs';
-import {
-    AdaptorOptions,
-    DataManager,
-    DataResult,
-    DataUtil,
-    Predicate,
-    Query
-} from '@syncfusion/react-data';
-import { generatePredicate, getDatePredicate, padZero } from '../../utils';
-import { ReturnType } from '@syncfusion/react-data';
-import { getCustomDateFormat, getPredicate } from '../../utils';
-import { AnimationType, Skeleton, Variants } from '@syncfusion/react-notifications';
-import { DatePicker, DatePickerChangeEvent, DatePickerProps } from '@syncfusion/react-calendars';
-/**
- * @hidden
- */
-export interface ExcelFilterArgs {
-    type?: string;
-    filterType?: string;
-    loadingIndicator?: string;
-    operators?: { [key: string]: object; }[] | string[];
-    height: number;
-    columns?: ColumnProps[];
-    field?: string;
-    query?: Query;
-    cssClass?: string;
-    parentElement?: HTMLElement;
-    dataSource?: Object[] | DataManager | DataResult; // for column datasource or grid datasource
-    dataManager?: DataManager;  // grid data manager
-    format?: string | NumberFormatOptions | DateFormatOptions;
-    filteredColumns?: Object[];
-    caseSensitive?: boolean;
-    ignoreAccent?: boolean;
-    parentCurrentViewDataCount? : number; // for on demand parent current view data count
-    handler?: Function;
-    target?: Element;
-    column?: ColumnProps;
-    isRemote?: boolean;
-    serviceLocator?: ServiceLocator;
-    id?: string;
-    enableSort?: boolean;
-    formatFn?: Function;
-    disableSearchOption?: boolean;
-    disableSortOption?: boolean;
-    enableHtmlSanitizer?: boolean;
-    isCustomDataSource?: boolean;
-    mode?: string;
-    immediateModeDelay?: number;
-}
-
-// Minimal props interface tailored for Excel-like filter popup
-type ExcelFilterDialogProps = {
-    isOpen: boolean;
-    options?: ExcelFilterArgs;
-    onCancel?: () => void;
-};
+import { Dialog, IDialog } from '@syncfusion/react-popups/src/dialog/index';
+import { Spinner } from '@syncfusion/react-popups/src/spinner/spinner';
+import { calculatePosition } from '@syncfusion/react-popups/src/common/popup-positioning';
+import { Button } from '@syncfusion/react-buttons/src/button/button';
+import { Checkbox, CheckboxChangeEvent } from '@syncfusion/react-buttons/src/check-box/check-box';
+import { RadioButton, RadioButtonChangeEvent } from '@syncfusion/react-buttons/src/radio-button/radio-button';
+import { Color, Variant, Size } from '@syncfusion/react-base/src/enums';
+import { useGridComputedProvider, useGridMutableProvider } from '../../contexts/GridProviders';
+import { FilterDialogAfterOpenEvent, FilterPredicates, ExcelFilterDialogProps} from '../../types/filter.interfaces';
+import { ColumnProps, IColumnBase } from '../../types/column.interfaces';
+import { IGrid } from '../../types/grid.interfaces';
+import { ActionType, ScrollMode } from '../../types/enum';
+import { IValueFormatter, MutableGridSetter, MutableGridBase, ValueType } from '../../types/interfaces';
+import { SearchSettings } from '../../types/search.interfaces';
+import { SortAscendingIcon } from '@syncfusion/react-icons/src/icons/sort-ascending';
+import { SortDescendingIcon } from '@syncfusion/react-icons/src/icons/sort-descending';
+import { FilterClearIcon } from '@syncfusion/react-icons/src/icons/filter-clear';
+import { FilterIcon } from '@syncfusion/react-icons/src/icons/filter';
+import { SearchIcon } from '@syncfusion/react-icons/src/icons/search';
+import { closest } from '@syncfusion/react-base/src/dom';
+import { extend, getValue, isNullOrUndefined } from '@syncfusion/react-base/src/util';
+import { getNumberPattern } from '@syncfusion/react-base/src/internationalization';
+import { IL10n } from '@syncfusion/react-base/src/l10n';
+import { SanitizeHtmlHelper } from '@syncfusion/react-base/src/sanitize-helper';
+import { DropDownList, ChangeEvent as DDLChangeEvent } from '@syncfusion/react-dropdowns/src/drop-down-list/index';
+import { InputBase, renderClearButton, renderFloatLabelElement } from '@syncfusion/react-inputs/src/common/inputbase';
+import { NumericChangeEvent, NumericTextBox, NumericTextBoxProps } from '@syncfusion/react-inputs/src/numeric-textbox/index';
+import { TextBox, TextBoxChangeEvent, TextBoxProps } from '@syncfusion/react-inputs/src/textbox/index';
+import { generatePredicate, getDatePredicate, padZero, getCustomDateFormat, getPredicate } from '../../utils/utils';
+import { AnimationType, Skeleton, Variants } from '@syncfusion/react-notifications/src/skeleton/skeleton';
+import { DatePicker, DatePickerChangeEvent, DatePickerProps } from '@syncfusion/react-calendars/src/datepicker/index';
+import { DataManager, AdaptorOptions, DataResult, DataUtil, Predicate, Query, ReturnType } from '@syncfusion/react-data';
+import { DateTimePickerChangeEvent, DateTimePickerProps } from '@syncfusion/react-calendars/src/datetimepicker/types';
+import DateTimePicker from '@syncfusion/react-calendars/src/datetimepicker/datetimepicker';
+import { OffsetPosition } from '@syncfusion/react-navigations';
+import { FormulaValue } from '../../types';
 
 const CSS_EXCEL_ASC: string = 'sf-excel-ascending sf-menu-item';
 const CSS_EXCEL_DEC: string = 'sf-excel-descending sf-menu-item';
@@ -73,11 +45,12 @@ const CSS_CLEAR_ITEM: string = 'sf-menu-item sf-clear-filter';
 export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
     isOpen,
     options,
+    embedded = false,
     onCancel
 }: ExcelFilterDialogProps): React.ReactElement | null => {
     const grid: Partial<IGrid> & Partial<MutableGridSetter> = useGridComputedProvider();
     const gridMutable: Partial<MutableGridBase> = useGridMutableProvider();
-    const { offsetX, dataModule } = gridMutable;
+    const { offsetX, dataModule, formulaModule } = gridMutable;
     const enableSort: boolean = options.enableSort || false;
     const hideSearchbox: boolean = options.disableSearchOption;
     const hideSorting: boolean =  options.disableSortOption;
@@ -92,6 +65,7 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
     const hdrele: string = options.target?.getAttribute('aria-sort');
     const type: string = options.type;
     const isExcel: boolean = options.filterType === 'Excel';
+    const isMenu: boolean = options.filterType === 'Menu';
     const isShimmer: boolean = options.loadingIndicator === 'Shimmer';
     const isRemote: boolean = options.isRemote;
     const cssClass: string = options.cssClass;
@@ -115,36 +89,47 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
     const [addCurrentFilter, setAddCurrentFilter] = useState<boolean>(false);
     const dialogRef: React.RefObject<IDialog> = useRef<IDialog>(null);
     const menuRef: React.RefObject<HTMLDivElement> = useRef<HTMLDivElement>(null);
-    const [defaultFilter, setDefaultFilter] = useState<boolean>(true);
-    const isImmediateMode: boolean = options?.mode === 'Immediate' && defaultFilter === true;
+    const [defaultFilter, setDefaultFilter] = useState<boolean>(isMenu ? false : true);
+    const isImmediateMode: boolean = options?.mode === 'Immediate';
     const delay: number = options.immediateModeDelay;
-    const operators: { [key: string]: object; }[] | string[] = options.operators;
+    const operators: { [key: string]: object; }[] | string[] = Array.isArray(options.operators) ? options.operators : [];
     const operator: string = updateColumn.filter?.operator || (updateColumn.type === 'string' ? 'startsWith' : 'equal');
-    let oprerator2: string = null;
+    let oprerator2: string = operator;
     let value2: ValueType | ValueType[] = null;
     if (filterColumns.length === 2) {
-        oprerator2 =  filterColumns[1].operator;
+        oprerator2 = filterColumns[1].operator;
         value2 = filterColumns[1].value;
     }
     const [firstOperator, setFirstOperator] = useState(filterColumns[0]?.operator || operator);
     const [secondOperator, setSecondOperator] = useState(oprerator2);
-    const [firstOperatorValue, setFirstOperatorValue] = useState<ValueType | ValueType[]>(filterColumns[0]?.value || null);
-    const [secondOperatorValue, setSecondOperatorValue] = useState<ValueType | ValueType[]>(value2 || null);
-    const andCondition: React.RefObject<boolean> = useRef<boolean>(true);
+    const [firstOperatorValue, setFirstOperatorValue] = useState<ValueType | ValueType[]>(filterColumns[0]?.value);
+    const [secondOperatorValue, setSecondOperatorValue] = useState<ValueType | ValueType[]>(value2);
+    const firstOperatorRef: React.RefObject<string> = useRef<string>(
+        filterColumns[0]?.operator || operator
+    );
+    const secondOperatorRef: React.RefObject<string> = useRef<string>(oprerator2);
+    const firstOperatorValueRef: React.RefObject<ValueType | ValueType[] | null> = useRef<
+    ValueType | ValueType[] | null
+    >(firstOperatorValue);
+    const secondOperatorValueRef: React.RefObject<ValueType | ValueType[] | null> = useRef<
+    ValueType | ValueType[] | null
+    >(secondOperatorValue);
+    const initialAndCondition: boolean = filterColumns.length === 2 ? filterColumns[1].predicate === 'and' : true;
+    const andCondition: React.RefObject<boolean> = useRef<boolean>(initialAndCondition);
+    const [andConditionUI, setAndConditionUI] = useState<boolean>(initialAndCondition);
     const scrollStopTimerRef: React.RefObject<number> = useRef<number | null>(null);
     const filterChoiceCount: number = 1000;
     const checkBoxesCount: number = 5;
     const checkBoxHeight: number = 40;
     const [filteredData, setFilteredData] = useState<Object[]>([]);
-    const isPopupRendered: React.RefObject<boolean> =  useRef<boolean>(true);
+    const isPopupRendered: React.RefObject<boolean> = useRef<boolean>(true);
     const disableAdvancedOkBtn: boolean = useMemo(() => {
         return (isNullOrUndefined(firstOperatorValue) || firstOperatorValue === '') &&
             (isNullOrUndefined(secondOperatorValue) || secondOperatorValue === '');
     }, [firstOperatorValue, secondOperatorValue]);
-    const filterExistingColumns: FilterPredicates[] =
-        (options.filteredColumns ?? []).filter((col: FilterPredicates) => {
-            return updateColumn.field !== col.field;
-        });
+    const filterExistingColumns: FilterPredicates[] = (options.filteredColumns).filter((col: FilterPredicates) => {
+        return updateColumn.field !== col.field;
+    });
     const actualPredicate: React.RefObject<Object[]> = useRef<Object[]>([]);
     const filterLength: number = filterColumns.length;
 
@@ -154,6 +139,7 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
     const moduleName: { getModuleName?: Function } = adaptor as { getModuleName?: Function };
     const target: HTMLElement | Element = document.querySelector('.sb-scrollbar.sb-desktop') ?
         closest(options.parentElement, '.tabs-container') : document.body;
+    const allowFormula: boolean = updateColumn.allowFormula;
 
     useEffect(() => { setInternalOpen(isOpen); }, [isOpen]);
 
@@ -163,7 +149,8 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
     }, [onCancel, totalCount]);
 
     const excelDialogFocus: (elem?: Element, className?: string) => void = useCallback((elem?: Element, className?: string) => {
-        const menuFocusElem: Element = (dialogRef.current?.element).querySelector('.' + className);
+        const hostElement: HTMLElement | null = dialogRef.current?.element;
+        const menuFocusElem: Element | null = hostElement?.querySelector('.' + className) ?? null;
         if (menuFocusElem) {
             menuFocusElem.classList.remove(className);
         }
@@ -211,7 +198,11 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
         }
         else if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && !e.altKey) {
             e.preventDefault();
-            const focusableElements: HTMLElement[] = Array.from(dialogRef.current?.element.querySelectorAll(
+            const hostElement: HTMLElement | null = dialogRef.current?.element;
+            if (!hostElement) {
+                return;
+            }
+            const focusableElements: HTMLElement[] = Array.from(hostElement.querySelectorAll(
                 'input, button, [tabindex]:not([tabindex="-1"]), .sf-menu-item:not(.sf-disabled)'
             ));
             focusNextOrPrevElement(e, focusableElements, 'sf-menufocus');
@@ -221,9 +212,13 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
 
     const clickHandler: (e: MouseEvent) => void = useCallback((e: MouseEvent) => {
         const target: Element = e.target as Element;
-        const popup: Element = closest(target, '.sf-excel-filter') || closest(target, '.sf-excel-filter-dropdown');
+        const dialogElement: Element | null = dialogRef.current?.element;
+        const popup: Element = closest(target, '.sf-excel-filter') || closest(target, '.sf-excel-filter-dropdown')
+            || closest(target, '.sf-grid-excel-filter-container')
+            || (dialogElement?.contains(target) ? dialogElement : null);
         const filterIcon: Element = closest(target, '.sf-grid-filter-container');
-        const datePickerCalendar: Element = closest(target, '.sf-calendar') || closest(target, '.sf-datepicker');
+        const datePickerCalendar: Element = closest(target, '.sf-calendar') || closest(target, '.sf-datepicker') || closest(target, '.sf-datetimepicker')
+            || (closest(target, '.sf-clear-icon') ? target.parentElement : null);
         const elem: Element = closest(target, '.sf-filter-checkbox');
         if (popup && defaultFilter) {
             excelDialogFocus(elem, 'sf-checkbox-focus');
@@ -234,13 +229,13 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
     }, [defaultFilter]);
 
     useEffect(() => {
-        if (internalOpen) {
-            document.body.addEventListener('click', clickHandler);
+        if (internalOpen && !embedded) {
+            document.body.addEventListener('mousedown', clickHandler);
         }
         return () => {
-            document.body.removeEventListener('click', clickHandler);
+            document.body.removeEventListener('mousedown', clickHandler);
         };
-    }, [internalOpen, defaultFilter]);
+    }, [internalOpen, embedded, clickHandler]);
 
     // If the edit is not saved and scroll mode is not virtual, close the filter dialog.
     const shouldSkipConfirmOnEdit: () => boolean = useCallback((): boolean => {
@@ -256,7 +251,7 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
             setInternalOpen(false);
             onCancel?.();
         }
-    }, [ shouldSkipConfirmOnEdit, onCancel]);
+    }, [shouldSkipConfirmOnEdit, onCancel]);
 
     const clearFilter: () => void = useCallback((): void => {
         closeDialogIfEditDirty();
@@ -305,44 +300,66 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
         return coll;
     }, []);
 
+    useEffect(() => {
+        firstOperatorValueRef.current = firstOperatorValue;
+    }, [firstOperatorValue]);
+
+    useEffect(() => {
+        secondOperatorValueRef.current = secondOperatorValue;
+    }, [secondOperatorValue]);
+
+    useEffect(() => {
+        firstOperatorRef.current = firstOperator;
+    }, [firstOperator]);
+
+    useEffect(() => {
+        secondOperatorRef.current = secondOperator;
+    }, [secondOperator]);
+
     const filterbtnHandler: () => void = useCallback((): void => {
         closeDialogIfEditDirty();
-        if (!defaultFilter) {
+        if (!defaultFilter && (isImmediateMode ? firstOperatorValueRef.current !== ''
+            || firstOperatorValueRef.current !== null ? true : false : true)) {
             let fColl: FilterPredicates[] = [];
             const field: string = updateColumn.field;
             const matchCase: boolean = options.type === 'string' || isNullOrUndefined(options.type) ?
                 (options.caseSensitive || false) : undefined;
             const predicate: string = andCondition.current ? 'and' : 'or';
             const ignoreAccent: boolean = options.ignoreAccent || false;
-            let secondPredicate: Predicate;
             const arg: {
                 cancel: boolean, arg1: string, arg2: string,
                 arg3: ValueType | ValueType[], arg4: string, arg6: boolean, arg7: string, arg8: ValueType | ValueType[] | number | Date
             } = {
-                arg1: field, arg2: firstOperator, arg3: firstOperatorValue, arg4: predicate,
-                arg6: ignoreAccent, arg7: secondOperator, arg8: secondOperatorValue, cancel: false
+                arg1: field, arg2: firstOperator, arg3: firstOperatorValueRef.current ?? firstOperatorValue, arg4: predicate,
+                arg6: ignoreAccent, arg7: secondOperator, arg8: secondOperatorValueRef.current ?? secondOperatorValue, cancel: false
             };
+            if (type === 'boolean') {
+                if (arg.arg3 !== null) {
+                    arg.arg3 = (arg.arg3 === 'true');
+                }
+                if (arg.arg8 !== null) {
+                    arg.arg8 = (arg.arg8 === 'true');
+                }
+            }
             fColl.push({
                 field: field,
                 predicate: predicate,
                 caseSensitive: matchCase,
                 ignoreAccent: ignoreAccent,
-                operator: firstOperator,
+                operator: firstOperatorRef.current,
                 value: arg.arg3,
                 type: type
             });
-            secondPredicate = new Predicate(field, firstOperator, arg.arg3, !matchCase, ignoreAccent);
-            if (!isNullOrUndefined(secondOperator) && !isNullOrUndefined(arg.arg8)) {
+            if (!isNullOrUndefined(secondOperatorRef.current) && !(isNullOrUndefined(arg.arg8) || arg.arg8 === '')) {
                 fColl.push({
                     field: field,
                     predicate: predicate,
                     caseSensitive: matchCase,
                     ignoreAccent: ignoreAccent,
-                    operator: secondOperator as string,
+                    operator: secondOperatorRef.current as string,
                     value: arg.arg8,
                     type: type
                 });
-                secondPredicate = (secondPredicate as Object)[`${predicate}`](field, secondOperator, secondOperatorValue as string, !matchCase, ignoreAccent);
             }
             fColl = fColl.concat(filterExistingColumns);
             options.handler(fColl, 'filter');
@@ -432,12 +449,12 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
                 options.handler(null, 'clear-filter', updateColumn.field);
             }
         }
-        if (!isImmediateMode) {
+        if (!isImmediateMode && !embedded) {
             handleCancel();
         }
 
     }, [updateColumn, filterExistingColumns, defaultFilter, firstOperator, secondOperator,
-        firstOperatorValue, secondOperatorValue, shouldSkipConfirmOnEdit]);
+        firstOperatorValue, secondOperatorValue, shouldSkipConfirmOnEdit, embedded]);
 
     const scheduleImmediateApply: () => void = useCallback(() => {
         if (!isImmediateMode) {
@@ -461,27 +478,31 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
                             className={CSS_EXCEL_ASC + ((!updateColumn?.allowSort || hdrele === 'ascending' || !defaultFilter) ? ' sf-disabled' : '')}
                             tabIndex={(!updateColumn?.allowSort || hdrele === 'ascending' || !defaultFilter) ? -1 : 0}
                             onClick={() => {
-                                handleCancel();
+                                if (!embedded) {
+                                    handleCancel();
+                                }
                             }}
                         >
                             <span className='sf-menu-icon sf-icons sf-sortascending'><SortAscendingIcon className="sf-font-size-xl"/></span>
-                            {(type === 'string') ? localization.getConstant('SortAtoZ') : (type === 'datetime' || type === 'date') ?
-                                localization.getConstant('SortByOldest') : localization.getConstant('SortSmallestToLargest')}
+                            {(type === 'string') ? localization.getConstant('sortAtoZ') : (type === 'datetime' || type === 'date') ?
+                                localization.getConstant('sortByOldest') : localization.getConstant('sortSmallestToLargest')}
                         </li>
                         <li
                             className={CSS_EXCEL_DEC + ((!updateColumn?.allowSort || hdrele === 'descending' || !defaultFilter) ? ' sf-disabled' : '')}
                             tabIndex={(!updateColumn?.allowSort || hdrele === 'descending' || !defaultFilter) ? -1 : 0}
                             onClick={() => {
-                                handleCancel();
+                                if (!embedded) {
+                                    handleCancel();
+                                }
                             }}
                         >
                             <span className='sf-menu-icon sf-icons sf-sortdescending'><SortDescendingIcon className="sf-font-size-xl"/></span>
-                            {(type === 'string') ? localization.getConstant('SortZtoA') : (type === 'datetime' || type === 'date') ?
-                                localization.getConstant('SortByNewest') : localization.getConstant('SortLargestToSmallest')}
+                            {(type === 'string') ? localization.getConstant('sortZtoA') : (type === 'datetime' || type === 'date') ?
+                                localization.getConstant('sortByNewest') : localization.getConstant('sortLargestToSmallest')}
                         </li>
                         <li className={CSS_SEPARATOR + (!defaultFilter ? ' sf-disabled' : '')}></li> </>}
                     <li
-                        className={CSS_CLEAR_ITEM + (filterLength < 1 || !defaultFilter ? ' sf-disabled' : '')}
+                        className={CSS_CLEAR_ITEM + (filterLength < 1 ? ' sf-disabled' : '')}
                         tabIndex={filterLength < 1 || !defaultFilter ? -1 : 0}
                         onClick={() => {
                             // if (filterLength > 0) {
@@ -492,12 +513,12 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
                         }}
                     >
                         <span className='sf-menu-icon sf-icons sf-excl-filter-icon'>{filterLength > 0 ? <FilterIcon className="sf-font-size-xl"/> : <FilterClearIcon className="sf-font-size-xl"/>}</span>
-                        {localization.getConstant('ClearFilter')}
+                        {localization.getConstant('clearFilter')}
                     </li>
                 </ul>
             </div>);
 
-    }, [updateColumn?.allowSort, hdrele, filterLength, defaultFilter]);
+    }, [updateColumn?.allowSort, hdrele, filterLength, defaultFilter, embedded]);
     const [isFocused, setIsFocused] = useState<boolean>(false);
 
     /**
@@ -698,7 +719,9 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
         setSearchValue(value);
         virtualContentScrollRef.current.scrollTop = 0;
         resetSearchNavigationState();
-        closeDialogIfEditDirty();
+        if (!defaultFilter) {
+            closeDialogIfEditDirty();
+        }
         if (isImmediateMode) {
             if (immediateFilterTimerRef.current) {
                 clearTimeout(immediateFilterTimerRef.current);
@@ -718,6 +741,48 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
         setIsFocused(false);
     }, []);
 
+
+    const normalizeKey: (rawKey: string | number | boolean | Date | null | undefined, primaryKey?: string | number) =>
+    string | number | boolean | null = (rawKey: string | number | boolean | Date | null | undefined, primaryKey?: string | number
+    ) => {
+        if (rawKey === '' || rawKey === undefined) { return null; }
+        if (type === 'date' || type === 'dateonly') {
+            if (rawKey instanceof Date) {
+                const d: Date = rawKey;
+                if (!isNaN(d.getTime())) {
+                    return `${d.getFullYear()}-${padZero((d.getMonth() + 1))}-${padZero(d.getDate())}`;
+                }
+                return String(rawKey);
+            }
+            return String(rawKey);
+        }
+        if (type === 'datetime') {
+            if (rawKey instanceof Date) {
+                const d: Date = rawKey;
+                if (!isNaN(d.getTime())) {
+                    // Use epoch millis as canonical string to avoid timezone/format variances
+                    return String(d.getTime());
+                }
+                return String(rawKey);
+            }
+            return String(rawKey);
+        }
+        if (formulaModule && allowFormula && primaryKey) {
+            rawKey = formulaModule.getFormulaValue(primaryKey, updateColumn.field);
+        }
+        return rawKey as string | number | boolean | null;
+    };
+
+    const normalizeValueToDepKey: (val: ValueType | ValueType[] | null | undefined) => string | number | boolean | null = (
+        val: ValueType | ValueType[] | null | undefined
+    ) => {
+        if (Array.isArray(val)) {
+            // Map elements through normalizeKey and join to produce a stable string key
+            return val.map((v: ValueType) => String(normalizeKey(v))).join('|');
+        }
+        return normalizeKey(val);
+    };
+
     const clearInput: () => void = useCallback((e?: React.MouseEvent) => {
         // Prevent default and stop propagation if event is provided
         e?.preventDefault();
@@ -726,12 +791,13 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
             prevHeaderCheckedRef.current = false;
             const newSelected: Set<string | number | boolean> = new Set();
             for (const item of filteredData) {
-                const key: string | number | boolean = getValue(updateColumn.field, item);
+                const rawKey: ValueType = getValue(updateColumn.field, item) as ValueType;
+                const normKey: string | number | boolean | null = normalizeKey(rawKey);
                 if (
-                    !unselectedRowRef.current.has(key) &&
-                    !previousUnselect.current.has(key)
+                    !unselectedRowRef.current.has(normKey) &&
+                    !previousUnselect.current.has(normKey)
                 ) {
-                    newSelected.add(key);
+                    newSelected.add(normKey as string | number | boolean);
                 }
             }
             selectedRowRef.current = newSelected;
@@ -766,15 +832,21 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
             }
             if (coll.operator === 'notEqual') {
                 addCurrentFilterColumns.current.push(coll);
-                unselectedRowRef.current.add(coll.value === '' || coll.value === undefined ? null : (type === 'number' ? parseFloat(coll.value as string) : coll.value as string | number | boolean));
+                // normalize stored values for date types
+                const rawUn: string | number | boolean | Date | null = coll.value === '' || coll.value === undefined
+                    ? null
+                    : (type === 'number' ? parseFloat(coll.value as string) : coll.value as string | number | boolean | Date);
+                unselectedRowRef.current.add(normalizeKey(rawUn) as string | number | boolean | null);
                 if (coll.value === '') {
-                    unselectedRowRef.current.add(type === 'string' ? null : undefined);
+                    unselectedRowRef.current.add(normalizeKey(type === 'string' ? null : undefined) as string | number | boolean | null);
                 }
             } else if (coll.operator === 'equal') {
                 addCurrentFilterColumns.current.push(coll);
-                selectedRowRef.current.add(type === 'number' ? parseFloat(coll.value as string) : coll.value as string | number | boolean);
+                const rawSel: string | number | boolean | Date | null =
+                    type === 'number' ? parseFloat(coll.value as string) : coll.value as string | number | boolean | Date;
+                selectedRowRef.current.add(normalizeKey(rawSel) as string | number | boolean);
                 if (coll.value === '') {
-                    selectedRowRef.current.add(type === 'string' ? null : undefined);
+                    selectedRowRef.current.add(normalizeKey(type === 'string' ? null : undefined) as string | number | boolean | null);
                 }
             } else if (!searchValue.length) {
                 actualPredicate.current.push(coll);
@@ -811,35 +883,28 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
     useEffect(() => {
         if (internalOpen && isRender.current) {
             const target: HTMLElement = options.target?.querySelector('.sf-grid-filter-container');
-            const hostEl: HTMLElement = dialogRef.current?.element as HTMLElement | undefined;
-            const dialogElement: HTMLElement = hostEl?.firstElementChild as HTMLElement | undefined;
-            if (!dialogElement) {
+            const hostEl: HTMLElement | undefined = dialogRef.current?.element as HTMLElement | undefined;
+            const dialogElement: HTMLElement | undefined = hostEl?.firstElementChild as HTMLElement | undefined;
+            if (!hostEl || !dialogElement) {
                 return;
             }
             dialogElement.style.display = 'block';
+            dialogElement.style.visibility = 'hidden';
             const dlgWidth: number = dialogElement.offsetWidth as number;
-            const pos: { left: number; top: number; } = calculatePosition(options.parentElement, 'left', 'Top');
             hostEl.style.position = 'absolute';
-            hostEl.style.top = pos.top + 'px';
-            hostEl.style.left = pos.left + 'px';
             hostEl.style.width = dialogElement.offsetWidth + 'px';
             const sbPanel: HTMLElement = document.querySelector('.sb-scrollbar.sb-desktop');
-            if (sbPanel) {
-                const sbPos: { left: number; top: number; } = calculateRelativeBasedPosition(options.parentElement, closest(options.parentElement, '.tabs-container') as HTMLElement);
-                hostEl.style.top = sbPos.top + 'px';
-                hostEl.style.left = sbPos.left + 'px';
-            }
-            const newpos: { top: number, left: number } = calculateRelativeBasedPosition(
-                target, options.parentElement.firstElementChild as HTMLElement
-            );
+            const newpos: OffsetPosition = calculatePosition(target, dialogElement, { horizontal: 'left', vertical: 'bottom' }, { horizontal: 'right',
+                vertical: 'top' }, null, null, sbPanel);
             dialogElement.style.display = '';
-            dialogElement.style.top =  (newpos.top + target.getBoundingClientRect().height) + 'px';
+            dialogElement.style.visibility = '';
+            hostEl.style.top =  (newpos.top + target.getBoundingClientRect().height) + 'px';
             // Calculate left position with offsetX for accurate overflow detection after virtual scroll
-            const leftPos: number = ((newpos.left - dlgWidth) + (offsetX ?? 0) + target.clientWidth);
-            if (leftPos < 1) {
-                dialogElement.style.left = (dlgWidth + leftPos) - 16 + 'px'; // right calculation
+            const leftPos: number = (newpos.left  + (offsetX ?? 0) + target.clientWidth);
+            if (leftPos < options.parentElement.getBoundingClientRect().left) {
+                hostEl.style.left = ((dlgWidth / 2) + leftPos) - 16 + 'px'; // right calculation
             } else {
-                dialogElement.style.left = leftPos + -4 + 'px';
+                hostEl.style.left = leftPos + -4 + 'px';
             }
             isRender.current = false;
             const args: FilterDialogAfterOpenEvent = {
@@ -853,10 +918,11 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
     }, [internalOpen, totalCount]);
 
     const generateKeys: (data: Object[]) => Object[] = useCallback((data: Object[]): Object[] => {
-        const keys: (string | number | boolean)[] = [];
+        const keys: (string | number | boolean | null)[] = [];
         for (let i: number = 0; i < data.length; i++) {
-            const key: string | number | boolean = getValue(updateColumn.field, data[parseInt(i.toString(), 10)]);
-            keys.push(key);
+            const rawKey: ValueType = getValue(updateColumn.field, data[parseInt(i.toString(), 10)]) as ValueType;
+            const normKey: string | number | boolean | null = normalizeKey(rawKey);
+            keys.push(normKey as string | number | boolean | null);
         }
         return keys;
     }, []);
@@ -919,8 +985,8 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
         const uniqueMap: Map<string, Object> = new Map<string, Object>();
 
         for (const item of resultItems) {
-            const key: string | number | boolean = getValue(updateColumn.field, item);
-            const normalizedKey: string | number | boolean | null = key === undefined ? null : key;
+            const rawKey: ValueType = getValue(updateColumn.field, item) as ValueType;
+            const normalizedKey: string | number | boolean | null = normalizeKey(rawKey);
             uniqueMap.set(String(normalizedKey), item);
         }
 
@@ -968,18 +1034,18 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
             (type ? 'contains' : 'equal');
         if (type === 'boolean') {
             if (parsed !== undefined &&
-                localization?.getConstant('FilterTrue').toLowerCase().indexOf((parsed as string).toLowerCase()) !== -1) {
+                localization?.getConstant('filterTrue').toLowerCase().indexOf((parsed as string).toLowerCase()) !== -1) {
                 parsed = 'true';
             } else if (parsed !== undefined &&
-                localization?.getConstant('FilterFalse').toLowerCase().indexOf((parsed as string).toLowerCase()) !== -1) {
+                localization?.getConstant('filterFalse').toLowerCase().indexOf((parsed as string).toLowerCase()) !== -1) {
                 parsed = 'false';
             }
             if (parsed !== undefined &&
-                localization?.getConstant('FilterTrue').toLowerCase().indexOf((parsed as string).toLowerCase()) !== -1) {
+                localization?.getConstant('filterTrue').toLowerCase().indexOf((parsed as string).toLowerCase()) !== -1) {
                 // eslint-disable-next-line no-constant-condition
                 parsed = (moduleName.getModuleName && moduleName.getModuleName() === 'ODataAdaptor' || 'ODataV4Adaptor') ? true : 'true';
             } else if (parsed !== undefined &&
-                localization?.getConstant('FilterFalse').toLowerCase().indexOf((parsed as string).toLowerCase()) !== -1) {
+                localization?.getConstant('filterFalse').toLowerCase().indexOf((parsed as string).toLowerCase()) !== -1) {
                 // eslint-disable-next-line no-constant-condition
                 parsed = (moduleName.getModuleName && moduleName.getModuleName() === 'ODataAdaptor' || 'ODataV4Adaptor') ? false : 'false';
             }
@@ -1008,10 +1074,10 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
                 predicte = getDatePredicate(filterObj, type);
             }
         } else {
-            predicte = new Predicate(field, operator, parsed, true, ignoreAccent);
+            predicte = new Predicate(field, operator, parsed, true, ignoreAccent, false, false, updateColumn.filterComparer);
         }
         if (parsed && typeof val === 'string' &&
-            localization?.getConstant('Blanks').toLowerCase().indexOf((val as string).toLowerCase()) >= 0) {
+            localization?.getConstant('blanks').toLowerCase().indexOf((val as string).toLowerCase()) >= 0) {
             coll = coll.concat(generateNullValuePredicates(defaults));
             const emptyValPredicte: Predicate = generatePredicate(coll, undefined, isRemote ? moduleName?.getModuleName?.() ?? 'UrlAdaptor' : null);
             emptyValPredicte.predicates.push(predicte);
@@ -1048,16 +1114,16 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
                     }
                 }
             }
-            const predicate: Predicate = getPredicateFromCols(cols, true);
+            const predicate: Predicate = getPredicateFromCols(cols, true, isRemote ? moduleName?.getModuleName?.() ?? 'UrlAdaptor' : null);
             if (predicate) {
                 query.where(predicate, null, null, null, null, null, isDistict);
             }
         }
     };
 
-    const getPredicateFromCols: (columns: Object[], isExecuteLocal?: boolean) => Predicate = (
-        columns: Object[], isExecuteLocal?: boolean): Predicate => {
-        const predicates: Predicate = getPredicate(columns, isExecuteLocal);
+    const getPredicateFromCols: (columns: Object[], isExecuteLocal?: boolean, moduleName?: string) => Predicate = (
+        columns: Object[], isExecuteLocal?: boolean, moduleName?: string): Predicate => {
+        const predicates: Predicate = getPredicate(columns, isExecuteLocal, moduleName);
         const predicateList: Predicate[] = [];
         for (const prop of Object.keys(predicates)) {
             predicateList.push(predicates[`${prop}`] as Predicate);
@@ -1181,15 +1247,18 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
     };
 
 
-    const toFormatValue: (data: Object) => string = (data: Object): string => {
-        let value: Date | number | string = getValue(updateColumn.field, data);
+    const toFormatValue: (data: Object, primaryKey: string | number) => string = (data: Object, primaryKey: string | number): string => {
+        let value: Date | number | string | FormulaValue = getValue(updateColumn.field, data);
+        if (formulaModule && allowFormula) {
+            value = formulaModule.getFormulaValue(primaryKey, updateColumn.field);
+        }
         if (value === '' || isNullOrUndefined(value)) {
-            value = localization?.getConstant('Blanks').toString();
+            value = localization?.getConstant('blanks').toString();
         } else if (!isNullOrUndefined(updateColumn.format) && !isNullOrUndefined(updateColumn.type) && options.formatFn) {
             value = formatter.toView((value as number), options.formatFn)?.toString();
         }
         if (typeof value === 'boolean') {
-            value = value === true ? localization?.getConstant('FilterTrue') : localization?.getConstant('FilterFalse');
+            value = value === true ? localization?.getConstant('filterTrue') : localization?.getConstant('filterFalse');
         }
         if (options.enableHtmlSanitizer) {
             value = SanitizeHtmlHelper.sanitize(value as string);
@@ -1206,6 +1275,7 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
         const data: Object[] = availData ? isCurrentBlockData(startIdx) : filteredData;
         to = isRemote ? data.length : (totalCount <= to ? totalCount : to);
         from =  isRemote ? 0 : startIdx - from;
+        const primaryKeyField: string | undefined = grid.getPrimaryKeyFieldNames?.()[0];
 
         for (let i: number = from; i < to; i++) {
             if (isRemote && !availData && isShimmer) {
@@ -1220,12 +1290,13 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
                     </div>
                 );
             } else {
-                const checkboxData: object = data[parseInt(i.toString(), 10)];
-                const rawKey: string | number | boolean = getValue(updateColumn.field, checkboxData);
-                const key: string | number | boolean | null = rawKey === '' || rawKey === undefined ? null : rawKey;
+                const checkboxData: Object = data[parseInt(i.toString(), 10)];
+                const primaryKey: string | number = checkboxData?.[`${primaryKeyField}`] as string | number;
+                const rawKey: ValueType = getValue(updateColumn.field, checkboxData) as ValueType;
+                const key: string | number | boolean | null = normalizeKey(rawKey, primaryKey);
                 // Determine checked state based on previous header state
                 let checked: boolean;
-                if (previousResult.current.includes(key) && previousCount.current) {
+                if (previousResult.current.includes(allowFormula ? rawKey : key) && previousCount.current) {
                     checked = !(previousUnselect.current.has(key) || unselectedRowRef.current.has(key));
                 } else if (prevHeaderCheckedRef.current && !previousCount.current) {
                     // Header was checked - all checked by default, except those in unselectedRowRef
@@ -1235,8 +1306,7 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
                     checked = selectedRowRef.current.has(key);
                 }
 
-
-                const formattedValue: string = toFormatValue(checkboxData);
+                const formattedValue: string = toFormatValue(checkboxData, primaryKey);
                 filterCheckBox.push(
                     <div
                         key={`${String(key)}_${i}`}
@@ -1245,11 +1315,12 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
                         style={{ height: `${checkBoxHeight}px`, width: '100%' }}>
                         <Checkbox
                             checked={checked}
-                            label={formattedValue}
+                            label={(updateColumn.disableHtmlEncode === false ?
+                                <span dangerouslySetInnerHTML={{ __html: formattedValue }} /> : formattedValue) as unknown as string}
                             className="sf-checkbox-wrapper sf-css sf-checkbox-filtertext"
                             onChange={(e: CheckboxChangeEvent) => {
                                 const next: boolean = e?.value;
-                                handleItemToggle(key, next);
+                                handleItemToggle(key as string | number | boolean, next);
                             }}
                         />
                     </div>
@@ -1259,7 +1330,7 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
 
         return filterCheckBox;
 
-    }, [searchValue, filteredData, cacheData, totalCount, startIdx, updateColumn.field, selectionVersion]);
+    }, [searchValue, filteredData, cacheData, totalCount, startIdx, updateColumn.field, updateColumn.disableHtmlEncode, selectionVersion]);
 
     const searchContainer: React.JSX.Element = useMemo(() => {
         if (!defaultFilter) { return null; }
@@ -1297,7 +1368,7 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
                             <Checkbox
                                 checked={selectAllChecked}
                                 indeterminate={selectAllIndeterminate}
-                                label={localization?.getConstant('SelectAll')}
+                                label={localization?.getConstant('selectAll')}
                                 // Add CSS hooks to get close to your posted DOM/classes
                                 className="sf-checkbox-wrapper sf-css sf-checkbox-filtertext sf-selectall"
                                 onChange={(e: CheckboxChangeEvent) => {
@@ -1309,7 +1380,7 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
                         {(!isImmediateMode && searchValue?.length) ? <div className="sf-filter-checkbox" /* uid is generated by Syncfusion internally; wrapper class added */>
                             <Checkbox
                                 checked={addCurrentFilter && totalCount > 0}
-                                label={localization?.getConstant('AddCurrentSelection')}
+                                label={localization?.getConstant('addCurrentSelection')}
                                 // Add CSS hooks to get close to your posted DOM/classes
                                 className="sf-checkbox-wrapper sf-css sf-checkbox-filtertext sf-selectall"
                                 onChange={(e: CheckboxChangeEvent) => {
@@ -1331,7 +1402,7 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
                             <div className='sf-checkboxlist sf-fields' style={{ width: '100%' }} id={options.id + '_CheckBoxList'}>
                                 {/* Items */}
                                 {totalCount === 0 ? (
-                                    <div className="sf-excel-empty-checkbox">{localization?.getConstant('NoMatches')}</div>
+                                    <div className="sf-excel-empty-checkbox">{localization?.getConstant('noMatches')}</div>
                                 ) : filterCheckBoxes}
                             </div>
                         </div>
@@ -1379,11 +1450,11 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
                         size={Size.Small}
                         variant={defaultFilter ? Variant.Filled : Variant.Outlined}
                         color={defaultFilter ? Color.Primary : Color.Secondary}
-                        aria-label={localization?.getConstant('Primary')}
+                        aria-label={localization?.getConstant('primary')}
                         onClick={() => setDefaultFilter(true)}
                         className={cssClass}
                     >
-                        {localization?.getConstant('Primary')}
+                        {localization?.getConstant('primary')}
                     </Button>
                     <span className='sf-excel-left-separator' />
                     <Button
@@ -1403,10 +1474,10 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
 
     const Operator: React.FC<{
         operator: string, setOperator: React.Dispatch<React.SetStateAction<string>>,
-        setOperatorValue: React.Dispatch<React.SetStateAction<string>>
-    }> = useCallback(({ operator, setOperator, setOperatorValue }:
+        setOperatorValue: React.Dispatch<React.SetStateAction<ValueType | ValueType[] | null>>, isSecondOperator?: boolean
+    }> = useCallback(({ operator, setOperator, setOperatorValue, isSecondOperator }:
     { operator: string, setOperator: React.Dispatch<React.SetStateAction<string>>,
-        setOperatorValue: React.Dispatch<React.SetStateAction<string>> }
+        setOperatorValue: React.Dispatch<React.SetStateAction<ValueType | ValueType[] | null>>, isSecondOperator?: boolean}
     ): JSX.Element => {
         return (
             <DropDownList
@@ -1414,30 +1485,54 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
                 variant={Variant.Outlined}
                 fields={{ text: 'text', value: 'value' }}
                 dataSource={operators}
-                popupSettings={{ zIndex: parseInt(window.getComputedStyle(dialogRef.current.element).zIndex, 10) }}
+                disabled={isSecondOperator && (
+                    (isNullOrUndefined(firstOperatorValueRef.current) || firstOperatorValueRef.current === '') &&
+                    (firstOperatorRef.current !== 'isEmpty' && firstOperatorRef.current !== 'isNotEmpty' &&
+                        firstOperatorRef.current !== 'isNull' && firstOperatorRef.current !== 'isNotNull')
+                )}
+                popupSettings={{ zIndex: parseInt(window.getComputedStyle(dialogRef.current?.element ?? document.body).zIndex, 10) }}
                 onChange={(args: DDLChangeEvent) => {
-                    setOperator(args.value as string);
-                    if (args.value === 'isNull' || args.value === 'isNotNull' || args.value === 'isEmpty' || args.value === 'isNotEmpty') {
+                    const newOperator: string = args.value as string;
+                    setOperator(newOperator);
+                    if (isSecondOperator) {
+                        secondOperatorRef.current = newOperator;
+                    } else {
+                        firstOperatorRef.current = newOperator;
+                    }
+                    if (newOperator === 'isNull' || newOperator === 'isNotNull' || newOperator === 'isEmpty' || newOperator === 'isNotEmpty') {
                         setOperatorValue(null);
+                        if (isSecondOperator) {
+                            secondOperatorValueRef.current = null;
+                        } else {
+                            firstOperatorValueRef.current = null;
+                        }
+                        scheduleImmediateApply();
+                    }
+                    if (firstOperatorValueRef.current !== null || secondOperatorValueRef.current !== null) {
+                        scheduleImmediateApply();
                     }
                 }}
                 className={cssClass + ' sf-excel-filter-dropdown'}
             />
         );
-    }, [operators, cssClass]);
+    }, [operators, cssClass, defaultFilter]);
 
     const advancedContainer: React.JSX.Element = useMemo(() => {
-        const Condition: (props: {andCondition: React.RefObject<boolean>}) => JSX.Element = (
-            props: { andCondition: React.RefObject<boolean> }): JSX.Element => {
+        const Condition: () => JSX.Element = (): JSX.Element => {
             const conditionChange: (args: RadioButtonChangeEvent) => void = (args: RadioButtonChangeEvent): void => {
-                props.andCondition.current = args.value === 'and';
+                const isAnd: boolean = args.value === 'and';
+                andCondition.current = isAnd;
+                setAndConditionUI(isAnd);
+                if (isImmediateMode) {
+                    scheduleImmediateApply();
+                }
             };
 
             return <>
                 <RadioButton
                     name='condition'
                     value='and'
-                    {...(props.andCondition.current ? { defaultChecked: true } : {})}
+                    checked={andConditionUI}
                     label={localization?.getConstant('and')}
                     onChange={conditionChange}
                     className={cssClass} />
@@ -1445,7 +1540,7 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
                 <RadioButton
                     name='condition'
                     value='or'
-                    {...(!props.andCondition.current ? { defaultChecked: true } : {})}
+                    checked={!andConditionUI}
                     label={localization?.getConstant('or')}
                     onChange={conditionChange}
                     className={cssClass} />
@@ -1472,19 +1567,23 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
                     onChange={(args: NumericChangeEvent) => {
                         if (second) {
                             setSecondOperatorValue(args.value);
+                            secondOperatorValueRef.current = args.value;
                         } else {
                             setFirstOperatorValue(args.value);
+                            firstOperatorValueRef.current = args.value;
+                        }
+                        if (isImmediateMode) {
+                            scheduleImmediateApply();
                         }
                     }}
                     onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => event.code === 'Enter' ? filterbtnHandler() : undefined}
                     format={(typeof (format) === 'object' && format ? getNumberPattern(format, false)?.toLowerCase() :
                         (format as string)?.toLowerCase()) ?? 'n2'} // only provided string format support.
-                    disabled={second ? secondInputDisabled : firstInputDisabled}
+                    disabled={second ? secondInputDisabled || (isNullOrUndefined(firstOperatorValueRef.current) && firstOperatorRef.current !== 'isNull' && firstOperatorRef.current !== 'isNotNull') : firstInputDisabled}
                     {...updateColumn.filter.params as NumericTextBoxProps}
                 />);
 
             case 'date':
-            case 'datetime':
             case 'dateonly':
                 return (<DatePicker
                     value={(second ? secondOperatorValue : firstOperatorValue) as Date}
@@ -1496,12 +1595,41 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
                     onChange={(args: DatePickerChangeEvent) => {
                         if (second) {
                             setSecondOperatorValue(args.value);
+                            secondOperatorValueRef.current = args.value;
                         } else {
                             setFirstOperatorValue(args.value);
+                            firstOperatorValueRef.current = args.value;
+                        }
+                        if (isImmediateMode) {
+                            scheduleImmediateApply();
                         }
                     }}
-                    disabled={second ? secondInputDisabled : firstInputDisabled}
+                    disabled={second ? secondInputDisabled || (isNullOrUndefined(firstOperatorValueRef.current) && firstOperatorRef.current !== 'isNull' && firstOperatorRef.current !== 'isNotNull') : firstInputDisabled}
                     {...updateColumn.filter.params as DatePickerProps}
+                />);
+
+            case 'datetime':
+                return (<DateTimePicker
+                    value={(second ? secondOperatorValue : firstOperatorValue) as Date}
+                    placeholder={placeholder}
+                    className={cssClass}
+                    variant={Variant.Outlined}
+                    onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => event.code === 'Enter' ? filterbtnHandler() : undefined}
+                    format={format ? getCustomDateFormat(format, type) : 'M/d/yyyy hh:mm a'} // only provided string format support
+                    onChange={(args: DateTimePickerChangeEvent) => {
+                        if (second) {
+                            setSecondOperatorValue(args.value);
+                            secondOperatorValueRef.current = args.value;
+                        } else {
+                            setFirstOperatorValue(args.value);
+                            firstOperatorValueRef.current = args.value;
+                        }
+                        if (isImmediateMode) {
+                            scheduleImmediateApply();
+                        }
+                    }}
+                    disabled={second ? secondInputDisabled || (isNullOrUndefined(firstOperatorValueRef.current) && firstOperatorRef.current !== 'isNull' && firstOperatorRef.current !== 'isNotNull') : firstInputDisabled}
+                    {...updateColumn.filter.params as unknown as DateTimePickerProps}
                 />);
 
             default :
@@ -1510,22 +1638,34 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
                     onChange={(args: TextBoxChangeEvent) => {
                         if (second) {
                             setSecondOperatorValue(args.value);
+                            secondOperatorValueRef.current = args.value;
                         } else {
                             setFirstOperatorValue(args.value);
+                            firstOperatorValueRef.current = args.value;
                         }
                     }}
                     variant={Variant.Outlined}
-                    onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => event.code === 'Enter' ? filterbtnHandler() : undefined}
+                    onKeyUp={() => isImmediateMode ? scheduleImmediateApply() : undefined}
+                    onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) =>
+                        event.code === 'Enter' ? filterbtnHandler() : undefined
+                    }
                     placeholder={localization?.getConstant('enterValue')}
                     className={cssClass}
-                    disabled={second ? secondInputDisabled : firstInputDisabled}
+                    disabled={
+                        second
+                            ? secondInputDisabled || (
+                                (isNullOrUndefined(firstOperatorValueRef.current) || firstOperatorValueRef.current === '') &&
+                                (firstOperatorRef.current !== 'isEmpty' && firstOperatorRef.current !== 'isNotEmpty')
+                            )
+                            : firstInputDisabled
+                    }
                     {...updateColumn.filter.params as TextBoxProps}
                 />);
             }
         };
 
         return (
-            <div className='sf-grid-excel-filter-container'>
+            <div className={`sf-grid-excel-filter-container ${isMenu ? 'sf-menu-top' : ''}`}>
                 <div>
                     <Operator operator={firstOperator} setOperator={setFirstOperator} setOperatorValue={setFirstOperatorValue} />
                 </div>
@@ -1533,75 +1673,87 @@ export const ExcelFilter: React.FC<ExcelFilterDialogProps> = ({
                     {firstFilterInputElement()}
                 </div>
                 <div className='sf-excel-top-separator'>
-                    <Condition andCondition={andCondition} />
+                    <Condition />
                 </div>
                 <div className='sf-excel-top-separator'>
-                    <Operator operator={secondOperator} setOperator={setSecondOperator} setOperatorValue={setSecondOperatorValue} />
+                    <Operator operator={secondOperator} setOperator={setSecondOperator} setOperatorValue={setSecondOperatorValue}
+                        isSecondOperator={true} />
                 </div>
                 <div className='sf-excel-top-separator'>
                     {firstFilterInputElement(true)}
                 </div>
             </div>
         );
-    }, [firstOperator, secondOperator, firstOperatorValue, secondOperatorValue]);
+    }, [firstOperator, secondOperator, normalizeValueToDepKey(firstOperatorValue), normalizeValueToDepKey(secondOperatorValue),
+        andConditionUI, defaultFilter]);
 
-
-    return (
-        <>{internalOpen && <Dialog
-            id={options.id + '_ExcelFilter'}
-            ref={dialogRef}
-            className={cssClass + ' sf-filter-popup sf-excel-filter'}
-            open={internalOpen}
-            data-uid={updateColumn.uid}
-            initialFocusRef={searchInputRef}
-            modal={false}
-            target={target as HTMLElement}
-            closeIcon={false}
-            onKeyDown={keyDownHandler}
-            onKeyUp={keyUpHandler}
-            style={{ width: '285px', maxHeight: '800px', zIndex: 10000, position: 'absolute' }}
-            footer={
-                isImmediateMode && !isExcel ? (
-                    <Button
-                        variant={Variant.Standard}
-                        className={cssClass}
-                        onClick={clearFilter}
-                        onKeyDown={(event: React.KeyboardEvent<HTMLButtonElement>) => event.code === 'Enter' ? clearFilter : undefined}
-                        disabled={!searchValue?.length && filterLength < 1}
-                    >
-                        {localization?.getConstant('Clear')}
-                    </Button>
-                ) : (isExcel && !defaultFilter || !isImmediateMode) ? (
-                    <>
-                        <Button
-                            variant={Variant.Standard}
-                            color={Color.Primary}
-                            className={cssClass}
-                            onClick={filterbtnHandler}
-                            onKeyDown={(event: React.KeyboardEvent<HTMLButtonElement>) => event.code === 'Enter' ? filterbtnHandler : undefined}
-                            disabled={defaultFilter ? (!selectAllChecked && !selectAllIndeterminate) : disableAdvancedOkBtn}
-                        >
-                            {localization?.getConstant('OKButton')}
-                        </Button>
-                        <Button
-                            variant={Variant.Standard}
-                            className={cssClass}
-                            onClick={isExcel ? handleCancel : clearFilter}
-                            onKeyDown={(event: React.KeyboardEvent<HTMLButtonElement>) => event.code === 'Enter' ? handleCancel : undefined}
-                            disabled={isExcel ? false : filterLength < 1}
-                        >
-                            {isExcel ? localization?.getConstant('CancelButton') : localization?.getConstant('Clear')}
-                        </Button>
-
-                    </>
-                ) : undefined
-            }
-        >
+    const filterContent: React.JSX.Element = (
+        <>
             {isExcel && renderExcelMenu}
             {isExcel && filterType}
             {defaultFilter && searchContainer}
             {!defaultFilter && advancedContainer}
-        </Dialog>}
+        </>
+    );
+
+    const filterFooter: React.JSX.Element = isMenu && !isImmediateMode ? (
+        <div className='sf-menu-filter-actions'>
+            <Button variant={Variant.Standard} className={cssClass + ' sf-menu-filter-clear'} onClick={clearFilter}>
+                Clear
+            </Button>
+            <Button variant={Variant.Standard} color={Color.Primary} className={cssClass + ' sf-menu-filter-apply'} onClick={filterbtnHandler}>
+                Apply
+            </Button>
+        </div>
+    ) : isImmediateMode && !isExcel ? (
+        <Button
+            variant={Variant.Standard}
+            className={cssClass}
+            onClick={clearFilter}
+            disabled={!searchValue?.length && filterLength < 1}
+        >
+            {localization?.getConstant('clear')}
+        </Button>
+    ) : !isImmediateMode ? (
+        <>
+            <Button variant={Variant.Standard} color={Color.Primary} className={cssClass} onClick={filterbtnHandler}
+                disabled={defaultFilter ? (!selectAllChecked && !selectAllIndeterminate) : disableAdvancedOkBtn}>
+                {localization?.getConstant('oKButton')}
+            </Button>
+            <Button variant={Variant.Standard} className={cssClass} onClick={isExcel ? handleCancel : clearFilter}
+                disabled={isExcel ? false : filterLength < 1}>
+                {isExcel ? localization?.getConstant('cancelButton') : localization?.getConstant('clear')}
+            </Button>
+        </>
+    ) : undefined;
+
+    return (
+        <>
+            {internalOpen && (embedded ? (
+                <div className={cssClass + ' sf-filter-popup sf-excel-filter sf-filter-panel-column'}
+                    data-uid={updateColumn.uid} data-field={updateColumn.field}>
+                    {filterContent}
+                    {filterFooter && <div className='sf-dlg-footer-content sf-content-end'>{filterFooter}</div>}
+                </div>
+            ) : (
+                <Dialog
+                    id={options.id + '_ExcelFilter'}
+                    ref={dialogRef}
+                    className={cssClass + ' sf-filter-popup sf-excel-filter'}
+                    open={internalOpen}
+                    data-uid={updateColumn.uid}
+                    initialFocusRef={searchInputRef}
+                    modal={false}
+                    target={target as HTMLElement}
+                    closeIcon={false}
+                    onKeyDown={keyDownHandler}
+                    onKeyUp={keyUpHandler}
+                    style={{ width: '285px', maxHeight: '800px', zIndex: 10000, position: 'absolute' }}
+                    footer={filterFooter}
+                >
+                    {filterContent}
+                </Dialog>
+            ))}
         </>
     );
 };

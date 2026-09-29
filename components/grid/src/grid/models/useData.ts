@@ -1,25 +1,23 @@
 import { RefObject, useCallback, useMemo } from 'react';
 import {
-    Action, DataChangeRequestEvent, DataRequestEvent,
-    payload,
-    MutableGridBase, PendingState,
+    Action,
     ScrollMode,
     AggregateType,
-    UseAggregateSelectionResult,
     SortDirection,
-    ActionType,
-    GroupSettings
-} from '../types';
+    ActionType
+} from '../types/enum';
+import { GroupSettings } from '../types/grouping.interfaces';
 import { SortDescriptor } from '../types/sort.interfaces';
 import { GridActionEvent, IGrid } from '../types/grid.interfaces';
 import { FilterPredicates } from '../types/filter.interfaces';
 import { ColumnProps } from '../types/column.interfaces';
 import { AggregateColumnProps, AggregateRowProps } from '../types/aggregate.interfaces';
 import { SearchSettings } from '../types/search.interfaces';
-import { MutableGridSetter, UseDataResult } from '../types/interfaces';
-import { extend, isNullOrUndefined} from '@syncfusion/react-base';
-import { AdaptorOptions, DataManager, Predicate, Query, DataResult, Deferred, UrlAdaptor } from '@syncfusion/react-data';
-import { getPredicate } from '../utils';
+import { MutableGridSetter, UseDataResult, UseAggregateSelectionResult, MutableGridBase, DataChangeRequestEvent, DataRequestEvent, PendingState } from '../types/interfaces';
+import { payload } from '../types/edit.interfaces';
+import { extend, isNullOrUndefined} from '@syncfusion/react-base/src/util';
+import { getPredicate } from '../utils/utils';
+import { DataManager, AdaptorOptions, Deferred, DataResult, UrlAdaptor, Predicate, Query } from '@syncfusion/react-data';
 
 // Constants for query operations
 const QUERY_FUNCTION_KEY: string = 'fn';
@@ -89,7 +87,8 @@ export const useData: <T>(gridInstance?: Partial<IGrid<T>> & Partial<MutableGrid
             const columns: SortDescriptor[] = grid.sortSettings?.columns ?? [];
             const sortGrp: SortDescriptor[] = [];
             for (let i: number = columns.length - 1; i > -1; i--) {
-                const col: ColumnProps<T> = (grid.columns as ColumnProps<T>[]).find((c: ColumnProps<T>) =>
+                const columnDetails: any = grid.isStackedHeader ? grid.stackedFlattedColumnProps : grid.columns;
+                const col: ColumnProps<T> = columnDetails.find((c: ColumnProps<T>) =>
                     c.field === columns[parseInt(i.toString(), 10)].field);
                 if (col) {
                     col.sortDirection = columns[parseInt(i.toString(), 10)]?.direction;
@@ -142,6 +141,9 @@ export const useData: <T>(gridInstance?: Partial<IGrid<T>> & Partial<MutableGrid
             const defaultFltrCols: FilterPredicates[] = [];
             for (const col of columns) {
                 const gridColumn: ColumnProps<T> = (gObj.columns as ColumnProps<T>[]).find((c: ColumnProps<T>) => c.field === col.field);
+                if (gridColumn?.allowFormula && gridColumn?.filterComparer) {
+                    col.filterComparer = gridColumn.filterComparer as Function;
+                }
                 if (isNullOrUndefined(col.type) && gridColumn && (gridColumn.type === 'dateonly' || gridColumn.type === 'datetime' || gridColumn.type === 'date')) {
                     col.type = (gObj.columns.find((c: ColumnProps<T>) => c.field === col.field)).type;
                 }
@@ -159,7 +161,7 @@ export const useData: <T>(gridInstance?: Partial<IGrid<T>> & Partial<MutableGrid
             query.where(Predicate.and(predicateList));
         }
         return query;
-    }, [grid.filterSettings, grid.filterSettings.enabled]);
+    }, [grid.columns, grid.filterSettings, grid.filterSettings?.enabled]);
 
     const searchQuery: (query: Query) => Query = useCallback((query: Query): Query => {
         const predicateList: Predicate[] = [];
@@ -167,6 +169,14 @@ export const useData: <T>(gridInstance?: Partial<IGrid<T>> & Partial<MutableGrid
             const sSettings: SearchSettings = grid.searchSettings;
             const fields: string[] = (!isNullOrUndefined(sSettings.fields) && sSettings.fields.length) ? sSettings.fields
                 : getSearchColumnFieldNames();
+            let filterComparer: Function | undefined;
+            for (const field of fields) {
+                const column: ColumnProps = (grid.columns as ColumnProps<T>[]).find((c: ColumnProps<T>) => c.field === field);
+                if (column?.allowFormula) {
+                    filterComparer = (column.filterComparer as Function).bind(column);
+                    break;
+                }
+            }
             const dataManager: DataManager = grid?.dataSource instanceof DataManager ? grid.dataSource :
                 new DataManager(grid?.dataSource as DataManager);
             const adaptor: AdaptorOptions = dataManager.adaptor;
@@ -176,14 +186,15 @@ export const useData: <T>(gridInstance?: Partial<IGrid<T>> & Partial<MutableGrid
                 for (let i: number = 0; i < fields.length; i++) {
                     predicateList.push(new Predicate(
                         fields[parseInt(i.toString(), 10)], sSettings.operator, grid.searchSettings?.value,
-                        sSettings.caseSensitive, sSettings.ignoreAccent
+                        sSettings.caseSensitive, sSettings.ignoreAccent, false, false, filterComparer
                     ));
                 }
                 const predList: Predicate = Predicate.or(predicateList);
                 predList.key = grid.searchSettings?.value;
                 query.where(predList);
             } else {
-                query.search(grid.searchSettings?.value, fields, sSettings.operator, sSettings.caseSensitive, sSettings.ignoreAccent);
+                query.search(grid.searchSettings?.value, fields, sSettings.operator, sSettings.caseSensitive,
+                             sSettings.ignoreAccent, filterComparer);
             }
         }
         return query;
@@ -314,8 +325,24 @@ export const useData: <T>(gridInstance?: Partial<IGrid<T>> & Partial<MutableGrid
             }
 
             case REQUEST_TYPE_SAVE: {
-                const index: number = isNullOrUndefined(args.index) ? 0 : args.index;
-                return (dataManager as DataManager).insert(args.data, currentQuery.fromTable, currentQuery, index) as Promise<Object>;
+                if (Array.isArray(args.data)) {
+                    const changes: { addedRecords: T[]; deletedRecords: T[]; changedRecords: T[] } = {
+                        addedRecords: [],
+                        deletedRecords: [],
+                        changedRecords: args.data
+                    };
+
+                    return (dataManager as DataManager).saveChanges(
+                        changes,
+                        key,
+                        currentQuery.fromTable,
+                        currentQuery.requiresCount()
+                    ) as Promise<Object>;
+                }
+                else {
+                    const index: number = isNullOrUndefined(args.index) ? 0 : args.index;
+                    return (dataManager as DataManager).insert(args.data, currentQuery.fromTable, currentQuery, index) as Promise<Object>;
+                }
             }
 
             case REQUEST_TYPE_UPDATE: {

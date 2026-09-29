@@ -11,25 +11,16 @@ import {
     JSX,
     ReactElement
 } from 'react';
-import {
-    FooterRowsRef,
-    IFooterRowsBase,
-    RowRef,
-    IRow,
-    ICell,
-    IValueFormatter,
-    AggregateType, RenderType
-} from '../types';
-import { Group, SummaryData, ColumnsChildren } from '../types/interfaces';
+import { FooterRowsRef, IFooterRowsBase, RowRef } from '../types/interfaces';
+import { IRow, ICell, IValueFormatter, Group, SummaryData, ColumnsChildren } from '../types/interfaces';
+import { AggregateType, RenderType } from '../types/enum';
 import { ColumnProps } from '../types/column.interfaces';
 import { AggregateRowProps, AggregateColumnProps, CustomSummaryType } from '../types/aggregate.interfaces';
-import {
-    useGridMutableProvider,
-    useGridComputedProvider
-} from '../contexts';
-import { RowBase } from '../components';
-import { getUid } from '../utils';
-import { DateFormatOptions, extend, isNullOrUndefined, NumberFormatOptions } from '@syncfusion/react-base';
+import { useGridMutableProvider, useGridComputedProvider } from '../contexts/GridProviders';
+import { RowBase } from '../components/Row';
+import { getUid } from '../utils/utils';
+import { DateFormatOptions, NumberFormatOptions } from '@syncfusion/react-base/src/internationalization';
+import { extend, isNullOrUndefined } from '@syncfusion/react-base/src/util';
 import { DataUtil } from '@syncfusion/react-data';
 
 // CSS class constants following enterprise naming convention
@@ -114,7 +105,7 @@ const FooterRowsBase: (props: Partial<IFooterRowsBase> & RefAttributes<FooterRow
             const getData: () => AggregateRowProps[] = useCallback(
                 (): AggregateRowProps[] => {
                     const rows: AggregateRowProps[] = [];
-                    const row: AggregateRowProps[] = aggregates.slice();
+                    const row: AggregateRowProps[] = aggregates?.slice();
                     for (let i: number = 0; i < row.length; i++) {
                         const columns: AggregateColumnProps<T>[] = row[parseInt(i.toString(), 10)].columns;
                         if (columns && columns.length && isColumnsVisible(columns)) {

@@ -9,9 +9,10 @@ import { ChartLegendRenderer, CustomLegendRenderer } from '../renderer/LegendRen
 import { ChartSeriesRenderer } from '../renderer/series-renderer/ChartSeriesRenderer';
 import { callChartEventHandlers } from '../hooks/events';
 import { CenterLabelRenderer } from '../renderer/ChartCenterLabelRender';
-import { PieChartMouseEvent, PieChartSizeProps, PiePointClickEvent, PieResizeEvent, PieChartAnnotationProps } from '../base/interfaces';
-import { Browser, isNullOrUndefined } from '@syncfusion/react-base';
+import { PieChartMouseEvent, PieChartSizeProps, PiePointClickEvent, PieResizeEvent, PieChartAnnotationProps, PieChartCenterLabelProps } from '../base/interfaces';
+import { Browser, initializeTelemetry, isNullOrUndefined } from '@syncfusion/react-base';
 import { PieChartTooltipRenderer, PointData } from '../renderer/ChartTooltipRenderer';
+import { CHART_TELEMETRY_KEY, setPieChartTelemetryFeatureList } from '../base/telemetry';
 import { indexFinder, stringToNumber } from '../utils/helper';
 import { PieSelectionRenderer } from '../renderer/PieSelectionsRenderer';
 import { highlightChart, PieHighlightRenderer } from '../renderer/PieHighlightRenderer';
@@ -84,6 +85,32 @@ export const LayoutProvider: React.FC = () => {
         layoutRef.current = {} as Chart;
         setPhase('measuring');
     }, []);
+
+    const isTelemetryInitialized: React.MutableRefObject<boolean> = useRef<boolean>(false);
+
+    const centerLabelVisibility: boolean = Array.isArray((centerLabel as PieChartCenterLabelProps | undefined)?.label) &&
+        ((centerLabel as PieChartCenterLabelProps).label as unknown[]).length > 0;
+    const annotationVisibility: boolean = Array.isArray(pieChartAnnotation) &&
+        (pieChartAnnotation as PieChartAnnotationProps[]).some(
+            (annotation: PieChartAnnotationProps) => typeof annotation?.content === 'string' && annotation.content.length > 0
+        );
+
+    useEffect(() => {
+        if (isTelemetryInitialized.current || phase !== 'rendering') { return; }
+
+        initializeTelemetry(CHART_TELEMETRY_KEY);
+        isTelemetryInitialized.current = true;
+
+        setPieChartTelemetryFeatureList({
+            title: !!chartTitle?.text,
+            subTitle: !!chartSubTitle?.text,
+            legend: !!chartLegend?.visible,
+            pie: chartSeries.length > 0,
+            tooltip: !!chartTooltip?.enable,
+            centerLabel: centerLabelVisibility,
+            annotation: annotationVisibility
+        });
+    }, [phase]);
     const expectedKeys: string[] = useMemo(() => {
         const keys: string[] = ['Chart', 'ChartSeries'];
         if (chartTitle?.text) {
@@ -310,6 +337,9 @@ export const LayoutProvider: React.FC = () => {
      */
     const chartResize: () => boolean = () => {
         const chart: Chart = layoutRef.current as Chart;
+        if (!chart) {
+            return false;
+        }
         chart.animateSeries = false;
         const arg: PieResizeEvent = {
             currentSize: {
@@ -347,12 +377,13 @@ export const LayoutProvider: React.FC = () => {
 
             chart.availableSize = {
                 height: stringToNumber(chartProps.height, measuredHeight) || measuredHeight || 450,
-                width: stringToNumber(chartProps.width, measuredWidth) || measuredWidth
+                width: (chartProps.width && chartProps.width.indexOf('%') > -1) ? measuredWidth :
+                    (stringToNumber(chartProps.width, measuredWidth) || measuredWidth)
             };
             parentElement.availableSize = arg.currentSize = chart.availableSize;
             triggerRemeasure();
             chartProps.onResize?.(arg);
-        }, 500);
+        }, 100);
 
         return false;
     };
@@ -1054,6 +1085,28 @@ export const LayoutProvider: React.FC = () => {
         chartContainer.addEventListener('keydown', accumulationChartKeyDown);
         chartContainer.addEventListener('keyup', accumulationChartKeyUp);
         window.addEventListener('resize', chartResize);
+
+        // Percentage widths (e.g. '100%', '90%') are resolved from the container's
+        // clientWidth, which only updates when the container element itself is resized.
+        // A layout change that isn't accompanied by a window 'resize' event — for example,
+        // toggling a sibling panel that reflows the flex/grid layout the chart sits in —
+        // never fires the listener above, so the chart width stays stale until the window
+        // itself is resized. Observing the container directly catches those layout-only
+        // width changes too. This only runs for percentage widths; fixed/pixel widths do
+        // not depend on the container's measured size, so that scenario is left untouched.
+        let containerResizeObserver: ResizeObserver | undefined;
+        if (typeof ResizeObserver !== 'undefined' && chartProps.width && chartProps.width.indexOf('%') > -1) {
+            let previousObservedWidth: number = chartContainer.clientWidth;
+            containerResizeObserver = new ResizeObserver((entries: ResizeObserverEntry[]) => {
+                const currentObservedWidth: number = entries[0]?.contentRect?.width ?? chartContainer.clientWidth;
+                if (currentObservedWidth !== previousObservedWidth) {
+                    previousObservedWidth = currentObservedWidth;
+                    chartResize();
+                }
+            });
+            containerResizeObserver.observe(chartContainer);
+        }
+
         return () => {
             // Cleanup event listeners
             chartContainer.removeEventListener('mousemove', handleMouseMove as EventListener);
@@ -1069,6 +1122,7 @@ export const LayoutProvider: React.FC = () => {
             chartContainer.removeEventListener('keydown', accumulationChartKeyDown);
             chartContainer.removeEventListener('keyup', accumulationChartKeyUp);
             window.removeEventListener('resize', chartResize);
+            containerResizeObserver?.disconnect();
         };
     }, [parentElement]);
 

@@ -1,13 +1,20 @@
 import { ComponentType, createElement, isValidElement, ReactElement, useMemo } from 'react';
-import { DateFormatOptions, IL10n, formatUnit, isNullOrUndefined, NumberFormatOptions } from '@syncfusion/react-base';
-import { Skeleton, SkeletonProps } from '@syncfusion/react-notifications';
-import { IValueFormatter, CellTypes, IRow, EditType, ValueType, FilterBarType, TextAlign, ColumnType, LoadingIndicatorType, ServiceLocator, VirtualDomType, IGridBase, AggregateType, GroupedData, GroupType } from '../types';
-import { ColumnProps, IColumnBase } from '../types/column.interfaces';
+import { DateFormatOptions, NumberFormatOptions } from '@syncfusion/react-base/src/internationalization';
+import { IL10n } from '@syncfusion/react-base/src/l10n';
+import { formatUnit, isNullOrUndefined } from '@syncfusion/react-base/src/util';
+import { Skeleton, SkeletonProps } from '@syncfusion/react-notifications/src/skeleton/skeleton';
+import { IValueFormatter, ServiceLocator, ValueType, IRow } from '../types/interfaces';
+import { CellTypes, EditType, FilterBarType, TextAlign, ColumnType, LoadingIndicatorType, AggregateType, GroupType, ColumnPinDirection, ResizeMode } from '../types/enum';
+import { GroupedData } from '../types/grouping.interfaces';
+import { IGridBase } from '../types/grid.interfaces';
+import { VirtualDomType } from '../types/virtualization.interface';
+import { ColumnProps, IColumnBase, PinDirectionInput } from '../types/column.interfaces';
+import { FormulaDefinition, FormulaProjection } from '../types/formula.interfaces';
 import { AggregateColumnProps, AggregateData } from '../types/aggregate.interfaces';
-import { useGridComputedProvider, useGridMutableProvider } from '../contexts';
+import { useGridComputedProvider, useGridMutableProvider } from '../contexts/GridProviders';
 import { setStringFormatter, getObject, getUid, headerValueAccessor as defaultHeaderValueAccessor,
     valueAccessor as defaultValueAccessor, isDateOrNumber, parseUnit,
-    updateUIColumnType} from '../utils';
+    updateUIColumnType, isColumnsChild} from '../utils/utils';
 /**
  * CSS class names used in the Column component
  */
@@ -25,46 +32,67 @@ const CSS_CLASS_NAMES: Record<string, string> = {
  * @param {IGridBase} gridProps - The grid configured properties.
  * @param {ColumnProps[]} typeDetectedUIColumn - After getting data type updated ui column.
  * @param {boolean} isColumnChooserChanged - To check whether column chooser state is changed.
+ * @param {PinDirectionInput<T>} pinnedStackedColumn - Pin direction (enum, string, or callback) inherited from a stacked parent column.
+ * @param {boolean} [isStackedHeader] - Whether the current column is part of a stacked header structure.
  * @returns {IColumnBase} The column properties with defaults applied
  * @private
  */
-export const defaultColumnProps: <T>(props: Partial<IColumnBase<T>>, serviceLocator: ServiceLocator, gridProps: IGridBase<T>,
-    typeDetectedUIColumn?: ColumnProps<T>, isColumnChooserChanged?: boolean) => Partial<IColumnBase<T>> = <T>(
+export const defaultColumnProps: <T>(props: Partial<IColumnBase<T>>, serviceLocator: ServiceLocator,
+    gridProps: IGridBase<T>,
+    typeDetectedUIColumn?: ColumnProps<T>, isColumnChooserChanged?: boolean,
+    pinnedStackedColumn?: PinDirectionInput<T>, isStackedHeader?: boolean) => Partial<IColumnBase<T>> = <T>(
     props: Partial<IColumnBase<T>>, serviceLocator: ServiceLocator, gridProps: IGridBase<T>, typeDetectedUIColumn?: ColumnProps<T>,
-    isColumnChooserChanged?: boolean):
+    isColumnChooserChanged?: boolean, pinnedStackedColumn?: PinDirectionInput<T>, isStackedHeader?: boolean):
 Partial<IColumnBase<T>> => {
     const commandColumn: boolean = !isNullOrUndefined(props.getCommandItems);
     const isCheckboxColumn: boolean = props.type === ColumnType.Checkbox ||
         (!!props.displayAsCheckBox && (props.edit?.type === EditType.CheckBox || props.type === ColumnType.Boolean));
+    const isRowDragAndDropColumn: boolean = props.type === ColumnType.RowDragAndDrop;
+    const hasExplicitVisible: boolean = !isNullOrUndefined(props.visible);
+    const isPinColumn: boolean = props.type === ColumnType.Pin;
     const typeFormatParseUpdatedColumn: Partial<IColumnBase<T>> =
         updateUIColumnType({}, {...props}, serviceLocator) as Partial<IColumnBase<T>>;
-    const isColumnDOMVirtualizationDisabled: boolean = !isNullOrUndefined(gridProps?.virtualizationSettings) &&
-        (gridProps?.virtualizationSettings?.enabled === false || gridProps?.virtualizationSettings?.type === VirtualDomType.Row ||
-            props.autoHeight);
+    const isColumnDOMVirtualizationDisabled: boolean = (gridProps?.resizeSettings?.enabled && gridProps?.resizeSettings?.mode !==
+        ResizeMode.Normal) || (!isNullOrUndefined(gridProps?.virtualizationSettings) &&
+        (gridProps?.virtualizationSettings?.enabled === false ||
+            gridProps?.virtualizationSettings?.type === VirtualDomType.Row || props.autoHeight));
     const isRequiredColumn: boolean = props?.isPrimaryKey || props?.isIdentity || (props.field && gridProps.groupSettings?.enabled &&
         gridProps.groupSettings?.columns?.length && gridProps.groupSettings?.columns?.indexOf(props.field) > -1);
+    const hasColumnsChild: boolean = isColumnsChild(props.children);
+    const defaultPinDirection: PinDirectionInput<T> = pinnedStackedColumn ??
+        (props.type === ColumnType.RowNumber ? ColumnPinDirection.Left : ColumnPinDirection.None);
+    const resolvedVisible: boolean | undefined = isColumnChooserChanged ? typeDetectedUIColumn?.visible :
+        hasExplicitVisible ? props.visible :
+            (props?.field && (commandColumn ? false : props.allowGroup ?? true) &&
+            gridProps?.groupSettings?.type === GroupType.MultipleColumns &&
+            gridProps?.groupSettings?.columns?.indexOf(props?.field) >= 0 ? true : (typeFormatParseUpdatedColumn?.visible) ?? true);
     // computed values should handle in component inside alone since react not allowed us to compute here using memo.
     return {
         autoHeight: false,
-        textAlign: commandColumn || isCheckboxColumn ? TextAlign.Center : 'Left',
+        textAlign: commandColumn || isCheckboxColumn || isRowDragAndDropColumn || isPinColumn ? TextAlign.Center : TextAlign.Left,
         disableHtmlEncode: true,
-        allowEdit: commandColumn || props.type === ColumnType.SingleGroup ? false : true,
+        allowEdit: commandColumn || isPinColumn || props.type === ColumnType.SingleGroup || isRowDragAndDropColumn ||
+            props.type === ColumnType.RowNumber ? false : true,
         edit: {type: EditType.TextBox},
-        filter: { type: props.filter?.type ?? gridProps?.filterSettings?.type ?? 'FilterBar', hideSearchbox: props.filter?.hideSearchbox ?? false,
+        filter: { type: props.filter?.type ?? gridProps?.filterSettings?.type ?? 'FilterBar',
+            hideSearchbox: props.filter?.hideSearchbox ?? false,
             filterBarType: FilterBarType.TextBox, filterOperators: [] },
         formatFn: typeFormatParseUpdatedColumn?.formatFn ?? typeDetectedUIColumn?.formatFn,
         parseFn: typeFormatParseUpdatedColumn?.parseFn ?? typeDetectedUIColumn?.parseFn,
         getFormatter: typeFormatParseUpdatedColumn?.formatFn ?? typeDetectedUIColumn?.formatFn,
         getParser: typeFormatParseUpdatedColumn?.parseFn ?? typeDetectedUIColumn?.parseFn,
         headerText: props.headerText ?? (props.type === ColumnType.SingleGroup ?
-            serviceLocator?.getService<IL10n>('localization')?.getConstant('singleColumnGroupLabel') : undefined),
+            serviceLocator?.getService<IL10n>('localization')?.getConstant('singleColumnGroupLabel') : props?.field ?? undefined),
+        minWidth: props?.columns || isStackedHeader ? undefined : 10,
+        allowReorder: commandColumn || props.type === ColumnType.Checkbox ? false : true,
         ...props,
         validationRules: isRequiredColumn ? { required: true, ...props.validationRules } : props.validationRules,
-        visible: isColumnChooserChanged ? typeDetectedUIColumn?.visible : (props?.field && (commandColumn ? false : props.allowGroup ??
-            true) && gridProps?.groupSettings?.type === GroupType.MultipleColumns &&
-            gridProps?.groupSettings?.columns?.indexOf(props?.field) >= 0 ? true : (typeFormatParseUpdatedColumn?.visible) ?? true),
-        width: !isColumnDOMVirtualizationDisabled ? (!isNullOrUndefined(props.width) ? (parseUnit(props.width) + 'px') : (props?.type ===
-            ColumnType.SingleGroup ? (!gridProps?.groupSettings?.captionFormat || gridProps?.groupSettings?.captionFormat === 'compact' ? '188px' : '335px') : '100px')) :
+        visible: resolvedVisible,
+        pinDirection: isColumnChooserChanged ? typeDetectedUIColumn?.pinDirection :
+            typeFormatParseUpdatedColumn?.pinDirection ?? defaultPinDirection,
+        width: !isColumnDOMVirtualizationDisabled ? (!isNullOrUndefined(props.width) && !(props.width === 'auto' || props.width === '') ? (parseUnit(props.width) + 'px') :
+            (props?.type === ColumnType.SingleGroup ? (!gridProps?.groupSettings?.captionFormat ||
+                gridProps?.groupSettings?.captionFormat === 'compact' ? '188px' : '335px') : '100px')) :
             props.width ? formatUnit(props.width) : '', // dom column virtualization only support pixels.
         valueAccessor: props.valueAccessor ?? defaultValueAccessor<T>,
         headerValueAccessor: props.headerValueAccessor ?? defaultHeaderValueAccessor,
@@ -72,11 +100,18 @@ Partial<IColumnBase<T>> => {
             (props.type ?? (commandColumn ? ColumnType.Command : typeDetectedUIColumn?.type))),
         sortComparer: typeDetectedUIColumn?.sortComparer ?? typeFormatParseUpdatedColumn?.sortComparer,
         uid: isNullOrUndefined(props.uid) ? getUid('grid-column') : props.uid,
-        allowSort: commandColumn || props.type === ColumnType.SingleGroup ? false : props.allowSort ?? true,
-        allowFilter: commandColumn || props.type === ColumnType.SingleGroup ? false : props.allowFilter ?? true,
-        allowSearch: commandColumn ? false : props.allowSearch ?? true,
-        allowGroup: commandColumn || props.type === ColumnType.Checkbox || props.type === ColumnType.SingleGroup
-            ? false : props.allowGroup ?? props.field ? true : false,
+        allowSort: commandColumn || isPinColumn || props.type === ColumnType.SingleGroup || isRowDragAndDropColumn || props.columns ||
+            hasColumnsChild || props.type === ColumnType.RowNumber ? false : props.allowSort ?? true,
+        allowFilter: commandColumn || isPinColumn || props.type === ColumnType.SingleGroup || isRowDragAndDropColumn || props.columns ||
+            hasColumnsChild || props.type === ColumnType.RowNumber ? false : props.allowFilter ?? true,
+        allowSearch: commandColumn || isPinColumn || isRowDragAndDropColumn || props.columns || hasColumnsChild ? false :
+            props.allowSearch ?? true,
+        allowGroup: commandColumn || isPinColumn || props.type === ColumnType.Checkbox || props.type === ColumnType.SingleGroup ||
+            isRowDragAndDropColumn || props.type === ColumnType.RowNumber ? false : props.allowGroup ?? props.columns ??
+                (props.field || hasColumnsChild) ? true : false,
+        allowResize: commandColumn || props.type === ColumnType.Checkbox ? false : props.allowResize ?? true,
+        allowFormula: props.allowFormula ?? false,
+        autoFit: commandColumn || props.type === ColumnType.Checkbox ? undefined : props.autoFit,
         templateSettings: {
             ariaLabel: '',
             ...props.templateSettings
@@ -141,9 +176,10 @@ export const useColumn: <T>(props: Partial<IColumnBase<T>>) => {
         headerTextAlign,
         ...rest
     } = column;
-    const { serviceLocator, virtualizationSettings, loadingIndicatorSettings } =
-        useGridComputedProvider();
-    const { aggregateSelection } = useGridMutableProvider();
+    const { serviceLocator, virtualizationSettings, loadingIndicatorSettings, getPrimaryKeyFieldNames, editSettings, groupSettings,
+        getVisibleColumns } = useGridComputedProvider();
+    const { aggregateSelection, formulaModule } = useGridMutableProvider<T>();
+    const isFormulaCellMode: boolean = editSettings?.mode === 'Cell';
     const { indicatorType, params } = loadingIndicatorSettings;
     const formatter: IValueFormatter = serviceLocator?.getService<IValueFormatter>('valueFormatter');
     const localization: IL10n = serviceLocator?.getService<IL10n>('localization');
@@ -155,8 +191,18 @@ export const useColumn: <T>(props: Partial<IColumnBase<T>>) => {
     const formatValue: (value: string | object | null) => string = useMemo(() => {
         return (value: string | Object | null): string => {
             let updatedType: string = type;
+            if (type === 'number' && typeof value === 'string' && value.trim().toLowerCase() === 'invalid') {
+                return 'invalid';
+            }
             if (!isNullOrUndefined(format) && formatter) {
-                const isCaptionRowAggregateTypeCell: boolean = row.isCaptionRow && !isNullOrUndefined(column.groupCaptionAggregateType);
+                // Formula projections may be numeric even when the column type is omitted.
+                if (!isNullOrUndefined(value) && (!type || type === 'string')) {
+                    updatedType = value instanceof Date && !isNullOrUndefined(value.getDay) ?
+                        ((value.getHours() || value.getMinutes() || value.getSeconds() || value.getMilliseconds()) ? 'datetime' : 'date') :
+                        (typeof value === 'string' && value.trim() !== '' && !isNaN(Number(value)) ? 'number' : typeof value);
+                }
+                const isCaptionRowAggregateTypeCell: boolean = (row.isCaptionRow || row?.data?.['flattedGroupSummary']) &&
+                    !isNullOrUndefined(column.groupCaptionAggregateType);
                 const applyNumberFormat: (closureValue: string | Object | null) => number | string =
                     (closureValue: string | Object | null): number | string => {
                         // Get appropriate formatter function
@@ -200,12 +246,6 @@ export const useColumn: <T>(props: Partial<IColumnBase<T>>) => {
                     } else {
                         return '';
                     }
-                }
-                // Auto-detect type if not specified
-                if (!isNullOrUndefined(value) && !type) {
-                    updatedType = value instanceof Date && !isNullOrUndefined(value.getDay) ?
-                        ((value.getHours() || value.getMinutes() || value.getSeconds() || value.getMilliseconds()) ? 'datetime' : 'date') :
-                        typeof value;
                 }
                 value = applyNumberFormat(value);
             }
@@ -260,9 +300,38 @@ export const useColumn: <T>(props: Partial<IColumnBase<T>>) => {
      * @type {ValueType}
      */
     const value: ValueType | Object = useMemo(() => {
-        return (cellType === CellTypes.Data && field && row && row.isDataRow) ?
-            getObject(field, row.data) : undefined;
-    }, [cellType, field, row]);
+        const isGroupRows: boolean = groupSettings?.type === GroupType.GroupRows && row?.isCaptionRow &&
+            column?.type === ColumnType.Checkbox;
+        if (cellType !== CellTypes.Data || (!field && !isGroupRows) || !row || !row.isDataRow) {
+            return undefined;
+        }
+        let rawValue: ValueType | Object = getObject(field, row.data);
+        if (!rawValue && column?.type === ColumnType.Checkbox && isGroupRows) {
+            rawValue = (cellType === CellTypes.Data && (field || isGroupRows) && row && row.isDataRow) ?
+                getObject(getVisibleColumns?.()?.find((column: ColumnProps) =>
+                    column?.type !== ColumnType.Checkbox && column?.type !== ColumnType.RowDragAndDrop &&
+                column?.type !== ColumnType.RowNumber && !column?.getCommandItems)?.field, row.data) : undefined;
+        }
+        if (!isFormulaCellMode || !formulaModule || typeof rawValue !== 'string' || !rawValue.trim().startsWith('=')) {
+            return rawValue;
+        }
+        const projectionByKey: FormulaProjection | undefined = formulaModule.getFormulas?.().find(
+            (projection: FormulaDefinition) => projection.identity.field === field && projection.formula === rawValue
+        ) as FormulaProjection | undefined;
+        if (projectionByKey) {
+            return projectionByKey.value;
+        }
+        if (!column.allowFormula) {
+            return rawValue;
+        }
+        const primaryKeyField: string | undefined = getPrimaryKeyFieldNames?.()?.[0];
+        const rowData: T = row.data as T;
+        const rowKey: unknown = primaryKeyField ? rowData?.[primaryKeyField as keyof T] : undefined;
+        if (typeof rowKey !== 'string' && typeof rowKey !== 'number') {
+            return '#INVALID_REFERENCE';
+        }
+        return formulaModule.getProjection(rowKey, field)?.value ?? '#INVALID_REFERENCE';
+    }, [cellType, field, row, formulaModule, column.allowFormula, getPrimaryKeyFieldNames, isFormulaCellMode]);
 
     /**
      * Determines if cell should render loading skeleton
@@ -324,7 +393,18 @@ export const useColumn: <T>(props: Partial<IColumnBase<T>>) => {
         // Handle data cell formatting
         else {
             if (isNullOrUndefined(template)) {
-                formattedVal = valueAccessor({field: (field as string), data: row.data as T, column: column});
+                const isGroupRows: boolean = groupSettings?.type === GroupType.GroupRows && row?.isCaptionRow &&
+                    column?.type === ColumnType.Checkbox;
+                const rawValue: ValueType | Object = getObject(field as string, row.data as T);
+                const isFormulaDisplayValue: boolean = isFormulaCellMode && formulaModule && typeof rawValue === 'string' &&
+                    rawValue.trim().startsWith('=') && column.allowFormula;
+                formattedVal = isFormulaDisplayValue ? (value ?? rawValue) :
+                    valueAccessor({field: (isGroupRows ? getVisibleColumns?.()?.find((column: ColumnProps) =>
+                        column?.type !== ColumnType.Checkbox && column?.type !== ColumnType.RowDragAndDrop && !column?.getCommandItems &&
+                    column?.type !== ColumnType.RowNumber)?.field : field as string), data: row.data as T, column: column});
+                if (isNullOrUndefined(formattedVal) && column.type === ColumnType.RowNumber) {
+                    formattedVal = row.rowIndex + 1;
+                }
             } else if (typeof template === 'string' || isValidElement(template)) {
                 return template;
             } else {

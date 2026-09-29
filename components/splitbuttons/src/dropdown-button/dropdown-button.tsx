@@ -2,11 +2,12 @@ import { useState, useRef, forwardRef, useImperativeHandle, useEffect, Ref, Butt
     ReactNode, SyntheticEvent, ForwardRefExoticComponent, RefAttributes, memo, type MouseEvent, type KeyboardEvent,
     isValidElement, Dispatch, SetStateAction, RefObject
 } from 'react';
-import { IPopup, Popup, CollisionType, PositionAxis, CollisionAxis, PopupAnimationOptions, PopupSettings } from '@syncfusion/react-popups';
+import { IPopup, Popup, CollisionType, CollisionAxis, PopupAnimationOptions, PopupSettings,
+    AlignmentPoint, HorizontalAlign, VerticalAlign } from '@syncfusion/react-popups';
 import { Button, Position, Color, Size, Variant, IButton } from '@syncfusion/react-buttons';
 import { useProviderContext, preRender, IAnimation, AnimationOptions, Animation, Effect } from '@syncfusion/react-base';
 import { createPortal } from 'react-dom';
-export { Color, Size, Variant, Position, PositionAxis, CollisionAxis, CollisionType, PopupSettings };
+export { Color, Size, Variant, Position, CollisionAxis, CollisionType, PopupSettings, HorizontalAlign, VerticalAlign, AlignmentPoint };
 
 /**
  * ItemModel interface defines properties for each dropdown item.
@@ -193,8 +194,19 @@ type IDropDownButtonProps = IDropDownButton & Omit<ButtonHTMLAttributes<HTMLButt
  * ```typescript
  * import { DropDownButton } from "@syncfusion/react-splitbuttons";
  *
- * const menuItems = [{ text: 'Cut' }, { text: 'Copy' }, { text: 'Paste' }];
- * <DropDownButton items={menuItems}>Default</DropDownButton>
+ * const menuItems = [
+ *      { text: "Cut" },
+ *      { text: "Copy" },
+ *      { text: "Paste" }
+ * ];
+ *
+ * export default function App() {
+ *      return (
+ *          <DropDownButton items={menuItems}>
+ *              Default
+ *          </DropDownButton>
+ *      );
+ * }
  * ```
  */
 export const DropDownButton: ForwardRefExoticComponent<IDropDownButtonProps & RefAttributes<IDropDownButton>> =
@@ -220,7 +232,8 @@ export const DropDownButton: ForwardRefExoticComponent<IDropDownButtonProps & Re
 
         const { dir } = useProviderContext();
         const {
-            position = { X: 'left', Y: 'bottom' },
+            popupAlign= { horizontal: 'left', vertical: 'top' },
+            anchorAlign= { horizontal: 'left', vertical: 'bottom' },
             offsetX = 0,
             offsetY = 0,
             collision,
@@ -606,7 +619,8 @@ export const DropDownButton: ForwardRefExoticComponent<IDropDownButtonProps & Re
                         ref={popupRef}
                         viewPortElementRef={viewPortElementRef}
                         relateTo={buttonRef.current?.element as HTMLElement}
-                        position={position}
+                        popupAlign={popupAlign}
+                        anchorAlign={anchorAlign}
                         offsetX={offsetX}
                         offsetY={offsetY}
                         animation={animation}

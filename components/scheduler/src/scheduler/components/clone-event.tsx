@@ -1,15 +1,24 @@
-import { FC, JSX, useEffect } from 'react';
+import { FC, JSX, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { DayEventClone } from './day-event-clone';
 import { TimeSlotEventClone } from './time-slot-event-clone';
 import { useCloneEventContext, CloneEventContextValue } from '../context/clone-event-context';
-import { ProcessedEventsData } from '../types/internal-interface';
+import { ProcessedEventsData, TimelineProcessedEvent } from '../types/internal-interface';
 import { useSchedulerPropsContext } from '../context/scheduler-context';
+import { useTimelineEvents } from '../hooks/useTimelineEvents';
 import { CSS_CLASSES } from '../common/constants';
+import { DEFAULT_TIMELINE_EVENT_HEIGHT } from '../services/EventService';
 
 export const CloneEvent: FC = () => {
     const state: CloneEventContextValue = useCloneEventContext();
-    const { schedulerRef } = useSchedulerPropsContext();
+    const { schedulerRef, isTimelineView } = useSchedulerPropsContext();
+    const isInternalTimelineDrag: boolean = !!(isTimelineView && state.visible && state.draggedEvent);
+    const overrideEventsData: TimelineProcessedEvent['event'][] | undefined = useMemo(() => (
+        isInternalTimelineDrag && state.draggedEvent ? [state.draggedEvent] : undefined
+    ), [isInternalTimelineDrag, state.draggedEvent]);
+    const { allEvents: draggedCloneEvents } = useTimelineEvents(
+        DEFAULT_TIMELINE_EVENT_HEIGHT, overrideEventsData, isInternalTimelineDrag ? (state.sourceTopPx ?? 0) : 0
+    );
 
     useEffect(() => {
         const onShow: (e: Event) => void = (e: Event) => {
@@ -35,14 +44,21 @@ export const CloneEvent: FC = () => {
         };
     }, [schedulerRef, state]);
 
-    const container: HTMLElement = state.isDayEvent ?
-        schedulerRef.current?.element?.querySelector(`.${CSS_CLASSES.DAY_CLONE_CONTAINER}`) :
-        schedulerRef.current?.element?.querySelector(`.${CSS_CLASSES.TIME_SLOT_CLONE_CONTAINER}`);
+    const useDayEventClone: boolean = !!(state.isDayEvent && !isTimelineView);
+    const selector: string =
+        useDayEventClone ? CSS_CLASSES.DAY_CLONE_CONTAINER : CSS_CLASSES.TIME_SLOT_CLONE_CONTAINER;
+    const container: HTMLElement = schedulerRef.current?.element?.querySelector(`.${selector}`);
 
-    const content: JSX.Element = (
+    const content: JSX.Element = isInternalTimelineDrag ? (
+        <>
+            {draggedCloneEvents.map((evt: TimelineProcessedEvent, index: number) => (
+                <TimeSlotEventClone key={`${evt.eventKey ?? index}-${index}`} {...evt} />
+            ))}
+        </>
+    ) : (
         <>
             {state.visible && state.segments.map((segment: ProcessedEventsData, index: number) => (
-                state.isDayEvent ? (
+                useDayEventClone ? (
                     <DayEventClone key={`${segment?.guid}-${index}`}
                         {...segment}
                     />

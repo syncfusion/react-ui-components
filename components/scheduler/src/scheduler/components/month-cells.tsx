@@ -12,12 +12,13 @@ import { CSS_CLASSES } from '../common/constants';
 import { MoreIndicator } from './more-indicator';
 import useCellInteraction from '../hooks/useCellInteraction';
 import { ResourceLevel } from '../services/ResourceGroupingService';
+import { MAX_EVENTS_STACK_MONTH } from '../utils/default-props';
 
 export const MonthCells: FC<MonthCellsProps> = (props: MonthCellsProps) => {
     const { weekRenderDates, hideOtherMonths, rowIndex, onHeightCalculated, resourceWorkCells } = props;
 
     const {
-        maxEventsPerRow = 2,
+        maxEventsStack = MAX_EVENTS_STACK_MONTH,
         cellHeader,
         cell,
         rowAutoHeight,
@@ -40,13 +41,13 @@ export const MonthCells: FC<MonthCellsProps> = (props: MonthCellsProps) => {
         hasBlockIndicator,
         hasAllDayBlock,
         calculatedRowHeight
-    } = useMonthEvents(weekRenderDates, maxEventsPerRow);
+    } = useMonthEvents(weekRenderDates, maxEventsStack);
 
     const renderMoreIndicator: (date: Date, resourceLeaf: ResourceLevel) => ReactNode =
         (date: Date, resourceLeaf: ResourceLevel): ReactNode => {
             return (
                 <MoreIndicator
-                    date={date}
+                    startDate={date}
                     count={getHiddenEventCount(DateService.generateDateKey(date), resourceLeaf)}
                     onMoreClick={handleMoreClick}
                     resource={resourceLeaf}
@@ -106,7 +107,7 @@ export const MonthCells: FC<MonthCellsProps> = (props: MonthCellsProps) => {
     }, [calculatedRowHeight]);
 
     return (
-        <div className={CSS_CLASSES.WORK_CELLS_ROW} style={{ height: (rowAutoHeight || maxEventsPerRow >= 3) ? calculatedRowHeight : '' }}>
+        <div className={CSS_CLASSES.WORK_CELLS_ROW} style={{ height: (rowAutoHeight || maxEventsStack >= 3) ? calculatedRowHeight : '' }}>
             {workCells.map((monthCell: MonthCell): ReactNode => {
                 if (hideOtherMonths && monthCell.className.includes('sf-other-month')) {
                     return (
@@ -124,7 +125,7 @@ export const MonthCells: FC<MonthCellsProps> = (props: MonthCellsProps) => {
                         data-group-index={monthCell.groupIndex}
                         onClick={(e: MouseEvent<HTMLElement>) => handleCellClick(e, monthCell.date, true)}
                         onDoubleClick={(e: MouseEvent<HTMLElement>) => handleCellDoubleClick(e, monthCell.date, true)}
-                        onKeyDown={(e: React.KeyboardEvent<HTMLElement>) => { handleKeyDown(e, monthCell.date); }}
+                        onKeyDown={(e: React.KeyboardEvent<HTMLElement>) => { handleKeyDown(e, monthCell.date, true); }}
                     >
                         <div className={CSS_CLASSES.DATE_HEADER_CONTAINER}>
                             <div className={CSS_CLASSES.DATE_HEADER}>

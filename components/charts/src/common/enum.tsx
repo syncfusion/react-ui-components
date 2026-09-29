@@ -131,11 +131,15 @@ export type ConnectorType =
  * SVG :- Exports the chart as a scalable vector graphics file.
  * PNG :- Exports the chart as a portable network graphics image.
  * JPG :- Exports the chart as a JPEG image.
+ * PDF :- Exports the chart as a PDF document.
+ * XLSX :- Exports the chart data as a Excel workbook.
+ * CSV :- Exports the chart data as comma-separated values text.
  * ```
  */
 export type ExportType =
     'SVG' |
     'PNG' |
     'JPG' |
-    'PDF' ;
-
+    'PDF' |
+    'XLSX'|
+    'CSV';

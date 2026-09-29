@@ -224,6 +224,9 @@ export interface ViewChangeEvent {
     event?: React.SyntheticEvent;
 }
 
+/**
+ * @private
+ */
 export interface CalendarBaseProps {
     /**
      * Specifies the calendar system to use, such as 'gregorian' or 'islamic'.
@@ -384,7 +387,9 @@ export interface CalendarBaseProps {
     isRangePreview?: boolean;
 }
 
-
+/**
+ * @private
+ */
 export interface CalendarUiProps {
 
     /**

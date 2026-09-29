@@ -11,37 +11,43 @@ export interface CellInteraction {
     /**
      * Handle cell click for event creation
      */
-    handleCellClick: (e: MouseEvent<HTMLElement> | React.KeyboardEvent<HTMLElement>, date: Date, isAllDay?: boolean) => void;
+    handleCellClick: (e: MouseEvent<HTMLElement> | React.KeyboardEvent<HTMLElement>,
+        startDate: Date, isAllDay?: boolean, endDate?: Date) => void;
 
     /**
      * Handle header cell double click for event creation
      */
-    handleCellDoubleClick: (e: MouseEvent<HTMLElement>, date: Date, isAllDay?: boolean) => void;
+    handleCellDoubleClick: (e: MouseEvent<HTMLElement>, startDate: Date, isAllDay?: boolean, endDate?: Date) => void;
 
     /**
      * Handle key down event for accessibility
      */
-    handleKeyDown: (e: React.KeyboardEvent<HTMLElement>, date: Date) => void;
+    handleKeyDown: (e: React.KeyboardEvent<HTMLElement>, startDate: Date, isAllDay?: boolean, endDate?: Date) => void;
 }
 
 export const useCellInteraction: () => CellInteraction = (): CellInteraction => {
 
     const { timeScale, onCellClick, onCellDoubleClick, readOnly, quickPopupRef } = useSchedulerPropsContext();
 
-    const createEventArgs: (e: MouseEvent<HTMLElement>, date: Date, isAllDay?: boolean) => SchedulerCellClickEvent =
-        useCallback((e: MouseEvent<HTMLElement>, date: Date, isAllDay?: boolean): SchedulerCellClickEvent => {
-            const endTime: Date = new Date(date);
-            if (!timeScale.enable || isAllDay) {
-                date.setHours(0, 0, 0, 0);
+    const createEventArgs: (e: MouseEvent<HTMLElement>, date: Date, isAllDay?: boolean, endDate?: Date) => SchedulerCellClickEvent =
+        useCallback((e: MouseEvent<HTMLElement>, date: Date, isAllDay?: boolean, endDate?: Date): SchedulerCellClickEvent => {
+            const startTime: Date = new Date(date);
+            let endTime: Date = new Date(date);
+            if (endDate) {
+                startTime.setHours(0, 0, 0, 0);
+                endTime = new Date(endDate);
+                isAllDay = true;
+            } else if (!timeScale.enable || isAllDay) {
+                startTime.setHours(0, 0, 0, 0);
                 endTime.setHours(0, 0, 0, 0);
                 isAllDay = true;
             } else {
-                endTime.setTime(date.getTime() + (timeScale.interval / timeScale.slotCount) * MS_PER_MINUTE);
+                endTime.setTime(startTime.getTime() + (timeScale.interval / timeScale.slotCount) * MS_PER_MINUTE);
             }
             const args: SchedulerCellClickEvent = {
                 cancel: false,
                 nativeEvent: e.nativeEvent,
-                startTime: date,
+                startTime,
                 endTime,
                 isAllDay: !!isAllDay,
                 element: e.currentTarget
@@ -54,10 +60,11 @@ export const useCellInteraction: () => CellInteraction = (): CellInteraction => 
         }, [timeScale]);
 
     const handleCellClick: (e: MouseEvent<HTMLElement> | React.KeyboardEvent<HTMLElement>,
-        date: Date, isAllDay?: boolean) => void = useCallback(
+        startDate: Date, isAllDay?: boolean, endDate?: Date) => void = useCallback(
         (e: MouseEvent<HTMLElement> | React.KeyboardEvent<HTMLElement>,
-         date: Date,
-         isAllDay?: boolean
+         startDate: Date,
+         isAllDay?: boolean,
+         endDate?: Date
         ): void => {
             if ((e.target as HTMLElement)?.classList.contains(CSS_CLASSES.DATE_HEADER) ||
                 (e.target as HTMLElement)?.classList.contains(CSS_CLASSES.HEADER_DATE) || readOnly) {
@@ -65,29 +72,29 @@ export const useCellInteraction: () => CellInteraction = (): CellInteraction => 
             }
             clearAndSelect(e.currentTarget as HTMLElement);
             if (onCellClick) {
-                const args: SchedulerCellClickEvent = createEventArgs(e as MouseEvent<HTMLElement>, date, isAllDay);
+                const args: SchedulerCellClickEvent = createEventArgs(e as MouseEvent<HTMLElement>, startDate, isAllDay, endDate);
                 onCellClick(args);
                 if (args.cancel) { return; }
             }
         }, [onCellClick, createEventArgs]);
 
-    const handleCellDoubleClick: (e: MouseEvent<HTMLElement>, date: Date, isAllDay?: boolean) => void =
-        useCallback((e: MouseEvent<HTMLElement>, date: Date, isAllDay?: boolean): void => {
+    const handleCellDoubleClick: (e: MouseEvent<HTMLElement>, startDate: Date, isAllDay?: boolean, endDate?: Date) => void =
+        useCallback((e: MouseEvent<HTMLElement>, startDate: Date, isAllDay?: boolean, endDate?: Date): void => {
             if (readOnly) { return; }
             clearAndSelect(e.currentTarget as HTMLElement);
             if (onCellDoubleClick) {
                 quickPopupRef?.current?.hide();
-                const args: SchedulerCellClickEvent = createEventArgs(e, date, isAllDay);
+                const args: SchedulerCellClickEvent = createEventArgs(e, startDate, isAllDay, endDate);
                 onCellDoubleClick(args);
                 if (args.cancel) { return; }
             }
         }, [onCellDoubleClick, createEventArgs]);
 
-    const handleKeyDown: (e: React.KeyboardEvent<HTMLElement>, date: Date) => void =
-        (e: React.KeyboardEvent<HTMLElement>, date: Date): void => {
+    const handleKeyDown: (e: React.KeyboardEvent<HTMLElement>, startDate: Date, isAllDay?: boolean, endDate?: Date) => void =
+        (e: React.KeyboardEvent<HTMLElement>, startDate: Date, isAllDay?: boolean, endDate?: Date): void => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                handleCellClick(e, date);
+                handleCellClick(e, startDate, isAllDay, endDate);
             }
         };
 

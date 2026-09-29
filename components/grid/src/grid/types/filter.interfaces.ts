@@ -1,9 +1,10 @@
-import { Dispatch, SetStateAction } from 'react';
-import { FilterType, FilterMode, ActionType, ValueType, IndicatorType } from './index';
-import { ColumnProps } from '../types/column.interfaces';
-import { ICustomOptr } from '../types/interfaces';
+import { Dispatch, FC, JSX, MemoExoticComponent, SetStateAction } from 'react';
+import { FilterType, FilterMode, ActionType, IndicatorType } from '../types/enum';
+import { ColumnProps, IColumnBase } from '../types/column.interfaces';
+import { ICustomOptr, ValueType, ServiceLocator } from '../types/interfaces';
 import { GridActionEvent } from '../types/grid.interfaces';
-import { ExcelFilterArgs } from '../views/common/Excel-CheckBox-filter';
+import { DateFormatOptions, NumberFormatOptions } from '@syncfusion/react-base/src/internationalization';
+import { DataManager, Query, DataResult } from '@syncfusion/react-data';
 
 /**
  * Defines the configuration for filtering functionality in the Data Grid component.
@@ -397,6 +398,17 @@ export interface FilterPredicates {
      * @private
      */
     actualOperator?: Object;
+
+    /**
+     * Defines a custom comparison function used to evaluate filter conditions.
+     * Allows custom logic to determine whether a value matches a filter condition.
+     * Typically used for advanced filtering scenarios beyond default operator-based matching.
+     *
+     * @type {Function}
+     * @default -
+     * @private
+     */
+    filterComparer?: Function;
 
     /**
      * Specifies the data type of the column being filtered (e.g., 'string', 'number').
@@ -818,6 +830,54 @@ export interface IFilterOperator {
 }
 
 /**
+ * @private
+ */
+export interface ExcelFilterArgs {
+    type?: string;
+    filterType?: string;
+    loadingIndicator?: string;
+    operators?: { [key: string]: object; }[] | string[];
+    height: number;
+    columns?: ColumnProps[];
+    field?: string;
+    query?: Query;
+    cssClass?: string;
+    parentElement?: HTMLElement;
+    dataSource?: Object[] | DataManager | DataResult; // for column datasource or grid datasource
+    dataManager?: DataManager;  // grid data manager
+    format?: string | NumberFormatOptions | DateFormatOptions;
+    filteredColumns?: Object[];
+    caseSensitive?: boolean;
+    ignoreAccent?: boolean;
+    parentCurrentViewDataCount? : number; // for on demand parent current view data count
+    handler?: Function;
+    target?: Element;
+    column?: ColumnProps;
+    isRemote?: boolean;
+    serviceLocator?: ServiceLocator;
+    id?: string;
+    enableSort?: boolean;
+    formatFn?: Function;
+    disableSearchOption?: boolean;
+    disableSortOption?: boolean;
+    enableHtmlSanitizer?: boolean;
+    isCustomDataSource?: boolean;
+    mode?: string;
+    immediateModeDelay?: number;
+}
+
+/**
+ * @private
+ */
+// Minimal props interface tailored for Excel-like filter popup
+export type ExcelFilterDialogProps = {
+    isOpen: boolean;
+    options?: ExcelFilterArgs;
+    embedded?: boolean;
+    onCancel?: () => void;
+};
+
+/**
  * Defines the API for managing filtering operations in the Data Grid.
  * Provides methods and properties to control filter behavior, state, and events.
  * Used internally to handle filter interactions and updates.
@@ -851,6 +911,30 @@ export interface FilterAPI {
      * @returns {void}
      */
     clearFilter(fields?: string[]): void;
+
+    /**
+     * Applies a filter to a specific column and resolves once the grid's UI has committed the filtered result.
+     * Resolves without rejecting when the filter is vetoed by `onFilterStart` or is a no-op.
+     *
+     * @param {string} fieldName - The column field to filter.
+     * @param {string} filterOperator - The operator for filtering (e.g., 'equal', 'contains').
+     * @param {ValueType | Array<ValueType>} filterValue - The value(s) to filter against.
+     * @param {string} [predicate] - Logical operator ('and'/'or') for combining filters.
+     * @param {boolean} [caseSensitive] - Enables case-sensitive string filtering.
+     * @param {boolean} [ignoreAccent] - Enables accent-insensitive string filtering.
+     * @returns {Promise<void>} Resolves after the filter is applied.
+     */
+    filterByColumnAsync?(fieldName: string, filterOperator: string,
+        filterValue: ValueType | ValueType[],
+        predicate?: string, caseSensitive?: boolean, ignoreAccent?: boolean): Promise<void>;
+
+    /**
+     * Clears specific column filters and resolves once the grid's UI has committed the unfiltered state.
+     *
+     * @param {string[]} fields - Array of field names to clear filters from.
+     * @returns {Promise<void>} Resolves after filtering is cleared.
+     */
+    clearFilteringAsync?(fields: string[]): Promise<void>;
 
     /**
      * Removes the filter condition for a specific column by its field name.
@@ -913,6 +997,8 @@ export interface FilterAPI {
     customOperators: CustomOperators;
 
     getFilterProperties: FilterProperties;
+    FilterBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Element>;
+    ExcelFilter: FC<ExcelFilterDialogProps>
 }
 
 /**

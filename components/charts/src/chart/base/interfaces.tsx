@@ -775,6 +775,18 @@ export interface ChartZoomSettingsProps {
      * @default false
      */
     enableScrollbar?: boolean;
+
+    /**
+     * Specifies the minimum number of data points that must remain visible after
+     * a zoom-in operation performed through mouse wheel, pinch, selection
+     * rectangle, or toolbar Zoom In actions.
+     *
+     * When set to `null`, the chart preserves its default zoom behavior without
+     * enforcing a minimum visible-items constraint.
+     *
+     * @default null
+     */
+    minimumVisiblePoints?: number | null;
 }
 
 /**
@@ -928,6 +940,13 @@ export interface ZoomEndEvent {
      * Includes previous minimum, maximum, interval, and delta values.
      */
     previousVisibleRange?: VisibleRangeProps;
+
+    /**
+     * Set when the proposed zoom was rejected because it would violate a
+     * configured floor (for example, `minimumVisibleItems`). Callers can use
+     * this flag to surface feedback to the user.
+     */
+    blockedBy?: string;
 
 }
 
@@ -4912,6 +4931,16 @@ export interface ChartTrendlineProps {
      * @default { ariaLabel: '', focusable: true, tabIndex: 0, role: '' }
      */
     accessibility?: ChartAccessibilityProps;
+
+    /**
+     * Optional nested `<ChartLinearGradient>` or `<ChartRadialGradient>`
+     * children. The renderer pipeline harvests these in
+     * `ChartSeriesCollection` and substitutes the trendline `stroke` with
+     * `url(#<id>)`.
+     *
+     * @private
+     */
+    children?: React.ReactNode;
 }
 
 /**
@@ -5183,6 +5212,15 @@ export interface ChartIndicatorProps {
     dashArray?: string;
 
     /**
+     * Optional nested `<LinearGradient>` or `<RadialGradient>` children. The
+     * renderer harvests these in `ChartIndicatorCollection` and stores the
+     * resolved handles onto `gradientProps` / `gradientStops`.
+     *
+     * @private
+     */
+    children?: React.ReactNode;
+
+    /**
      * Specifies the financial data field used to compare the current value
      * with previous values when calculating technical indicators.
      *
@@ -5226,6 +5264,166 @@ export interface ChartRangeColorProps {
      * @default ''
      */
     label?: string;
+}
+
+/**
+ * Defines a single color stop within a linear or radial gradient.
+ */
+export interface ChartGradientColorStopProps {
+
+    /**
+     * Specifies the position of the color stop along the gradient vector.
+     * Accepts a number (0-100) or a percentage string; normalized to a
+     * percentage string internally.
+     *
+     * @default ''
+     */
+    offset?: string | number;
+
+    /**
+     * Specifies the color of the stop. Invalid or unsafe color tokens are
+     * removed during validation.
+     *
+     * @default ''
+     */
+    color: string;
+
+    /**
+     * Specifies the opacity of the stop color, clamped between 0 and 1.
+     *
+     * @default 1
+     */
+    opacity?: number;
+
+    /**
+     * The brightness adjustment for the color.
+     *
+     * @default 0
+     */
+    brighten?: number;
+
+    /**
+     * The lightness adjustment for the color.
+     *
+     * @default 0
+     */
+    lighten?: number;
+
+}
+
+/**
+ * Defines the style settings for a linear gradient applied to a supported chart host.
+ */
+export interface ChartLinearGradientProps {
+
+    /**
+     * Specifies the x-coordinate of the gradient's start point.
+     *
+     * @default 0
+     */
+    x1?: number | string;
+
+    /**
+     * Specifies the y-coordinate of the gradient's start point.
+     *
+     * @default 0
+     */
+    y1?: number | string;
+
+    /**
+     * Specifies the x-coordinate of the gradient's end point.
+     *
+     * @default 1
+     */
+    x2?: number | string;
+
+    /**
+     * Specifies the y-coordinate of the gradient's end point.
+     * The default coordinate set (x1=0, y1=0, x2=1, y2=0) produces a
+     * horizontal, left-to-right gradient.
+     *
+     * @default 0
+     */
+    y2?: number | string;
+
+    /**
+     * Specifies the nested ChartGradientColorStop elements that define the
+     * gradient's colors.
+     *
+     * @private
+     *
+     */
+    children?: React.ReactNode;
+}
+
+/**
+ * Defines the style settings for a radial gradient applied to a supported chart host.
+ */
+export interface ChartRadialGradientProps {
+
+    /**
+     * Specifies the x-coordinate of the gradient's center.
+     *
+     * @default '50%'
+     */
+    cx?: number | string;
+
+    /**
+     * Specifies the y-coordinate of the gradient's center.
+     *
+     * @default '50%'
+     */
+    cy?: number | string;
+
+    /**
+     * Specifies the radius of the gradient circle.
+     *
+     * @default '50%'
+     */
+    r?: number | string;
+
+    /**
+     * Specifies the x-coordinate of the gradient's focal point. Defaults to
+     * the resolved value of cx.
+     *
+     * @default ''
+     */
+    fx?: number | string;
+
+    /**
+     * Specifies the y-coordinate of the gradient's focal point. Defaults to
+     * the resolved value of cy.
+     *
+     * @default ''
+     */
+    fy?: number | string;
+
+    /**
+     * Specifies the nested ChartGradientColorStop elements that define the
+     * gradient's colors.
+     *
+     * @private
+     */
+    children?: React.ReactNode;
+}
+
+
+/**
+ * Inputs for the gradient-decision pipeline consumed by the renderer.
+ *
+ * @private
+ */
+export interface GradientRenderInfo {
+    /** Namespaced SVG `<defs>` id, e.g. `container_series_0_linear_gradient`. */
+    id: string;
+    /** Resolved `fill="url(#…)"` (or `null` when fallback applies). */
+    fillUrl: string | null;
+    /** Resolved `stroke="url(#…)"` (or `null` when gradient does not target stroke). */
+    strokeUrl: string | null;
+    /** Owner label used in dev-mode diagnostics. */
+    owner: 'series' | 'marker' | 'tooltip' | 'trendline' | 'indicator';
+    /** Per-owner index used for stable id namespacing. */
+    index: number;
 }
 
 

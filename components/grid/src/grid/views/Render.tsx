@@ -15,18 +15,24 @@ import {
     useCallback,
     useState
 } from 'react';
-import { HeaderPanelBase, ContentPanelBase, PagerPanelBase, GridToolbar, PopupEditForm, ColumnChooserDialog, ContextMenuPanelBase } from './index';
-import { RenderRef, IRenderBase, HeaderPanelRef, ContentPanelRef, FooterPanelRef, WrapMode, InlineEditFormRef, ColumnProps, IRow, ScrollMode, LoadingIndicatorType, ActionType, ColumnChooserBeforeOpenEvent, ColumnChooserSettings, ColumnChooserApplyEvent, ContextMenuPanelRef, SortDescriptor } from '../types';
-import { useGridComputedProvider, useGridMutableProvider } from '../contexts';
-import { useRender, useScroll } from '../hooks';
+import { HeaderPanelBase } from './HeaderPanel';
+import { ContentPanelBase } from './ContentPanel';
+import { RenderRef, IRenderBase, HeaderPanelRef, ContentPanelRef, FooterPanelRef, IRow } from '../types/interfaces';
+import { ScrollMode, LoadingIndicatorType, ActionType, WrapMode } from '../types/enum';
+import { InlineEditFormRef } from '../types/edit.interfaces';
+import { ColumnProps } from '../types/column.interfaces';
+import { SortDescriptor } from '../types/sort.interfaces';
+import { ContextMenuPanelRef } from '../types/context.interfaces';
+import { ColumnChooserBeforeOpenEvent, ColumnChooserSettings, ColumnChooserApplyEvent } from '../types/grid.interfaces';
+import { useGridComputedProvider, useGridMutableProvider } from '../contexts/GridProviders';
+import { useRender } from '../hooks/useRender';
+import { useScroll } from '../hooks/useScroll';
 import { ToolbarItemProps, ToolbarAPI } from '../types/toolbar.interfaces';
-import { PagerRef } from '@syncfusion/react-pager';
-import { FooterPanelBase } from './FooterPanel';
-import { Spinner, SpinnerProps } from '@syncfusion/react-popups';
-import { isNullOrUndefined } from '@syncfusion/react-base';
+import { PagerRef } from '@syncfusion/react-pager/src/page';
+import { Spinner, SpinnerProps } from '@syncfusion/react-popups/src/spinner/spinner';
+import { isNullOrUndefined } from '@syncfusion/react-base/src/util';
+import { addLastRowBorder } from '../utils/utils';
 import { DataManager } from '@syncfusion/react-data';
-import { addLastRowBorder } from '../utils';
-import { GroupDropArea } from '../views';
 
 /**
  * CSS class names used in the Render component
@@ -100,11 +106,11 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
         const headerPanelRef: RefObject<HeaderPanelRef> = useRef<HeaderPanelRef>(null);
         const contentPanelRef: RefObject<ContentPanelRef<T>> = useRef<ContentPanelRef<T>>(null);
         const footerPanelRef: RefObject<FooterPanelRef> = useRef<FooterPanelRef>(null);
-        const contextMenuPanelRef: RefObject<ContextMenuPanelRef> = useRef<ContextMenuPanelRef>(null);
         const pagerObjectRef:  RefObject<PagerRef> = useRef<PagerRef>(null);
         const popupEditFormRef: RefObject<InlineEditFormRef<T>> = useRef<InlineEditFormRef<T>>(null);
 
         const { privateRenderAPI, protectedRenderAPI } = useRender<T>();
+        const { onColumnChooserOpenChange } = _props;
         const { privateScrollAPI, protectedScrollAPI, setHeaderScrollElement, setContentScrollElement, setFooterScrollElement } =
             useScroll<T>(contentPanelRef.current);
         const { setPadding } = protectedScrollAPI;
@@ -112,11 +118,12 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
         const { headerContentBorder, headerPadding, onContentScroll, onVirtualRowContentScroll, onVirtualColumnContentScroll,
             onHeaderScroll, onFooterScroll, getCssProperties } = privateScrollAPI;
         const { textWrapSettings, pageSettings, aggregates, toolbar, id, columns, dataSource, editSettings, height,
-            loadingIndicatorSettings, getColumns, columnChooserSettings, showColumnChooser,
+            loadingIndicatorSettings, getColumns, isStackedHeader, stackedFlattedColumnProps, columnChooserSettings, showColumnChooser,
             contextMenuSettings, element, groupSettings, sortSettings } = useGridComputedProvider<T>();
         const  { indicatorType, params } = loadingIndicatorSettings;
-        const { columnsDirective, currentViewData, totalRecordsCount, cssClass, toolbarModule, editModule, scrollMode, virtualSettings,
-            infiniteScrollState, expandedGroupCountRef, groupModule } = useGridMutableProvider<T>();
+        const { columnsDirective, currentViewData, totalRecordsCount, cssClass, toolbarModule, editModule, scrollMode,
+            virtualSettings, infiniteScrollState, expandedGroupCountRef, groupModule, pagerModule, contextMenuModule,
+            columnChooserModule, aggregateModule } = useGridMutableProvider<T>();
 
         // Column Chooser state management - moved from useGrid
         const [isColumnChooserOpen, setIsColumnChooserOpen] = useState<boolean>(false);
@@ -145,7 +152,8 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
             // Set position if provided, otherwise use default positioning logic in ColumnChooserDialog
             setColumnChooserPosition(x !== undefined || y !== undefined ? { x, y } : undefined);
             setIsColumnChooserOpen(true);
-        }, [showColumnChooser]);
+            onColumnChooserOpenChange?.(true);
+        }, [onColumnChooserOpenChange, showColumnChooser]);
 
         /**
          * Closes the column chooser dialog
@@ -153,7 +161,8 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
         const closeColumnChooser: () => void = useCallback(() => {
             setIsColumnChooserOpen(false);
             setColumnChooserPosition(undefined);
-        }, []);
+            onColumnChooserOpenChange?.(false);
+        }, [onColumnChooserOpenChange]);
 
         /**
          * Handle before open event for column chooser dialog
@@ -167,6 +176,8 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
                     const args: ColumnChooserBeforeOpenEvent = {
                         cancel: false,
                         type: ActionType.ColumnChooserBeforeOpen,
+                        mode: event.columnChooserSettings?.mode,
+                        immediateModeDelay: event.columnChooserSettings?.immediateModeDelay,
                         enableSearch: event.columnChooserSettings?.enableSearch,
                         operator: event.columnChooserSettings?.operator,
                         ignoreAccent: event.columnChooserSettings?.ignoreAccent,
@@ -194,6 +205,8 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
                     const args: ColumnChooserApplyEvent = {
                         type: ActionType.ColumnChooserApply,
                         columnVisibility: event.columnVisibility,
+                        mode: event.columnChooserSettings?.mode,
+                        immediateModeDelay: event.columnChooserSettings?.immediateModeDelay,
                         enableSearch: event.columnChooserSettings?.enableSearch,
                         operator: event.columnChooserSettings?.operator,
                         ignoreAccent: event.columnChooserSettings?.ignoreAccent,
@@ -229,14 +242,15 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
             hideSpinner: protectedRenderAPI.hideSpinner,
             scrollModule: protectedScrollAPI,
             openColumnChooser,
+            closeColumnChooser,
             // Forward all properties from header and content panels
             ...(headerPanelRef.current as HeaderPanelRef),
             ...(contentPanelRef.current as ContentPanelRef<T>),
             ...(footerPanelRef.current as FooterPanelRef),
-            ...(contextMenuPanelRef.current as ContextMenuPanelRef),
-            pagerModule: pagerObjectRef.current,
-            ...(editModule.editSettings.mode === 'Popup' && editModule.isEdit ?
-                isNullOrUndefined(editModule.originalData) ? { addInlineRowFormRef: popupEditFormRef }
+            ...(contextMenuModule?.contextMenuRef?.current as ContextMenuPanelRef),
+            pagerRef: pagerObjectRef.current,
+            ...(editModule?.editSettings.mode === 'Popup' && editModule?.isEdit ?
+                isNullOrUndefined(editModule?.originalData) ? { addInlineRowFormRef: popupEditFormRef }
                     : { editInlineRowFormRef: popupEditFormRef } : {}),
             refreshContentUI,
             isContentBusy: privateRenderAPI.isContentBusy
@@ -248,16 +262,18 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
             pagerObjectRef.current,
             popupEditFormRef.current,
             openColumnChooser,
-            contextMenuPanelRef.current
+            closeColumnChooser,
+            contextMenuModule?.contextMenuRef?.current
         ]);
 
-        const pagerPanel: JSX.Element = useMemo(() => (
-            <PagerPanelBase
+        const pagerPanel: JSX.Element = useMemo(() => {
+            if (!pagerModule) { return null; }
+            const { PagerPanelBase } = pagerModule;
+            return (<PagerPanelBase
                 ref={pagerObjectRef}
                 {...pageSettings}
-            />
-
-        ), [totalRecordsCount, pageSettings]);
+            />);
+        }, [totalRecordsCount, pageSettings, pagerModule?.PagerPanelBase]);
 
         const isNoColumnRemoteData: boolean = useMemo(() => {
             return !columns.length && dataSource instanceof DataManager && dataSource.dataSource.url
@@ -295,6 +311,20 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
                 protectedScrollAPI.virtualRowInfo.startIndex = 0;
             }
         }, [totalRecordsCount]);
+
+        useMemo(() => {
+            if (!(groupSettings?.enabled && groupSettings?.columns?.length)) {
+                return;
+            }
+            if (scrollMode === ScrollMode.Infinite || scrollMode === ScrollMode.Virtual) {
+                protectedScrollAPI.isDataOperationPreventVirtualCache.current = true;
+                if (contentPanelRef.current?.contentScrollRef) {
+                    contentPanelRef.current.contentScrollRef.scrollTop = 0;
+                    protectedScrollAPI.virtualRowInfo.startIndex = 0;
+                }
+            }
+            protectedRenderAPI.refresh();
+        }, [groupSettings?.groupSummaryPosition]);
         useMemo(() => {
             protectedScrollAPI.virtualRowInfo.endIndex = (groupSettings.enabled && groupSettings.columns?.length &&
                 expandedGroupCountRef.current ? expandedGroupCountRef.current : (scrollMode === ScrollMode.Virtual ||
@@ -315,10 +345,10 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
                 ref={(panelRef: ContentPanelRef<T>) => {
                     contentPanelRef.current = panelRef;
                     if (privateRenderAPI.isContentBusy && columns.length && panelRef &&
-                        panelRef.contentSectionRef.clientHeight < panelRef.contentPanelRef.clientHeight) {
+                        panelRef.contentSectionRef?.clientHeight < panelRef.contentPanelRef?.clientHeight) {
                         refreshContentUI();
                     }
-                    if (height !== 'auto' && (panelRef?.contentPanelRef.firstElementChild as HTMLElement)?.offsetHeight >
+                    if (height !== 'auto' && (panelRef?.contentPanelRef?.firstElementChild as HTMLElement)?.offsetHeight >
                         panelRef?.contentTableRef?.scrollHeight) {
                         addLastRowBorder(panelRef?.contentTableRef, editSettings);
                     }
@@ -351,9 +381,10 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
         }, [setPadding, privateRenderAPI.contentStyles, privateRenderAPI.isContentBusy, onContentScroll, isContentHeightUpdateRequired]);
 
         const footerPanel: JSX.Element = useMemo(() => {
-            if (!columnsDirective || !currentViewData || currentViewData.length === 0) {
+            if (!aggregateModule || !columnsDirective || !currentViewData || currentViewData.length === 0) {
                 return null;
             }
+            const { FooterPanelBase } = aggregateModule;
             const tableScrollerPadding: boolean = headerPadding[`${getCssProperties.padding}`] && headerPadding[`${getCssProperties.padding}`] !== '0px' ? true : false;
             const cssClass: string = `${CSS_CLASS_NAMES.GRID_FOOTER} ${tableScrollerPadding ? CSS_CLASS_NAMES.GRID_FOOTER_PADDING : ''}`;
             return (<FooterPanelBase
@@ -368,10 +399,11 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
                 }}
                 tableScrollerPadding={tableScrollerPadding}
             />);
-        }, [headerPadding, getCssProperties, columnsDirective, currentViewData, onFooterScroll]);
+        }, [headerPadding, getCssProperties, columnsDirective, currentViewData, onFooterScroll, aggregateModule?.FooterPanelBase]);
 
         const popupEditPanel: JSX.Element = useMemo(() => {
-            if ((editModule.editSettings.mode === 'Popup' || editModule.editSettings.mode === 'PopupTemplate') && editModule.isEdit) {
+            if ((editModule?.editSettings.mode === 'Popup' || editModule?.editSettings.mode === 'PopupTemplate') && editModule?.isEdit) {
+                const { PopupEditForm } = editModule;
                 return (
                     <PopupEditForm
                         ref={(ref: InlineEditFormRef<Record<string, unknown>>) => {
@@ -379,8 +411,8 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
                                 popupEditFormRef.current = ref as InlineEditFormRef<T>;
                                 editModule.popupEditFormRef.current = ref as InlineEditFormRef<T>;
                             }
-                            if (ref && !isNullOrUndefined(editModule.originalData)) {
-                                editModule.rowObject.setRowObject((prev: IRow<ColumnProps<T>>) =>
+                            if (ref && !isNullOrUndefined(editModule?.originalData)) {
+                                editModule?.rowObject.setRowObject((prev: IRow<ColumnProps<T>>) =>
                                     ({ ...prev, editInlineRowFormRef: { current: ref as InlineEditFormRef<T> } }));
                             }
                         }}
@@ -391,11 +423,13 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
         }, [editModule]);
 
         const contextMenuPanel: JSX.Element = useMemo(() => {
+            if (!contextMenuModule) { return null; }
+            const { ContextMenuPanelBase } = contextMenuModule;
             if (element && contextMenuSettings.enabled) {
-                return <ContextMenuPanelBase ref={contextMenuPanelRef} />;
+                return <ContextMenuPanelBase ref={contextMenuModule.contextMenuRef} />;
             }
             return null;
-        }, [element, contextMenuSettings]);
+        }, [element, contextMenuSettings, contextMenuModule?.ContextMenuPanelBase]);
 
         useEffect(() => {
             if (!privateRenderAPI.isContentBusy && editModule?.isShowAddNewRowActive && !editModule?.isShowAddNewRowDisabled) {
@@ -407,45 +441,49 @@ const RenderBase: <T>(_props: Partial<IRenderBase> & RefAttributes<RenderRef<T>>
         }, [toolbar, groupSettings?.showDropArea]);
 
         const loadingSpinnerProps: SpinnerProps = indicatorType === LoadingIndicatorType.Spinner ? params : {};
+        const columnsDetails: ColumnProps[] = isStackedHeader ? stackedFlattedColumnProps : getColumns?.();
         return (
             <>
                 <Spinner visible={privateRenderAPI.isContentBusy && ((!infiniteScrollState?.isVirtualScrollRequest &&
                     scrollMode === ScrollMode.Infinite) || indicatorType === LoadingIndicatorType.Spinner)}
                 className={cssClass} overlay={true} {...loadingSpinnerProps} />
-                {groupSettings?.enabled && groupSettings?.showDropArea && (
-                    <GroupDropArea
+                {groupModule && groupSettings?.enabled && groupSettings?.showDropArea && (() => {
+                    const { GroupDropArea } = groupModule;
+                    return(<GroupDropArea
                         cssClass={cssClass}
-                        groupColumns={groupModule.groupedColumns.map((field: string) =>
-                            (getColumns?.()).find((column: ColumnProps) => column.field === field)) || []}
-                        onUngroupColumn={groupModule.ungroupColumn}
+                        groupColumns={groupModule?.groupedColumns.map((field: string) =>
+                            (columnsDetails)?.find((column: ColumnProps) => column.field === field)) || []}
+                        onUngroupColumn={groupModule?.ungroupColumn}
                         sortDirections={sortSettings?.columns?.reduce(
                             (acc: Record<string, 'Ascending' | 'Descending'>, col: SortDescriptor) => {
                                 acc[col.field as string] = col.direction as 'Ascending' | 'Descending';
                                 return acc;
                             }, {}
                         ) ?? {}}
-                    />
-                )}
-                {toolbarModule && toolbar?.length > 0 && (
-                    <GridToolbar
+                    />);
+                })()}
+                {toolbarModule && toolbar?.length > 0 && (() => {
+                    const { GridToolbar } = toolbarModule;
+                    return (<GridToolbar
                         key={id + '_grid_toolbar'}
                         className={cssClass}
                         toolbar={(toolbar as (string | ToolbarItemProps)[]) || []}
                         gridId={id}
                         toolbarAPI={toolbarModule as ToolbarAPI}
-                    />
-                )}
-                {showColumnChooser && (
-                    <ColumnChooserDialog
+                    />);
+                })()}
+                {columnChooserModule && showColumnChooser && (() => {
+                    const { ColumnChooserDialog } = columnChooserModule;
+                    return (<ColumnChooserDialog
                         isOpen={isColumnChooserOpen}
                         onClose={closeColumnChooser}
-                        columns={getColumns?.() || []}
+                        columns={columnsDetails || []}
                         position={columnChooserPosition}
                         settings={columnChooserSettings}
                         onBeforeOpen={handleColumnChooserBeforeOpen}
                         onApply={handleColumnChooserApply}
-                    />
-                )}
+                    />);
+                })()}
                 {headerPanel}
                 {contentPanel}
                 {aggregates?.length ? footerPanel : null}

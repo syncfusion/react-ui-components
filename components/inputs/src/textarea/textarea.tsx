@@ -169,7 +169,11 @@ type ITextAreaProps = TextAreaProps & Omit<InputHTMLAttributes<HTMLTextAreaEleme
  * ```typescript
  * import { TextArea } from '@syncfusion/react-inputs';
  *
- * <TextArea defaultValue="Initial text" placeholder="Enter text" rows={5} cols={40} />
+ * export default function App() {
+ *      return (
+ *              <TextArea defaultValue="Initial text" placeholder="Enter text" rows={5} cols={40} />
+ *      );
+ * }
  * ```
  */
 export const TextArea: ForwardRefExoticComponent<ITextAreaProps & RefAttributes<ITextArea>> =

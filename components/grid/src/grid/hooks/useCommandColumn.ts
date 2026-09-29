@@ -1,5 +1,10 @@
 import { RefObject, useMemo, useRef } from 'react';
-import { ColumnProps, EditState, InlineEditFormRef, IRow, UseCommandColumnResult } from '../types';
+import { ColumnProps } from '../types/column.interfaces';
+import { EditState, InlineEditFormRef } from '../types/edit.interfaces';
+import { IRow } from '../types/interfaces';
+import { UseCommandColumnResult } from '../types/command.interfaces';
+import { CommandColumnBase } from '../components/CommandColumn';
+import { EditModule } from './useEdit';
 
 /**
  * `useCommandColumn` is a custom hook that provides state management and refs for command column operations.
@@ -16,7 +21,7 @@ import { ColumnProps, EditState, InlineEditFormRef, IRow, UseCommandColumnResult
  * // Use these refs to manage editing state across command column operations
  * ```
  */
-export const useCommandColumn: <T>(isCommandColumnEnabled?: boolean) => UseCommandColumnResult<T> =
+const useCommandColumn: <T>(isCommandColumnEnabled?: boolean) => UseCommandColumnResult<T> =
 <T>(isCommandColumnEnabled?: boolean): UseCommandColumnResult<T> => {
 
     /**
@@ -72,6 +77,9 @@ export const useCommandColumn: <T>(isCommandColumnEnabled?: boolean) => UseComma
         commandEditStateRef,
         commandAddRef,
         commandEditInlineFormRef,
-        commandAddInlineFormRef
+        commandAddInlineFormRef,
+        CommandColumnBase,
+        EditModule
     };
 };
+export { useCommandColumn as CommandColumnModule };

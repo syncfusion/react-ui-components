@@ -1,16 +1,25 @@
 import * as React from 'react';
 import { useState, useCallback, memo, forwardRef, useRef, useMemo, JSX, RefObject, CSSProperties, useImperativeHandle, createElement } from 'react';
-import { Dialog, IDialog } from '@syncfusion/react-popups';
-import { Button, ICheckbox } from '@syncfusion/react-buttons';
+import { Dialog, IDialog } from '@syncfusion/react-popups/src/dialog/index';
+import { Button } from '@syncfusion/react-buttons/src/button/button';
+import { ICheckbox } from '@syncfusion/react-buttons/src/check-box/check-box';
 import { useGridComputedProvider, useGridMutableProvider } from '../../contexts';
-import { EditCell, handleFieldBlurFn, handleFieldChangeFn, internalDataFn, ValidationTooltips } from '../index';
-import { ColumnProps, InlineEditFormRef, EditCellRef, IValueFormatter, ValueType, UseEditResult } from '../../types';
-import { IL10n, isNullOrUndefined, Variant } from '@syncfusion/react-base';
-import { Form, FormField, FormState, FormValueType, IFormValidator, INumericTextBox, ITextBox } from '@syncfusion/react-inputs';
-import { getObject } from '../../utils';
-import { IDatePicker } from '@syncfusion/react-calendars';
-import { IDropDownList } from '@syncfusion/react-dropdowns';
-import { useFormValidationRules } from '../../hooks';
+import { ValidationTooltips } from '../editing/ValidationTooltips';
+import { handleFieldBlurFn, handleFieldChangeFn, internalDataFn } from '../editing/InlineEditForm';
+import { EditCell } from '../editing/EditCell';
+import { ColumnProps } from '../../types/column.interfaces';
+import { InlineEditFormRef, EditCellRef, UseEditResult } from '../../types/edit.interfaces';
+import { IValueFormatter, ValueType } from '../../types/interfaces';
+import { IL10n } from '@syncfusion/react-base/src/l10n';
+import { isNullOrUndefined } from '@syncfusion/react-base/src/util';
+import { Variant } from '@syncfusion/react-base/src/enums';
+import { Form, FormField, FormState, FormValueType, IFormValidator } from '@syncfusion/react-inputs/src/form-validator/index';
+import { INumericTextBox } from '@syncfusion/react-inputs/src/numeric-textbox/numeric-textbox';
+import { ITextBox } from '@syncfusion/react-inputs/src/textbox/textbox';
+import { getObject } from '../../utils/utils';
+import { IDatePicker } from '@syncfusion/react-calendars/src/datepicker/datepicker';
+import { IDropDownList } from '@syncfusion/react-dropdowns/src/drop-down-list/drop-down-list';
+import { useFormValidationRules } from '../../hooks/useFormValidationRules';
 
 // CSS class names for popup edit form
 const POPUP_EDIT_CLASS: string = 'sf-grid-popup-edit';

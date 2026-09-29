@@ -1,14 +1,30 @@
-import { TextAlign, ClipMode, ColumnType, CellType, ContextMenuItem, AggregateType } from '../types/enum';
-import { CSSProperties, ReactElement, ReactNode, TdHTMLAttributes, ThHTMLAttributes, RefObject, JSX, ComponentType } from 'react';
-import { DateFormatOptions, NumberFormatOptions } from '@syncfusion/react-base';
+import { TextAlign, ClipMode, ColumnType, CellType, ContextMenuItem, AggregateType, ColumnPinDirection, AutoFitMode } from '../types/enum';
+import { CSSProperties, ReactElement, ReactNode, TdHTMLAttributes, ThHTMLAttributes, RefObject, JSX, ComponentType,
+    JSXElementConstructor } from 'react';
 import { ValueType, IRow, ICell } from '../types/interfaces';
-import { FilterType, FilterBarType, FilterTemplateProps, ContextMenuItemProps } from './index';
+import { FilterType, FilterBarType } from '../types/enum';
+import { FilterTemplateProps } from '../types/filter.interfaces';
+import { ContextMenuItemProps } from '../types/context.interfaces';
 import { ColumnEditParams, EditTemplateProps } from '../types/edit.interfaces';
-import { FormValueType } from '@syncfusion/react-inputs';
-import { NumericTextBoxProps, TextBoxProps } from '@syncfusion/react-inputs';
-import { DatePickerProps } from '@syncfusion/react-calendars';
-import { DropDownListProps } from '@syncfusion/react-dropdowns';
-import { GroupedData, CommandColumnProps } from './';
+import { GroupedData } from './grouping.interfaces';
+import { CommandColumnProps } from './command.interfaces';
+import { DateFormatOptions, NumberFormatOptions } from '@syncfusion/react-base/src/internationalization';
+import { DatePickerProps } from '@syncfusion/react-calendars/src/datepicker/types';
+import { DropDownListProps } from '@syncfusion/react-dropdowns/src/drop-down-list/types';
+import { FormValueType, ValidationRule } from '@syncfusion/react-inputs/src/form-validator/index';
+import { TextBoxProps } from '@syncfusion/react-inputs/src/textbox/index';
+import { NumericTextBoxProps } from '@syncfusion/react-inputs/src/numeric-textbox/index';
+import { FormulaValue } from './formula.interfaces';
+
+/**
+ * Public input shape for `ColumnProps.pinDirection`.
+ *
+ * Mirrors the typing pattern used by `cellClass` (static value, string alias,
+ * or a callback). The callback receives the column's own props and returns the
+ * resolved pin direction as either the enum value or one of its string aliases
+ * ('left' | 'right' | 'none', case-insensitive).
+ */
+export type PinDirectionInput<T = unknown> = ColumnPinDirection | string | ((column: ColumnProps<T>) => ColumnPinDirection | string);
 
 /**
  * Defines the properties for configuring a column in the grid, including layout, behavior, and data binding options.
@@ -63,6 +79,13 @@ export interface ColumnProps<T = unknown> extends CommandColumnProps {
     uid?: string;
 
     /**
+     * Header text of the direct parent column when this column belongs to a stacked header.
+     *
+     * @private
+     */
+    ParentHeaderText?: string;
+
+    /**
      * Specifies the column's position in the grid's column collection, controlling display order.
      *
      * @private
@@ -86,6 +109,45 @@ export interface ColumnProps<T = unknown> extends CommandColumnProps {
      * @default '' | '100px'
      */
     width?: string | number;
+
+    /**
+     * Defines the minimum width in pixels allowed for the column.
+     * Constrains the column width at all times, including at initial render, during interactive resize (drag, keyboard), auto-fit, and programmatic operations.
+     *
+     * @default 10
+     */
+    minWidth?: number;
+
+    /**
+     * Defines the maximum width in pixels allowed for the column.
+     * Constrains the column width at all times, including at initial render, during interactive resize (drag, keyboard), auto-fit, and programmatic operations.
+     *
+     * @default null
+     */
+    maxWidth?: number;
+
+    /**
+     * Controls whether the column participates in interactive resizing.
+     * When false, the resize handle is not rendered for the column and programmatic resize requests targeting this column are skipped.
+     *
+     * @default true
+     */
+    allowResize?: boolean;
+
+    /**
+     * Controls whether formulas stored in this column are evaluated by the FormulaModule.
+     *
+     * @default false
+     */
+    allowFormula?: boolean;
+
+    /**
+     * Defines the auto-fit scope applied to the column when auto-fit is triggered.
+     * Determines whether measurement considers the header cell only, the content cells only, or the widest of both.
+     *
+     * @default null
+     */
+    autoFit?: AutoFitMode;
 
     /**
      * Aligns text in header and content cells (e.g., `Left`, `Right`, `Center`).
@@ -149,6 +211,34 @@ export interface ColumnProps<T = unknown> extends CommandColumnProps {
     visible?: boolean;
 
     /**
+     * Pins the column to a fixed side during horizontal scrolling.
+     *
+     * * `ColumnPinDirection` enum value — static pin direction
+     * * `'Left' | 'Right' | 'None'` string — string alias of the enum
+     * * A callback receiving the column props — evaluated once during column
+     *   preparation; the returned direction wins over any static declaration.
+     *
+     * @default ColumnPinDirection.None
+     *
+     * @example
+     * ```tsx
+     * // Static
+     * <Column field="OrderID" pinDirection={ColumnPinDirection.Left} />
+     * <Column field="ShipCountry" pinDirection="Right" />
+     *
+     * // Callback — wraps well in useCallback to keep referential identity.
+     * const getDirection = useCallback((column: ColumnProps<Employee>) => {
+     *   if (column.field === 'OrderID') { return ColumnPinDirection.Left; }
+     *   if (column.field === 'ShipCountry') { return ColumnPinDirection.Right; }
+     *   return ColumnPinDirection.None;
+     * }, []);
+     *
+     * <Column field="OrderID" pinDirection={getDirection} />
+     * ```
+     */
+    pinDirection?: PinDirectionInput<T>;
+
+    /**
      * Controls whether the column appears in the column chooser dialog.
      * Set to false to hide the column from the chooser. By default (true), the column is shown.
      * Useful for columns that should always be visible or hidden from user control.
@@ -196,6 +286,29 @@ export interface ColumnProps<T = unknown> extends CommandColumnProps {
      * @default true
      */
     allowEdit?: boolean;
+
+    /**
+     * Disables autofill functionality for this column.
+     * When enabled, the autofill feature is completely unavailable for cells in this column.
+     * The fill handle will not appear when the selection includes this column.
+     * Autofill operations cannot be initiated from or applied to this column.
+     *
+     * @default false
+     *
+     * @example
+     * ```tsx
+     * // Disable autofill for the Country column
+     * <Grid
+     *   columns={[
+     *     { field: 'Athlete', headerText: 'Athlete Name' },
+     *     { field: 'Country', headerText: 'Country', disableAutofill: true },
+     *     { field: 'Year', headerText: 'Year' }
+     *   ]}
+     *   cellFillSettings={{ isEnabled: true }}
+     * />
+     * ```
+     */
+    disableAutofill?: boolean;
 
     /**
      * If false, disables grouping for this specific column.
@@ -392,6 +505,14 @@ export interface ColumnProps<T = unknown> extends CommandColumnProps {
         comparerRowData?: T, sortDirection?: string) => number | string;
 
     /**
+     *
+     * @returns A number or string indicating the filter order. Return a negative number if referenceValue should come before comparerValue, positive if after, or zero if equal.
+     * @private
+     */
+    filterComparer?: (referenceValue: ValueType, comparerValue: ValueType, referenceRowData?: T,
+        comparerRowData?: T, sortDirection?: string) => FormulaValue;
+
+    /**
      * Template for the column's edit UI, as a string, function, or HTML element ID.
      * Customizes the editor during editing.
      *
@@ -570,6 +691,20 @@ export interface ColumnProps<T = unknown> extends CommandColumnProps {
      * @default undefined
      */
     contextMenuItems?: (ContextMenuItem | ContextMenuItemProps)[];
+
+    /**
+     * Controls whether the column participates in reordering.
+     *
+     * @default true
+     */
+    allowReorder?: boolean;
+
+    /**
+     * Stores the presentation position created by a column reorder operation.
+     *
+     * @private
+     */
+    orderIndex?: number;
 }
 
 /**
@@ -763,7 +898,7 @@ export interface ColumnValidationParams {
      *
      * @default false
      */
-    required?: boolean;
+    required?: boolean | ValidationRule;
 
     /**
      * Specifies the minimum length for string values in the field.
@@ -772,7 +907,7 @@ export interface ColumnValidationParams {
      *
      * @default null
      */
-    minLength?: number;
+    minLength?: number | ValidationRule;
 
     /**
      * Specifies the maximum length for string values in the field.
@@ -781,7 +916,7 @@ export interface ColumnValidationParams {
      *
      * @default null
      */
-    maxLength?: number;
+    maxLength?: number | ValidationRule;
 
     /**
      * Specifies the minimum value for numeric inputs in the field.
@@ -790,7 +925,7 @@ export interface ColumnValidationParams {
      *
      * @default null
      */
-    min?: number;
+    min?: number | ValidationRule;
 
     /**
      * Specifies the maximum value for numeric inputs in the field.
@@ -799,7 +934,7 @@ export interface ColumnValidationParams {
      *
      * @default null
      */
-    max?: number;
+    max?: number | ValidationRule;
 
     /**
      * Defines a range [min, max] for numeric values in the field.
@@ -808,7 +943,7 @@ export interface ColumnValidationParams {
      *
      * @default null
      */
-    range?: [number, number];
+    range?: [number, number] | ValidationRule;
 
     /**
      * Defines a range [min, max] for the length of string values in the field.
@@ -817,7 +952,7 @@ export interface ColumnValidationParams {
      *
      * @default null
      */
-    rangeLength?: [number, number];
+    rangeLength?: [number, number] | ValidationRule;
 
     /**
      * Specifies a regular expression pattern for custom validation of the field’s value.
@@ -826,7 +961,7 @@ export interface ColumnValidationParams {
      *
      * @default null
      */
-    regex?: RegExp | string;
+    regex?: RegExp | string | ValidationRule;
 
     /**
      * Defines a custom validation function for the field’s value.
@@ -846,7 +981,7 @@ export interface ColumnValidationParams {
      *
      * @default false
      */
-    number?: boolean;
+    number?: boolean | ValidationRule;
 
     /**
      * Indicates whether the field’s value must be a valid date.
@@ -855,7 +990,7 @@ export interface ColumnValidationParams {
      *
      * @default false
      */
-    date?: boolean;
+    date?: boolean | ValidationRule;
 
     /**
      * Indicates whether the field’s value must be a valid email address.
@@ -864,7 +999,7 @@ export interface ColumnValidationParams {
      *
      * @default false
      */
-    email?: boolean;
+    email?: boolean | ValidationRule;
 
     /**
      * Indicates whether the field’s value must be a valid URL.
@@ -873,7 +1008,7 @@ export interface ColumnValidationParams {
      *
      * @default false
      */
-    url?: boolean;
+    url?: boolean | ValidationRule;
 
     /**
      * Indicates whether the field’s value must contain only digits.
@@ -882,7 +1017,7 @@ export interface ColumnValidationParams {
      *
      * @default false
      */
-    digits?: boolean;
+    digits?: boolean | ValidationRule;
 
     /**
      * Indicates whether the field’s value must be a valid credit card number.
@@ -891,7 +1026,7 @@ export interface ColumnValidationParams {
      *
      * @default false
      */
-    creditCard?: boolean;
+    creditCard?: boolean | ValidationRule;
 
     /**
      * Indicates whether the field’s value must be a valid telephone number.
@@ -900,7 +1035,7 @@ export interface ColumnValidationParams {
      *
      * @default false
      */
-    tel?: boolean;
+    tel?: boolean | ValidationRule;
 
     /**
      * Specifies the field name of another field whose value must match this field’s value.
@@ -909,7 +1044,7 @@ export interface ColumnValidationParams {
      *
      * @default ''
      */
-    equalTo?: string;
+    equalTo?: string | ValidationRule;
 }
 
 /**
@@ -1035,6 +1170,69 @@ export interface IColumnBase<T = unknown> extends ColumnProps<T> {
      * @default ''
      */
     uid?: string;
+
+    /**
+     * Pin bucket of the row container rendering the cell.
+     *
+     * @default undefined
+     */
+    containerPinBucket?: 'top' | 'bottom';
+}
+
+/**
+ * Represents a single flattened column entry used for shared header and content rendering.
+ * Built once inside `prepareColumns` while column details are generated, so the renderer
+ * can iterate the same list for both header and content rows without re-traversing the tree.
+ *
+ * @private
+ */
+export interface FlattenedColumn<T = unknown> {
+    /**
+     * The column directive element (ColumnBase / Column / Columns) associated with this entry.
+     */
+    element: ReactElement<IColumnBase<T>, string | JSXElementConstructor<any>>;
+    /**
+     * Mutable column model associated with this flattened entry.
+     * Used for runtime updates that mutate column state such as visibility or sort direction.
+     */
+    columnProps?: ColumnProps<T>;
+    /**
+     * Depth of the column in the stacked-header hierarchy. 0 for top-level columns.
+     */
+    depth: number;
+
+    /**
+     * Column's uid.
+     */
+    uid: string;
+    /**
+     * Number of leaf (non-stacked) columns this entry represents.
+     * For a leaf column, this is 1. For a stacked parent, it is the total
+     * number of descendants that produce visible content columns.
+     */
+    leafCount: number;
+    /**
+     * Direct child indexes for this flattened parent entry.
+     * Only parent header entries expose this array; leaf entries are null.
+     */
+    ContainsChildIndex?: number[] | null;
+    /**
+     * Direct child FlattenedColumn entries for this column.
+     * Contains complete metadata objects of immediate children, recursively populated.
+     * Empty array for leaf columns; populated only for stacked header columns.
+     */
+    childDetails?: FlattenedColumn<T>[];
+    /**
+     * Total width represented by this flattened column entry.
+     * For leaf columns, this is the column width or a fallback of 100.
+     * For parent columns, this is the sum of the direct child column widths.
+     */
+    totalWidth: number;
+    /**
+     * Header text of the direct parent column, or undefined for top-level columns.
+     * Used to identify the parent in a stacked-header hierarchy.
+     */
+    ParentHeaderText?: string;
 }
 
 /**
@@ -1049,6 +1247,8 @@ export interface PrepareColumns<T = unknown> {
      * @default []
      */
     columns: ColumnProps<T>[];
+    leftPinnedColumns: Map<string, {Column: ReactNode, Col: ReactNode}>;
+    rightPinnedColumns: Map<string, {Column: ReactNode, Col: ReactNode}>;
     groupCaptionAggregateType?: Map<string, string[]>;
     /**
      * Depth level for nested columns.
@@ -1088,6 +1288,47 @@ export interface PrepareColumns<T = unknown> {
     uiColumns?: ColumnProps<T>[];
     visibleColumns?: ColumnProps<T>[];
     /**
+     * Flattened column entries shared by header and content rendering.
+     * Each entry contains the column element, its depth in the hierarchy, and its leaf count.
+     */
+    stackedHeaderColumns?: FlattenedColumn<T>[];
+    /**
+     * Flattened leaf column elements shared by header and content rendering.
+     * Used to render visible leaf columns without re-iterating the hierarchy.
+     */
+    stackedFlattedColumns?: ReactElement<IColumnBase<T>>[];
+    /**
+     * Indicates whether the grid configuration contains stacked (multi-level) headers.
+     */
+    isStackedHeader?: boolean;
+    /**
+     * Indicates whether the grid configuration contains stacked (multi-level) headers details.
+     */
+    visibleStackedHeaderColumns?: ColumnProps<T>[];
+    /**
+     * Flat collection of every column prop (parent and leaf) participating in a stacked header
+     * hierarchy. Useful for external consumers that need to iterate the full set without
+     * re-traversing the nested `columns` tree.
+     *
+     * @default []
+     */
+    allStackedColumnProps?: ColumnProps<T>[];
+    /**
+     * Flat collection of leaf column props (columns with a `field`) participating in a stacked
+     * header hierarchy. Mirrors `stackedFlattedColumns` but as plain prop objects rather than
+     * React elements, for convenient access from non-rendering code paths.
+     *
+     * @default []
+     */
+    stackedFlattedColumnProps?: ColumnProps<T>[];
+    /**
+     * Matrix of stacked header rows, where the outer index represents the depth in the column
+     * hierarchy and the inner array contains the column props rendered at that depth.
+     *
+     * @default []
+     */
+    stackedRowEntries?: ColumnProps<T>[][];
+    /**
      * Specifies if the column renders a checkbox for selection.
      *
      * @default false
@@ -1104,6 +1345,25 @@ export interface PrepareColumns<T = unknown> {
      */
     isSpannedColumns?: boolean;
     singleGroupColumn?: ColumnProps<T> | undefined;
+    /**
+     * Map of field names to their index positions in visible columns.
+     *
+     * @default new Map()
+     */
+    fieldOrderMap?: Map<string, number>;
+    uidOrderMap?: Map<string, number>;
+    /**
+     * Map of field names to their corresponding column properties.
+     *
+     * @default new Map()
+     */
+    columnMap?: Map<string, ColumnProps<T>>;
+    /**
+     * Map of column UIDs to their corresponding column properties.
+     *
+     * @default new Map()
+     */
+    columnUidMap?: Map<string, ColumnProps<T>>;
 }
 
 /**

@@ -3,7 +3,7 @@ import { formatDate } from '@syncfusion/react-base';
 import { CalendarCell, CalendarCellProps } from '../calendar-cell';
 import { CalendarCellData, CalendarSystem, WEEK_LENGTH } from '../../calendar-core';
 import { WeekDaysFormats, CalendarView, WeekRule } from '../types';
-import { buildCellState, CellState, isDateDisabledByRule } from '../utils';
+import { buildCellState, CellState, isDateDisabledByRule, getRangeClassName } from '../utils';
 
 export interface MonthViewProps {
     currentDate: Date;
@@ -116,25 +116,6 @@ export const MonthView: React.FC<MonthViewProps> = (props: MonthViewProps): Reac
         'Wide'
     );
 
-    const isInRange: (date: Date) => boolean = React.useCallback((date: Date): boolean => {
-        if (!range || !Array.isArray(range)) {
-            return false;
-        }
-        const [start, end] = range;
-        if (!(start instanceof Date) || isNaN(start.getTime())) {
-            return false;
-        }
-        if (!(end instanceof Date) || isNaN(end.getTime())) {
-            return false;
-        }
-        const dateTime: number = date.getTime();
-        const startTime: number = start.getTime();
-        const endTime: number = end.getTime();
-        const actualStart: number = Math.min(startTime, endTime);
-        const actualEnd: number = Math.max(startTime, endTime);
-        return dateTime >= actualStart && dateTime <= actualEnd;
-    }, [range?.[0]?.getTime(), range?.[1]?.getTime()]);
-
     const year: number = calendarSystem.getYear(currentDate);
     const month: number = calendarSystem.getMonth(currentDate);
 
@@ -230,13 +211,7 @@ export const MonthView: React.FC<MonthViewProps> = (props: MonthViewProps): Reac
                         );
 
                         const isdateDisabled: boolean = isDateDisabledByRule(date, disablePastDays, disableFutureDays, CalendarView.Month);
-                        const isRangeStart: boolean | undefined = range && Array.isArray(range) && range[0] instanceof Date &&
-                            date.getTime() === range[0].getTime();
-                        const isInSelectedRange: boolean = isInRange(date);
-                        let rangeClass: string = '';
-                        if (isInSelectedRange && !isRangeStart) {
-                            rangeClass += ' sf-in-range';
-                        }
+                        const rangeClass: string = getRangeClassName(date, range, 'date', calendarSystem, true, suppressRangeSelection);
                         const finalClassName: string = (state.className + rangeClass).trim();
                         const baseProps: CalendarCellProps = {
                             id: `${date.valueOf()}`,

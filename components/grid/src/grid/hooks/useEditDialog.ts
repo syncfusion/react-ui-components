@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { IL10n } from '@syncfusion/react-base';
+import { IL10n } from '@syncfusion/react-base/src/l10n';
 import { ServiceLocator } from '../types/interfaces';
 import { DialogState, ConfirmDialogConfig, UseConfirmDialogResult } from '../types/edit.interfaces';
 /**

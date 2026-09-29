@@ -1,6 +1,7 @@
 /**
  * Popup Components
  */
-export * from './position';
-export * from './collision';
+export * from './alignment-types';
+export * from './popup-positioning';
+export * from './collision-handler';
 export * from './resize';

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { excelExportService } from '../services/excel-export-service';
 import type { ExcelExportSettings, UseGridExcelExportOptions, UseExcelExportReturn } from '../types/excel-export.interfaces';
 import { GridTelemetryFeatures } from '../types/enum';
-import { initializeTelemetryFeature } from '@syncfusion/react-base';
+import { initializeTelemetryFeature } from '@syncfusion/react-base/src/telemetry';
 
 /**
  * Hook for managing Excel export state and execution.
@@ -50,7 +50,7 @@ export function useGridExcelExport<T = Record<string, unknown>>(
     }, [options]);
 
     useEffect(() => {
-        initializeTelemetryFeature(GridTelemetryFeatures.ExcelExport, 'grid');
+        initializeTelemetryFeature(GridTelemetryFeatures.ExcelExport, 'DataGrid');
     }, []);
 
     return {

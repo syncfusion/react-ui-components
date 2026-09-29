@@ -1,36 +1,11 @@
 import { ReactNode, ReactElement, ComponentType } from 'react';
 import { AggregateType } from './enum';
-import { DateFormatOptions, NumberFormatOptions } from '@syncfusion/react-base';
+import { DateFormatOptions, NumberFormatOptions } from '@syncfusion/react-base/src/internationalization';
 import { CellClassProps } from './column.interfaces';
+import { GroupedData } from './grouping.interfaces';
+export { CustomSummaryType, aggregateModule, AggregatesComponent, AggregateData } from './interfaces';
 import { Query } from '@syncfusion/react-data';
-import { GroupedData } from '.';
-
-/**
- * Represents the structure of aggregate result values returned by the Data Grid component.
- * Includes raw numeric values for computation and formatted display values for rendering.
- *
- * Raw values are keyed by `field - type` (e.g., `Freight - sum` for summation on the "Freight" field).
- * Formatted values are keyed by `AggregateType` enum members (e.g., `Sum` for rendering summation results).
- *
- * Used in `footerTemplate` rendering and custom aggregation logic.
- *
- * @template T - Data model used for grid aggregate columns.
- *
- * @example
- * ```ts
- * {
- *   "Freight - sum": 1234.56,
- *   "Salary - max": 98000,
- *   Sum: "$1,234.56",
- *   Max: "$98,000"
- * }
- * ```
- */
-export type AggregateData<T = unknown> = {
-    [key in `${Extract<keyof T, string>} - ${Lowercase<AggregateType>}`]?: string | number;
-} & {
-    [type in AggregateType]?: string;
-};
+import { AggregateData } from './interfaces';
 
 /**
  * Represents the input structure for the `customAggregate` function used in data grid aggregation.
@@ -240,7 +215,6 @@ export interface AggregateRowProps {
      */
     children?: ReactNode;
 }
-
 /**
  * Defines the event interface for aggregate cell rendering operations in grid components.
  * Provides context information during the rendering process of individual aggregate cells.
@@ -308,11 +282,4 @@ export interface AggregateRowRenderEvent<T = unknown> {
     rowHeight: number;
 }
 
-/**
- * Defines the function signature for custom aggregate calculation implementations.
- * Specifies the contract for functions that perform specialized summary operations on grid data.
- * Enables implementation of custom aggregation logic beyond standard built-in calculation types.
- *
- * @private
- */
-export type CustomSummaryType<T> = (data: CustomAggregateData<T>[] | CustomAggregateData<T>, column: AggregateColumnProps<T>) => Object;
+

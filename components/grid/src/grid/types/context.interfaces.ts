@@ -1,7 +1,9 @@
-import { ContextMenu, MenuItemProps } from '@syncfusion/react-navigations';
+import { ContextMenu } from '@syncfusion/react-navigations/src/context-menu/context-menu';
+import { MenuItemProps } from '@syncfusion/react-navigations/src/common/components/menu/menu-item';
 import { ContextMenuItem } from './enum';
 import { ColumnProps } from './column.interfaces';
-import { ComponentProps, JSX } from 'react';
+import { ComponentProps, JSX, ReactElement, RefAttributes } from 'react';
+import { MenuSelectEvent } from '@syncfusion/react-navigations/src/menu/types';
 
 /**
  * Defines the arguments passed to context menu display functions.
@@ -33,6 +35,13 @@ export interface ContextMenuArgs {
      * @default undefined
      */
     top?: number;
+    /**
+     * Restricts programmatically opened menus to the supplied built-in items.
+     *
+     * @type {ContextMenuItem[]}
+     * @default undefined
+     */
+    items?: ContextMenuItem[];
 }
 
 /**
@@ -205,4 +214,16 @@ export interface ContextMenuOpenEvent<T = unknown> {
  * @type {string}
  * @default -
  */
-export type ContextMenuParentItem = 'Select';
+export type ContextMenuParentItem = 'Select' | 'PinRow' | 'PinColumn' | 'Chart' | 'BarChart' | 'ColumnChart' | 'LineChart' | 'AreaChart';
+
+/**
+ * @private
+ */
+export type contextMenuModule = { ContextMenuPanelBase: (props: RefAttributes<ContextMenuPanelRef>) =>
+ReactElement, contextMenuRef: React.RefObject<ContextMenuPanelRef> };
+
+export type ChartType = 'Bar' | 'StackingBar' | 'StackingBar100' | 'Pie' | 'Column' | 'StackingColumn' | 'StackingColumn100' | 'Line' | 'StackingLine' | 'StackingLine100' | 'Area' | 'StackingArea' | 'StackingArea100' | 'Scatter';
+
+export interface ContextMenuClickEvent extends MenuSelectEvent {
+    chart?: ChartType;
+}

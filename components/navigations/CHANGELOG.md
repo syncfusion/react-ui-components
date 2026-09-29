@@ -1,5 +1,38 @@
 # Changelog
 
+## 34.1.29 (2026-09-28)
+
+### TreeView
+
+The TreeView component renders structured node collections as an expandable, navigable list. It supports both local arrays and remote `DataManager` data sources, controlled and uncontrolled expansion and selection, multiple selection modes, tri-state checkboxes, inline label editing, and rich keyboard interaction for accessibility.
+
+  **Key features**
+
+  - **Hierarchical Data Binding:** Render nested trees from a `children` field, a self-referential `parentId` field, or a remote `DataManager` with a `Query` and lazy-loaded children.
+  - **Custom Field Mapping:** Map any `dataSource` property names to the TreeView fields (`id`, `label`, `children`, `parentId`, `disabled`, `icon`, `hasChildren`, `tooltip`, `navigateUrl`, and more) using the `fields` prop.
+  - **Selection Modes:** Choose between `None`, `Single`, `Multiple`, or `Checkbox` selection. Checkbox mode supports tri-state checkboxes with optional cascading to descendants and disabled-children participation via `autoCheck` and `checkDisabledChildren`.
+  - **Expansion Control:** Expand on `Click`, `DoubleClick`, or `None`, and drive the expanded set through `expandedIds` (controlled) or `defaultExpandedIds` (uncontrolled).
+  - **Inline Editing:** Enable `editable` to let users rename nodes in place. The `onNodeEdit` callback receives the old and new label and can return `false` to reject the change. A `TreeViewEditInput` slot is provided for full editor customization.
+  - **Sorting and Empty State:** Sort siblings with `sortOrder` and render a custom `TreeViewEmptyState` when the resolved list is empty.
+  - **Row Templates:** Replace the default row rendering with a `TreeViewNodes` render-prop child, or compose individual parts using `TreeViewItemIcon`, `TreeViewItemLabel`, `TreeViewItemToggle`, and `TreeViewItemCheckbox`.
+  - **Keyboard Navigation:** Comprehensive keyboard support for accessibility, including arrow keys to move focus, Home/End for first/last, Enter/Space to select, and F2 to begin editing.
+
+### Sidebar
+
+The Sidebar component renders a collapsible drawer for navigation and custom content. It supports left/right anchoring, push/over interaction modes, optional backdrop, configurable transitions, and a dockable compact state for responsive layouts.
+
+  **Key features**
+
+  - **Positioning:** Anchor the sidebar to either the `Left` or `Right` edge of the viewport to fit different navigation patterns.
+  - **Interaction Modes:** Choose between `Over` (floats above content) and `Push` (shifts main content) modes to control how the sidebar coexists with surrounding content.
+  - **Backdrop Overlay:** Render an optional backdrop when the sidebar is open to focus attention and intercept outside interactions.
+  - **Configurable Transitions:** Customize the enter and exit transition durations independently for smooth, polished animations.
+  - **Dockable State:** Collapse the sidebar into a compact docked state that remains visible, configurable via a `dockableWidth` value.
+  - **Responsive Media Queries:** Drive the sidebar's open/closed state automatically based on a media query for adaptive layouts.
+  - **Controlled and Uncontrolled State:** Manage visibility through `open`/`onOpenChange` for controlled usage or `defaultOpen` for uncontrolled usage.
+  - **Composite Layout API:** Pair the sidebar with `SidebarLayout`, `SidebarMain`, and `SidebarTrigger` components to coordinate drawer, content area, and toggle button.
+  - **Outside Click Handling:** Automatically close the sidebar when clicking outside, configurable via `closeOnDocumentClick`.
+
 ## 34.1.29 (2026-07-06)
 
 ### Menu

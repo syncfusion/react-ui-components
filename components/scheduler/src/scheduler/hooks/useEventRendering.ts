@@ -7,12 +7,9 @@ import { useSchedulerRenderDatesContext } from '../context/scheduler-render-date
 import { useSchedulerLocalization } from '../common/locale';
 import { clearAndSelectAppointment } from '../utils/actions';
 import {
-    renderSpannedContent,
-    renderStandardEventContent,
     getEventContent,
-    renderTimeSlotStandardContent,
-    renderTimeSlotSpannedContent,
-    getTimeSlotEventContent
+    getTimeSlotEventContent,
+    getTimelineTimeSlotEventContent
 } from '../components/event-render';
 
 // ─── Day Event ───────────────────────────────────────────────────────────────
@@ -39,6 +36,7 @@ interface DayEventRenderingProps {
  * Interface for useEventRendering hook parameters (time-slot variant).
  * Does not accept per-event data — the returned functions accept eventInfo
  * as a parameter, allowing a single hook call to serve all events in a loop.
+ * Also exposes timeline-specific content getters bound from the same context.
  */
 interface TimeSlotEventRenderingProps {
     /** Discriminator to select time-slot rendering logic. */
@@ -48,6 +46,12 @@ interface TimeSlotEventRenderingProps {
 // ─── Union ───────────────────────────────────────────────────────────────────
 
 type UseEventRenderingProps = DayEventRenderingProps | TimeSlotEventRenderingProps;
+
+interface UseEventRenderingHook {
+    (props: DayEventRenderingProps): DayEventRenderingResult;
+    (props: TimeSlotEventRenderingProps): TimeSlotEventRenderingResult;
+    (): CommonEventHandlers;
+}
 
 // ─── Shared Event Handlers ───────────────────────────────────────────────────
 
@@ -78,11 +82,9 @@ interface CommonEventHandlers {
  * Handlers accept the event and isBlocked flag per call.
  */
 interface DayEventRenderingResult extends CommonEventHandlers {
-    /** Returns the spanned event content. */
-    renderSpannedContent: () => ReactNode;
-    /** Returns the standard event content. */
-    renderStandardEventContent: () => ReactNode;
-    /** Returns the resolved event content based on event type. */
+    /**
+     * Returns the resolved day/all-day event content based on event type.
+     */
     getEventContent: () => ReactNode;
 }
 
@@ -92,12 +94,13 @@ interface DayEventRenderingResult extends CommonEventHandlers {
  * Handlers accept the event and isBlocked flag per call.
  */
 interface TimeSlotEventRenderingResult extends CommonEventHandlers {
-    /** Returns the spanned content for the given event. */
-    renderSpannedContent: (eventInfo: ProcessedEventsData) => ReactNode;
-    /** Returns the standard content for the given event. */
-    renderStandardEventContent: (eventInfo: ProcessedEventsData) => ReactNode;
-    /** Returns the resolved content for the given event. */
+    /** Returns the resolved vertical time-slot content for the given event. */
     getEventContent: (eventInfo: ProcessedEventsData) => ReactNode;
+    /**
+     * Returns timeline (horizontal) time-slot content for the given event.
+     * Bound with the same locale/timeFormat/template/renderDates context.
+     */
+    getTimelineTimeSlotEventContent: (eventInfo: ProcessedEventsData) => ReactNode;
 }
 
 /**
@@ -105,25 +108,20 @@ interface TimeSlotEventRenderingResult extends CommonEventHandlers {
  *
  * Supports two variants via the `variant` discriminator:
  * - `'day'`      → DayEvent / DayEventClone: zero-arg functions, event bound at hook-call time.
- * - `'timeSlot'` → TimeSlotEvent / TimeSlotEventClone: functions accept `eventInfo` per call,
- *                  so a single hook call serves all events rendered in a loop without
- *                  violating the Rules of Hooks.
+ * - `'timeSlot'` → Appointment / TimeSlotEventClone: functions accept `eventInfo` per call.
+ *                  Exposes getEventContent (vertical) and getTimelineTimeSlotEventContent (timeline).
  * - `undefined`  → Only returns event handlers (handleClick, handleDoubleClick).
  *
- * Internally reads locale, timeFormat, eventTemplate and timescale settings from context,
- * and delegates to pure utility functions in eventRenderingUtils.
+ * Internally reads locale, timeFormat, eventTemplate and timescale settings once from context,
+ * and delegates to pure utility functions in event-render. Callers should not re-read those
+ * props just to build event content — use the bound getters returned by this hook.
  *
  * @param {UseEventRenderingProps} [props] - Rendering parameters for the selected variant.
  * @returns {DayEventRenderingResult|TimeSlotEventRenderingResult|CommonEventHandlers} Memoized rendering functions or handlers.
  * @private
  */
-/* eslint-disable no-redeclare */
-export function useEventRendering(props: DayEventRenderingProps): DayEventRenderingResult;
-export function useEventRendering(props: TimeSlotEventRenderingProps): TimeSlotEventRenderingResult;
-export function useEventRendering(): CommonEventHandlers;
-export function useEventRendering(props?: UseEventRenderingProps):
-DayEventRenderingResult | TimeSlotEventRenderingResult | CommonEventHandlers {
-/* eslint-enable no-redeclare */
+export const useEventRendering: UseEventRenderingHook = ((props?: UseEventRenderingProps):
+DayEventRenderingResult | TimeSlotEventRenderingResult | CommonEventHandlers => {
 
     const {
         timeFormat,
@@ -190,6 +188,7 @@ DayEventRenderingResult | TimeSlotEventRenderingResult | CommonEventHandlers {
     const { locale } = useProviderContext();
     const { getString } = useSchedulerLocalization(locale || 'en-US');
     const { renderDates } = useSchedulerRenderDatesContext();
+
     const addTitleLabel: string = getString('addTitle');
 
     // ─── Variant discriminator and bound values ──────────────────────────────
@@ -206,26 +205,16 @@ DayEventRenderingResult | TimeSlotEventRenderingResult | CommonEventHandlers {
     // ── Builders: define rendering callbacks inside helper builders and call both
     // Builders are called unconditionally so hooks inside them remain stable.
     const buildDayCallbacks: () => DayEventRenderingResult = (): DayEventRenderingResult => {
-        const renderSpanned: () => ReactNode =
-            useCallback((): ReactNode =>
-                renderSpannedContent(boundEvent, boundOverflowLeft, boundOverflowRight, locale, timeFormat, addTitleLabel),
-                        [boundEvent, boundOverflowLeft, boundOverflowRight, locale, timeFormat, addTitleLabel]);
-
-        const renderStandard: () => ReactNode =
-            useCallback((): ReactNode =>
-                renderStandardEventContent(boundEvent, locale, timeFormat, addTitleLabel),
-                        [boundEvent, locale, timeFormat, addTitleLabel]);
-
         const getContent: () => ReactNode =
             useCallback((): ReactNode =>
-                getEventContent(eventTemplate, boundEvent, boundTotalSegments, boundOverflowLeft, boundOverflowRight,
-                                locale, timeFormat, addTitleLabel),
-                        [eventTemplate, boundEvent, boundTotalSegments, boundOverflowLeft, boundOverflowRight, locale,
-                            timeFormat, addTitleLabel]);
+                getEventContent(
+                    eventTemplate, boundEvent, boundTotalSegments, boundOverflowLeft,
+                    boundOverflowRight, locale, timeFormat, addTitleLabel
+                ),
+                        [eventTemplate, boundEvent, boundTotalSegments, boundOverflowLeft,
+                            boundOverflowRight, locale, timeFormat, addTitleLabel]);
 
         return {
-            renderSpannedContent: renderSpanned,
-            renderStandardEventContent: renderStandard,
             getEventContent: getContent,
             handleClick,
             handleDoubleClick
@@ -233,34 +222,39 @@ DayEventRenderingResult | TimeSlotEventRenderingResult | CommonEventHandlers {
     };
 
     const buildSlotCallbacks: () => TimeSlotEventRenderingResult = (): TimeSlotEventRenderingResult => {
-        const renderSpanned: (eventInfo: ProcessedEventsData) => ReactNode = useCallback(
-            (eventInfo: ProcessedEventsData): ReactNode =>
-                renderTimeSlotSpannedContent(
-                    eventInfo, renderDates, timeScaleEnabled, timeFormat, locale,
-                    addTitleLabel, startHourTuple, endHourTuple
-                ),
-            [renderDates, timeScaleEnabled, timeFormat, locale, addTitleLabel, startHourTuple, endHourTuple]
-        );
-
-        const renderStandard: (eventInfo: ProcessedEventsData) => ReactNode = useCallback(
-            (eventInfo: ProcessedEventsData): ReactNode =>
-                renderTimeSlotStandardContent(eventInfo, timeFormat, locale, addTitleLabel),
-            [timeFormat, locale, addTitleLabel]
-        );
-
         const getContent: (eventInfo: ProcessedEventsData) => ReactNode = useCallback(
             (eventInfo: ProcessedEventsData): ReactNode =>
                 getTimeSlotEventContent(
                     eventTemplate, eventInfo, renderDates, timeScaleEnabled,
                     timeFormat, locale, addTitleLabel, startHourTuple, endHourTuple
                 ),
-            [eventTemplate, renderDates, timeScaleEnabled, timeFormat, locale, addTitleLabel, startHourTuple, endHourTuple]
+            [
+                eventTemplate, renderDates, timeScaleEnabled, timeFormat, locale, addTitleLabel,
+                startHourTuple, endHourTuple
+            ]
+        );
+
+        const getTimelineContent: (eventInfo: ProcessedEventsData) => ReactNode = useCallback(
+            (eventInfo: ProcessedEventsData): ReactNode =>
+                getTimelineTimeSlotEventContent(
+                    eventTemplate,
+                    eventInfo,
+                    renderDates,
+                    timeFormat,
+                    locale,
+                    addTitleLabel,
+                    startHourTuple,
+                    endHourTuple
+                ),
+            [
+                eventTemplate, renderDates, timeFormat, locale, addTitleLabel,
+                startHourTuple, endHourTuple
+            ]
         );
 
         return {
-            renderSpannedContent: renderSpanned,
-            renderStandardEventContent: renderStandard,
             getEventContent: getContent,
+            getTimelineTimeSlotEventContent: getTimelineContent,
             handleClick,
             handleDoubleClick
         };
@@ -271,6 +265,6 @@ DayEventRenderingResult | TimeSlotEventRenderingResult | CommonEventHandlers {
     const slotCallbacks: TimeSlotEventRenderingResult = buildSlotCallbacks();
 
     return isDayVariant ? dayCallbacks : slotCallbacks;
-}
+}) as UseEventRenderingHook;
 
 export default useEventRendering;

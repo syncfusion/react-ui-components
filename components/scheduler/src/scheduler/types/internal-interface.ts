@@ -8,8 +8,39 @@ import { IScheduler } from '../index';
 import { useConfirmationDialog } from '../hooks/useConfirmationDialog';
 import { MonthCell } from '../hooks/useMonthCells';
 
+/**
+ * Describes measured dimensions returned by `getCellDimensions`.
+ *
+ * @private
+ */
+export interface ViewDimensions {
+    cellHeight: number;
+    cellWidth?: number;
+}
+
 /** @private */
 export interface ActiveViewProps extends SchedulerProps, ViewSpecificProps {
+
+    /**
+     * Active scheduler view type.
+     */
+    viewType?: View;
+
+    /**
+     * Indicates whether the active view is a Timeline view (TimelineDay, TimelineWeek, TimelineWorkWeek, TimelineMonth).
+     *
+     * Derived once in `useScheduler` and exposed via the Scheduler context so consumers
+     * do not need to repeat the `viewType?.startsWith('Timeline')` check.
+     */
+    isTimelineView?: boolean;
+
+    /**
+     * Indicates whether the active view is a Month view (Month or TimelineMonth).
+     *
+     * Derived once in `useScheduler` and exposed via the Scheduler context so consumers
+     * do not need to repeat the `viewType === 'Month' || viewType === 'TimelineMonth'` check.
+     */
+    isMonthView?: boolean;
 
     /**
      * Specifies whether to use the displayDate or not.
@@ -114,6 +145,20 @@ export interface IAllDayRow {
 }
 
 /** @private */
+export interface AppointmentProps {
+    /** The event data to render. */
+    eventInfo: ProcessedEventsData;
+    /** Whether the event is in a vertical time-slot view. */
+    isVertical?: boolean;
+    /** Spanned indicators. */
+    hasPrevious?: boolean;
+    /** Spanned indicators. */
+    hasNext?: boolean;
+    /** Defines resource grouping index */
+    groupIndex?: number;
+}
+
+/** @private */
 export interface TimeCellsProps {
     currentTime?: Date;
     currentTimePosition?: number;
@@ -123,6 +168,7 @@ export interface TimeCellsProps {
 /** @private */
 export interface TimeIndicatorProps {
     onPositionUpdate?: (position: number, isWithinBounds: boolean) => void;
+    viewMode?: 'vertical' | 'timeline';
 }
 
 /** @private */
@@ -242,6 +288,10 @@ export interface TimeSlot {
     label: string;
     templateProps: TimeSlotProps;
     index: number;
+    hour?: number;
+    minute?: number;
+    slotIndex?: number;
+    minutesFromStart?: number;
 }
 
 /** @private */
@@ -255,7 +305,7 @@ export interface CellData {
     /**
      * Specifies the cell type.
      */
-    type: 'resourceHeader' | 'dateHeader' | 'monthWeekday';
+    type: 'resourceHeader' | 'dateHeader' | 'monthWeekday' | 'hourHeader' | 'customRowsHeader';
 
     /**
      * Specifies the resource configuration.
@@ -331,4 +381,97 @@ export interface CellData {
      * Specifies the render dates for the resource.
      */
     renderDates?: Date[];
+
+    /**
+     * Specifies whether the cell represents a major (primary) time slot.
+     */
+    isMajorSlot?: boolean;
+
+    /**
+     * Specifies the end date for the cell, used when a cell spans a date range.
+     */
+    endDate?: Date;
+}
+
+/** @private */
+export interface TimelineSlot {
+    hour?: number;
+    minute?: number;
+    slotIndex?: number;
+    isMajorBoundary?: boolean;
+    minutesFromStart: number;
+    state?: boolean;
+    top?: number;
+    width?: number;
+    label?: string;
+}
+
+/** @private */
+export interface TimelineProcessedEvent extends ProcessedEventsData {
+    leftPx: number;
+    widthPx: number;
+    topPx: number;
+    isBlockIndicator?: boolean;
+}
+
+/** @private */
+export interface TimelineEventRow {
+    key: string;
+    date: Date;
+    dateTimestamp: number;
+    dateIndex: number;
+    rowHeight: number;
+    stackCount: number;
+    events: TimelineProcessedEvent[];
+    hiddenEventsInfo?: { count: number; };
+    hiddenEventsInfoBySlot?: Map<number, { count: number; }>;
+    eventsBySlot?: Map<number, TimelineProcessedEvent[]>;
+}
+
+/** @private */
+export interface HeaderRowGroup {
+    startDate: Date;
+    endDate?: Date;
+    startIndex?: number;
+    endIndex?: number;
+    label: string;
+    weekNumber: number;
+}
+
+/**
+ * Minimal structural shape accepted by id-resolution helpers. Both
+ * `ResourceLevel` (tree nodes) and `TimelineResourceRowMeta` (header rows)
+ * expose `resource` and `resourceData`, so the helpers can resolve the same
+ * composite id from either without an intermediate lookup.
+ *
+ * @private
+ */
+export interface ResourceNodeRef {
+    resource?: SchedulerResource;
+    resourceData?: Record<string, any>;
+}
+
+/**
+ * Item shape for the TreeView's bound data.
+ *
+ * Mirrors a `ResourceLevel` node from `useResourceGroupingContext().resourceTree`.
+ * `selectable` is `false` on parent rows so only leaves drive selection.
+ *
+ * @private
+ */
+export interface ResourceTreeItem {
+    /** Stable TreeView node id, composed as `${resource.name}_${getNodeId(node)}`. */
+    id: string;
+    /** Display label for the row. */
+    label: string;
+    /** `true` for leaf rows only; parents are non-selectable. */
+    selectable: boolean;
+    /** Nested child items; empty for leaves. */
+    child?: ResourceTreeItem[];
+    /** Zero-based leaf index; set on leaf rows and used by `onSelectedChange`. */
+    leafIndex?: number;
+    /** Original row data from the grouping service. */
+    resourceData?: Record<string, any>;
+    /** Original resource configuration. */
+    resource?: SchedulerResource;
 }

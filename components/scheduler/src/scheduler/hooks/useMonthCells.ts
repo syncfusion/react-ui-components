@@ -104,7 +104,9 @@ export interface MonthCellsResult {
     /**
      * Handle more click for more event creation
      */
-    handleMoreClick: (e: MouseEvent<HTMLElement>, date: Date, resource?: ResourceLevel) => void;
+    handleMoreClick: (
+        e: MouseEvent<HTMLElement>, startDate: Date, resource?: ResourceLevel, endDate?: Date
+    ) => void;
 }
 
 /**
@@ -122,12 +124,12 @@ export function useMonthCells(props: MonthCellsProps): MonthCellsResult {
         selectedDate,
         workDays,
         showWeekend,
-        maxEventsPerRow = 3
+        maxEventsStack = 3
     } = useSchedulerPropsContext();
 
     const { locale } = useProviderContext();
     const { renderDates } = useSchedulerRenderDatesContext();
-    const { getAllEventsForDate } = useMonthEvents(renderDates, maxEventsPerRow);
+    const { getAllEventsForDate } = useMonthEvents(renderDates, maxEventsStack);
     const { handleMoreClick } = useMoreIndicator(getAllEventsForDate);
     const { isGroupingEnabled, leafResources, groupConfig } = useResourceGroupingContext();
 
@@ -273,7 +275,7 @@ export function useMonthCells(props: MonthCellsProps): MonthCellsResult {
             resource,
             cells: generateCellsForResource(resource)
         }));
-    }, [isGroupingEnabled, generateCellsForResource, groupConfig.byDate]);
+    }, [isGroupingEnabled, leafResources, generateCellsForResource, groupConfig.byDate]);
 
     /**
      * Generate cells organized by date first, then resource

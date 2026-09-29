@@ -1,4 +1,4 @@
-import { isNullOrUndefined } from '@syncfusion/react-base';
+import { isNullOrUndefined } from '@syncfusion/react-base/src/util';
 import { ServiceLocator } from '../types/interfaces';
 
 // ServiceLocator constants

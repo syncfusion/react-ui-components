@@ -38,7 +38,7 @@ export interface IDatePicker extends DatePickerProps {
  * import { DatePicker } from '@syncfusion/react-calendars';
  *
  * export default function App() {
- *   return <DatePicker />;
+ *          return <DatePicker />;
  * }
  * ```
  */

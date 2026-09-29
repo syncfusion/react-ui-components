@@ -1,41 +1,34 @@
-import {
-    PdfDocument,
-    PdfGrid,
-    PdfStandardFont,
-    PdfFontFamily,
-    PdfFontStyle,
-    PdfStringFormat,
-    PdfTextAlignment,
-    PdfSolidBrush,
-    PdfColor,
-    PdfGridCellStyle,
-    PdfPaddings,
-    PdfVerticalAlignment,
-    PdfSection,
-    PdfGridCell,
-    PdfGridColumn,
-    PdfGridRow,
-    PdfTextWebLink,
-    PdfPage,
-    PdfBitmap,
-    RectangleF,
-    PdfHorizontalOverflowType,
-    SizeF,
-    PdfPageSettings,
-    PdfPageOrientation,
-    PdfPageTemplateElement,
-    PdfPen,
-    PdfPageNumberField,
-    PdfPageCountField,
-    PdfCompositeField,
-    PointF,
-    PdfGridLayoutFormat,
-    PdfLayoutType,
-    PdfLayoutBreakType
-} from '@syncfusion/pdf-export';
+import { PdfDocument } from '@syncfusion/pdf-export/src/implementation/document/pdf-document';
+import { PdfStandardFont } from '@syncfusion/pdf-export/src/implementation/graphics/fonts/pdf-standard-font';
+import { PdfStringFormat } from '@syncfusion/pdf-export/src/implementation/graphics/fonts/pdf-string-format';
+import { PdfTextAlignment, PdfVerticalAlignment } from '@syncfusion/pdf-export/src/implementation/graphics/enum';
+import { PdfColor } from '@syncfusion/pdf-export/src/implementation/graphics/pdf-color';
+import { PdfPen } from '@syncfusion/pdf-export/src/implementation/graphics/pdf-pen';
+import { PdfBitmap } from '@syncfusion/pdf-export/src/implementation/graphics/images/pdf-bitmap';
+import { PointF, RectangleF, SizeF } from '@syncfusion/pdf-export/src/implementation/drawing/pdf-drawing';
+import { PdfSection } from '@syncfusion/pdf-export/src/implementation/pages/pdf-section';
+import { PdfPage } from '@syncfusion/pdf-export/src/implementation/pages/pdf-page';
+import { PdfPageSettings } from '@syncfusion/pdf-export/src/implementation/pages/pdf-page-settings';
+import { PdfPageTemplateElement } from '@syncfusion/pdf-export/src/implementation/pages/pdf-page-template-element';
+import { PdfPageNumberField } from '@syncfusion/pdf-export/src/implementation/document/automatic-fields/pdf-page-number-field';
+import { PdfPageCountField } from '@syncfusion/pdf-export/src/implementation/document/automatic-fields/page-count-field';
+import { PdfCompositeField } from '@syncfusion/pdf-export/src/implementation/document/automatic-fields/composite-field';
+import { PdfTextWebLink } from '@syncfusion/pdf-export/src/implementation/annotations/pdf-text-web-link';
+import { PdfGrid } from '@syncfusion/pdf-export/src/implementation/structured-elements/grid/pdf-grid';
+import { PdfGridCell } from '@syncfusion/pdf-export/src/implementation/structured-elements/grid/pdf-grid-cell';
+import { PdfGridColumn } from '@syncfusion/pdf-export/src/implementation/structured-elements/grid/pdf-grid-column';
+import { PdfGridRow } from '@syncfusion/pdf-export/src/implementation/structured-elements/grid/pdf-grid-row';
+import { PdfGridCellStyle } from '@syncfusion/pdf-export/src/implementation/structured-elements/grid/styles/style';
+import { PdfGridLayoutFormat } from '@syncfusion/pdf-export/src/implementation/structured-elements/grid/layout/grid-layouter';
+import { PdfFontFamily, PdfFontStyle } from '@syncfusion/pdf-export/src/implementation/graphics/fonts/enum';
+import { PdfSolidBrush } from '@syncfusion/pdf-export/src/implementation/graphics/brushes/pdf-solid-brush';
+import { PdfPaddings } from '@syncfusion/pdf-export/src/implementation/structured-elements/grid/styles/pdf-borders';
+import { PdfPageOrientation } from '@syncfusion/pdf-export/src/implementation/pages/enum';
+import { PdfLayoutType, PdfLayoutBreakType } from '@syncfusion/pdf-export/src/implementation/graphics/figures/enum';
+import { PdfHorizontalOverflowType } from '@syncfusion/pdf-export/src/implementation/structured-elements/grid/styles/style';
+import { PdfExportSettings, PdfExportResult, PdfCellCustomizeArgs, PdfFooter, PdfHeader, PdfHeaderFooterContent, PdfPosition, PdfContentStyle, PdfPoints, PdfSize } from '../types/pdf-export.interfaces';
 import { ColumnProps } from '../types/column.interfaces';
 import { GroupedData } from '../types/grouping.interfaces';
-import { PdfExportSettings, PdfExportResult, PdfCellCustomizeArgs, PdfFooter, PdfHeader, PdfHeaderFooterContent, PdfPosition, PdfContentStyle, PdfPoints, PdfSize } from '../types/pdf-export.interfaces';
 
 // PDF Page Size Constants
 const PDF_PAGE_SIZE_A3: string = 'A3';
@@ -364,6 +357,9 @@ function renderHeaderFooterPageNumber(element: PdfPageTemplateElement, content: 
  * @param {unknown[]} dataSource - The grid data
  * @param {Function} [onPdfCellCustomize] - Optional callback for cell-level customization
  * @param {Object} [groupingSettings] - Optional grouping settings for grouped data export
+ * @param {boolean} groupingSettings.enabled - Whether grouping is enabled
+ * @param {string[]} groupingSettings.columns - The grouping column names
+ * @param {('verbose'|'compact')} groupingSettings.captionFormat - The caption format
  * @returns {PdfGrid} Configured PDF grid
  */
 function buildPdfGrid(
@@ -725,6 +721,9 @@ async function executePdfExportStrategy<T>(
  * @param {ColumnProps[]} columns - The grid columns
  * @param {PdfExportSettings} config - The PDF export configuration
  * @param {Object} [groupingSettings] - Optional grouping settings for grouped data export
+ * @param {boolean} groupingSettings.enabled - Whether grouping is enabled
+ * @param {string[]} groupingSettings.columns - The grouping column names
+ * @param {('verbose'|'compact')} groupingSettings.captionFormat - The caption format
  * @returns {Promise<PdfExportResult>} PDF export result
  */
 export async function pdfWindowManager<T>(

@@ -1,14 +1,12 @@
-import { FC, ReactNode, MouseEvent } from 'react';
+import { FC, ReactNode } from 'react';
 import { CSS_CLASSES } from '../common/constants';
 import { ProcessedEventsData } from '../types/internal-interface';
 import { useProviderContext, formatDate } from '@syncfusion/react-base';
 import { AgendaEventItem } from './agenda-event-item';
 import { AgendaEmptyState } from './agenda-empty-state';
 import { useSchedulerPropsContext } from '../context/scheduler-context';
-import { DateService } from '../services/DateService';
-import { useNavigate } from '../hooks/useDateHeader';
-import { ViewService } from '../services/ViewService';
 import { useSchedulerLocalization } from '../common/locale';
+import { AgendaDateHeader } from './agenda-date-header';
 
 /**
  * Props for AgendaDateGroup component
@@ -23,6 +21,19 @@ interface AgendaDateGroupProps {
      * Events for this date, sorted by start time
      */
     events: ProcessedEventsData[];
+
+    /**
+     * Optional group index for resource grouping
+     * Set when rendering within a resource-grouped agenda view
+     */
+    groupIndex?: number;
+
+    /**
+     * Optional group order (resource hierarchy path) for resource grouping
+     * Set when rendering within a resource-grouped agenda view
+     * Used to retrieve resource color
+     */
+    groupOrder?: (number | string)[];
 }
 
 /**
@@ -34,6 +45,8 @@ interface AgendaDateGroupProps {
  * <AgendaDateGroup
  *   date={new Date()}
  *   events={[...]}
+ *   groupIndex={0}
+ *   groupOrder={[1]}
  * />
  * ```
  *
@@ -42,45 +55,28 @@ interface AgendaDateGroupProps {
  */
 export const AgendaDateGroup: FC<AgendaDateGroupProps> = ({
     date,
-    events
+    events,
+    groupIndex,
+    groupOrder
 }: AgendaDateGroupProps): ReactNode => {
     const { locale } = useProviderContext();
-    const { dateHeader, dateFormat, getAvailableViews } = useSchedulerPropsContext();
-    const { handleDateClick } = useNavigate();
-    const dayNumber: string = DateService.formatDateRange(locale, date, undefined, 'd');
-    const dayName: string = DateService.formatDateRange(locale, date, undefined, 'E');
-    const isToday: boolean = DateService.isToday(date);
+    const { dateFormat } = useSchedulerPropsContext();
     const { getString } = useSchedulerLocalization(locale || 'en-US');
     const eventsFor: string = getString('eventsFor');
     const formattedDate: string = formatDate(date, {
         format: dateFormat || 'EEEE, MMMM dd, yyyy',
         locale
     }) || '';
-    const isDayViewAvailable: boolean = ViewService.isDayViewAvailable(getAvailableViews);
 
     return (
         <div className={CSS_CLASSES.AGENDA_DATE_GROUP} role="region" aria-label={`${eventsFor} ${formattedDate}`}>
             <div className={CSS_CLASSES.DATE_HEADER}>
-                <div className={`${CSS_CLASSES.AGENDA_DATE_LABEL} ${isToday ? CSS_CLASSES.CURRENT_DATE : ''}`}>
-                    {dateHeader ? (
-                        dateHeader({ date })
-                    ) : (
-                        <>
-                            <div
-                                className={`${CSS_CLASSES.AGENDA_DATE_NUMBER} ${isDayViewAvailable ? CSS_CLASSES.LINK : ''}`}
-                                onClick={(e: MouseEvent<HTMLElement>) => handleDateClick(e, date)}
-                            >
-                                {dayNumber}
-                            </div>
-                            <div className={CSS_CLASSES.AGENDA_DATE_NAME}>{dayName}</div>
-                        </>
-                    )}
-                </div>
+                <AgendaDateHeader date={date} />
                 <div className={CSS_CLASSES.AGENDA_EVENTS_CONTAINER}>
                     {events && events.length > 0 ? (
                         <ul className={CSS_CLASSES.AGENDA_EVENT_LIST}>
                             {events.map((eventData: ProcessedEventsData) => (
-                                <AgendaEventItem key={`event-${eventData.event.id}-${eventData.startDate?.getTime()}`} eventData={eventData} />
+                                <AgendaEventItem key={`event-${eventData.event.id}-${eventData.startDate?.getTime()}`} eventData={eventData} groupIndex={groupIndex} groupOrder={groupOrder} />
                             ))}
                         </ul>
                     ) : (

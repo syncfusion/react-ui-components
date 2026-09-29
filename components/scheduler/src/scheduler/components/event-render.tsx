@@ -27,16 +27,18 @@ export const formatEventTime: (time: Date, timeFormat: string, locale: string) =
 /**
  * Renders an overflow indicator arrow for spanned events.
  *
- * @param {'left' | 'right'} direction - The overflow direction.
+ * @param {'left' | 'right'} direction - The overflow direction (logical, before RTL swap).
  * @returns {ReactNode} The overflow indicator element.
  * @private
  */
 export const renderOverflowIndicator: (direction: 'left' | 'right') => ReactNode =
-    (direction: 'left' | 'right'): ReactNode => (
-        <div className={`sf-indicator sf-icons sf-${direction}-icon`}>
-            {direction === 'left' ? <ChevronLeftDoubleIcon /> : <ChevronRightDoubleIcon />}
-        </div>
-    );
+    (direction: 'left' | 'right'): ReactNode => {
+        return (
+            <div className={`${CSS_CLASSES.INDICATOR} ${CSS_CLASSES.ICONS} sf-${direction}-icon`}>
+                {direction === 'left' ? <ChevronLeftDoubleIcon /> : <ChevronRightDoubleIcon />}
+            </div>
+        );
+    };
 
 /**
  * Renders a time label element.
@@ -161,7 +163,45 @@ export const renderStandardEventContent: (
 };
 
 /**
- * Determines and returns the appropriate event content based on type.
+ * Renders basic appointment details (subject, location, optional time, recurrence).
+ * View-agnostic: pass `showTime` to control time visibility instead of view flags.
+ *
+ * @param {EventModel} event - The event model to render.
+ * @param {string} locale - The locale string.
+ * @param {string} timeFormat - The time format string.
+ * @param {string} addTitleLabel - The localized label for 'Add title'.
+ * @param {string} [timeDisplay] - Optional pre-formatted time display text.
+ * @param {boolean} [showTime] - Whether to show the time row. Defaults to true when the event is not a block.
+ * @returns {ReactNode} The basic event details content.
+ * @private
+ */
+export const renderBasicEventContent: (
+    event: EventModel, locale: string, timeFormat: string, addTitleLabel: string, timeDisplay?: string, showTime?: boolean
+) => ReactNode = (
+    event: EventModel, locale: string, timeFormat: string, addTitleLabel: string, timeDisplay?: string, showTime?: boolean
+): ReactNode => {
+    const timeText: string = timeDisplay ||
+        (event.startTime && event.endTime
+            ? getTimeRangeString(event.startTime, event.endTime, timeFormat, locale)
+            : '');
+    const shouldShowTime: boolean = showTime ?? !event.isBlock;
+    return (
+        <div className={CSS_CLASSES.APPOINTMENT_DETAILS}>
+            <div className={CSS_CLASSES.SUBJECT}>{event.subject || addTitleLabel}</div>
+            {!event.isBlock && event.location && (
+                <div className={`${CSS_CLASSES.EVENT_LOCATION} ${CSS_CLASSES.ELLIPSIS}`}>{event.location}</div>
+            )}
+            {shouldShowTime && (
+                <div className={`${CSS_CLASSES.EVENT_TIME} ${CSS_CLASSES.ELLIPSIS}`}>{timeText}</div>
+            )}
+            <RecurrenceIcon event={event} />
+        </div>
+    );
+};
+
+/**
+ * Determines and returns the appropriate day/all-day event content based on type.
+ * View-agnostic — no timeline or view-specific branching.
  *
  * @param {Function | undefined} eventTemplate - Optional custom event template.
  * @param {EventModel} event - The event model.
@@ -231,22 +271,7 @@ const renderAppointmentDetails: (eventInfo: ProcessedEventsData, timeFormat: str
     locale: string, addTitleLabel: string) => ReactNode =
     (eventInfo: ProcessedEventsData, timeFormat: string, locale: string, addTitleLabel: string): ReactNode => {
         const { event, timeDisplay } = eventInfo;
-        const timeText: string = timeDisplay ||
-            (event.startTime && event.endTime
-                ? getTimeRangeString(event.startTime, event.endTime, timeFormat, locale)
-                : '');
-        return (
-            <div className={CSS_CLASSES.APPOINTMENT_DETAILS}>
-                <div className={CSS_CLASSES.SUBJECT}>{event.subject || addTitleLabel}</div>
-                {!event.isBlock && event.location && (
-                    <div className={`${CSS_CLASSES.EVENT_LOCATION} ${CSS_CLASSES.ELLIPSIS}`}>{event.location}</div>
-                )}
-                {!event.isBlock && (
-                    <div className={`${CSS_CLASSES.EVENT_TIME} ${CSS_CLASSES.ELLIPSIS}`}>{timeText}</div>
-                )}
-                <RecurrenceIcon event={event} />
-            </div>
-        );
+        return renderBasicEventContent(event, locale, timeFormat, addTitleLabel, timeDisplay, !event.isBlock);
     };
 
 /**
@@ -279,8 +304,9 @@ export const renderTimeSlotStandardContent: (
 };
 
 /**
- * Renders the spanned content for a time-slot event, including top/bottom
+ * Renders the spanned content for a vertical time-slot event, including top/bottom
  * overflow indicators when timescale is enabled, or left/right when disabled.
+ * View-agnostic: vertical time-slot behavior only (no timeline branching).
  *
  * @param {ProcessedEventsData} eventInfo - The processed event data.
  * @param {Date[]} renderDates - The dates currently rendered in the view.
@@ -348,26 +374,72 @@ export const renderTimeSlotSpannedContent: (
     return (
         <Fragment>
             <div className={CSS_CLASSES.INNER_APPOINTMENT}>
-                {isOverflowLeft && (
-                    <div className={`${CSS_CLASSES.INDICATOR} ${CSS_CLASSES.ICONS} ${CSS_CLASSES.LEFT_ARROW_ICON}`}>
-                        <ChevronLeftDoubleIcon />
-                    </div>
-                )}
+                {isOverflowLeft && renderOverflowIndicator('left')}
                 {contentNode}
                 {eventTemplate && <RecurrenceIcon event={eventInfo.event} />}
-                {isOverflowRight && (
-                    <div className={`${CSS_CLASSES.INDICATOR} ${CSS_CLASSES.ICONS} ${CSS_CLASSES.RIGHT_ARROW_ICON}`}>
-                        <ChevronRightDoubleIcon />
-                    </div>
-                )}
+                {isOverflowRight && renderOverflowIndicator('right')}
             </div>
         </Fragment>
     );
 };
 
 /**
- * Resolves and returns the appropriate content for a time-slot event.
+ * Renders spanned content for timeline (horizontal) time-slot events.
+ * Always uses left/right overflow indicators with hour-tuple aware overflow detection.
+ *
+ * @param {ProcessedEventsData} eventInfo - The processed event data.
+ * @param {Date[]} renderDates - The dates currently rendered in the view.
+ * @param {string} timeFormat - The time format string.
+ * @param {string} locale - The locale string.
+ * @param {string} addTitleLabel - The localized label for 'Add title'.
+ * @param {[number, number]} [startHourTuple] - The scheduler start hour tuple.
+ * @param {[number, number]} [endHourTuple] - The scheduler end hour tuple.
+ * @param {Function} [eventTemplate] - Optional custom event template.
+ * @returns {ReactNode} The spanned timeline time-slot event content.
+ * @private
+ */
+export const renderTimelineTimeSlotSpannedContent: (
+    eventInfo: ProcessedEventsData,
+    renderDates: Date[],
+    timeFormat: string,
+    locale: string,
+    addTitleLabel: string,
+    startHourTuple?: [number, number],
+    endHourTuple?: [number, number],
+    eventTemplate?: (event: EventModel) => ReactNode
+) => ReactNode = (
+    eventInfo: ProcessedEventsData,
+    renderDates: Date[],
+    timeFormat: string,
+    locale: string,
+    addTitleLabel: string,
+    startHourTuple?: [number, number],
+    endHourTuple?: [number, number],
+    eventTemplate?: (event: EventModel) => ReactNode
+): ReactNode => {
+    const contentNode: ReactNode = eventTemplate
+        ? eventTemplate(eventInfo.event)
+        : renderAppointmentDetails(eventInfo, timeFormat, locale, addTitleLabel);
+
+    const { isOverflowLeft, isOverflowRight } =
+        PositioningService.getOverflowDirection(eventInfo, renderDates, startHourTuple, endHourTuple);
+
+    return (
+        <Fragment>
+            <div className={CSS_CLASSES.INNER_APPOINTMENT}>
+                {isOverflowLeft && renderOverflowIndicator('left')}
+                {contentNode}
+                {eventTemplate && <RecurrenceIcon event={eventInfo.event} />}
+                {isOverflowRight && renderOverflowIndicator('right')}
+            </div>
+        </Fragment>
+    );
+};
+
+/**
+ * Resolves and returns the appropriate content for a vertical time-slot event.
  * Prioritizes the custom event template, then spanned, then standard content.
+ * View-agnostic: vertical time-slot behavior only.
  *
  * @param {Function | undefined} eventTemplate - Optional custom template.
  * @param {ProcessedEventsData} eventInfo - The processed event data.
@@ -408,6 +480,59 @@ export const getTimeSlotEventContent: (
             eventInfo,
             renderDates,
             timeScaleEnabled,
+            timeFormat,
+            locale,
+            addTitleLabel,
+            startHourTuple,
+            endHourTuple,
+            eventTemplate
+        );
+    }
+    if (eventTemplate) {
+        return renderInnerAppointment(eventTemplate(eventInfo.event), false, false, eventInfo.event);
+    }
+    return renderTimeSlotStandardContent(eventInfo, timeFormat, locale, addTitleLabel);
+};
+
+/**
+ * Resolves content for timeline (horizontal) time-slot events.
+ * Uses timeline spanned content with left/right overflow; no vertical arrows.
+ *
+ * @param {Function | undefined} eventTemplate - Optional custom template.
+ * @param {ProcessedEventsData} eventInfo - The processed event data.
+ * @param {Date[]} renderDates - The dates currently rendered.
+ * @param {string} timeFormat - The time format string.
+ * @param {string} locale - The locale string.
+ * @param {string} addTitleLabel - The localized label for 'Add title'.
+ * @param {[number, number]} [startHourTuple] - The scheduler start hour tuple.
+ * @param {[number, number]} [endHourTuple] - The scheduler end hour tuple.
+ * @returns {ReactNode} The resolved timeline time-slot event content.
+ * @private
+ */
+export const getTimelineTimeSlotEventContent: (
+    eventTemplate: ((event: EventModel) => ReactNode) | undefined,
+    eventInfo: ProcessedEventsData,
+    renderDates: Date[],
+    timeFormat: string,
+    locale: string,
+    addTitleLabel: string,
+    startHourTuple?: [number, number],
+    endHourTuple?: [number, number]
+) => ReactNode = (
+    eventTemplate: ((event: EventModel) => ReactNode) | undefined,
+    eventInfo: ProcessedEventsData,
+    renderDates: Date[],
+    timeFormat: string,
+    locale: string,
+    addTitleLabel: string,
+    startHourTuple?: [number, number],
+    endHourTuple?: [number, number]
+): ReactNode => {
+    const isSpanned: boolean = !!(eventInfo.totalSegments || startHourTuple || endHourTuple);
+    if (isSpanned) {
+        return renderTimelineTimeSlotSpannedContent(
+            eventInfo,
+            renderDates,
             timeFormat,
             locale,
             addTitleLabel,

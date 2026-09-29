@@ -2,10 +2,11 @@ import { ReactNode, type MouseEvent, type KeyboardEvent, type ChangeEvent as Rea
 import { DataManager, Query } from '@syncfusion/react-data';
 import { Size, LabelMode, Variant, SortOrder, HorizontalAlignment } from '@syncfusion/react-base';
 import { VirtualizationProps, ScrollEvent } from '@syncfusion/react-lists';
-import { CollisionAxis, PositionAxis, CollisionType, ResizeEvent } from '@syncfusion/react-popups';
+import { CollisionAxis, CollisionType, ResizeEvent, AlignmentPoint, HorizontalAlign, VerticalAlign } from '@syncfusion/react-popups';
 import { validationProps } from '@syncfusion/react-inputs';
 import { DropDownProps, DropDownFilterIconProps, DropDownSelectionProps, InputProps } from '../common/types';
-export { LabelMode, Variant, Size, ScrollEvent, SortOrder, PositionAxis, CollisionAxis, CollisionType, ResizeEvent, HorizontalAlignment };
+export { LabelMode, Variant, Size, ScrollEvent, SortOrder, CollisionAxis, AlignmentPoint, HorizontalAlign,
+    VerticalAlign, CollisionType, ResizeEvent, HorizontalAlignment };
 
 /**
  * Specifies a datasource item type.
@@ -46,12 +47,19 @@ export interface DropdownVirtualProps extends VirtualizationProps {
  */
 export interface PopupSettings {
 
-    /** Specifies the X and Y position of the popup relative to the target element.
+    /**
+     * Specifies the point on the anchor element used as the reference for popup positioning.
      *
-     * @private
-     * @default {X:'left', Y:'bottom'}
+     * @default { horizontal: 'left', vertical: 'top' }
      */
-    position?: PositionAxis;
+    anchorAlign?: AlignmentPoint;
+
+    /**
+     * Specifies the point on the popup that aligns with the anchor reference point.
+     *
+     * @default { horizontal: 'left', vertical: 'bottom' }
+     */
+    popupAlign?: AlignmentPoint;
 
     /** Specifies the horizontal offset for positioning the popup relative to the target.
      *

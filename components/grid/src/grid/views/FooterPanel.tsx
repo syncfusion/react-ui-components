@@ -1,9 +1,8 @@
 import { forwardRef, ForwardRefExoticComponent, RefAttributes, useImperativeHandle, useRef, useMemo, memo, CSSProperties, RefObject, JSX, useState, useLayoutEffect } from 'react';
 import { FooterTableBase } from './FooterTable';
-import { useGridComputedProvider, useGridMutableProvider } from '../contexts';
-import {
-    FooterPanelRef, FooterTableRef, IFooterPanelBase
-} from '../types';
+import { useGridComputedProvider, useGridMutableProvider } from '../contexts/GridProviders';
+import { FooterPanelRef, FooterTableRef, IFooterPanelBase } from '../types/interfaces';
+import { getNonContinuousLeftPinnedWidth } from '../utils/utils';
 
 // Constant CSS class
 const CSS_FOOTER_TABLE: string = 'sf-grid-table';
@@ -37,8 +36,8 @@ const FooterPanelBase: ForwardRefExoticComponent<Partial<IFooterPanelBase> & Ref
     memo(forwardRef<FooterPanelRef, Partial<IFooterPanelBase>>(
         (props: Partial<IFooterPanelBase>, ref: RefObject<FooterPanelRef>) => {
             const { panelAttributes, scrollContentAttributes, tableScrollerPadding } = props;
-            const { id } = useGridComputedProvider();
-            const { offsetX, totalVirtualColumnWidth, virtualSettings } = useGridMutableProvider();
+            const { id, scrollModule, getVisibleColumns } = useGridComputedProvider();
+            const { offsetX, totalVirtualColumnWidth, virtualSettings, leftPinnedColumns, uidOrderMap } = useGridMutableProvider();
 
             // Refs for DOM elements and child components
             const footerPanelRef: RefObject<HTMLDivElement> = useRef<HTMLDivElement>(null);
@@ -46,6 +45,10 @@ const FooterPanelBase: ForwardRefExoticComponent<Partial<IFooterPanelBase> & Ref
             const footerTableRef: RefObject<FooterTableRef> = useRef<FooterTableRef>(null);
             const footerVirtualTableRef: RefObject<HTMLDivElement> = useRef<HTMLDivElement>(null);
             const [columnClientWidth, setColumnClientWidth] = useState<number>(0);
+            const nonContinuousLeftPinnedWidth: number = useMemo(() => scrollModule?.virtualColumnInfo?.endIndex <
+                getVisibleColumns?.()?.length ? getNonContinuousLeftPinnedWidth(leftPinnedColumns, uidOrderMap) :
+                0, [leftPinnedColumns, uidOrderMap]);
+            const scrollableVirtualColumnWidth: number = Math.max(0, totalVirtualColumnWidth - nonContinuousLeftPinnedWidth);
             /**
              * Expose internal elements and methods through the forwarded ref
              * Only define properties specific to FooterPanel and forward FooterTable properties
@@ -62,19 +65,19 @@ const FooterPanelBase: ForwardRefExoticComponent<Partial<IFooterPanelBase> & Ref
 
             const virtualWrapperStyle: CSSProperties = useMemo(() => {
                 return {
-                    transform: `translate3d(${offsetX || 0}px, 0px, 0) translateZ(0)`,
+                    transform: `translate3d(${(offsetX || 0) - (scrollModule?.leftPinnedWidth ?? 0)}px, 0px, 0) translateZ(0)`,
                     // resizeSettings Auto based currently handled, columns occupied whitespaces, each columns render beyond configured widths.
-                    ...(virtualSettings.enableColumn && totalVirtualColumnWidth > footerScrollRef.current?.clientWidth &&
+                    ...(virtualSettings.enableColumn && totalVirtualColumnWidth > footerScrollRef.current?.getBoundingClientRect().width &&
                         totalVirtualColumnWidth > columnClientWidth ? { width: columnClientWidth } : {}),
                     zIndex: 1
                 };
-            }, [offsetX, footerScrollRef.current?.clientWidth, columnClientWidth, totalVirtualColumnWidth]);
+            }, [offsetX, scrollModule?.leftPinnedWidth, footerScrollRef.current?.clientWidth, columnClientWidth, totalVirtualColumnWidth]);
 
             const virtualTrackStyle: CSSProperties = useMemo(() => ({
                 position: 'relative',
-                width: totalVirtualColumnWidth,
+                width: scrollableVirtualColumnWidth,
                 zIndex: 0
-            }), [totalVirtualColumnWidth, columnClientWidth]);
+            }), [scrollableVirtualColumnWidth, columnClientWidth]);
 
             useLayoutEffect(() => {
                 setColumnClientWidth(footerTableRef.current?.columnClientWidth);

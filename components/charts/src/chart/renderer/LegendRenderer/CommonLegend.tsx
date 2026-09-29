@@ -1,5 +1,5 @@
 import { extend, HorizontalAlignment, VerticalAlignment } from '@syncfusion/react-base';
-import { ChartBorderProps,  ChartLegendProps, ChartFontProps, LegendClickEvent, ChartLocationProps } from '../../base/interfaces';
+import { ChartBorderProps,  ChartLegendProps, ChartFontProps, LegendClickEvent, ChartLocationProps, ChartRadialGradientProps } from '../../base/interfaces';
 import { ChartMarkerShape, ChartSeriesType, LegendShape } from '../../base/enum';
 import { BaseLegend, createLegendOption, createPathOption, createRectOption, RectOption, GradientStopOption } from '../../base/Legend-base';
 import { LegendOptions } from '../../base/Legend-base';
@@ -10,6 +10,31 @@ import { useRegisterAxisRender, useRegisterSeriesRender } from '../../hooks/useC
 import { AxisModel, Chart, PathOptions, Rect, SeriesProperties, ChartSizeProps, TextOption, TextStyleModel, Points } from '../../chart-area/chart-interfaces';
 import { LegendPosition, TextOverflow } from '../../../common';
 import { SCATTER_MARKER_SHAPES } from '../SeriesRenderer/ScatterSeriesRenderer';
+import {
+    getGradientId,
+    getSeriesGradientUrl
+} from '../../utils/gradient/gradientPipeline';
+import { GradientDefSpec } from '../SeriesRenderer/GradientDefs';
+
+/**
+ * Legend-specific gradient registry. Populated only when a line-shaped
+ * legend symbol needs a `userSpaceOnUse` radial gradient because the
+ * horizontal path has a zero-height object bounding box.
+ *
+ * @private
+ */
+export const legendGradientDefsByChartId: { [chartId: string]: GradientDefSpec[] } = {};
+
+/**
+ * Returns the legend gradient definitions for a chart.
+ *
+ * @param {string} chartId - Chart element ID.
+ * @returns {GradientDefSpec[]} Queued legend gradient definitions.
+ * @private
+ */
+export function getLegendGradientDefsForChart(chartId: string): GradientDefSpec[] {
+    return legendGradientDefsByChartId[chartId as string] || [];
+}
 
 // === LEGEND INITIALIZATION & CONFIGURATION ===
 
@@ -75,11 +100,12 @@ export function getLegendOptions(chartLegend: ChartLegendProps, visibleSeriesCol
         if (series.type?.indexOf('Scatter') as number !== -1 && !markerShape) {
             markerShape = SCATTER_MARKER_SHAPES[series.index % SCATTER_MARKER_SHAPES.length];
         }
+        const seriesGradientUrl: string | null | undefined = getSeriesGradientUrl(series, chart.element.id);
         if (legend.mode === 'Series') {
             if (series.name !== '' && !(series.category === 'TrendLine' && visibleSeriesCollection[series.sourceIndex].name === '') && series.category !== 'Indicator') {
                 seriesType = (series.type as Required<ChartSeriesType>).replace(/^(Polar|Radar)/i, '') as ChartSeriesType;
                 dashArray = series.dashArray as Required<string>;
-                fill = series.interior as Required<string>;
+                fill = seriesGradientUrl ?? (series.interior as Required<string>);
                 legend.legendCollections.push(createLegendOption(
                     series.name as Required<string>, fill, series.legendShape as Required<LegendShape>,
                     series.visible as Required<boolean>, seriesType, series.legendImageUrl ? series.legendImageUrl : '',
@@ -90,7 +116,7 @@ export function getLegendOptions(chartLegend: ChartLegendProps, visibleSeriesCol
         }
         else if (legend.mode === 'Point') {
             for (const points of series.points) {
-                fill = points.interior ? points.interior : series.interior;
+                fill = points.interior ? points.interior : (seriesGradientUrl ?? (series.interior as Required<string>));
                 legend.legendCollections.push(createLegendOption(
                     points.x.toString(), fill, series.legendShape, (series.category === 'TrendLine' ?
                         chart.series[series.sourceIndex].trendlines?.[series.index].visible : points.visible),
@@ -101,7 +127,7 @@ export function getLegendOptions(chartLegend: ChartLegendProps, visibleSeriesCol
         }
         else if (legend.mode === 'Range') {
             for (const points of series.points) {
-                fill = points.interior ? points.interior : series.interior;
+                fill = points.interior ? points.interior : (seriesGradientUrl ?? (series.interior as Required<string>));
                 let legendLabel: string = 'Others';
                 if (colors.indexOf(fill) < 0) {
                     colors.push(fill);
@@ -125,12 +151,13 @@ export function getLegendOptions(chartLegend: ChartLegendProps, visibleSeriesCol
             if (isRangeColorEnabled(chart)) {
                 const startLabel: string | undefined = chart.rangeColorModule[0].start?.toString();
                 const endLabel: string | undefined = chart.rangeColorModule[chart.rangeColorModule.length - 1].end?.toString();
+                const gradientFill: string = seriesGradientUrl ?? (series.interior as Required<string>);
                 legend.legendCollections.push(createLegendOption(
-                    startLabel, series.interior, 'Rectangle', true,
+                    startLabel, gradientFill, 'Rectangle', true,
                     series.type, '', markerShape, series.marker?.visible
                 ));
                 legend.legendCollections.push(createLegendOption(
-                    endLabel, series.interior, 'Rectangle', true,
+                    endLabel, gradientFill, 'Rectangle', true,
                     series.type, '', markerShape, series.marker?.visible
                 ));
             }
@@ -1090,9 +1117,6 @@ export function renderSymbol(
     let shape: string = (legendOption.shape === 'SeriesType') ? legendOption.type : legendOption.shape;
     shape = shape === 'Scatter' ? legendOption.markerShape as string : shape;
     const strokewidth: number = isStrokeWidth ? legend.mode === 'Series' ? chart.visibleSeries[legendIndex as number].width as Required<number> : chart.visibleSeries[0].width as Required<number> : 1;
-    let symbolOption: PathOptions = createPathOption(
-        legend.legendID + '_shape_' + legendIndex, symbolColor, strokewidth,
-        symbolColor, legend.opacity as Required<number>, legendOption.dashArray as Required<string>, '');
     const textSize: ChartSizeProps = measureText(legendOption.text, chartLegend.textStyle as Required<ChartFontProps>,
                                                  chart.themeStyle.legendLabelFont);
     const x: number = chartLegend.inversed && !legend.isRtlEnable ? legendOption.location.x + textSize.width +
@@ -1100,6 +1124,21 @@ export function renderSymbol(
     const y: number = legendOption.location.y;
     const shapeWidth: number = shape === 'Rectangle' && !chartLegend.shapeWidth ? 8 : (chartLegend.shapeWidth || 10) as Required<number>;
     const shapeHeight: number = shape === 'Rectangle' && !chartLegend.shapeHeight ? 8 : (chartLegend.shapeHeight || 10) as Required<number>;
+    const isLineShaped: boolean = isStrokeWidth && shape !== 'VerticalLine' && shape !== 'Cross';
+    const legendSymbolFill: string = isLineShaped
+        ? resolveLegendRadialGradientUrl(
+            legendIndex,
+            chart,
+            symbolColor,
+            x,
+            y,
+            shapeWidth,
+            shapeHeight
+        )
+        : symbolColor;
+    let symbolOption: PathOptions = createPathOption(
+        legend.legendID + '_shape_' + legendIndex, legendSymbolFill, strokewidth,
+        legendSymbolFill, legend.opacity as Required<number>, legendOption.dashArray as Required<string>, '');
     symbolOption = calculateShapes({ x: x, y: y }, { width: shapeWidth,
         height: shapeHeight }, shape, symbolOption, legendOption.url as Required<string>) as PathOptions;
     legendOption.symbolOption = symbolOption;
@@ -1113,6 +1152,84 @@ export function renderSymbol(
                                        markerOption, legendOption.url as Required<string>) as PathOptions;
         legendOption.markerOption = markerOption;
     }
+}
+
+function resolveLegendRadialGradientUrl(
+    legendIndex: number,
+    chart: Chart,
+    symbolColor: string,
+    cx: number,
+    cy: number,
+    shapeWidth: number,
+    shapeHeight: number
+): string {
+    if (typeof symbolColor !== 'string' || symbolColor.indexOf('url(#') !== 0) {
+        return symbolColor;
+    }
+    const visibleSeries: SeriesProperties[] = (chart.visibleSeries || []) as SeriesProperties[];
+    const chartId: string = (chart.element && chart.element.id) || '';
+    let series: SeriesProperties | undefined;
+    for (const candidate of visibleSeries) {
+        if (getSeriesGradientUrl(candidate, chartId) === symbolColor) {
+            series = candidate;
+            break;
+        }
+    }
+    if (!series || series.gradientKind !== 'radial' || !series.gradientProps || !series.gradientStops) {
+        return symbolColor;
+    }
+    const radialProps: ChartRadialGradientProps = series.gradientProps as ChartRadialGradientProps;
+    const seriesIndex: number = series.index ?? legendIndex;
+    const r: number = Math.max(shapeWidth, shapeHeight) / 2;
+    const fxPx: number = resolveFocusPixelCoord(radialProps.fx, cx, cx - shapeWidth / 2, shapeWidth);
+    const fyPx: number = resolveFocusPixelCoord(radialProps.fy, cy, cy - shapeHeight / 2, shapeHeight);
+    const gradientId: string = `${getGradientId(chartId, 'series', seriesIndex, 'radial')}_legend_${legendIndex}`;
+    const defSpec: GradientDefSpec = {
+        id: gradientId,
+        owner: 'series',
+        index: legendIndex,
+        kind: 'radial',
+        gradientProps: {
+            cx: radialProps.cx,
+            cy: radialProps.cy,
+            r: radialProps.r,
+            fx: fxPx,
+            fy: fyPx
+        },
+        stops: series.gradientStops,
+        strokeEndpoints: null,
+        radialCenterPx: { cx, cy, r },
+        target: 'Line'
+    };
+    legendGradientDefsByChartId[chartId as string] =
+        legendGradientDefsByChartId[chartId as string] ?? [];
+    const list: GradientDefSpec[] = legendGradientDefsByChartId[chartId as string];
+    const existing: number = list.findIndex((entry: GradientDefSpec): boolean => entry.id === defSpec.id);
+    if (existing >= 0) {
+        list[existing as number] = defSpec;
+    } else {
+        list.push(defSpec);
+    }
+    return `url(#${gradientId})`;
+}
+
+function resolveFocusPixelCoord(
+    value: number | string | undefined,
+    fallback: number,
+    origin: number,
+    span: number
+): number {
+    if (value === undefined || value === null) {
+        return fallback;
+    }
+    const isPercent: boolean = typeof value === 'string' && value.indexOf('%') >= 0;
+    const numeric: number = typeof value === 'number'
+        ? value
+        : Number(String(value).trim().replace('%', '').trim());
+    if (!isFinite(numeric)) {
+        return fallback;
+    }
+    return origin + (isPercent ? numeric / 100 : numeric) * span;
 }
 
 /**
@@ -1341,15 +1458,17 @@ export function LegendClick(props: ChartLegendProps, index: number, chart: Chart
                 series.isLegendClicked = true;
                 changeSeriesVisiblity(series, series.visible, chart);
                 chartLegend.visible = (series.visible as Required<boolean>);
+                const seriesGradientUrl: string | null | undefined = series.gradientFill;
+                const visibleFill: string = seriesGradientUrl ?? (series.interior as Required<string>);
                 if (chartLegend.markerOption) {
-                    chartLegend.markerOption.fill = chartLegend.visible ? series.interior as Required<string> : '#D3D3D3';
-                    chartLegend.markerOption.stroke = chartLegend.visible ? series.interior as Required<string> : '#D3D3D3';
+                    chartLegend.markerOption.fill = chartLegend.visible ? visibleFill : '#D3D3D3';
+                    chartLegend.markerOption.stroke = chartLegend.visible ? visibleFill : '#D3D3D3';
                 }
                 if (chartLegend.symbolOption) {
                     if (!((series.type === 'Spline' || series.type === 'StepLine') && chartLegend.shape === 'SeriesType')) {
-                        chartLegend.symbolOption.fill = chartLegend.visible ? series.interior as Required<string> : '#D3D3D3';
+                        chartLegend.symbolOption.fill = chartLegend.visible ? visibleFill : '#D3D3D3';
                     }
-                    chartLegend.symbolOption.stroke = chartLegend.visible ? series.interior as Required<string> : '#D3D3D3';
+                    chartLegend.symbolOption.stroke = chartLegend.visible ? visibleFill : '#D3D3D3';
                 }
                 if (chartLegend.textOption) {
                     chartLegend.textOption.fill = chartLegend.visible ? (legend.textStyle as Required<ChartFontProps>).color ||
@@ -1369,16 +1488,20 @@ export function LegendClick(props: ChartLegendProps, index: number, chart: Chart
             point.visible = !point.visible;
             const legendOption: LegendOptions = legend.legendCollections?.[index as number] as LegendOptions;
             legendOption.visible = point.visible;
+            const pointSeriesGradientUrl: string | null | undefined = series.gradientFill;
+            const pointVisibleFill: string = pointSeriesGradientUrl
+                || (point.interior as Required<string>)
+                || (point.color as Required<string>);
 
             if (legendOption.markerOption) {
-                legendOption.markerOption.fill = legendOption.visible ? point.interior as Required<string> || point.color as Required<string> : '#D3D3D3';
-                legendOption.markerOption.stroke = legendOption.visible ? point.interior as Required<string> || point.color as Required<string> : '#D3D3D3';
+                legendOption.markerOption.fill = legendOption.visible ? pointVisibleFill : '#D3D3D3';
+                legendOption.markerOption.stroke = legendOption.visible ? pointVisibleFill : '#D3D3D3';
             }
             if (legendOption.symbolOption) {
                 if (!((series.type === 'Spline' || series.type === 'StepLine') && chartLegend.shape === 'SeriesType')) {
-                    legendOption.symbolOption.fill = legendOption.visible ? point.interior as Required<string> || point.color as Required<string> : '#D3D3D3';
+                    legendOption.symbolOption.fill = legendOption.visible ? pointVisibleFill : '#D3D3D3';
                 }
-                legendOption.symbolOption.stroke = legendOption.visible ? point.interior as Required<string> || point.color as Required<string> : '#D3D3D3';
+                legendOption.symbolOption.stroke = legendOption.visible ? pointVisibleFill : '#D3D3D3';
             }
             if (legendOption.textOption) {
                 legendOption.textOption.fill = legendOption.visible ? (legend.textStyle as Required<ChartFontProps>).color ||
@@ -1390,6 +1513,7 @@ export function LegendClick(props: ChartLegendProps, index: number, chart: Chart
     else if (legend.mode === 'Range') {
         const points: Points[] = [];
         const legendOption: LegendOptions = legend.legendCollections?.[index as number] as LegendOptions;
+        const rangeSeriesGradientUrl: string | null | undefined = series.gradientFill;
         for (const point of series.points) {
             if (legendOption.fill === (point.interior || series.interior)) {
                 points.push(point);
@@ -1397,16 +1521,19 @@ export function LegendClick(props: ChartLegendProps, index: number, chart: Chart
                     point.visible = !point.visible;
                     const legendOption: LegendOptions = legend.legendCollections?.[index as number] as LegendOptions;
                     legendOption.visible = point.visible;
+                    const rangeVisibleFill: string = rangeSeriesGradientUrl
+                        || (point.interior as Required<string>)
+                        || (point.color as Required<string>);
 
                     if (legendOption.markerOption) {
-                        legendOption.markerOption.fill = legendOption.visible ? point.interior as Required<string> || point.color as Required<string> : '#D3D3D3';
-                        legendOption.markerOption.stroke = legendOption.visible ? point.interior as Required<string> || point.color as Required<string> : '#D3D3D3';
+                        legendOption.markerOption.fill = legendOption.visible ? rangeVisibleFill : '#D3D3D3';
+                        legendOption.markerOption.stroke = legendOption.visible ? rangeVisibleFill : '#D3D3D3';
                     }
                     if (legendOption.symbolOption) {
                         if (!((series.type === 'Spline' || series.type === 'StepLine') && chartLegend.shape === 'SeriesType')) {
-                            legendOption.symbolOption.fill = legendOption.visible ? point.interior as Required<string> || point.color as Required<string> : '#D3D3D3';
+                            legendOption.symbolOption.fill = legendOption.visible ? rangeVisibleFill : '#D3D3D3';
                         }
-                        legendOption.symbolOption.stroke = legendOption.visible ? point.interior as Required<string> || point.color as Required<string> : '#D3D3D3';
+                        legendOption.symbolOption.stroke = legendOption.visible ? rangeVisibleFill : '#D3D3D3';
                     }
                     if (legendOption.textOption) {
                         legendOption.textOption.fill = legendOption.visible ? (legend.textStyle as Required<ChartFontProps>).color ||

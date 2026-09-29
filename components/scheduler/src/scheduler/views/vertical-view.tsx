@@ -8,6 +8,7 @@ import { WorkCells } from '../components/work-cells';
 import { TimeSlotEvent } from '../components/time-slot-event';
 import { useVerticalView } from '../hooks/useVerticalView';
 import { CSS_CLASSES } from '../common/constants';
+import { useOnScroll } from '../hooks/useOnScroll';
 
 export const VerticalView: FC<VerticalViewProps> = (props: VerticalViewProps) => {
     const { viewType } = props;
@@ -15,7 +16,6 @@ export const VerticalView: FC<VerticalViewProps> = (props: VerticalViewProps) =>
         timeScale,
         showTimeIndicator
     } = useSchedulerPropsContext();
-
     const {
         currentTime,
         currentTimePosition,
@@ -24,10 +24,11 @@ export const VerticalView: FC<VerticalViewProps> = (props: VerticalViewProps) =>
         contentSectionClassName,
         handleTimePositionUpdate
     } = useVerticalView(viewType);
+    const { onScroll } = useOnScroll();
 
     return (
         <div className={`${CSS_CLASSES.VERTICAL_VIEW} ${viewClassName}`}>
-            <div className={CSS_CLASSES.MAIN_SCROLL_CONTAINER} tabIndex={0}>
+            <div className={CSS_CLASSES.MAIN_SCROLL_CONTAINER} tabIndex={0} onScroll={onScroll}>
                 <div className={CSS_CLASSES.STICKY_HEADER}>
                     <DateHeader />
                 </div>
@@ -43,7 +44,9 @@ export const VerticalView: FC<VerticalViewProps> = (props: VerticalViewProps) =>
                         <div className={CSS_CLASSES.TIME_SLOT_CLONE_CONTAINER}></div>
                         <div className={CSS_CLASSES.CONTENT_WRAP}>
                             <TimeSlotEvent />
-                            <WorkCells />
+                            <div className={CSS_CLASSES.CONTENT_TABLE}>
+                                <WorkCells />
+                            </div>
                         </div>
 
                         {showTimeIndicator && timeScale.enable && (

@@ -315,7 +315,11 @@ export const ViewButton: FC<ViewButtonProps> = (props: ViewButtonProps): ReactEl
                 aria-label={ariaLabel}
                 title={title}
                 disabled={disabled}
-                popupSettings={{ viewPortElementRef: viewPortElementRef }}
+                popupSettings={{
+                    viewPortElementRef: viewPortElementRef,
+                    popupAlign: { horizontal: 'right', vertical: 'top' },
+                    anchorAlign: { horizontal: 'right', vertical: 'bottom' }
+                }}
             >
                 {displayText}
             </DropDownButton>
@@ -541,7 +545,8 @@ export const SchedulerToolbar: FC<SchedulerToolbarProps> = ({
                     <Popup
                         open={true}
                         relateTo={popupAnchorRef.current.element}
-                        position={{ X: 'left', Y: 'bottom' }}
+                        popupAlign={{ horizontal: 'left', vertical: 'top' }}
+                        anchorAlign={{ horizontal: 'left', vertical: 'bottom' }}
                         collision={{
                             X: CollisionType.Fit,
                             Y: CollisionType.None

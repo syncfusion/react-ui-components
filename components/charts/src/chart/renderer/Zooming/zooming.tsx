@@ -108,7 +108,7 @@ export const ZoomContent: React.FC<ChartZoomSettingsProps> = (props: ChartZoomSe
         }
     }, [props.selectionZoom, props.accessibility, props.mouseWheelZoom,
         props.pinchZoom, props.pan, props.enableScrollbar,
-        props.mode, props.toolbar?.items]);
+        props.mode, props.toolbar?.items, props.minimumVisiblePoints]);
 
     // In ZoomContent component, replace the existing useEffect with:
     useEffect(() => {
@@ -439,6 +439,8 @@ export function doPan(chart: Chart, axes: AxisModel[], xDifference: number = 0, 
     zoom.offset = !chart.delayRedraw ? chart.chartAxislayout.seriesClipRect : zoom.offset;
 
     const zoomedAxisCollection: AxisDataProps[] = [];
+    const proposedAxisZooms: ProposedAxisZoom[] = [];
+    const zoomCompleteEvtCollection: ZoomEndEvent[] = [];
 
     for (const axis of (axes as AxisModel[])) {
         const argsData: ZoomEndEvent = {
@@ -460,6 +462,26 @@ export function doPan(chart: Chart, axes: AxisModel[], xDifference: number = 0, 
             offsetValue = (yDifference !== 0 ? yDifference : (chart.previousMouseMoveY - chart.mouseY)) / axis.rect.height / currentScale;
             argsData.currentZoomPosition = minMax((axis.zoomPosition as number) - offsetValue, 0, (1 - (axis.zoomFactor as number)));
         }
+
+        proposedAxisZooms.push({
+            axis,
+            zoomFactor: argsData.currentZoomFactor as number,
+            zoomPosition: argsData.currentZoomPosition as number
+        });
+        zoomCompleteEvtCollection.push(argsData);
+    }
+
+    const isValidPan: boolean = hasMinimumVisiblePoints(chart, proposedAxisZooms);
+
+    for (let index: number = 0; index < proposedAxisZooms.length; index++) {
+        const axis: AxisModel = proposedAxisZooms[index as number].axis;
+        const argsData: ZoomEndEvent = zoomCompleteEvtCollection[index as number];
+
+        if (!isValidPan) {
+            argsData.currentZoomFactor = argsData.previousZoomFactor;
+            argsData.currentZoomPosition = argsData.previousZoomPosition;
+        }
+
         axis.zoomFactor = argsData.currentZoomFactor;
         axis.zoomPosition = argsData.currentZoomPosition;
         zoom.zoomCompleteEvtCollection.push(argsData);
@@ -480,7 +502,12 @@ export function doPan(chart: Chart, axes: AxisModel[], xDifference: number = 0, 
     if (zoomingEventArgs.cancel) {
         zoomCancel(axes, zoom.zoomCompleteEvtCollection);
     } else {
-        performDeferredZoom(chart);
+        if (isValidPan) {
+            performDeferredZoom(chart);
+        } else {
+            chart.previousMouseMoveX = chart.mouseX;
+            chart.previousMouseMoveY = chart.mouseY;
+        }
         redrawOnZooming(chart, false);
     }
 }
@@ -712,6 +739,8 @@ export function doZoom(
     const mode: ZoomMode = chart.zoomSettings.mode as ZoomMode;
     zoom.isPanning = chart.zoomSettings.pan || isPanningParam;
     const zoomedAxisCollections: AxisDataProps[] = [];
+    const proposedAxisZooms: ProposedAxisZoom[] = [];
+    const zoomCompleteEvtCollection: ZoomEndEvent[] = [];
     zoom.zoomCompleteEvtCollection = [];
 
     for (const axis of (axes as AxisModel[])) {
@@ -740,6 +769,25 @@ export function doZoom(
         }
 
         if (parseFloat((argsData.currentZoomFactor as Required<number>).toFixed(3)) <= 0.001) {
+            argsData.currentZoomFactor = argsData.previousZoomFactor;
+            argsData.currentZoomPosition = argsData.previousZoomPosition;
+        }
+
+        proposedAxisZooms.push({
+            axis,
+            zoomFactor: argsData.currentZoomFactor as number,
+            zoomPosition: argsData.currentZoomPosition as number
+        });
+        zoomCompleteEvtCollection.push(argsData);
+    }
+
+    const isValidZoom: boolean = hasMinimumVisiblePoints(chart, proposedAxisZooms);
+
+    for (let index: number = 0; index < proposedAxisZooms.length; index++) {
+        const axis: AxisModel = proposedAxisZooms[index as number].axis;
+        const argsData: ZoomEndEvent = zoomCompleteEvtCollection[index as number];
+
+        if (!isValidZoom) {
             argsData.currentZoomFactor = argsData.previousZoomFactor;
             argsData.currentZoomPosition = argsData.previousZoomPosition;
         }
@@ -845,6 +893,8 @@ function calculateWheelZoomFactors(
     zoom: BaseZoom
 ): AxisDataProps[] {
     const zoomedAxisCollection: AxisDataProps[] = [];
+    const proposedAxisZooms: ProposedAxisZoom[] = [];
+    const zoomCompleteEvtCollection: ZoomEndEvent[] = [];
     let anyAxisZoomed: boolean = false;
 
     for (const axis of axes) {
@@ -878,13 +928,37 @@ function calculateWheelZoomFactors(
                     zoomFactor = (zoomPosition + zoomFactor) > 1 ? (1 - zoomPosition) : zoomFactor;
                 }
 
-                if (parseFloat((argsData.currentZoomFactor as Required<number>).toFixed(3)) <= 0.001) {
+                if (parseFloat(zoomFactor.toFixed(3)) <= 0.001) {
                     argsData.currentZoomFactor = argsData.previousZoomFactor;
                     argsData.currentZoomPosition = argsData.previousZoomPosition;
                 } else {
                     argsData.currentZoomFactor = zoomFactor;
                     argsData.currentZoomPosition = zoomPosition;
                 }
+            }
+
+            zoomCompleteEvtCollection.push(argsData);
+        }
+
+        proposedAxisZooms.push({
+            axis,
+            zoomFactor: argsData.currentZoomFactor as number,
+            zoomPosition: argsData.currentZoomPosition as number
+        });
+    }
+
+    const isValidZoom: boolean = direction < 0 || hasMinimumVisiblePoints(chart, proposedAxisZooms);
+
+    for (const proposedAxisZoom of proposedAxisZooms) {
+        const axis: AxisModel = proposedAxisZoom.axis;
+        const argsData: ZoomEndEvent | undefined = zoomCompleteEvtCollection.find(
+            (zoomEvent: ZoomEndEvent): boolean => zoomEvent.axisName === axis.name
+        );
+
+        if (argsData) {
+            if (!isValidZoom) {
+                argsData.currentZoomFactor = argsData.previousZoomFactor;
+                argsData.currentZoomPosition = argsData.previousZoomPosition;
             }
 
             if (argsData.currentZoomFactor !== argsData.previousZoomFactor ||
@@ -904,6 +978,7 @@ function calculateWheelZoomFactors(
             axisRange: axis.visibleRange
         });
     }
+
     if (!anyAxisZoomed) {
         chart.disableTrackTooltip = false;
     }
@@ -1023,29 +1098,29 @@ function calculatePinchZoomFactor(chart: Chart, pinchRect: Rect): boolean {
     let currentZF: number;
     let currentZP: number;
     const zoomedAxisCollection: AxisDataProps[] = [];
+    const proposedAxisZooms: ProposedAxisZoom[] = [];
+    const zoomCompleteEvtCollection: ZoomEndEvent[] = [];
     zoom.zoomCompleteEvtCollection = [];
 
     for (let index: number = 0; index < chart.axisCollection.length; index++) {
         const axis: AxisModel = chart.axisCollection[index as number];
+        currentZF = axis.zoomFactor as Required<number>;
+        currentZP = axis.zoomPosition as Required<number>;
+        argsData = {
+            axisName: axis.name,
+            previousZoomFactor: axis.zoomFactor,
+            previousZoomPosition: axis.zoomPosition,
+            currentZoomFactor: currentZF,
+            currentZoomPosition: currentZP,
+            previousVisibleRange: axis.visibleRange,
+            currentVisibleRange: undefined
+        };
+
         if ((axis.orientation === 'Horizontal' && mode !== 'Y') ||
             (axis.orientation === 'Vertical' && mode !== 'X')) {
-            currentZF = axis.zoomFactor as Required<number>;
-            currentZP = axis.zoomPosition as Required<number>;
-            argsData = {
-                axisName: axis.name,
-                previousZoomFactor: axis.zoomFactor,
-                previousZoomPosition: axis.zoomPosition,
-                currentZoomFactor: currentZF,
-                currentZoomPosition: currentZP,
-                previousVisibleRange: axis.visibleRange,
-                currentVisibleRange: undefined
-            };
-
             if (axis.orientation === 'Horizontal') {
                 value = pinchRect.x - (zoom.offset as Required<Rect>).x;
-
-                axisTrans =
-                    axis.rect.width / ((zoom.zoomAxes as Required<IZoomAxisRange[]>)[index as number].delta as Required<number>);
+                axisTrans = axis.rect.width / ((zoom.zoomAxes as Required<IZoomAxisRange[]>)[index as number].delta as Required<number>);
                 rangeMin = value / axisTrans + ((zoom.zoomAxes as Required<IZoomAxisRange[]>)[index as number].min as Required<number>);
                 value = pinchRect.x + pinchRect.width - (zoom.offset as Required<Rect>).x;
                 rangeMax = value / axisTrans + ((zoom.zoomAxes as Required<IZoomAxisRange[]>)[index as number].min as Required<number>);
@@ -1064,14 +1139,41 @@ function calculatePinchZoomFactor(chart: Chart, pinchRect: Rect): boolean {
             currentZP = (selectionMin -
                 ((zoom.zoomAxes as Required<IZoomAxisRange[]>)[index as number].actualMin as Required<number>)) /
                 ((zoom.zoomAxes as Required<IZoomAxisRange[]>)[index as number].actualDelta as Required<number>);
-            currentZF = (selectionMax -
-                selectionMin) / ((zoom.zoomAxes as Required<IZoomAxisRange[]>)[index as number].actualDelta as Required<number>);
-            argsData.currentZoomPosition = currentZP < 0 ? 0 : currentZP;
+            currentZF = (selectionMax - selectionMin) /
+                ((zoom.zoomAxes as Required<IZoomAxisRange[]>)[index as number].actualDelta as Required<number>);
             argsData.currentZoomFactor = currentZF > 1 ? 1 : (currentZF < 0.003) ? 0.003 : currentZF;
+            argsData.currentZoomPosition = currentZP < 0 ? 0 : currentZP;
+            zoomCompleteEvtCollection.push(argsData);
+        }
 
-            axis.zoomFactor = argsData.currentZoomFactor;
-            axis.zoomPosition = argsData.currentZoomPosition;
-            zoom.zoomCompleteEvtCollection.push(argsData);
+        proposedAxisZooms.push({
+            axis,
+            zoomFactor: argsData.currentZoomFactor as number,
+            zoomPosition: argsData.currentZoomPosition as number
+        });
+    }
+
+    const isZoomIn: boolean = proposedAxisZooms.some(
+        (proposedAxisZoom: ProposedAxisZoom): boolean =>
+            proposedAxisZoom.zoomFactor < (proposedAxisZoom.axis.zoomFactor as number)
+    );
+    const isValidZoom: boolean = !isZoomIn || hasMinimumVisiblePoints(chart, proposedAxisZooms);
+
+    for (const proposedAxisZoom of proposedAxisZooms) {
+        const axis: AxisModel = proposedAxisZoom.axis;
+        const zoomEvent: ZoomEndEvent | undefined = zoomCompleteEvtCollection.find(
+            (eventArgs: ZoomEndEvent): boolean => eventArgs.axisName === axis.name
+        );
+
+        if (zoomEvent) {
+            if (!isValidZoom) {
+                zoomEvent.currentZoomFactor = zoomEvent.previousZoomFactor;
+                zoomEvent.currentZoomPosition = zoomEvent.previousZoomPosition;
+            }
+
+            axis.zoomFactor = zoomEvent.currentZoomFactor;
+            axis.zoomPosition = zoomEvent.currentZoomPosition;
+            zoom.zoomCompleteEvtCollection.push(zoomEvent);
 
             zoomedAxisCollection.push({
                 zoomFactor: axis.zoomFactor as number,
@@ -1292,6 +1394,7 @@ export function zoomInOutCalculation(scale: number, chart: Chart, axes: AxisMode
 
     const zoomCompleteEvtCollection: ZoomEndEvent[] = [];
     const zoomedAxisCollection: AxisDataProps[] = [];
+    const proposedAxisZooms: ProposedAxisZoom[] = [];
 
     for (const axis of axes) {
         // Save previous values for zoom complete event
@@ -1331,10 +1434,30 @@ export function zoomInOutCalculation(scale: number, chart: Chart, axes: AxisMode
 
             argsData.currentZoomFactor = currentZoomFactor;
             argsData.currentZoomPosition = currentZoomPosition;
+            zoomCompleteEvtCollection.push(argsData);
+        }
 
+        proposedAxisZooms.push({
+            axis,
+            zoomFactor: argsData.currentZoomFactor as number,
+            zoomPosition: argsData.currentZoomPosition as number
+        });
+    }
+
+    const validatedAxisZooms: ProposedAxisZoom[] = scale > 0 ?
+        getMinimumVisiblePointZoom(chart, proposedAxisZooms) : proposedAxisZooms;
+
+    for (const proposedAxisZoom of validatedAxisZooms) {
+        const axis: AxisModel = proposedAxisZoom.axis;
+        const argsData: ZoomEndEvent | undefined = zoomCompleteEvtCollection.find(
+            (zoomEvent: ZoomEndEvent): boolean => zoomEvent.axisName === axis.name
+        );
+
+        if (argsData) {
+            argsData.currentZoomFactor = proposedAxisZoom.zoomFactor;
+            argsData.currentZoomPosition = proposedAxisZoom.zoomPosition;
             axis.zoomFactor = argsData.currentZoomFactor;
             axis.zoomPosition = argsData.currentZoomPosition;
-            zoomCompleteEvtCollection.push(argsData);
 
             zoomedAxisCollection.push({
                 zoomFactor: axis.zoomFactor as number,
@@ -1344,6 +1467,7 @@ export function zoomInOutCalculation(scale: number, chart: Chart, axes: AxisMode
             });
         }
     }
+
     zoom.isZoomed = isAxisZoomed(axes);
     const zoomingEventArgs: ZoomStartEvent = {
         cancel: false,
@@ -1454,4 +1578,242 @@ export function reset(chart: Chart, zoom: BaseZoom): boolean {
     setToolkitVisible();
     return true;
 }
+
+/**
+ * Proposed zoom values for an axis.
+ *
+ * @private
+ */
+interface ProposedAxisZoom {
+    axis: AxisModel;
+    zoomFactor: number;
+    zoomPosition: number;
+}
+
+/**
+ * Numeric range produced by an axis zoom state.
+ *
+ * @private
+ */
+interface ProposedVisibleRange {
+    minimum: number;
+    maximum: number;
+}
+
+/**
+ * Returns the visible range produced by the proposed axis zoom values.
+ *
+ * @param {AxisModel} axis - Axis being zoomed.
+ * @param {ProposedAxisZoom[]} proposedAxisZooms - Proposed axis zoom values.
+ * @returns {ProposedVisibleRange} Proposed numeric visible range.
+ * @private
+ */
+function getProposedVisibleRange(
+    axis: AxisModel,
+    proposedAxisZooms: ProposedAxisZoom[]
+): ProposedVisibleRange {
+    const proposedAxisZoom: ProposedAxisZoom | undefined =
+        proposedAxisZooms.find(
+            (proposedZoom: ProposedAxisZoom): boolean =>
+                proposedZoom.axis === axis
+        );
+
+    const zoomFactor: number = proposedAxisZoom
+        ? proposedAxisZoom.zoomFactor
+        : axis.zoomFactor as number;
+
+    const zoomPosition: number = proposedAxisZoom
+        ? proposedAxisZoom.zoomPosition
+        : axis.zoomPosition as number;
+
+    const actualMinimum: number = axis.actualRange.minimum;
+    const actualDelta: number = axis.actualRange.delta;
+    const minimum: number =
+        actualMinimum + (zoomPosition * actualDelta);
+
+    return {
+        minimum,
+        maximum: minimum + (zoomFactor * actualDelta)
+    };
+}
+
+/**
+ * Checks whether a value is inside the provided visible range.
+ *
+ * @param {number} value - Point value.
+ * @param {ProposedVisibleRange} range - Proposed visible range.
+ * @returns {boolean} Whether the value is visible.
+ * @private
+ */
+function isValueWithinRange(
+    value: number,
+    range: ProposedVisibleRange
+): boolean {
+    return value >= range.minimum &&
+        value <= range.maximum;
+}
+
+/**
+ * Returns the number of series points visible after applying the proposed
+ * zoom values.
+ *
+ * @param {Chart} chart - Chart instance.
+ * @param {ProposedAxisZoom[]} proposedAxisZooms - Proposed zoom values.
+ * @param {ZoomMode} mode - Current zoom mode.
+ * @returns {number} Number of visually visible points.
+ * @private
+ */
+function getVisiblePointCount(
+    chart: Chart,
+    proposedAxisZooms: ProposedAxisZoom[],
+    mode: ZoomMode
+): number {
+    let visiblePointCount: number = 0;
+
+    for (const series of chart.visibleSeries) {
+        if (!series.visible || !series.points) {
+            continue;
+        }
+
+        const xRange: ProposedVisibleRange =
+            getProposedVisibleRange(
+                series.xAxis,
+                proposedAxisZooms
+            );
+
+        const yRange: ProposedVisibleRange =
+            getProposedVisibleRange(
+                series.yAxis,
+                proposedAxisZooms
+            );
+
+        for (const point of series.points) {
+            if (!point.visible) {
+                continue;
+            }
+
+            const xValue: number = point.xValue as number;
+            const yValue: number = point.yValue as number;
+
+            const isXVisible: boolean =
+                isValueWithinRange(xValue, xRange);
+
+            const isYVisible: boolean =
+                isValueWithinRange(yValue, yRange);
+
+            let isPointVisible: boolean = false;
+
+            switch (mode) {
+            case 'X':
+                isPointVisible = isXVisible;
+                break;
+
+            case 'Y':
+                isPointVisible = isYVisible;
+                break;
+
+            case 'XY':
+                isPointVisible =
+                    isXVisible && isYVisible;
+                break;
+            }
+
+            if (isPointVisible) {
+                visiblePointCount++;
+            }
+        }
+    }
+
+    return visiblePointCount;
+}
+
+
+
+/**
+ * Returns the closest valid zoom values that satisfy minimumVisiblePoints.
+ *
+ * @param {Chart} chart - Chart instance.
+ * @param {ProposedAxisZoom[]} proposedAxisZooms - Proposed zoom values.
+ * @returns {ProposedAxisZoom[]} Validated zoom values.
+ * @private
+ */
+function getMinimumVisiblePointZoom(
+    chart: Chart,
+    proposedAxisZooms: ProposedAxisZoom[]
+): ProposedAxisZoom[] {
+    if (hasMinimumVisiblePoints(chart, proposedAxisZooms)) {
+        return proposedAxisZooms;
+    }
+
+    let minimumRatio: number = 0;
+    let maximumRatio: number = 1;
+    let validatedAxisZooms: ProposedAxisZoom[] = proposedAxisZooms.map(
+        (proposedAxisZoom: ProposedAxisZoom): ProposedAxisZoom => ({
+            axis: proposedAxisZoom.axis,
+            zoomFactor: proposedAxisZoom.axis.zoomFactor as number,
+            zoomPosition: proposedAxisZoom.axis.zoomPosition as number
+        })
+    );
+    const MAX_ZOOM_SEARCH_ITERATIONS: number = 20;
+    for (let index: number = 0; index < MAX_ZOOM_SEARCH_ITERATIONS; index++) {
+        const ratio: number = (minimumRatio + maximumRatio) / 2;
+        const currentAxisZooms: ProposedAxisZoom[] = proposedAxisZooms.map(
+            (proposedAxisZoom: ProposedAxisZoom): ProposedAxisZoom => {
+                const axis: AxisModel = proposedAxisZoom.axis;
+                const previousZoomFactor: number = axis.zoomFactor as number;
+                const previousZoomPosition: number = axis.zoomPosition as number;
+
+                return {
+                    axis,
+                    zoomFactor: previousZoomFactor +
+                        ((proposedAxisZoom.zoomFactor - previousZoomFactor) * ratio),
+                    zoomPosition: previousZoomPosition +
+                        ((proposedAxisZoom.zoomPosition - previousZoomPosition) * ratio)
+                };
+            }
+        );
+
+        if (hasMinimumVisiblePoints(chart, currentAxisZooms)) {
+            minimumRatio = ratio;
+            validatedAxisZooms = currentAxisZooms;
+        } else {
+            maximumRatio = ratio;
+        }
+    }
+
+    return validatedAxisZooms;
+}
+
+/**
+ * Validates the proposed zoom values against minimumVisiblePoints.
+ *
+ * @param {Chart} chart - Chart instance.
+ * @param {ProposedAxisZoom[]} proposedAxisZooms - Proposed zoom values.
+ * @returns {boolean} Whether the proposed zoom operation is valid.
+ * @private
+ */
+function hasMinimumVisiblePoints(
+    chart: Chart,
+    proposedAxisZooms: ProposedAxisZoom[]
+): boolean {
+    const minimumVisiblePoints: number | null | undefined =
+        chart.zoomSettings.minimumVisiblePoints;
+
+    if (
+        !minimumVisiblePoints ||
+        minimumVisiblePoints < 1
+    ) {
+        return true;
+    }
+
+    const visiblePointCount: number =
+        getVisiblePointCount(
+            chart,
+            proposedAxisZooms,
+            chart.zoomSettings.mode as ZoomMode
+        );
+
+    return visiblePointCount >= minimumVisiblePoints;
+}
+
 

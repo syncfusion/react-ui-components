@@ -5,7 +5,7 @@ import { DayViewProps } from '../types/scheduler-types';
 
 export const DayView: FC<DayViewProps> = () => {
     useEffect(() => {
-        initializeTelemetryFeature('DayView', 'schedule');
+        initializeTelemetryFeature('DayView', 'Scheduler');
     }, []);
 
     return <VerticalView viewType={'Day'} />;

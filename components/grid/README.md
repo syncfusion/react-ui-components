@@ -26,6 +26,10 @@ Ideal for react applications requiring structured data presentation, real-time i
 
 - **[Grouping](https://react.syncfusion.com/react-ui/data-grid/grouping/configuration):** Organizes data into hierarchical groups for better analysis.
 
+- **[Stacked Headers](https://react.syncfusion.com/react-ui/data-grid/columns/configuration#stacked-headers):** Organizes related columns under multiple levels of headers for clearer data presentation and improved column structure.
+
+- **[Clipboard](https://react.syncfusion.com/react-ui/data-grid/clipboard):** Supports copying and pasting cell and row selections through the Grid clipboard API for efficient data transfer and editing.
+
 - **[Row & Column Spanning](https://react.syncfusion.com/react-ui/data-grid/row/row-spanning):** Supports merging cells across rows and columns for advanced layouts.
 
 - **[Master-Detail](https://react.syncfusion.com/react-ui/data-grid/master-detail/detail-grid):** Displays hierarchical data using expandable detail rows.

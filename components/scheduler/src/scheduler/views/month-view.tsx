@@ -4,15 +4,17 @@ import { MonthViewProps } from '../types/scheduler-types';
 import { WeekDayHeader } from '../components/week-day-header';
 import { MonthRow } from '../components/month-row';
 import { CSS_CLASSES } from '../common/constants';
+import { useOnScroll } from '../hooks/useOnScroll';
 
 export const MonthView: FC<MonthViewProps> = () => {
+    const { onScroll } = useOnScroll();
     useEffect(() => {
-        initializeTelemetryFeature('MonthView', 'schedule');
+        initializeTelemetryFeature('MonthView', 'Scheduler');
     }, []);
 
     return (
         <div className={`${CSS_CLASSES.VERTICAL_VIEW} ${CSS_CLASSES.MONTH_VIEW}`}>
-            <div className={CSS_CLASSES.MAIN_SCROLL_CONTAINER} tabIndex={0}>
+            <div className={CSS_CLASSES.MAIN_SCROLL_CONTAINER} tabIndex={0} onScroll={onScroll}>
                 <div className={CSS_CLASSES.STICKY_HEADER}>
                     <WeekDayHeader />
                 </div>

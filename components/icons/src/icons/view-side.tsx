@@ -1,4 +1,4 @@
 import { createIcon } from '../icon';
 import { IconComponent } from '../icon';
-const path: React.ReactNode = <path d='M21 2C22.1046 2 23 2.89543 23 4V20C23 21.1046 22.1046 22 21 22H3C1.89543 22 1 21.1046 1 20V4C1 2.89543 1.89543 2 3 2H21ZM21 4H10V20H21V4ZM8 20V4H3V20H8ZM11.0858 12L15 8.08582L16.4142 9.50003L14.9142 11H19.5V13H14.9142L16.4142 14.5L15 15.9142L11.0858 12Z' fillRule='evenodd' clipRule='evenodd' fill='currentcolor'/>;
+const path: React.ReactNode = <path d='M20 0C21.1046 0 22 0.895431 22 2V18C22 19.1046 21.1046 20 20 20H2C0.89543 20 0 19.1046 0 18V2C0 0.89543 0.895431 0 2 0H20ZM2 18H13V2H2V18ZM15 18H20V2H15V18ZM11.9141 10L8 13.9141L6.58594 12.5L8.08594 11H3.5V9H8.08594L6.58594 7.5L8 6.08594L11.9141 10Z' fillRule='evenodd' clipRule='evenodd' fill='currentcolor'/>;
 export const ViewSideIcon: IconComponent  = createIcon(path);

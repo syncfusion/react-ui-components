@@ -62,6 +62,9 @@ export interface MaskPlaceholder {
     meridiem?: string;
 }
 
+/**
+ * @private
+ */
 export interface InputProps extends inputBaseProps {
     /**
      * Specifies the placeholder text to display in the input box when no value is set.

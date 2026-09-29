@@ -1,5 +1,15 @@
 # Changelog
 
+## 34.1.29 (2026-09-23)
+
+### Popup
+
+#### Breaking Changes
+
+- **Replaced `position` with `anchorAlign` and `popupAlign`.** The previous `position: PositionAxis` (`{ X, Y }`, each `'left' | 'center' | 'right' | 'top' | 'bottom' | number`) could not express arbitrary anchor/popup corner pairs.
+  - `anchorAlign: AlignmentPoint` — point on the anchor used as reference. Default: `{ horizontal: 'left', vertical: 'top' }`.
+  - `popupAlign: AlignmentPoint` — point on the popup aligned with `anchorAlign`. Default: `{ horizontal: 'left', vertical: 'bottom' }`.
+
 ## 32.1.19 (2025-12-16)
 
 ### Spinner

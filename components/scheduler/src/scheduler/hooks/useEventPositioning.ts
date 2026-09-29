@@ -2,6 +2,7 @@ import { useMemo, CSSProperties } from 'react';
 import { ProcessedEventsData } from '../types/internal-interface';
 import { EventModel } from '../types/scheduler-types';
 import { PositioningService } from '../services/PositioningService';
+import { useResourceGroupingContext } from '../context/resource-grouping-context';
 
 /**
  * Interface for the props accepted by useEventPositioning hook
@@ -63,6 +64,7 @@ interface UseEventPositioningResult {
 export const useEventPositioning: (props: UseEventPositioningProps) => UseEventPositioningResult =
 (props: UseEventPositioningProps): UseEventPositioningResult => {
     const { eventInfo, renderDates } = props;
+    const { groupConfig } = useResourceGroupingContext();
 
     // Process event model
     const processedEvent: EventModel = useMemo(() => {
@@ -76,7 +78,7 @@ export const useEventPositioning: (props: UseEventPositioningProps) => UseEventP
 
     // Calculate position style
     const positionStyle: CSSProperties = useMemo(() => {
-        return PositioningService.calculatePositionStyles(eventInfo, renderDates);
+        return PositioningService.calculatePositionStyles(eventInfo, renderDates, groupConfig?.byDate);
     }, [eventInfo, renderDates]);
 
     return {

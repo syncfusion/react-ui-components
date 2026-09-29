@@ -1,11 +1,15 @@
 import * as React from 'react';
 import { useState, useCallback, useMemo, useEffect} from 'react';
-import { Dialog } from '@syncfusion/react-popups';
-import { Button, Color, Variant, RadioButton } from '@syncfusion/react-buttons';
-import { IL10n } from '@syncfusion/react-base';
-import { useGridComputedProvider, useGridMutableProvider } from '../contexts';
-import { AutoSelectMode, GridRef, DeleteDialogProps, DeleteDialogEventArgs, DeleteOption } from '../types';
-import { getCurrentPageSelectedItems } from '../utils';
+import { Dialog } from '@syncfusion/react-popups/src/dialog/index';
+import { Button } from '@syncfusion/react-buttons/src/button/button';
+import { Color, Variant } from '@syncfusion/react-base/src/enums';
+import { RadioButton } from '@syncfusion/react-buttons/src/radio-button/radio-button';
+import { IL10n } from '@syncfusion/react-base/src/l10n';
+import { useGridComputedProvider, useGridMutableProvider } from '../contexts/GridProviders';
+import { AutoSelectMode } from '../types/enum';
+import { GridRef } from '../types/grid.interfaces';
+import { DeleteDialogProps, DeleteDialogEventArgs, DeleteOption } from '../types/edit.interfaces';
+import { getCurrentPageSelectedItems } from '../utils/utils';
 
 /**
  * DeleteDialog component for handling bulk delete operations with selection options.

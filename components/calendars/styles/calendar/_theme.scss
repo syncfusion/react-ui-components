@@ -20,9 +20,39 @@
     background: $calendar-bg-color;
     border: $calendar-border-style;
     box-shadow: $calendar-box-shadow;
-
-    .sf-in-range:not(.sf-other-month):not(.sf-selected) { 
-      background: $calendar-range-color; 
+  
+    --sf-calendar-range-height: #{$calendar-normal-month-view-height};
+    
+    .sf-calendar-year,
+    .sf-calendar-decade {
+      --sf-calendar-range-height: #{$calendar-normal-year-decade-height-inside};
+    }
+  
+    .sf-in-range:not(.sf-other-month) {
+      background: transparent;
+      position: relative;
+  
+      &::before {
+        content: '';
+        position: absolute;
+        inset-inline: 0;
+        inset-block: calc((100% - var(--sf-calendar-range-height)) / 2);
+        background: $calendar-range-color;
+        z-index: 0;
+      }
+  
+      &.sf-range-start:not(.sf-range-end)::before {
+        inset-inline-start: 50%;
+      }
+  
+      &.sf-range-end:not(.sf-range-start)::before {
+        inset-inline-end: 50%;
+      }
+  
+      .sf-day {
+        position: relative;
+        z-index: 1;
+      }
     }
 
     .sf-day {

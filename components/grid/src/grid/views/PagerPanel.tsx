@@ -1,11 +1,11 @@
-import { PageProps, Pager, PagerRef } from '@syncfusion/react-pager';
-import { forwardRef, ForwardRefExoticComponent, RefAttributes,  Ref, memo, JSX, useState } from 'react';
+import { PageProps, Pager, PagerRef } from '@syncfusion/react-pager/src/page';
+import { forwardRef, ForwardRefExoticComponent, RefAttributes,  Ref, memo, JSX, useRef, useCallback } from 'react';
 import { IGrid } from '../types/grid.interfaces';
-import { useGridComputedProvider, useGridMutableProvider } from '../contexts';
-import { isNullOrUndefined } from '@syncfusion/react-base';
+import { useGridComputedProvider, useGridMutableProvider } from '../contexts/GridProviders';
+import { isNullOrUndefined } from '@syncfusion/react-base/src/util';
 import { PagerArgsInfo } from '../types/page.interfaces';
 import { MutableGridSetter } from '../types/interfaces';
-import { ActionType } from '../types';
+import { ActionType } from '../types/enum';
 
 /**
  * PagerPanelBase component renders the pagination controls for the grid.
@@ -23,29 +23,40 @@ const PagerPanelBase: ForwardRefExoticComponent<PageProps & RefAttributes<PagerR
         const grid: Partial<IGrid> & Partial<MutableGridSetter> = useGridComputedProvider();
         const { setCurrentPage, setGridAction, allowKeyboard, pageSettings } = grid;
         const { totalRecordsCount, cssClass, editModule } = useGridMutableProvider();
-        const [_, setPagerCurrentPage] = useState(props.currentPage);
+        const pagerRef: React.RefObject<PagerRef> = useRef<PagerRef>(null);
+        const setPagerRef: (instance: PagerRef) => void = useCallback((instance: PagerRef | null): void => {
+            pagerRef.current = instance;
+            if (typeof ref === 'function') {
+                ref(instance);
+            } else if (ref) {
+                ref.current = instance;
+            }
+        }, [ref]);
         const clickHander: (e: PagerArgsInfo) => void = async(e: PagerArgsInfo) => {
+            // Stop the third-party pager from changing its visual page before confirmation.
+            e.cancel = true;
+            e.isPageLoading = false;
             const args: PagerArgsInfo = {
                 cancel: false, currentPage: e.currentPage, previousPage: e.oldPage, requestType: ActionType.Paging
             };
             args.type = 'pageChanging';
-            const confirmResult: boolean = await editModule?.checkUnsavedChanges?.();
+            args.isPageLoading = false;
+            const confirmResult: boolean = await editModule?.checkUnsavedChanges?.() ?? true;
             if (!isNullOrUndefined(confirmResult) && !confirmResult) {
-                setPagerCurrentPage(pageSettings.currentPage); // force re-render as well not change pager currentPage state.
                 return;
             }
             grid.onPageChangeStart?.(args);
-            args.isPageLoading = false;
             if (args.cancel) {
                 return;
             }
             setCurrentPage(args.currentPage as number);
             setGridAction(args);
+            pagerRef.current?.goToPage?.(args.currentPage as number);
         };
 
         return (
             <Pager
-                ref={ref}
+                ref={setPagerRef}
                 className={cssClass + ' sf-grid-pager'}
                 totalRecordsCount={totalRecordsCount}
                 pageSize={props.pageSize}

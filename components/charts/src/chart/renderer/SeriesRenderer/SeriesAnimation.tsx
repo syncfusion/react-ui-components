@@ -755,6 +755,14 @@ export const calculatePathAnimation: (pathOptions: RenderOptions, index: number,
     enableAnimation: boolean,
     visibleSeries?: SeriesProperties[]
 ): { strokeDasharray: string | number; strokeDashoffset: number; interpolatedD?: string } => {
+    // If animation is not enabled, skip all animation logic and return default values immediately
+    if (!enableAnimation) {
+        return {
+            strokeDasharray: pathOptions.dashArray || 'none',
+            strokeDashoffset: 0
+        };
+    }
+
     const { previousPathLengthRef, isInitialRenderRef, renderedPathDRef, animationProgress } = state;
 
     // Get the series index from the ID

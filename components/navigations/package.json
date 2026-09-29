@@ -23,6 +23,7 @@
   "dependencies": {
     "@syncfusion/react-base": "~34.1.29",
     "@syncfusion/react-buttons": "~34.1.29",
+    "@syncfusion/react-data": "~34.1.29",
     "@syncfusion/react-icons": "~34.1.29",
     "@syncfusion/react-inputs": "~34.1.29",
     "@syncfusion/react-popups": "~34.1.29"

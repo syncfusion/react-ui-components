@@ -1,17 +1,20 @@
 import { forwardRef, useImperativeHandle, useRef, RefObject, useCallback, JSX, isValidElement, memo, createElement, useMemo, RefAttributes, ForwardRefExoticComponent } from 'react';
-import { ActionType, EditType, FocusedCellInfo, IFocusMatrix, ValueType } from '../../types';
+import { ActionType, EditType } from '../../types/enum';
+import { ValueType } from '../../types/interfaces';
+import { FocusedCellInfo, IFocusMatrix } from '../../types/focus.interfaces';
 import { MutableGridSetter } from '../../types/interfaces';
 import { GridRef } from '../../types/grid.interfaces';
 import { EditParams, EditCellProps, EditCellRef, EditCellInputRef } from '../../types/edit.interfaces';
-import { TextBox, ITextBox, TextBoxProps } from '@syncfusion/react-inputs';
-import { NumericTextBox, INumericTextBox, NumericTextBoxProps, TextBoxChangeEvent, NumericChangeEvent } from '@syncfusion/react-inputs';
-import { Checkbox, ICheckbox, CheckboxProps, CheckboxChangeEvent } from '@syncfusion/react-buttons';
-import { DatePicker, IDatePicker, DatePickerProps, DatePickerChangeEvent } from '@syncfusion/react-calendars';
-import { DropDownList, IDropDownList, DropDownListProps, ChangeEvent as DDLChangeEvent, DataLoadEvent } from '@syncfusion/react-dropdowns';
-import { useGridComputedProvider, useGridMutableProvider } from '../../contexts';
+import { TextBox, ITextBox, TextBoxProps, TextBoxChangeEvent } from '@syncfusion/react-inputs/src/textbox/index';
+import { NumericTextBox, INumericTextBox, NumericTextBoxProps, NumericChangeEvent } from '@syncfusion/react-inputs/src/numeric-textbox/index';
+import { Checkbox, ICheckbox, CheckboxProps, CheckboxChangeEvent } from '@syncfusion/react-buttons/src/check-box/check-box';
+import { DatePicker, IDatePicker, DatePickerProps, DatePickerChangeEvent } from '@syncfusion/react-calendars/src/datepicker/index';
+import { DropDownList, IDropDownList, DropDownListProps, ChangeEvent as DDLChangeEvent, DataLoadEvent } from '@syncfusion/react-dropdowns/src/drop-down-list/index';
+import { useGridComputedProvider, useGridMutableProvider } from '../../contexts/GridProviders';
+import { getCustomDateFormat } from '../../utils/utils';
+import { getNumberPattern } from '@syncfusion/react-base/src/internationalization';
+import { Position } from '@syncfusion/react-base/src/enums';
 import { DataManager, DataResult, DataUtil, Predicate, Query } from '@syncfusion/react-data';
-import { getCustomDateFormat } from '../../utils';
-import { getNumberPattern, Position } from '@syncfusion/react-base';
 
 // CSS class constants
 const CSS_FIELD_CLASS: string = 'sf-field';
@@ -49,7 +52,7 @@ export const EditCell: ForwardRefExoticComponent<EditCellProps<unknown> & RefAtt
         // Access grid context to get complete dataSource for dropdown
         const gridContext: Partial<GridRef<T>> & Partial<MutableGridSetter<T>> = useGridComputedProvider<T>();
         const { cssClass, commandColumnModule, editModule, focusModule } = useGridMutableProvider();
-        const { commandEdit } = commandColumnModule;
+
         const dataSource: T[] | DataManager | DataResult = gridContext.dataSource;
 
         /**
@@ -76,7 +79,7 @@ export const EditCell: ForwardRefExoticComponent<EditCellProps<unknown> & RefAtt
                 }
 
                 if ('element' in currentInput && currentInput.element) {
-                    if (gridContext?.editSettings?.mode === 'Cell') {
+                    if (gridContext?.editSettings?.mode === 'Cell' || gridContext?.editSettings?.allowBatchSave === true) {
                         focusModule.setActiveMatrix('Content');
                         const matrix: IFocusMatrix = focusModule.getActiveMatrix();
                         const focusedCell: FocusedCellInfo = focusModule.getFocusedCell();
@@ -166,9 +169,9 @@ export const EditCell: ForwardRefExoticComponent<EditCellProps<unknown> & RefAtt
                 const isDisabled: boolean = disabled || column.allowEdit === false || (column.isPrimaryKey === true && !isAdd);
                 const baseProps: {[key: string]: string | number | boolean} = useMemo(() => ({
                     'data-mappinguid': column.uid,
-                    'id': `${commandEdit.current ? rowObject.uid + '-' : ''}${GRID_EDIT_PREFIX}${column.field}`
-                }), [column.uid, column.field, commandEdit, rowObject?.uid]);
-                const popupMode: boolean = editModule.editSettings.mode === 'Popup' && popupRef ? true : false;
+                    'id': `${commandColumnModule?.commandEdit.current && rowObject?.uid ? rowObject.uid + '-' : ''}${GRID_EDIT_PREFIX}${column.field}`
+                }), [column.uid, column.field, commandColumnModule?.commandEdit, rowObject?.uid]);
+                const popupMode: boolean = editModule?.editSettings.mode === 'Popup' && popupRef ? true : false;
                 const placeHolder: string = column.headerText ? column.headerText : column.field;
 
                 switch (editorType) {
@@ -251,7 +254,16 @@ export const EditCell: ForwardRefExoticComponent<EditCellProps<unknown> & RefAtt
                                 ' ' + CSS_ERROR_CLASS : ''}` + (cssClass !== '' ? (' ' + cssClass) : '')}
                             value={value ? new Date(value as Date) : null}
                             onChange={isDisabled ? undefined : ((args: DatePickerChangeEvent) => {
-                                handleSyncfusionChange(args.value as Date);
+                                const currentDate: Date | null = value ? new Date(value as Date) : null;
+                                const selectedDate: Date | null = args.value as Date | null;
+                                const isBatchDateEdit: boolean = gridContext?.editSettings?.allowBatchSave === true;
+                                const isSameCalendarDate: boolean = isBatchDateEdit && !!currentDate && !!selectedDate &&
+                                    currentDate.getFullYear() === selectedDate.getFullYear() &&
+                                    currentDate.getMonth() === selectedDate.getMonth() &&
+                                    currentDate.getDate() === selectedDate.getDate();
+                                if (!isSameCalendarDate) {
+                                    handleSyncfusionChange(selectedDate);
+                                }
                             }) as (event: DatePickerChangeEvent) => void}
                             format={column.format ? getCustomDateFormat(column.format, column.type) : 'M/d/yyyy'} // only provided string format support
                             onClose={isDisabled ? undefined : handleSyncfusionBlur}

@@ -86,19 +86,20 @@ type IAutocompleteProps = AutocompleteProps & Omit<InputHTMLAttributes<HTMLSpanE
  * import { Autocomplete } from "@syncfusion/react-dropdowns";
  *
  * export default function App() {
- *   const data = [
- *     { text: "Apple", value: "apple" },
- *     { text: "Banana", value: "banana" },
- *     { text: "Cherry", value: "cherry" }
- *   ];
+ *      const data = [
+ *          { text: "Apple", value: "apple" },
+ *          { text: "Banana", value: "banana" },
+ *          { text: "Cherry", value: "cherry" }
+ *      ];
  *
- *   return (
- *     <Autocomplete
- *       id="fruits"
- *       dataSource={data}
- *       fields={{ text: "text", value: "value" }}
- *       placeholder="Select a fruit" />
- *   );
+ *      return (
+ *          <Autocomplete
+ *              id="fruits"
+ *              dataSource={data}
+ *              fields={{ text: "text", value: "value" }}
+ *              placeholder="Select a fruit"
+ *          />
+ *      );
  * }
  * ```
  */

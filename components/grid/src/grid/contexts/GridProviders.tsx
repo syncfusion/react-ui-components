@@ -1,5 +1,5 @@
 import { Context, createContext, JSX, ReactElement, ReactNode, useContext } from 'react';
-import { MutableGridBase } from '../types';
+import { MutableGridBase } from '../types/interfaces';
 import { GridRef, IGrid } from '../types/grid.interfaces';
 import { MutableGridSetter } from '../types/interfaces';
 /**

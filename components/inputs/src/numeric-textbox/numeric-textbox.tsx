@@ -186,7 +186,11 @@ const classNames: (...classes: string[]) => string = (...classes: string[]) => {
  * ```typescript
  * import { NumericTextBox } from "@syncfusion/react-inputs";
  *
- * <NumericTextBox defaultValue={100} min={0} max={1000} />
+ * export default function App() {
+ *      return (
+ *              <NumericTextBox defaultValue={100} min={0} max={1000} />
+ *      );
+ * }
  * ```
  */
 export const NumericTextBox: React.ForwardRefExoticComponent<INumericTextBoxProps & React.RefAttributes<INumericTextBox>> =

@@ -1,5 +1,25 @@
 # Changelog
 
+## 34.1.29 (2026-09-28)
+
+### FileUpload
+
+The FileUpload component enables users to select and upload files or folders to a server with support for drag-and-drop, validation, chunk upload. It supports both single and multiple file, and exposes a flexible composition API for customizing the drop hint, file list, and action buttons.
+
+Explore the demo <a href="https://react.syncfusion.com/react-ui/file-upload" target="_blank" rel="noopener noreferrer">here</a>
+
+**Key features**
+
+- **Drag-and-drop:** Supports native drag-and-drop file selection and the optional use of an external element as the drop target through the `dropArea` ref.
+
+- **File validation:** Built-in validation for accepted file types, minimum and maximum file size, minimum and maximum file count, and duplicate detection, surfaced through the `onValidationError` event.
+
+- **Auto and manual upload:** Upload files immediately on selection with `autoUpload`, or queue them for manual upload via the provided `Upload` action.
+
+- **Chunk upload:** Split large files into configurable chunk sizes for resilient, resumable uploads, with per-chunk pause, resume, and cancel controls.
+
+- **Composition API:** Customize the UI with compound children — `<BrowseButton>`, `<DragHint>`, `<FileList>`, and `<Actions>` — to tailor the trigger, hint, list, and action buttons.
+
 ## 34.1.29 (2026-07-06)
 
 ### TextBox
@@ -52,7 +72,7 @@ Added support for field-level validation rules on `FormField`. Field-level rules
 
 The Form component provides comprehensive form validation and state management functionality with built-in validation rules and field interaction tracking. It offers a powerful way to handle complex forms with real-time validation, error handling, and submission management.
 
-Explore the demo <a href="https://react.syncfusion.com/form" target="_blank" rel="noopener noreferrer">here</a>
+Explore the demo <a href="https://react.syncfusion.com/react-ui/form" target="_blank" rel="noopener noreferrer">here</a>
 
 **Key features**
 
@@ -92,7 +112,7 @@ Explore the demo <a href="https://react.syncfusion.com/form" target="_blank" rel
 
 The NumericTextBox component provides a specialized input field for numeric values with validation, formatting, and increment/decrement capabilities. It offers precise control over numeric input with support for various number formats, validation rules, and user interaction patterns.
 
-Explore the demo <a href="https://react.syncfusion.com/numeric-textbox" target="_blank" rel="noopener noreferrer">here</a>
+Explore the demo <a href="https://react.syncfusion.com/react-ui/numeric-textbox" target="_blank" rel="noopener noreferrer">here</a>
 
 **Key features**
 
@@ -112,7 +132,7 @@ Explore the demo <a href="https://react.syncfusion.com/numeric-textbox" target="
 
 The TextArea component provides a multi-line text input field with enhanced functionality for collecting longer text content from users. It offers various customization options to adapt to different application requirements and design systems.
 
-Explore the demo <a href="https://react.syncfusion.com/textarea" target="_blank" rel="noopener noreferrer">here</a>
+Explore the demo <a href="https://react.syncfusion.com/react-ui/textarea" target="_blank" rel="noopener noreferrer">here</a>
 
 **Key features**
 
@@ -130,7 +150,7 @@ Explore the demo <a href="https://react.syncfusion.com/textarea" target="_blank"
 
 The TextBox component provides a feature-rich input field for collecting user text input with enhanced styling options and validation states. It supports both controlled and uncontrolled input modes to fit various application requirements.
 
-Explore the demo <a href="https://react.syncfusion.com/textbox" target="_blank" rel="noopener noreferrer">here</a>
+Explore the demo <a href="https://react.syncfusion.com/react-ui/textbox/" target="_blank" rel="noopener noreferrer">here</a>
 
 **Key features**
 

@@ -154,7 +154,14 @@ export const AxisRenderer: React.FC<ChartAxesProps> = ({ axes }: { axes: AxisMod
         );
         for (const runtimeAxis of chart.axisCollection) {
             const propAxis: AxisModel | undefined = axes.find((a: AxisModel) => a.name === runtimeAxis.name);
-            if (!propAxis || !propAxis.scrollbarSettings) { continue; }
+            if (!propAxis) { continue; }
+            // Sync controlled zoom state from props so updates after a pan are honored
+            // (internal pan/zoom/scrollbar path passes isLegendClicked=true and is skipped)
+            if (!isLegendClicked) {
+                runtimeAxis.zoomFactor = propAxis.zoomFactor ?? runtimeAxis.zoomFactor;
+                runtimeAxis.zoomPosition = propAxis.zoomPosition ?? runtimeAxis.zoomPosition;
+            }
+            if (!propAxis.scrollbarSettings) { continue; }
             runtimeAxis.scrollbarSettings = {
                 ...(runtimeAxis.scrollbarSettings ?? {}),
                 ...(propAxis.scrollbarSettings ?? {})

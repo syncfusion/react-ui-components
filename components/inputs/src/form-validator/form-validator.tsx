@@ -469,26 +469,34 @@ type FormComponentProps = FormProps & Omit<FormHTMLAttributes<HTMLFormElement>, 
  *
  * ```typescript
  * import { Form, FormField, FormState } from '@syncfusion/react-inputs';
+ * import React, { useState } from 'react';
  *
- * const [formState, setFormState] = useState<FormState>();
+ * export default function App() {
+ *      const [formState, setFormState] = useState<FormState>();
  *
- * <Form
- *   rules={{ username: { required: [true, 'Username is required'] } }}
- *   onSubmit={data => console.log(data)}
- *   onFormStateChange={setFormState} >
- *   <FormField name="username">
- *     <input
- *       name="username"
- *       value={(formState?.values.username || '') as string}
- *       onChange={(e) => formState?.onChange('username', { value: e.target.value })}
- *       onBlur={() => formState?.onBlur('username')}
- *       onFocus={() => formState?.onFocus('username')}
- *     />
- *     {formState?.errors?.username && (<div className="error">{formState.errors.username}</div>)}
- *   </FormField>
- *   <button type="submit">Submit</button>
- * </Form>
- * ```
+ *      return (
+ *              <Form
+ *                  rules={{ username: { required: [true, 'Username is required'] } }}
+ *                  onSubmit={data => console.log(data)}
+ *                  onFormStateChange={setFormState}
+ *              >
+ *                  <FormField name="username">
+ *                      <input
+ *                          name="username"
+ *                          value={(formState?.values.username || '')}
+ *                          onChange={e => formState?.onChange('username', { value: e.target.value })}
+ *                          onBlur={() => formState?.onBlur('username')}
+ *                          onFocus={() => formState?.onFocus('username')}
+ *                      />
+ *                      {formState?.errors?.username && (
+ *                          <div className="error">{formState.errors.username}</div>
+ *                      )}
+ *                  </FormField>
+ *                  <button type="submit">Submit</button>
+ *              </Form>
+ *      );
+ * }
+ *  ```
  */
 export const Form: ForwardRefExoticComponent<FormComponentProps & RefAttributes<IFormValidator>> =
 forwardRef<IFormValidator, FormComponentProps>((props: FormComponentProps, ref: Ref<IFormValidator>) => {

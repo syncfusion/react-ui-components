@@ -482,3 +482,21 @@ export function useStableId(prefix: string): string {
     }
     return idRef.current;
 }
+
+/**
+ * Product to components map - groups components by their product
+ * More efficient than component-to-product as it avoids duplication
+ */
+export const productToComponentsMap: { [key: string]: string[] } = {
+    'PDFViewerSDK': ['PdfViewer'],
+    'DocumentSDK': ['pdf', 'pdf-extract'],
+    'DOCXEditorSDK': ['DocumentEditor'],
+    'SpreadsheetEditorSDK': ['spreadsheet'],
+    'SchedulerSDK': ['schedule', 'calendar', 'daterangepicker', 'datepicker', 'datetimepicker', 'timepicker'],
+    'GanttSDK': ['gantt', 'kanban'],
+    'DiagramSDK': ['diagram'],
+    'FileManagerSDK': ['filemanager'],
+    'GridSDK': ['grid', 'pivotview', 'treegrid'],
+    'RichTextEditorSDK': ['richtexteditor', 'blockeditor'],
+    'ChartSDK': ['barcode', 'bulletChart', 'circularchart3d', 'circulargauge', 'DashboardLayout', 'heatmap', 'lineargauge', 'maps', 'rangeNavigator', 'sankey', 'smithchart', 'sparkline', 'stockChart', 'chart3d', 'treemap', 'chart']
+};

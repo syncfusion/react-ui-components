@@ -1,6 +1,10 @@
-import { Dispatch, SetStateAction } from 'react';
-import { GridActionEvent } from '../types/grid.interfaces';
-import { useSearch } from '../hooks';
+import { Dispatch, SetStateAction, RefObject } from 'react';
+import { GridActionEvent, GridRef } from '../types/grid.interfaces';
+import { ToolbarAPI, ToolbarConfig } from './toolbar.interfaces';
+import { SelectionModel, SelectionSettings } from './selection.interfaces';
+import { UseCommandColumnResult } from './command.interfaces';
+import { VirtualSettings } from './virtualization.interface';
+import { editModule } from './edit.interfaces';
 
 /**
  * Configures search functionality for the Data Grid component.
@@ -91,15 +95,6 @@ export interface SearchEvent extends GridActionEvent {
 }
 
 /**
- * Defines the type for the search strategy module in the Data Grid.
- * Represents the return type of the useSearch hook for managing search operations.
- * Used internally to encapsulate search functionality.
- *
- * @private
- */
-export type searchModule = ReturnType<typeof useSearch>;
-
-/**
  * Defines the API for managing search operations in the Data Grid.
  * Provides methods and properties to control search behavior, state, and updates.
  * Used internally to handle search interactions and configuration.
@@ -116,6 +111,15 @@ export interface SearchAPI {
      * @returns {void}
      */
     search: (key: string) => void;
+
+    /**
+     * Searches the grid and resolves once the grid's UI has committed the search results.
+     * Resolves without rejecting when the search is vetoed by `onSearchStart` or is a no-op.
+     *
+     * @param {string} key - The search key to filter grid records.
+     * @returns {Promise<void>} Resolves after the search completes.
+     */
+    searchAsync?: (key: string) => Promise<void>;
 
     /**
      * Stores the current search settings configuration for the grid.
@@ -135,4 +139,26 @@ export interface SearchAPI {
      * @returns {void}
      */
     setSearchSetting: Dispatch<SetStateAction<SearchSettings>>;
+    ToolbarModule: (
+        config: ToolbarConfig,
+        editModule?: editModule,
+        selectionModule?: SelectionModel,
+        currentViewData?: unknown[],
+        allowSearching?: boolean,
+        commandColumnModule?: UseCommandColumnResult,
+        selectionSettings?: SelectionSettings,
+        showColumnChooser?: boolean,
+        virtualSettings?: VirtualSettings,
+        totalRecordsCount?: number,
+        gridRef?: RefObject<GridRef>
+    ) => ToolbarAPI;
 }
+
+/**
+ * Defines the type for the search strategy module in the Data Grid.
+ * Represents the return type of the useSearch hook for managing search operations.
+ * Used internally to encapsulate search functionality.
+ *
+ * @private
+ */
+export type searchModule = SearchAPI;

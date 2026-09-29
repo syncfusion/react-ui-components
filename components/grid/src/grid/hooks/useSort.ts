@@ -1,12 +1,13 @@
 import { useCallback, RefObject, useEffect, useMemo, useState } from 'react';
-import { ActionType, SortDirection } from '../types';
+import { ActionType, SortDirection } from '../types/enum';
 import { SortSettings, SortDescriptor, SortEvent, SortAPI } from '../types/sort.interfaces';
 import { ColumnProps } from '../types/column.interfaces';
-import { closest, isNullOrUndefined} from '@syncfusion/react-base';
-import { getActualPropFromColl } from '../utils';
+import { closest } from '@syncfusion/react-base/src/dom';
+import { isNullOrUndefined } from '@syncfusion/react-base/src/util';
+import { getActualPropFromColl, executeGridAsyncAction, dispatchGridCancelBegin } from '../utils/utils';
 import { GridRef } from '../types/grid.interfaces';
 import { SortProperties } from '../types/interfaces';
-import { UseGroupResult } from './useGroup';
+import { UseGroupResult } from '../types/grouping.interfaces';
 
 /**
  * Custom hook to manage sort state and configuration
@@ -33,6 +34,7 @@ export const useSort: (gridRef?: RefObject<GridRef>, sortSetting?: SortSettings,
     }), []);
 
     useMemo(() => {
+        if (!groupModule) { return; }
         const { groupSettings } = groupModule;
         if (groupSettings?.autoSort && !isInitialLoad) {
             const removalRequiredFields: string [] = groupSettings?.enabled ?
@@ -103,7 +105,9 @@ export const useSort: (gridRef?: RefObject<GridRef>, sortSetting?: SortSettings,
      */
     const sortByColumn: (field: string, direction: SortDirection | string, isMultiSort: boolean) => void = useCallback(async(
         field: string, direction: SortDirection | string, isMultiSort: boolean): Promise<void> => {
-        const column: ColumnProps = gridRef.current.columns.find((col: ColumnProps) => col.field === field );
+        const columnsDetails: ColumnProps[] = gridRef.current.isStackedHeader ? gridRef.current.stackedFlattedColumnProps
+            : gridRef.current.columns;
+        const column: ColumnProps = columnsDetails.find((col: ColumnProps) => col.field === field );
         if (column.allowSort === false || gridRef.current?.sortSettings?.enabled === false) { return; }
         const sortedColumn: SortDescriptor = { field: field, direction: direction };
         let index: number;
@@ -115,14 +119,20 @@ export const useSort: (gridRef?: RefObject<GridRef>, sortSetting?: SortSettings,
             event: getSortProperties.currentEvent, columns: getSortProperties.sortSettings.columns };
         if (getSortProperties.contentRefresh) {
             args.type = ActionType.Sorting;
-            const confirmResult: boolean = await gridRef.current?.editModule?.checkUnsavedChanges?.();
+            const confirmResult: boolean = await gridRef.current?.editModule?.checkUnsavedChanges?.() ?? true;
             if (!isNullOrUndefined(confirmResult) && !confirmResult) {
                 return;
             }
             gridRef.current.onSortStart?.(args);
             if (args.cancel) {
+                dispatchGridCancelBegin(gridRef, ActionType.Sorting);
                 return;
             }
+        }
+        const confirmUndoRedoClear: boolean = gridRef.current?.editModule?.editSettings?.allowUndoRedo ?
+            await gridRef.current?.editModule?.confirmUndoRedoClear?.() ?? true : true;
+        if (getSortProperties.contentRefresh && !confirmUndoRedoClear) {
+            return;
         }
         updateSortedCols(field, isMultiSort);
         if (!isMultiSort) {
@@ -136,6 +146,7 @@ export const useSort: (gridRef?: RefObject<GridRef>, sortSetting?: SortSettings,
                     }));
                 args.type = 'actionComplete';
                 setGridAction(args);
+                gridRef.current?.clearUndoRedoHistory?.();
             }
         } else {
             index = getSortedColsIndexByField(field);
@@ -152,6 +163,7 @@ export const useSort: (gridRef?: RefObject<GridRef>, sortSetting?: SortSettings,
                     }));
                 args.type = 'actionComplete';
                 setGridAction(args);
+                gridRef.current?.clearUndoRedoHistory?.();
             }
         }
     }, [gridRef, getSortProperties, setGridAction, updateSortedCols, getSortedColsIndexByField]);
@@ -187,12 +199,18 @@ export const useSort: (gridRef?: RefObject<GridRef>, sortSetting?: SortSettings,
         const args: SortEvent = { cancel: false, requestType: ActionType.ClearSorting, event: getSortProperties.currentEvent,
             columns: getSortProperties.sortSettings.columns, field: field, action: ActionType.ClearSorting };
         args.type = ActionType.Sorting;
-        const confirmResult: boolean = await gridRef.current?.editModule?.checkUnsavedChanges?.();
+        const confirmResult: boolean = await gridRef.current?.editModule?.checkUnsavedChanges?.() ?? true;
         if (!isNullOrUndefined(confirmResult) && !confirmResult) {
             return;
         }
         gridRef.current.onSortStart?.(args);
         if (args.cancel) {
+            dispatchGridCancelBegin(gridRef, ActionType.ClearSorting);
+            return;
+        }
+        const confirmUndoRedoClear: boolean = gridRef.current?.editModule?.editSettings?.allowUndoRedo ?
+            await gridRef.current?.editModule?.confirmUndoRedoClear?.() ?? true : true;
+        if (!confirmUndoRedoClear) {
             return;
         }
         for (let i: number = 0, len: number = cols.length; i < len; i++) {
@@ -203,6 +221,7 @@ export const useSort: (gridRef?: RefObject<GridRef>, sortSetting?: SortSettings,
                     ({ ...prev, columns: cols, allowUnsort: gridRef.current.sortSettings?.allowUnsort }));
                 args.type = 'actionComplete';
                 setGridAction(args);
+                gridRef.current?.clearUndoRedoHistory?.();
                 break;
             }
         }
@@ -215,10 +234,10 @@ export const useSort: (gridRef?: RefObject<GridRef>, sortSetting?: SortSettings,
             getSortProperties.currentEvent = e;
             const direction: SortDirection | string = !target.getElementsByClassName('sf-ascending').length ? SortDirection.Ascending :
                 SortDirection.Descending;
-            const { groupSettings } = groupModule;
-            const isColumnGrouped: boolean = !!(groupSettings?.enabled && groupSettings?.columns?.length);
-            const notGroupedSortedColumns: SortDescriptor[] = gridRef.current?.sortSettings?.columns?.filter(
-                (col: SortDescriptor) => groupSettings?.columns?.indexOf(col.field) === -1);
+            const isColumnGrouped: boolean = !!(groupModule?.groupSettings?.enabled && groupModule?.groupSettings?.columns?.length);
+            const notGroupedSortedColumns: SortDescriptor[] = !groupModule ? gridRef.current?.sortSettings?.columns :
+                gridRef.current?.sortSettings?.columns?.filter((col: SortDescriptor) =>
+                    groupModule?.groupSettings?.columns?.indexOf(col.field) === -1);
             const notGroupedSortedColumnCount: number = notGroupedSortedColumns?.length;
             getSortProperties.isMultiSort = e.ctrlKey || isColumnGrouped;
             if (!(gridRef.current?.sortSettings?.mode === 'Multiple')) {
@@ -252,17 +271,24 @@ export const useSort: (gridRef?: RefObject<GridRef>, sortSetting?: SortSettings,
         if (!gridRef.current?.sortSettings?.enabled) { return; }
         if ((event.target as Element).closest('.sf-excel-filter')) {
             if (closest(event.target as Element, '.sf-excel-ascending') || closest(event.target as Element, '.sf-excel-descending')) {
-                const colUid: string = (closest(event.target as Element, '.sf-filter-popup')).getAttribute('data-uid');
+                const popupElement: Element | null = closest(event.target as Element, '.sf-filter-popup');
+                if (!popupElement) { return; }
+                const colUid: string = popupElement.getAttribute('data-uid');
                 const direction: string = isNullOrUndefined(closest(event.target as Element, '.sf-excel-descending')) ?
                     SortDirection.Ascending : SortDirection.Descending;
-                const column: ColumnProps = gridRef.current.columns.find((col: ColumnProps) => col.uid === colUid );
+                const columnsDetails: ColumnProps[] = gridRef.current.isStackedHeader ? gridRef.current.stackedFlattedColumnProps
+                    : gridRef.current?.getColumns?.();
+                const column: ColumnProps = columnsDetails.find((col: ColumnProps) => col.uid === colUid );
+                if (!column) { return; }
                 sortByColumn(column.field, direction, false);
             }
         } else {
             const target: Element = closest(event.target as Element, '.sf-grid-header-row .sf-cell') ??
                 (event.target as Element).closest('.sf-group-chip-template');
             if (target && !(event.target as Element).classList.contains('sf-group-togglebtn')) {
-                const colObj: ColumnProps = gridRef.current.columns.find((col: ColumnProps) => col.uid ===
+                const columnsDetails: ColumnProps[] = gridRef.current.isStackedHeader ? gridRef.current.stackedFlattedColumnProps
+                    : gridRef.current?.getColumns?.();
+                const colObj: ColumnProps = columnsDetails.find((col: ColumnProps) => col.uid ===
                     (target.querySelector('.sf-grid-header-cell') || target).getAttribute('data-mappinguid'));
                 if (colObj && colObj?.type !== 'checkbox') {
                     initiateSort(target, event, colObj);
@@ -283,7 +309,9 @@ export const useSort: (gridRef?: RefObject<GridRef>, sortSetting?: SortSettings,
             const target: Element = ele;
             if (isNullOrUndefined(target) || ((!target.classList.contains('sf-cell')
                 || !target.querySelector('.sf-grid-header-cell')) && !groupChipElement)) { return; }
-            const colObj: ColumnProps = gridRef.current.columns.find((col: ColumnProps) => col.uid ===
+            const columnsDetails: ColumnProps[] = gridRef.current.isStackedHeader ? gridRef.current.stackedFlattedColumnProps
+                : gridRef.current.columns;
+            const colObj: ColumnProps = columnsDetails.find((col: ColumnProps) => col.uid ===
                 (groupChipElement?.getAttribute?.('data-mappinguid') ||
                 target.querySelector('.sf-grid-header-cell')?.getAttribute?.('data-mappinguid')));
             initiateSort(target, e, colObj);
@@ -310,7 +338,42 @@ export const useSort: (gridRef?: RefObject<GridRef>, sortSetting?: SortSettings,
                 });
             }
         }
-    }, []);
+        gridRef.current?.clearUndoRedoHistory?.();
+    }, [gridRef, removeSortColumn]);
 
-    return { removeSortColumn, sortByColumn, clearSort, handleGridClick, keyUpHandler, sortSettings, setSortSettings };
+    /**
+     * Sorts a column and resolves when the grid's UI has committed the new sort order.
+     *
+     * @param {string} field - Defines the column name to be sorted.
+     * @param {SortDirection | string} direction - Defines the direction of sorting field.
+     * @param {boolean} isMultiSort - Specifies whether the previous sorted columns are to be maintained.
+     * @returns {Promise<void>} Resolves after sorting completes (or is cancelled/no-op).
+     */
+    const sortColumnAsync: (field: string, direction: SortDirection | string, isMultiSort?: boolean) => Promise<void> =
+        useCallback((field: string, direction: SortDirection | string, isMultiSort?: boolean): Promise<void> =>
+            executeGridAsyncAction(gridRef, ActionType.Sorting, () => sortByColumn(field, direction, isMultiSort)),
+                    [gridRef, sortByColumn]);
+
+    /**
+     * Removes sorting from a column and resolves when the grid's UI has committed the change.
+     *
+     * @param {string} field - Defines the column field to be sorted.
+     * @returns {Promise<void>} Resolves after the sort is removed (or is cancelled/no-op).
+     */
+    const removeSortColumnAsync: (field: string) => Promise<void> = useCallback((field: string): Promise<void> =>
+        executeGridAsyncAction(gridRef, ActionType.ClearSorting, () => removeSortColumn(field)), [gridRef, removeSortColumn]);
+
+    /**
+     * Clears all sorted columns and resolves when the grid's UI has committed the change.
+     *
+     * @param {string[]} [fields] - Array of field names to clear sorts from. If omitted, clears all sorts.
+     * @returns {Promise<void>} Resolves after sorting is cleared (or is cancelled/no-op).
+     */
+    const clearSortingAsync: (fields?: string[]) => Promise<void> = useCallback((fields?: string[]): Promise<void> =>
+        executeGridAsyncAction(gridRef, ActionType.ClearSorting, () => clearSort(fields)), [gridRef, clearSort]);
+
+    return {
+        removeSortColumn, sortByColumn, clearSort, handleGridClick, keyUpHandler, sortSettings, setSortSettings,
+        sortColumnAsync, removeSortColumnAsync, clearSortingAsync
+    };
 };

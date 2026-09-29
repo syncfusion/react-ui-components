@@ -2,7 +2,8 @@ import * as React from 'react';
 import { ChartIndicatorProps } from '../../base/interfaces';
 import { SeriesProperties, Points, RenderOptions, Chart, ChartIndicatorSettings } from '../../chart-area/chart-interfaces';
 import { firstToLowerCase } from '../../utils/helper';
-import { seriesModules } from '../SeriesRenderer/SeriesRenderer';
+import { seriesModules, getGradientDefsForChart } from '../SeriesRenderer/SeriesRenderer';
+import { GradientDefs, GradientDefSpec } from '../SeriesRenderer/GradientDefs';
 import BollingerBandsRenderer from './BollingerBandsRenderer';
 import SMARenderer from './SMARenderer';
 import EMARenderer from './EMARenderer';
@@ -348,6 +349,11 @@ export function renderIndicatorsJSX(
                                         height={clipRectHeight}
                                     />
                                 </clipPath>
+                                <GradientDefs specs={
+                                    getGradientDefsForChart(chartId).filter(
+                                        (spec: GradientDefSpec) => spec.owner === 'indicator'
+                                    )
+                                } />
                             </defs>
 
                             {/* Render each indicator path */}

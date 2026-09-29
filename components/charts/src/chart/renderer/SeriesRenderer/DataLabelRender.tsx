@@ -388,7 +388,7 @@ export const DataLabelRenderer: IDataLabelRenderer  = {
                 const CenterY: number = rect.y + (rect.height / 2);
                 xPos = CenterX;
                 yPos = CenterY;
-                if (series.type !== 'Waterfall' && series.type !== 'BoxAndWhisker' && !isDataLabelOverlap && series.isRectSeries && point.regions && point.regions[0] && dataLabelPosition !== 'Outer') {
+                if (series.type !== 'Waterfall' && series.type !== 'PolarStackingColumn' && series.type !== 'RadarStackingColumn' && series.type !== 'BoxAndWhisker' && !isDataLabelOverlap && series.isRectSeries && point.regions && point.regions[0] && dataLabelPosition !== 'Outer') {
                     const pointRegion: Rect = point.regions[0];
                     const rectCheck: Rect = isBorder ? rect : labelRect;
 

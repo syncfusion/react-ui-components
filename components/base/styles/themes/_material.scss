@@ -46,6 +46,24 @@
   --sf-color-line-color: 231, 227, 240;
   --sf-color-placeholder-text-color: 121, 116, 126;
   --sf-color-shadow-focus-ring1: 0 0 0 1px #fff,0 0 0 3px #000;
+  
+  --sf-color-formula-reference-cell-border-1: #008aa9;
+  --sf-color-formula-reference-cell-border-2: #bc4b09;
+  --sf-color-formula-reference-cell-border-3: #8156b8;
+  --sf-color-formula-reference-cell-border-4: #007c1f;
+  --sf-color-formula-reference-cell-border-5: #d35491;
+  --sf-color-formula-reference-cell-border-6: #d13438;
+  --sf-color-formula-reference-cell-border-7: #4d6787;
+  --sf-color-formula-reference-cell-background-1: #f2fafc;
+  --sf-color-formula-reference-cell-background-2: #fff9f5;
+  --sf-color-formula-reference-cell-background-3: #f8f4ff;
+  --sf-color-formula-reference-cell-background-4: #f1faf1;
+  --sf-color-formula-reference-cell-background-5: #fff3f9;
+  --sf-color-formula-reference-cell-background-6: #fdf3f4;
+  --sf-color-formula-reference-cell-background-7: #f3f8ff;
+
+  --sf-elevation-4: 0px 0.3px 0.9px 0px rgba(0, 0, 0, 0.1), 0px 1.6px 3.6px 0px rgba(0, 0, 0, 0.13);
+  --sf-elevation-4-reverse: 0px -0.3px 0.9px 0px rgba(0, 0, 0, 0.1), 0px -1.6px 3.6px 0px rgba(0, 0, 0, 0.13);
 }
 
 :root, .sf-light-mode, .sf-dark-mode {
@@ -204,6 +222,21 @@ $overlay-bg-color: rgba($scrim, .5) !default;
 $table-bg-color-selected: rgba($primary-container, .65) !default;
 $table-bg-color-selected-hover: color-mix(in srgb, rgba($primary-container, .85), rgba($on-surface, 0.15));
 
+$formula-reference-cell-border-1: sf-color('formula-reference-cell-border-1') !default;
+$formula-reference-cell-border-2: sf-color('formula-reference-cell-border-2') !default;
+$formula-reference-cell-border-3: sf-color('formula-reference-cell-border-3') !default;
+$formula-reference-cell-border-4: sf-color('formula-reference-cell-border-4') !default;
+$formula-reference-cell-border-5: sf-color('formula-reference-cell-border-5') !default;
+$formula-reference-cell-border-6: sf-color('formula-reference-cell-border-6') !default;
+$formula-reference-cell-border-7: sf-color('formula-reference-cell-border-7') !default;
+$formula-reference-cell-background-1: sf-color('formula-reference-cell-background-1') !default;
+$formula-reference-cell-background-2: sf-color('formula-reference-cell-background-2') !default;
+$formula-reference-cell-background-3: sf-color('formula-reference-cell-background-3') !default;
+$formula-reference-cell-background-4: sf-color('formula-reference-cell-background-4') !default;
+$formula-reference-cell-background-5: sf-color('formula-reference-cell-background-5') !default;
+$formula-reference-cell-background-6: sf-color('formula-reference-cell-background-6') !default;
+$formula-reference-cell-background-7: sf-color('formula-reference-cell-background-7') !default;
+
 $content-text-color: $on-surface !default;
 $content-text-color-alt1: $on-surface-variant !default;
 $content-text-color-hover: $content-text-color !default;
@@ -233,6 +266,8 @@ $shadow-sm: var(--sf-elevation-1) !default;
 $shadow-md: var(--sf-elevation-2) !default;
 $shadow-lg: var(--sf-elevation-3) !default;
 $shadow-inner: var(--sf-elevation-inner)!default;
+$shadow-xl: 0 2px 3px 0 rgba(0, 0, 0, .3), 0 6px 10px 4px rgba(0, 0, 0, .15) !default;
+$shadow-2xl: 0 4px 4px 0 rgba(0, 0, 0, .3), 0 8px 12px 6px rgba(0, 0, 0, .15) !default;
 
 $shadow-focus-ring1: var(--sf-color-shadow-focus-ring1) !default;
 $shadow-focus-ring2: 0 0 0 2px rgba($content-text-color, 1) !default;
@@ -386,10 +421,15 @@ $msg-info-close-icon-color-alt1: rgba($icon-color) !default;
 $msg-info-close-icon-color-alt2: rgba($on-info) !default;
 
 $skeleton-wave-color: rgba(255, 255, 255, 1) !default;
+$appbar-top-shadow: 0px -0.3px 0.9px 0px rgba(0, 0, 0, 0.1), 0px -1.6px 3.6px 0px rgba(0, 0, 0, 0.13) !default;
+$appbar-bottom-shadow: 0px 0.3px 0.9px 0px rgba(0, 0, 0, 0.1), 0px 1.6px 3.6px 0px rgba(0, 0, 0, 0.13) !default;
 
 $grey-white: #fff !default;
 $grey-300: #e0e0e0 !default;
 $tooltip-text-color: #f9fafb !default;
+
+$grid-bottom-pinned-table-box-shadow: var(--sf-elevation-4-reverse) !default;
+$grid-top-pinned-table-box-shadow: var(--sf-elevation-4) !default;
 
 .sf-dark-mode {
   --sf-color-black: 0, 0, 0;
@@ -433,6 +473,24 @@ $tooltip-text-color: #f9fafb !default;
   --sf-color-line-color: 57, 53, 67;
   --sf-color-placeholder-text-color: 121, 116, 126;
   --sf-color-shadow-focus-ring1: 0 0 0 1px #000,0 0 0 3px #fff;
+  
+  --sf-color-formula-reference-cell-border-1: #0099bc;
+  --sf-color-formula-reference-cell-border-2: #faa06b;
+  --sf-color-formula-reference-cell-border-3: #b791e8;
+  --sf-color-formula-reference-cell-border-4: #107c10;
+  --sf-color-formula-reference-cell-border-5: #e86ca8;
+  --sf-color-formula-reference-cell-border-6: #dc626d;
+  --sf-color-formula-reference-cell-border-7: #7c9fca;
+  --sf-color-formula-reference-cell-background-1: #002e38;
+  --sf-color-formula-reference-cell-background-2: #4a1e04;
+  --sf-color-formula-reference-cell-background-3: #322546;
+  --sf-color-formula-reference-cell-background-4: #052505;
+  --sf-color-formula-reference-cell-background-5: #2d1822;
+  --sf-color-formula-reference-cell-background-6: #3b0509;
+  --sf-color-formula-reference-cell-background-7: #152130;
+
+  --sf-elevation-4: 0px 1px 2px 0px rgba(0, 0, 0, 0.6), 0px 4px 8px 3px rgba(0, 0, 0, 0.6);
+  --sf-elevation-4-reverse: 0px -1px 2px 0px rgba(0, 0, 0, 0.6), 0px -4px 8px 3px rgba(0, 0, 0, 0.6);
 }
 
 $error-font-color: $error !default;

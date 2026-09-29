@@ -6,18 +6,25 @@ import { ResourceLevel } from '../services/ResourceGroupingService';
 
 /** @private */
 export interface MoreIndicatorProps {
-    date: Date;
+    /**
+     * Start of the more-indicator range. Timeline slots pass the slot start time;
+     * date-only views pass the calendar day.
+     */
+    startDate: Date;
     count: number;
-    onMoreClick: (e: MouseEvent<HTMLElement>, date: Date, resource?: ResourceLevel) => void;
-    topPx?: number;
+    onMoreClick: (
+        e: MouseEvent<HTMLElement>, startDate: Date, resource?: ResourceLevel, endDate?: Date
+    ) => void;
+    style?: CSSProperties;
     resource?: ResourceLevel;
+    /** Optional exclusive end of the filter range for timeline more indicators. */
+    endDate?: Date;
 }
 
 export const MoreIndicator: FC<MoreIndicatorProps> = (props: MoreIndicatorProps) => {
-    const { date, count, onMoreClick, topPx, resource } = props;
+    const { startDate, count, onMoreClick, style, resource, endDate } = props;
     const { locale } = useProviderContext();
     const { getString } = useSchedulerLocalization(locale || 'en-US');
-    const style: CSSProperties | undefined = topPx !== undefined ? { top: `${topPx}px` } : undefined;
 
     const handleKeyDown: (e: KeyboardEvent<HTMLDivElement>) => void = (e: KeyboardEvent<HTMLDivElement>): void => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -26,7 +33,7 @@ export const MoreIndicator: FC<MoreIndicatorProps> = (props: MoreIndicatorProps)
                 currentTarget: e.currentTarget,
                 type: 'click'
             } as unknown as MouseEvent<HTMLElement>;
-            onMoreClick(syntheticEvent, date, resource);
+            onMoreClick(syntheticEvent, startDate, resource, endDate);
         }
     };
 
@@ -34,7 +41,7 @@ export const MoreIndicator: FC<MoreIndicatorProps> = (props: MoreIndicatorProps)
         <div
             className={`${CSS_CLASSES.MORE_INDICATOR} ${CSS_CLASSES.LINK}`}
             style={style}
-            onClick={(e: MouseEvent<HTMLDivElement>) => onMoreClick(e, date, resource)}
+            onClick={(e: MouseEvent<HTMLDivElement>) => onMoreClick(e, startDate, resource, endDate)}
             onKeyDown={handleKeyDown}
             tabIndex={0}
             role="button"

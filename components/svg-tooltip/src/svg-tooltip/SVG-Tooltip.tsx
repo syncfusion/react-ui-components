@@ -58,7 +58,6 @@ export interface TooltipRefHandle {
     /** Fades in the tooltip, setting its opacity to 1. */
     fadeIn: () => void;
 }
-
 // Define state types for grouped state
 type TextData = {
     textSpans: TextSpanElement[];

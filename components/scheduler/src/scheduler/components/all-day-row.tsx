@@ -9,6 +9,7 @@ import { CSS_CLASSES } from '../common/constants';
 import { useResourceGroupingContext } from '../context/resource-grouping-context';
 import { useSchedulerRenderDatesContext } from '../context/scheduler-render-dates-context';
 import { ResourceLevel } from '../services/ResourceGroupingService';
+import { MAX_EVENTS_STACK_TIMESLOT } from '../utils/default-props';
 
 export const AllDayRow: ForwardRefExoticComponent<AllDayRowProps & RefAttributes<IAllDayRow>> =
 forwardRef<IAllDayRow, AllDayRowProps>((props: AllDayRowProps, ref: Ref<IAllDayRow>): ReactNode => {
@@ -22,16 +23,16 @@ forwardRef<IAllDayRow, AllDayRowProps>((props: AllDayRowProps, ref: Ref<IAllDayR
     const { timeScale } = useSchedulerPropsContext();
     const allDayRowRef: RefObject<HTMLDivElement> = useRef<HTMLDivElement>(null);
     const prevAllDayHeightRef: RefObject<number> = useRef<number>(0);
-    const maxEventsPerRow: number = 3;
+    const maxEventsStack: number = MAX_EVENTS_STACK_TIMESLOT;
     const [allDayRowHeight, setAllDayRowHeight] = useState<string>('auto');
-    const { isGroupingEnabled, columnLevels, leafResources } = useResourceGroupingContext();
+    const { isGroupingEnabled, columnLevels, allLeafResources } = useResourceGroupingContext();
     const {
         eventsByDate,
         hasEventsExceedingMaxCount,
         calculateHeight,
         getVisibleEvents,
         getHiddenEventCount
-    } = useAllDayEvents(isCollapsed, maxEventsPerRow);
+    } = useAllDayEvents(isCollapsed, maxEventsStack);
 
     const columnLastLevelData: CellData[] = isGroupingEnabled && columnLevels?.length > 0
         ? columnLevels[columnLevels.length - 1]
@@ -79,8 +80,8 @@ forwardRef<IAllDayRow, AllDayRowProps>((props: AllDayRowProps, ref: Ref<IAllDayR
 
     const renderCell: (cellData: CellData) => ReactNode = (cellData: CellData): ReactNode => {
         const dateKey: string = DateService.generateDateKey(cellData.date);
-        const resourceLeaf: ResourceLevel = cellData.groupIndex !== undefined && leafResources
-            ? leafResources[cellData.groupIndex]
+        const resourceLeaf: ResourceLevel = cellData.groupIndex !== undefined && allLeafResources
+            ? allLeafResources[cellData.groupIndex]
             : undefined;
         const visibleEvents: ProcessedEventsData[] = getVisibleEvents(dateKey, resourceLeaf);
         const hiddenEventCount: number = getHiddenEventCount(dateKey, resourceLeaf);
