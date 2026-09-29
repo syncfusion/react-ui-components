@@ -1,0 +1,52 @@
+@use '../../../base/styles/themes/variables' as *;
+
+$upload-font-size: $font-size-sm !default;
+$upload-line-height: $line-height-sm !default;
+$upload-chunk-font-size: $font-size-2xs !default;
+$upload-file-font-weight: $font-weight-medium !default;
+$upload-file-status-font-size: $font-size-xs !default;
+$upload-file-status-line-height: $line-height-xs !default;
+$upload-file-name-line-height: $line-height-sm !default;
+
+$upload-min-width: $spacing-0 !default;
+$upload-gap: $spacing-12 !default;
+$upload-file-select-padding: $spacing-14 $spacing-16 !default;
+$upload-list-item-padding: $spacing-10 $spacing-12 !default;
+$upload-footer-padding: $spacing-12 $spacing-16 !default;
+$upload-file-list-min-height: $spacing-56 !default;
+$upload-file-status-margin: $spacing-4 !default;
+$upload-sf-progress-text: $spacing-36 !default;
+$upload-progress-wrapper-margin: $spacing-8 !default;
+$upload-padding: $spacing-4 !default;
+$upload-progress-bar-height: $spacing-6 !default;
+$upload-footer-height: $spacing-48 !default;
+$upload-drop-border-width: $spacing-1 !default;
+$upload-list-border-width: $spacing-1 !default;
+$upload-divider-width: $spacing-1 !default;
+$upload-border-radius: $radius-6 !default;
+
+$upload-progress-bar-radius: $radius-full !default;
+$upload-border-color: rgb($outline-variant) !default;
+$upload-list-style: none !default;
+$upload-transition-duration: 200ms !default;
+$upload-transition-easing: cubic-bezier(0.2, 0, 0, 1) !default;
+$upload-file-select-transition: background-color $upload-transition-duration $upload-transition-easing,
+                border-color $upload-transition-duration $upload-transition-easing !default;
+$upload-file-list-item-transition: box-shadow $upload-transition-duration $upload-transition-easing,
+                border-color $upload-transition-duration $upload-transition-easing !default;
+$upload-progress-bar-transition: width 2s !default;
+$upload-file-select-bg: rgb($surface) !default;
+$upload-border: rgb($outline-variant) !default;
+$upload-file-list-border: rgb($outline-variant) !default;
+$upload-file-select-hover-border: rgb($outline) !default;
+$upload-file-select-color: rgb($content-text-color-alt1) !default;
+$upload-file-name-color: rgb($content-text-color) !default;
+$upload-file-size-color: rgb($content-text-color-alt1) !default;
+$upload-file-status-color: rgb($content-text-color) !default;
+$upload-chunk-info-color: rgb($content-text-color-alt1) !default;
+$upload-success-text-color: rgb($success) !default;
+$upload-failure-text-color: rgb($error) !default;
+$upload-in-progress-text-color: rgb($primary) !default;
+$upload-progress-text-color: rgb($content-text-color) !default;
+$upload-progress-bar-bg: rgb($surface-variant) !default;
+$upload-progress-bar-fill-gradient: rgb($primary) !default;

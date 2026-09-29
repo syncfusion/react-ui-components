@@ -1,0 +1,93 @@
+@use 'theme-variables' as *;
+
+@include export-module('treeview-layout') {
+  .sf-treeview {
+    display: block;
+    position: relative;
+    user-select: none;
+    padding: $treeview-list-padding;
+    margin: $treeview-list-margin;
+    list-style: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .sf-treeview-list {
+    display: block;
+    margin: $treeview-list-margin;
+    list-style: none;
+    padding: $treeview-list-padding;
+  }
+
+  .sf-treeview-row-surface {
+    padding: $treeview-item-padding;
+  }
+
+  .sf-treeview-item {
+    .sf-treeview-item-content {
+      margin-inline-start: calc(($treeview-item-indent * min(var(--tree-level, 0), 1)) + ($treeview-item-indent-step * max(calc(var(--tree-level, 0) - 1), 0)));
+    }
+
+    &.sf-treeview-leaf .sf-treeview-item-content {
+      margin-inline-start: calc(($treeview-item-leaf-indent * min(var(--tree-level, 0), 1)) + ($treeview-item-indent-step * max(calc(var(--tree-level, 0) - 1), 0)));
+    }
+
+    &.sf-treeview-root-leaf .sf-treeview-item-content {
+      margin-inline-start: $treeview-item-root-leaf-indent;
+    }
+  }
+
+  .sf-treeview-item-content {
+    gap: $treeview-item-gap;
+  }
+
+  .sf-treeview-item-label {
+    flex: 1 1 auto;
+    font-size: $treeview-item-font-size;
+    font-weight: $treeview-item-font-weight;
+    line-height: $treeview-item-line-height;
+  }
+
+  .sf-treeview-item-icon,
+  .sf-treeview-item-toggle {
+    flex: 0 0 auto;
+
+    svg {
+      font-size: $treeview-item-icon-font-size;
+    }
+  }
+
+  .sf-treeview-item-toggle {
+    transition: transform 120ms ease-in-out;
+  }
+
+  .sf-treeview-default-toggle.sf-treeview-item-toggle-expanded {
+    transform: rotate(90deg);
+  }
+
+  .sf-treeview-item-checkbox {
+    flex: 0 0 auto;
+
+    .sf-checkbox-ripple {
+      padding: $treeview-item-checkbox-padding;
+    }
+  }
+
+  .sf-treeview-edit-input {
+    margin: $treeview-edit-input-margin;
+  }
+
+  .sf-treeview-editing.sf-treeview-row-surface {
+    padding: $treeview-edit-item-padding;
+  }
+
+  .sf-treeview-loading-spinner .sf-spinner-content {
+    padding: $treeview-loading-spinner-padding;
+    font-size: $treeview-loading-spinner-font-size;
+  }
+
+  .sf-treeview-link-full-row {
+    display: block;
+    width: 100%;
+  }
+}

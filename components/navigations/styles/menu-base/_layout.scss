@@ -1,0 +1,67 @@
+@use 'theme-variables' as *;
+
+@mixin sf-chevron-rotation($angle: 0deg) {
+  svg {
+    transform: rotate($angle);
+  }
+}
+
+.sf-menu-icon,
+.sf-submenu-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  line-height: 0;
+}
+
+.sf-submenu-icon {
+  margin-inline-start: auto;
+}
+
+.sf-menu-url {
+  text-decoration: none;
+  color: inherit;
+}
+
+.sf-menu-item.sf-separator {
+  pointer-events: none;
+  background: $base-menu-separator-bg;
+}
+
+.sf-menu-parent:not(.sf-menu-root):has(.sf-menu-icon) .sf-menu-item:not(:has(.sf-menu-icon)) {
+  padding-inline: $base-menu-blank-icon-padding;
+}
+
+.sf-menu-parent {
+  list-style: none;
+  margin: $base-menu-ul-margin;
+  user-select: none;
+}
+
+.sf-menu-ul {
+  position: absolute;
+  padding: $base-menu-ul-padding;
+  border: $base-menu-ul-border;
+  border-radius: $base-menu-ul-border-radius;
+  box-shadow: $base-menu-ul-box-shadow;
+  font-size: $base-menu-font-size;
+}
+
+.sf-menu-item {
+  cursor: pointer;
+  position: relative;
+  line-height: $base-menu-li-line-height;
+  padding: $base-menu-li-padding;
+  gap: $base-menu-li-items-gap;
+  white-space: nowrap;
+}
+
+.sf-menu-icon,
+.sf-menu-icon svg {
+  font-size: $base-menu-icon-font-size;
+}
+
+.sf-submenu-icon svg {
+  font-size: $base-menu-submenu-icon-font-size;
+}

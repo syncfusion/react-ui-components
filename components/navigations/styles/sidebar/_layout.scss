@@ -1,0 +1,125 @@
+@use 'theme-variables' as *;
+
+@mixin sf-sidebar-push-close($direction) {
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+        inset-inline var(--sf-sidebar-transition-exit, $sidebar-transition-exit) ease,
+        visibility 0s linear var(--sf-sidebar-transition-exit, $sidebar-transition-exit);
+    @if $direction == left {
+        inset-inline-start: calc(-1 * var(--sf-sidebar-width));
+    } @else {
+        inset-inline-end: calc(-1 * var(--sf-sidebar-width));
+    }
+}
+
+.sf-sidebar-layout {
+    display: flex;
+    position: relative;
+    overflow: hidden;
+    min-width: $sidebar-layout-min-width;
+    height: $sidebar-layout-height;
+    width: $sidebar-layout-width;
+}
+
+.sf-sidebar {
+    position: absolute;
+    inset-block: $sidebar-flush-position;
+    inset-inline-start: $sidebar-flush-position;
+    display: flex;
+    flex-direction: column;
+    width: var(--sf-sidebar-width);
+    height: $sidebar-fill-height;
+    overflow: hidden;
+
+    &.sf-sidebar-right {
+        inset-inline-start: $sidebar-auto-position;
+        inset-inline-end: $sidebar-flush-position;
+    }
+
+    &.sf-sidebar-push {
+        transition:
+            inset-inline var(--sf-sidebar-transition-exit, $sidebar-transition-exit) ease,
+            visibility 0s linear var(--sf-sidebar-transition-exit, $sidebar-transition-exit);
+
+        &.sf-sidebar-left.sf-sidebar-close {
+            @include sf-sidebar-push-close(left);
+        }
+
+        &.sf-sidebar-right.sf-sidebar-close {
+            @include sf-sidebar-push-close(right);
+        }
+
+        &.sf-sidebar-open {
+            visibility: visible;
+            transition:
+                inset-inline var(--sf-sidebar-transition-enter, $sidebar-transition-enter) ease,
+                visibility 0s linear 0s;
+        }
+    }
+
+    &.sf-sidebar-over {
+        z-index: $sidebar-z-index;
+        visibility: hidden;
+        transition:
+            inset-inline-start var(--sf-sidebar-transition-exit, $sidebar-transition-exit) ease,
+            inset-inline-end var(--sf-sidebar-transition-exit, $sidebar-transition-exit) ease,
+            width var(--sf-sidebar-transition-exit, $sidebar-transition-exit) ease,
+            visibility 0s linear var(--sf-sidebar-transition-exit, $sidebar-transition-exit);
+
+        &.sf-sidebar-open {
+            visibility: visible;
+            transition:
+                inset-inline-start var(--sf-sidebar-transition-enter, $sidebar-transition-enter) ease,
+                inset-inline-end var(--sf-sidebar-transition-enter, $sidebar-transition-enter) ease,
+                width var(--sf-sidebar-transition-enter, $sidebar-transition-enter) ease,
+                visibility 0s linear 0s;
+        }
+
+        &.sf-sidebar-left.sf-sidebar-close {
+            inset-inline-start: calc(-1 * var(--sf-sidebar-width));
+        }
+
+        &.sf-sidebar-right.sf-sidebar-close {
+            inset-inline-end: calc(-1 * var(--sf-sidebar-width));
+        }
+    }
+}
+
+.sf-sidebar-main {
+    position: relative;
+    flex: $sidebar-main-flex;
+    min-width: $sidebar-main-min-width;
+    transition:
+        margin-inline-start var(--sf-sidebar-transition-enter, $sidebar-transition-enter) ease,
+        margin-inline-end var(--sf-sidebar-transition-enter, $sidebar-transition-enter) ease,
+        transform var(--sf-sidebar-transition-enter, $sidebar-transition-enter) ease;
+}
+
+.sf-sidebar-push.sf-sidebar-close ~ .sf-sidebar-main {
+    transition:
+        margin-inline-start var(--sf-sidebar-transition-exit, $sidebar-transition-exit) ease,
+        margin-inline-end var(--sf-sidebar-transition-exit, $sidebar-transition-exit) ease,
+        transform var(--sf-sidebar-transition-exit, $sidebar-transition-exit) ease;
+}
+
+.sf-sidebar-backdrop {
+    position: absolute;
+    inset: $sidebar-flush-position;
+    z-index: $sidebar-backdrop-z-index;
+    opacity: $sidebar-backdrop-opacity;
+    pointer-events: auto;
+    transition: opacity var(--sf-sidebar-transition-enter, $sidebar-transition-enter) ease;
+}
+
+@each $direction in (left, right) {
+    @each $state in (open, close) {
+        .sf-sidebar-push.sf-sidebar-#{$direction}.sf-sidebar-#{$state} ~ .sf-sidebar-main {
+            @if $direction == left {
+                margin-inline-start: if($state == open, var(--sf-sidebar-width), 0);
+            } @else {
+                margin-inline-end: if($state == open, var(--sf-sidebar-width), 0);
+            }
+        }
+    }
+}

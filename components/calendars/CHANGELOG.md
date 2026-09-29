@@ -1,5 +1,14 @@
 # Changelog
 
+## 35.1.37 (2026-09-29)
+
+### DatePicker
+
+#### Breaking Changes
+
+- **Replaced `position` with `anchorAlign` and `popupAlign` in `PopupSettings`.** The previous `position: PositionAxis` accepted a `{ X, Y }` object where each axis was `'left' | 'center' | 'right' | 'top' | 'bottom' | number`, limiting alignment flexibility. `anchorAlign` defines the anchor reference point, while `popupAlign` defines the popup reference point, enabling independent alignment of both elements.
+- This enhancement is also applicable to the DateRangePicker, DateTimePicker, and TimePicker components.
+
 ## 34.1.29 (2026-07-06)
 
 ### Calendar

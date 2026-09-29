@@ -1,0 +1,126 @@
+@use "sass:map";
+@use 'theme-variables' as *;
+
+@include export-module('upload-layout') {
+  .sf-upload {
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    width: 100%;
+
+    .sf-file-select {
+      align-items: center;
+      gap: $upload-gap;
+      padding: $upload-file-select-padding;
+      transition: $upload-file-select-transition;
+      border-radius: inherit;
+      cursor: pointer;
+    }
+
+    .sf-file-drop-text {
+      flex: 1;
+      min-width: $upload-min-width;
+      font-size: $upload-font-size;
+      line-height: $upload-line-height;
+    }
+
+    .sf-upload-files { 
+      list-style: $upload-list-style;
+      margin: 0;
+      padding: $upload-padding;
+      border-top: $upload-list-border-width solid $upload-border-color;
+    }
+
+    .sf-upload-file-list {
+      flex-direction: column;
+      padding: $upload-list-item-padding;
+      min-height: $upload-file-list-min-height;
+      border-bottom: none;
+      transition: $upload-file-list-item-transition;
+    }
+
+    &.sf-auto-upload-disabled .sf-upload-file-list {
+      border-bottom: $upload-list-border-width solid $upload-border-color;
+    }
+
+    .sf-file-container {
+      gap: $upload-gap;
+      width: 100%;
+    }
+
+    .sf-file-info {
+      flex-direction: column;
+      flex: 1;
+      min-width: $upload-min-width;
+      overflow: hidden;
+    }
+
+    .sf-file-name-text {
+      font-size: $upload-font-size;
+      font-weight: $upload-file-font-weight;
+      line-height: $upload-file-name-line-height;
+    }
+
+    .sf-file-size,
+    .sf-file-status {
+      font-size: $upload-file-status-font-size;
+      line-height: $upload-file-status-line-height;
+      margin-top: $upload-file-status-margin;
+      font-weight: $upload-file-font-weight;
+    }
+
+    .sf-file-actions {
+      align-items: center;
+      gap: $upload-padding;
+      flex-shrink: 0;
+    }
+
+    .sf-progress-wrapper {
+      gap: $upload-gap;
+      margin-top: $upload-progress-wrapper-margin;
+      width: 100%;
+    }
+
+    .sf-progress-bar-container {
+      flex: 1;
+      height: $upload-progress-bar-height;
+      border-radius: $upload-progress-bar-radius;
+      overflow: hidden;
+    }
+
+    .sf-progress-bar {
+      height: 100%;
+      border-radius: $upload-progress-bar-radius;
+      transition: $upload-progress-bar-transition;
+    }
+
+    .sf-progress-text {
+      font-size: $upload-font-size;
+      white-space: nowrap;
+      flex-shrink: 0;
+      min-width: $upload-sf-progress-text;
+      text-align: right;
+    }
+
+    .sf-chunk-info {
+      font-size: $upload-chunk-font-size;
+      margin-top: $upload-padding;
+    }
+
+    .sf-upload-actions {
+      gap: $upload-gap;
+      padding: $upload-footer-padding;
+      border-top: $upload-divider-width solid transparent;
+      min-height: $upload-footer-height;
+    }
+
+    .sf-rtl {
+      .sf-file-actions {
+        flex-direction: row-reverse;
+      }
+
+      .sf-upload-actions {
+        justify-content: flex-start;
+      }
+    }
+  }
+}

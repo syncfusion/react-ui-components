@@ -1,0 +1,4 @@
+@mixin tab-state($bg, $fg) {
+  background-color: $bg;
+  color: $fg;
+}

@@ -1,0 +1,66 @@
+@use 'theme-variables' as *;
+
+@include export-module('accordion-theme') {
+
+    .sf-accordion {
+        background: $accordion-bg-color;
+        color: $accordion-text-color;
+
+        &-trigger {
+            background: $accordion-trigger-bg;
+            color: $accordion-trigger-color;
+
+            &.sf-accordion-open {
+                background: $accordion-trigger-open-bg-color;
+                color: $accordion-trigger-open-color;
+
+                .sf-accordion-indicator {
+                    color: $accordion-indicator-open-color;
+                }
+            }
+
+            &:focus-visible {
+                box-shadow: $accordion-trigger-focus-outline;
+                background: $accordion-trigger-focus-bg-color;
+                outline: none;
+                z-index: 1;
+
+                .sf-accordion-indicator {
+                    color: $accordion-indicator-focus-color;
+                }
+            }
+
+            &.sf-accordion-disabled {
+                color: $accordion-trigger-disabled-color;
+                background: $accordion-trigger-disabled-bg-color;
+
+                .sf-accordion-indicator {
+                    color: $accordion-indicator-disabled-color;
+                }
+            }
+
+            &:hover {
+                background: $accordion-trigger-hover-bg;
+                color: $accordion-trigger-hover-color;
+
+                .sf-accordion-indicator {
+                    color: $accordion-indicator-hover-color;
+                }
+            }
+
+            &:active {
+                background: $accordion-trigger-active-bg;
+                color: $accordion-trigger-active-color;
+                box-shadow: $accordion-trigger-active-shadow;
+
+                .sf-accordion-indicator {
+                    color: $accordion-indicator-active-color;
+                }
+            }
+        }
+
+        &-indicator {
+            color: $accordion-indicator-color;
+        }
+    }
+}

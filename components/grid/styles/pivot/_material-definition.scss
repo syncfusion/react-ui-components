@@ -1,0 +1,65 @@
+@use '../../../base/styles/themes/variables' as *;
+
+$pivot-border-color: rgba($border-light) !default;
+$pivot-panel-border-color: rgba($grid-line) !default;
+$pivot-accent: rgba($primary) !default;
+$pivot-background: rgba($content-bg-color) !default;
+$pivot-font-weight-bold: $font-weight-bold !default;
+$pivot-member-row-padding-x: $spacing-7 !default;
+
+// Typography and dimensions share the theme's runtime font and spacing scale.
+$pivot-font-family: var(--sf-font-family) !default;
+$pivot-font-size: $font-size-xs !default;
+$pivot-small-font-size: calc($pivot-font-size * 11 / 12) !default;
+$pivot-line-height: $line-height-xs !default;
+$pivot-hint-line-height: $line-height-base !default;
+$pivot-font-weight-medium: $font-weight-medium !default;
+$pivot-border-width: 1px !default;
+$pivot-focus-width: 2px !default;
+$pivot-focus-offset: $spacing-2 !default;
+$pivot-border-radius: $radius-4 !default;
+$pivot-chip-border-radius: $radius-4 !default;
+$pivot-label-gap: $spacing-8 !default;
+$pivot-message-padding: $spacing-16 !default;
+$pivot-panel-width: calc($pivot-font-size * 70 / 3) !default;
+$pivot-action-size: calc($pivot-line-height + $spacing-6) !default;
+$pivot-panel-collapsed-size: calc($pivot-action-size + $spacing-12) !default;
+$pivot-panel-header-min-height: calc($pivot-line-height + $spacing-10) !default;
+$pivot-panel-toolbar-min-height: calc($pivot-line-height + $spacing-14) !default;
+$pivot-action-icon-size: calc($pivot-font-size * 1.5) !default;
+$pivot-chip-action-icon-size: $font-size-sm !default;
+$pivot-chip-action-size: calc($pivot-font-size * 1.5) !default;
+$pivot-chip-delete-size: $font-size-sm !default;
+$pivot-drag-handle-size: $pivot-font-size !default;
+$pivot-expand-width: $font-size-base !default;
+$pivot-expand-height: calc($pivot-expand-width + $spacing-2) !default;
+$pivot-expand-icon-size: calc($pivot-expand-width + $spacing-4) !default;
+$pivot-axis-min-height: calc($pivot-action-size + $spacing-14) !default;
+$pivot-field-list-min-height: calc($pivot-action-size + $spacing-16) !default;
+$pivot-section-min-height: calc($pivot-action-size * 3) !default;
+$pivot-member-options-max-height: min(calc($pivot-font-size * 20), 35vh) !default;
+$pivot-chip-controls-width: calc($pivot-action-size + $pivot-chip-action-size + $spacing-3) !default;
+$pivot-available-field-gap: $spacing-12 !default;
+$pivot-field-indent: $spacing-36 !default;
+$pivot-chip-background: color-mix(in srgb, currentColor 8%, $pivot-background) !default;
+$pivot-drag-handle-opacity: .55 !default;
+$pivot-axis-icon-opacity: .7 !default;
+$pivot-drop-hint-opacity: .65 !default;
+$pivot-drag-preview-z-index: 10000 !default;
+// Media queries cannot resolve CSS custom properties.
+$pivot-mobile-breakpoint: 39.9375em !default;
+$pivot-mobile-main-min-height: 45vh !default;
+
+$pivot-spacing-2: $spacing-2 !default;
+$pivot-spacing-3: $spacing-3 !default;
+$pivot-spacing-4: $spacing-4 !default;
+$pivot-spacing-5: $spacing-5 !default;
+$pivot-spacing-6: $spacing-6 !default;
+$pivot-spacing-8: $spacing-8 !default;
+$pivot-spacing-10: $spacing-10 !default;
+$pivot-spacing-12: $spacing-12 !default;
+$pivot-spacing-16: $spacing-16 !default;
+
+$pivot-tooltip-row-gap: $spacing-6 !default;
+$pivot-tooltip-padding: $spacing-4 $spacing-2 !default;
+$pivot-tooltip-line-height: $line-height-xs !default;
