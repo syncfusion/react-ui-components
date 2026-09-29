@@ -1,10 +1,14 @@
 import { CSSProperties, useCallback, useLayoutEffect, useRef, UIEvent, useMemo, useState, useEffect, RefObject } from 'react';
-import { Browser, isNullOrUndefined } from '@syncfusion/react-base';
-import { useGridComputedProvider, useGridMutableProvider } from '../contexts';
+import { isNullOrUndefined } from '@syncfusion/react-base/src/util';
+import { Browser } from '@syncfusion/react-base/src/browser';
+import { useGridComputedProvider, useGridMutableProvider } from '../contexts/GridProviders';
 import { GridRef, IGrid } from '../types/grid.interfaces';
 import { MutableGridSetter, UseScrollResult, ScrollElements, ScrollCss, VirtualRowInfo, VirtualColumnInfo, ContentPanelRef, IRow } from '../types/interfaces';
-import { ActionType, ColumnProps, InfiniteScrollState, NewRowPosition, PagerArgsInfo, ScrollMode } from '../types';
-import { getPageFromRowIndex, parseUnit } from '../utils';
+import { ActionType, NewRowPosition, ScrollMode } from '../types/enum';
+import { PagerArgsInfo } from '../types/page.interfaces';
+import { InfiniteScrollState } from '../types/infinite-scroll.interface';
+import { ColumnProps } from '../types/column.interfaces';
+import { getLeftPinnedWidth, getPageFromRowIndex, parseUnit } from '../utils/utils';
 
 /**
  * Custom hook to manage scroll synchronization between header and content panels
@@ -20,7 +24,7 @@ export const useScroll: <T>(contentPanelRef: ContentPanelRef<T>) => UseScrollRes
         setCurrentPage, setGridAction, getVisibleColumns, getRowHeight, groupSettings, cachedRowObjects } = grid;
     const { getParentElement, currentViewData, totalVirtualColumnWidth, setOffsetX, totalRecordsCount, setInfiniteScrollState,
         setOffsetY, columnOffsets, virtualSettings, scrollMode, editModule, infiniteScrollState, expansionState, expandedGroupCountRef,
-        loadedPageWiseGroupExpandedCountRef, loadedPageWiseVirtualGroupStartEndRowIndexes
+        loadedPageWiseGroupExpandedCountRef, loadedPageWiseVirtualGroupStartEndRowIndexes, leftPinnedColumns
     } = useGridMutableProvider<T>();
     const [scrollStyles, setScrollStyles] = useState<{ headerPadding: CSSProperties; headerContentBorder: CSSProperties; }>({
         headerPadding: {},
@@ -55,8 +59,14 @@ export const useScroll: <T>(contentPanelRef: ContentPanelRef<T>) => UseScrollRes
         isFastJumpScroll: false,
         scrollFocusCurrentAriaColIndex: NaN,
         isFocusScrollOffsetChange: false,
-        columns: []
+        columns: [],
+        prevStackedFocusCell: { mappingUid: null, width: NaN, isHiddenCellFocus: false }
     });
+    const leftPinnedWidth: number = useMemo(() => {
+        const startIndex: number = virtualColumnInfo.current?.startIndex ?? 0;
+        const endIndex: number = virtualColumnInfo.current?.endIndex ?? 0;
+        return getLeftPinnedWidth(leftPinnedColumns, startIndex, endIndex);
+    }, [leftPinnedColumns, virtualColumnInfo.current?.startIndex, virtualColumnInfo.current?.endIndex]);
     const ticking: RefObject<boolean> = useRef(false);
     const scrollStopTimerRef: RefObject<number> = useRef<number | null>(null);
     const last: RefObject<{
@@ -101,11 +111,11 @@ export const useScroll: <T>(contentPanelRef: ContentPanelRef<T>) => UseScrollRes
     const getScrollBarWidth: () => number = useCallback((): number => {
         const { contentScrollElement } = elementsRef.current;
         if (!contentScrollElement || height === 'auto') { return 0; }
-        if (virtualSettings.enableRow && contentPanelRef?.virtualContentRowScrollRef) {
-            return contentPanelRef?.virtualContentRowScrollRef?.offsetWidth;
+        if (virtualSettings.enableRow && contentPanelRef?.virtualContentRowScrollRef?.offsetWidth) {
+            return contentPanelRef.virtualContentRowScrollRef.offsetWidth;
         }
         return (contentScrollElement.offsetWidth - contentScrollElement.clientWidth) | 0;
-    }, [virtualSettings.enableRow, height]);
+    }, [contentPanelRef?.virtualContentRowScrollRef?.offsetWidth, virtualSettings.enableRow, height]);
 
     /**
      * Set padding based on scrollbar width to ensure header and content alignment
@@ -350,7 +360,7 @@ export const useScroll: <T>(contentPanelRef: ContentPanelRef<T>) => UseScrollRes
             setCurrentPage(pageNo);
             setGridAction(args);
             if (!isVirtualScrollRequest && scrollMode === ScrollMode.Infinite) {
-                grid.showSpinner();
+                grid?.showSpinner();
             }
             setInfiniteScrollState((prevState: InfiniteScrollState) => ({
                 ...prevState,
@@ -533,7 +543,7 @@ export const useScroll: <T>(contentPanelRef: ContentPanelRef<T>) => UseScrollRes
             (startIndex !== 0 && i !== (visibleColumns?.length - 1) ? virtualSettings?.columnBuffer * 2 :
                 virtualSettings?.columnBuffer); i++) {
             virtualColumnInfo.current.columns.push(visibleColumns[i as number]);
-            totalWidth += parseUnit(visibleColumns[i as number].width);
+            totalWidth += parseUnit(visibleColumns[i as number]?.width);
             if (totalWidth > contentPanelRef?.contentPanelRef?.clientWidth) {
                 buffer++;
             }
@@ -571,8 +581,8 @@ export const useScroll: <T>(contentPanelRef: ContentPanelRef<T>) => UseScrollRes
                 const isFastJumpScroll: boolean = isLeftScroll ?
                     (last.current.startCol - (virtualSettings.columnBuffer)) > startColumnIndex :
                     (last.current.startCol + (virtualSettings.columnBuffer)) < startColumnIndex;
-                if (contentPanelRef?.contentTableRef?.parentElement && isFastJumpScroll) {
-                    contentPanelRef.contentTableRef.parentElement.style.transform =
+                if (contentPanelRef?.contentVirtualTableRef && isFastJumpScroll) {
+                    contentPanelRef.contentVirtualTableRef.style.transform =
                         `translate3d(${nextOffsetX || 0}px, ${last.current.offsetY || 0}px, 0) translateZ(0)`;
                 } // Apply immediate DOM manipulation translateY for prevent whitespace flash issue
                 virtualColumnInfo.current.isFastJumpScroll = isFastJumpScroll;
@@ -604,8 +614,10 @@ export const useScroll: <T>(contentPanelRef: ContentPanelRef<T>) => UseScrollRes
         const left: number = target.scrollLeft;
         const top: number = target.scrollTop;
         contentScrollElement.scrollLeft = left;
-        if (contentPanelRef.virtualContentRowScrollRef) { contentPanelRef.virtualContentRowScrollRef.scrollTop = top; }
-        if (contentPanelRef.virtualContentColumnScrollRef) { contentPanelRef.virtualContentColumnScrollRef.scrollLeft = left; }
+        requestAnimationFrame(() => {
+            if (contentPanelRef.virtualContentRowScrollRef) { contentPanelRef.virtualContentRowScrollRef.scrollTop = top; }
+            if (contentPanelRef.virtualContentColumnScrollRef) { contentPanelRef.virtualContentColumnScrollRef.scrollLeft = left; }
+        });
 
         // IMMEDIATE synchronization - no requestAnimationFrame delay to prevent gridline misalignment
         if (headerScrollElement) { headerScrollElement.scrollLeft = left; }
@@ -643,10 +655,10 @@ export const useScroll: <T>(contentPanelRef: ContentPanelRef<T>) => UseScrollRes
                 const maxDivHeight: number = virtualRowInfo.current.maxDivHeight || 33554400;
 
                 // Calculate average height upfront (used in multiple places)
-                const cache: Map<string | number, IRow<ColumnProps<T>>> = contentPanelRef.cachedRowObjects.current;
+                const cache: Map<string | number, IRow<ColumnProps<T>>> = contentPanelRef?.getContentTableCachedRowObjects?.();
                 let avgHeight: number = rowHeight;
 
-                if (cache.size > 10) {
+                if (cache?.size > 10) {
                     let totalCachedHeight: number = 0;
                     cache.forEach((row: IRow<ColumnProps<T>>) => {
                         totalCachedHeight += row.height || rowHeight;
@@ -679,7 +691,7 @@ export const useScroll: <T>(contentPanelRef: ContentPanelRef<T>) => UseScrollRes
                 const effectiveScrollTop: number = adjustedScrollTop + browserLimitStretchedRowOffset;
 
                 // Use dynamic calculation ONLY when getRowHeight is provided
-                if (getRowHeight && contentPanelRef.cachedRowObjects.current.size > 0) {
+                if (getRowHeight && contentPanelRef.getContentTableCachedRowObjects?.()?.size > 0) {
                     const totalVirtualHeight: number = totalRows * avgHeight;
                     const contentHeight: number = contentPanelRef?.contentPanelRef?.clientHeight || 0;
                     const minRowsNeeded: number = Math.ceil(contentHeight / avgHeight) + virtualSettings.rowBuffer;
@@ -730,7 +742,7 @@ export const useScroll: <T>(contentPanelRef: ContentPanelRef<T>) => UseScrollRes
                             const result: { startIndex: number; offsetY: number } = calculateDynamicRowPositionWithEstimate(
                                 estimatedRowIndex,
                                 effectiveScrollTop,
-                                contentPanelRef.cachedRowObjects.current as Map<number, IRow<ColumnProps<T>>>,
+                                contentPanelRef.getContentTableCachedRowObjects?.() as Map<number, IRow<ColumnProps<T>>>,
                                 totalRows,
                                 virtualSettings.rowBuffer,
                                 avgHeight
@@ -746,7 +758,7 @@ export const useScroll: <T>(contentPanelRef: ContentPanelRef<T>) => UseScrollRes
                             const result: { startIndex: number; offsetY: number } = calculateDynamicRowPositionWithEstimate(
                                 estimatedRowIndex,
                                 effectiveScrollTop,
-                                contentPanelRef.cachedRowObjects.current as Map<number, IRow<ColumnProps<T>>>,
+                                contentPanelRef.getContentTableCachedRowObjects?.() as Map<number, IRow<ColumnProps<T>>>,
                                 totalRows,
                                 virtualSettings.rowBuffer,
                                 avgHeight
@@ -757,8 +769,9 @@ export const useScroll: <T>(contentPanelRef: ContentPanelRef<T>) => UseScrollRes
                         }
                     }
                 } else {
-                    const rows: IRow<ColumnProps<T>>[] = contentPanelRef.getRowsObject?.().filter(
+                    const rows: IRow<ColumnProps<T>>[] = contentPanelRef?.getContentTableRowsObject?.()?.filter(
                         (row: IRow<ColumnProps<T>>) => { return !row.isDetailRow; });
+
                     if (isMasterDetail && rows.length === totalRows) {
                         ticking.current = false;
                         return;
@@ -767,7 +780,8 @@ export const useScroll: <T>(contentPanelRef: ContentPanelRef<T>) => UseScrollRes
                     const averageRowHeight: number = (
                         (contentPanelRef.totalRenderedRowHeight.current === 0 ? rowHeight :
                             contentPanelRef.totalRenderedRowHeight.current) /
-                        (contentPanelRef.cachedRowObjects.current.size === 0 ? 1 : contentPanelRef.cachedRowObjects.current.size)
+                        (contentPanelRef.getContentTableCachedRowObjects()?.size === 0 ? 1 :
+                            contentPanelRef.getContentTableCachedRowObjects()?.size)
                     );
                     let viewPortStartIndex: number = Math.floor(effectiveScrollTop / (averageRowHeight === 0 ? rowHeight :
                         averageRowHeight));
@@ -808,11 +822,11 @@ export const useScroll: <T>(contentPanelRef: ContentPanelRef<T>) => UseScrollRes
                     const isFastJumpScroll: boolean = isUpScroll ?
                         (last.current.startRow - (virtualSettings.rowBuffer)) > startIndex :
                         (last.current.startRow + (virtualSettings.rowBuffer)) < startIndex;
-                    if (contentPanelRef?.contentTableRef?.parentElement && isFastJumpScroll) {
+                    if (contentPanelRef?.contentVirtualTableRef && isFastJumpScroll) {
                         // Apply stretched offset to table transform
                         const stretchedOffsetY: number = nextOffsetY - (virtualRowInfo.current.browserLimitStretchedRowOffset || 0);
 
-                        contentPanelRef.contentTableRef.parentElement.style.transform =
+                        contentPanelRef.contentVirtualTableRef.style.transform =
                             `translate3d(${last.current.offsetX || 0}px, ${stretchedOffsetY}px, 0) translateZ(0)`;
                     } // Apply immediate DOM manipulation translateY for prevent whitespace flash issue
                     virtualRowInfo.current.isFastJumpScroll = isFastJumpScroll;
@@ -991,9 +1005,10 @@ export const useScroll: <T>(contentPanelRef: ContentPanelRef<T>) => UseScrollRes
         scrollIntoVirtualRowsRangeView,
         isDataOperationPreventVirtualCache: isDataOperationPreventVirtualCache,
         scrollToVirtualColumnIndex,
-        setVirtualColumnEndIndex
+        setVirtualColumnEndIndex,
+        leftPinnedWidth
     }), [setPadding, virtualRowInfo, virtualColumnInfo, scrollIntoVirtualRowsRangeView, isDataOperationPreventVirtualCache,
-        scrollToVirtualColumnIndex, setVirtualColumnEndIndex, getScrollBarWidth, expandedGroupCountRef.current]);
+        scrollToVirtualColumnIndex, setVirtualColumnEndIndex, getScrollBarWidth, expandedGroupCountRef.current, leftPinnedWidth]);
 
     return {
         publicScrollAPI,

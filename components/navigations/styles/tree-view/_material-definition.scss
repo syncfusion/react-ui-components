@@ -1,0 +1,45 @@
+@use '../../../base/styles/themes/variables' as *;
+
+$treeview-bg-color: rgba($content-bg-color) !default;
+
+$treeview-item-padding: $spacing-12 $spacing-16 !default;
+$treeview-item-gap: $spacing-12 !default;
+
+$treeview-item-font-size: $font-size-base !default;
+$treeview-item-font-weight: $font-weight-normal !default;
+$treeview-item-line-height: $line-height-base !default;
+$treeview-item-icon-font-size: $font-size-2xl !default;
+
+$treeview-item-color: rgb($content-text-color) !default;
+$treeview-item-bg: $transparent !default;
+$treeview-item-hover-bg: $content-bg-color-hover !default;
+$treeview-item-hover-color: rgba($content-text-color-hover) !default;
+$treeview-item-selected-bg: rgba($content-bg-color-selected) !default;
+$treeview-item-selected-color: rgba($content-text-color-selected) !default;
+$treeview-item-focused-bg-color: $content-bg-color-focus !default;
+$treeview-item-focused-color: rgba($content-text-color) !default;
+$treeview-item-focused-box-shadow: none !default;
+$treeview-item-active-bg: $content-bg-color-pressed !default;
+$treeview-item-active-color: rgba($content-text-color) !default;
+$treeview-item-selected-focused-box-shadow: $shadow-focus-ring1 !default;
+
+$treeview-item-indent: $spacing-20 !default;
+$treeview-item-leaf-indent: $spacing-56 !default;
+$treeview-item-root-leaf-indent: $spacing-36 !default;
+$treeview-item-indent-step: $spacing-20 !default;
+
+$treeview-toggle-color: rgba($icon-color) !default;
+$treeview-toggle-selected-color: rgba($icon-color) !default;
+$treeview-toggle-focused-active-color: rgba($icon-color) !default;
+$treeview-toggle-hover-color: rgba($icon-color) !default;
+
+$treeview-list-padding: $spacing-0 !default;
+$treeview-list-margin: $spacing-0 !default;
+
+$treeview-item-checkbox-padding: $spacing-0 !default;
+
+$treeview-edit-input-margin: $spacing-0 !default;
+$treeview-edit-item-padding: $spacing-4 $spacing-16 !default;
+
+$treeview-loading-spinner-padding: $spacing-2 !default;
+$treeview-loading-spinner-font-size: $font-size-xl !default;

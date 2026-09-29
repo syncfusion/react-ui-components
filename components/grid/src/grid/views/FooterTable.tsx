@@ -12,16 +12,9 @@ import {
     useLayoutEffect
 } from 'react';
 import { FooterRowsBase } from './FooterRows';
-import {
-    useGridComputedProvider,
-    useGridMutableProvider
-} from '../contexts';
-import {
-    FooterRowsRef,
-    FooterTableRef,
-    IFooterTableBase
-} from '../types';
-import { parseUnit } from '../utils';
+import { useGridComputedProvider, useGridMutableProvider } from '../contexts/GridProviders';
+import { FooterRowsRef, FooterTableRef, IFooterTableBase } from '../types/interfaces';
+import { parseUnit, buildVisibleColumnGroup } from '../utils/utils';
 
 /**
  * FooterTableBase component renders the table structure for grid footer
@@ -40,8 +33,9 @@ const FooterTableBase: ForwardRefExoticComponent<Partial<IFooterTableBase> & Ref
         (props: Partial<IFooterTableBase>, ref: RefObject<FooterTableRef>) => {
             const { tableScrollerPadding, ...rest } = props;
             // Access grid context providers
-            const { colElements: ColElements, offsetX, virtualSettings } = useGridMutableProvider();
-            const { id, scrollModule } = useGridComputedProvider();
+            const { colElements: ColElements, offsetX, virtualSettings, columnWidthInfo, leftPinnedColumns,
+                rightPinnedColumns } = useGridMutableProvider();
+            const { id, scrollModule, rowNumberSettings, dragAndDropSettings, getVisibleColumns } = useGridComputedProvider();
 
             // Refs for DOM elements and child components
             const footerTableRef: RefObject<HTMLTableElement> = useRef<HTMLTableElement>(null);
@@ -59,18 +53,26 @@ const FooterTableBase: ForwardRefExoticComponent<Partial<IFooterTableBase> & Ref
                 if (ColElements.length) {
                     if (!virtualSettings.enableColumn) {
                         visibleCols = ColElements;
+                        if (columnWidthInfo.current.maxTableWidth || columnWidthInfo.current.resizeTableWidth) {
+                            totalWidth.current = 0;
+                            for (let i: number = 0; i < ColElements.length; i++) {
+                                const styleWidth: number = ColElements[i as number]?.props?.style?.width;
+                                totalWidth.current += parseUnit(styleWidth);
+                            }
+                        }
                     } else {
                         const startIndex: number = scrollModule?.virtualColumnInfo?.startIndex;
                         const endIndex: number = scrollModule?.virtualColumnInfo?.endIndex;
-                        totalWidth.current = 0;
-                        for (let i: number = startIndex; i < endIndex; i++) {
-                            const col: JSX.Element = ColElements[i as number];
-                            visibleCols.push(col);
-
-                            // Optional: If you ever need cumulative width, you can calculate here
-                            const styleWidth: number = col?.props?.style?.width;
-                            totalWidth.current += parseUnit(styleWidth);
-                        }
+                        const nextGroup: { visibleCols: JSX.Element[]; totalWidth: number } = buildVisibleColumnGroup(
+                            ColElements,
+                            getVisibleColumns(),
+                            leftPinnedColumns,
+                            rightPinnedColumns,
+                            startIndex,
+                            endIndex
+                        );
+                        visibleCols = nextGroup.visibleCols;
+                        totalWidth.current = nextGroup.totalWidth;
                     }
                 }
 
@@ -86,10 +88,11 @@ const FooterTableBase: ForwardRefExoticComponent<Partial<IFooterTableBase> & Ref
                 ColElements,
                 id,
                 offsetX,
+                getVisibleColumns,
                 virtualSettings.enableColumn,
                 scrollModule?.virtualColumnInfo?.startIndex,
                 scrollModule?.virtualColumnInfo?.endIndex,
-                forceRerender, totalWidth.current
+                forceRerender, totalWidth.current, rowNumberSettings?.enabled, dragAndDropSettings?.enabled
             ]);
 
             /**
@@ -121,6 +124,10 @@ const FooterTableBase: ForwardRefExoticComponent<Partial<IFooterTableBase> & Ref
                 <table
                     ref={footerTableRef}
                     {...rest}
+                    style={{
+                        ...props.style, ...(columnWidthInfo.current.maxTableWidth || columnWidthInfo.current.resizeTableWidth ?
+                            { width: totalWidth.current } : {})
+                    }}
                 >
                     {colGroupContent}
                     {footerRows}

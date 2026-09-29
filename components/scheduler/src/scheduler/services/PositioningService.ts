@@ -58,7 +58,7 @@ export class PositioningService {
         startHourTuple?: [number, number],
         endHourTuple?: [number, number]
     ): { isOverflowLeft: boolean, isOverflowRight: boolean, isOverflowTop: boolean, isOverflowBottom: boolean } {
-        if ((!eventInfo.totalSegments && !startHourTuple && !endHourTuple)
+        if ((!eventInfo.totalSegments && !startHourTuple && !endHourTuple) || eventInfo.event?.isBlock
             || !eventInfo.event?.startTime || !eventInfo.event?.endTime || !renderDates?.length) {
             return { isOverflowLeft: false, isOverflowRight: false, isOverflowTop: false, isOverflowBottom: false };
         }
@@ -71,11 +71,45 @@ export class PositioningService {
         if (!eventStartDay || !eventEndDay || !firstRenderDate || !lastRenderDate) {
             return { isOverflowLeft: false, isOverflowRight: false, isOverflowTop, isOverflowBottom };
         }
-        const isOverflowLeft: boolean = eventStartDay.getTime() < firstRenderDate.getTime();
-        const isOverflowRight: boolean = eventEndDay.getTime() > lastRenderDate.getTime();
-        if (startHourTuple && endHourTuple) {
+        let firstVisibleEventDate: Date = firstRenderDate;
+        let lastVisibleEventDate: Date = lastRenderDate;
+        const hasMultiDayRange: boolean = !!eventInfo.event?.startTime && !!eventInfo.event?.endTime &&
+            DateService.getDaysCount(eventInfo.event.startTime, eventInfo.event.endTime, eventInfo.event.isAllDay) > 1;
+        const hasVisibleRangeBounds: boolean = eventInfo.event.isAllDay || eventInfo.totalSegments > 1 || hasMultiDayRange;
+        if (hasVisibleRangeBounds) {
+            const { visibleDayCount, startDayIndex } = DateService.getVisibleAndStartDays(
+                renderDates, eventStartDay, eventEndDay, eventInfo.event
+            );
+            if (visibleDayCount > 0 && startDayIndex >= 0) {
+                firstVisibleEventDate = DateService.normalizeDate(renderDates[startDayIndex as number]);
+                lastVisibleEventDate = DateService.normalizeDate(renderDates[startDayIndex + visibleDayCount - 1]);
+            }
+        }
+        let isOverflowLeft: boolean = eventStartDay.getTime() < firstVisibleEventDate.getTime();
+        const rightBoundaryDay: Date = (eventInfo.event.isAllDay || !DateService.isMidnight(eventInfo.event.endTime)) ? eventEndDay
+            : DateService.addDays(eventEndDay, -1);
+        let isOverflowRight: boolean = hasVisibleRangeBounds ? (rightBoundaryDay.getTime() > lastVisibleEventDate.getTime()) :
+            eventInfo.event.endTime.getTime() > DateService.addDays(lastRenderDate, 1).getTime();
+        const hasRestrictedStartHour: boolean = startHourTuple && (startHourTuple[0] !== 0 || startHourTuple[1] !== 0);
+        const hasRestrictedEndHour: boolean = endHourTuple && (endHourTuple[0] !== 24 || endHourTuple[1] !== 0);
+        if (startHourTuple && endHourTuple && (hasRestrictedStartHour || hasRestrictedEndHour)) {
             eventStartDay.setHours(startHourTuple[0], startHourTuple[1], 0, 0);
             eventEndDay.setHours(endHourTuple[0], endHourTuple[1], 0, 0);
+            if (eventInfo.event.isAllDay) {
+                isOverflowLeft = hasRestrictedStartHour;
+                isOverflowRight = hasRestrictedEndHour;
+            } else {
+                const eventEndStartHour: Date = new Date(eventEndDay);
+                eventEndStartHour.setHours(startHourTuple[0], startHourTuple[1], 0, 0);
+                if (hasRestrictedStartHour && !isOverflowLeft && (eventInfo.event.startTime < eventStartDay)) {
+                    isOverflowLeft = true;
+                }
+                if (hasRestrictedEndHour && !isOverflowRight &&
+                    (DateService.isMidnight(eventInfo.event.endTime) || (eventInfo.event.endTime > eventEndDay) ||
+                    (eventEndStartHour.getTime() > eventStartDay.getTime() && eventInfo.event.endTime < eventEndStartHour))) {
+                    isOverflowRight = true;
+                }
+            }
             if (!isOverflowTop && eventStartDay > eventInfo.event.startTime) {
                 isOverflowTop = true;
             }
@@ -91,25 +125,19 @@ export class PositioningService {
      *
      * @param {ProcessedEventsData} eventInfo - The event information
      * @param {Date[]} renderDates - The dates being rendered in the current view
-     * @param {TimeScaleProps} timeScale - The time scale configuration (for non-allday events)
-     * @param {string} startHour - The start hour of the scheduler (for non-allday events)
-     * @param {string} endHour - The end hour of the scheduler (for non-allday events)
-     * @param {number} [cellHeight] - Optional custom cell height. If not provided or 0, falls back to ROW_HEIGHT
+     * @param {boolean} groupByDate - Specifies whether to group events by date.
      * @returns {CSSProperties} CSS properties for positioning
      */
     static calculatePositionStyles(
         eventInfo: ProcessedEventsData,
         renderDates: Date[],
-        timeScale?: TimeScaleProps,
-        startHour?: string,
-        endHour?: string,
-        cellHeight?: number
+        groupByDate?: boolean
     ): CSSProperties {
         // For spanned events
         if (eventInfo.totalSegments) {
             const styles: CSSProperties = {
                 top: `${eventInfo.positionIndex * (ALL_DAY_EVENT_HEIGHT + EVENTS_GAP)}px`,
-                width: this.calculateEventWidth(eventInfo, renderDates)
+                width: this.calculateEventWidth(eventInfo, renderDates, groupByDate)
             };
             return styles;
         }
@@ -118,10 +146,6 @@ export class PositioningService {
             return {
                 top: `${eventInfo.positionIndex * (ALL_DAY_EVENT_HEIGHT + EVENTS_GAP)}px`
             };
-        }
-        // For regular time slot events
-        if (timeScale && startHour && endHour) {
-            return this.calculateEventPosition(eventInfo, timeScale, startHour, endHour, cellHeight);
         }
         return {};
     }
@@ -219,11 +243,13 @@ export class PositioningService {
      *
      * @param {ProcessedEventsData} eventInfo - The event information
      * @param {Date[]} renderDates - The dates being rendered
+     * @param {boolean} groupByDate - Specifies whether to group events by date.
      * @returns {string} The width as a CSS value
      */
     private static calculateEventWidth(
         eventInfo: ProcessedEventsData,
-        renderDates: Date[]
+        renderDates: Date[],
+        groupByDate?: boolean
     ): string {
         const eventStartDay: Date = DateService.normalizeDate(eventInfo.event.startTime);
         const eventEndDay: Date = DateService.normalizeDate(eventInfo.event.endTime);
@@ -231,14 +257,23 @@ export class PositioningService {
         const lastRenderDate: Date = DateService.normalizeDate(renderDates[renderDates.length - 1]);
         const { isOverflowLeft, isOverflowRight } = this.getOverflowDirection(eventInfo, renderDates);
 
+        if (groupByDate) {
+            return 'calc(100% - 4px)';
+        }
+
+        if (eventInfo.isMonthEvent && eventInfo.event.isBlock && !eventInfo.event.isAllDay &&
+            DateService.isFullDayEvent(eventInfo.startDate, eventInfo.endDate)) {
+            return `${(eventInfo.totalSegments || 1) * 100}%`;
+        }
+
         // When working with week-based renderDates
         if (renderDates.length <= 7) {
             const { visibleDayCount, startDayIndex } =
                     DateService.getVisibleAndStartDays(renderDates, eventStartDay, eventEndDay, eventInfo.event);
 
             if (visibleDayCount > 0 && startDayIndex !== -1) {
-                // Calculate width as percentage based on cell width (100% per cell)
-                return `calc(${visibleDayCount * 100}% - 4px)`;
+                const isMonthBlockEvent: boolean = eventInfo.isMonthEvent && eventInfo.event.isBlock;
+                return isMonthBlockEvent ? `${visibleDayCount * 100}%` : `calc(${visibleDayCount * 100}% - 4px)`;
             }
         }
 

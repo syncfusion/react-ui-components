@@ -216,7 +216,7 @@ export const useData: (props: UseDataProps) => UseDataResult = (props: UseDataPr
             }
         }
 
-        (dmResult as any).then(
+        dmResult.then(
             (e: ReturnType) => dataManagerSuccess(e)
         ).catch(
             (e: Error) => dataManagerFailure(e)

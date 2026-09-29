@@ -37,7 +37,7 @@ export interface ITimePicker extends TimePickerProps {
  * import { TimePicker } from '@syncfusion/react-calendars';
  *
  * export default function App() {
- *   return <TimePicker />;
+ *          return <TimePicker />;
  * }
  * ```
  */
@@ -171,7 +171,8 @@ export const TimePicker: React.ForwardRefExoticComponent<ITimePickerProps & Reac
             contentRefs: [popupRef as unknown as React.RefObject<HTMLElement | null>],
             extraInsideRefs: [mobRef as unknown as React.RefObject<HTMLElement | null>],
             inputRef,
-            popupSettings
+            popupSettings,
+            matchTargetWidth: useInline && !(fullScreenMode && Browser.isDevice)
         });
 
         const handleTimeSelection: (time: Date, event?: React.SyntheticEvent) => void =
@@ -567,7 +568,7 @@ export const TimePicker: React.ForwardRefExoticComponent<ITimePickerProps & Reac
                                     {useInline && (
                                         <Popup
                                             ref={popupRef}
-                                            className="sf-timepicker sf-popup"
+                                            className="sf-timepicker sf-popup sf-timepicker-inline"
                                             open={isOpen}
                                             onOpen={() => {
                                                 ensureSelectedVisible();

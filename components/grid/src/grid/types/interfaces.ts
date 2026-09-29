@@ -1,5 +1,4 @@
 import { Dispatch, HTMLAttributes, JSX, ReactElement, ReactNode, RefObject, SetStateAction, MouseEvent, FocusEvent, CSSProperties, UIEvent } from 'react';
-import { ReturnType, DataManager, Predicate, Query, DataResult, Aggregates } from '@syncfusion/react-data';
 import { DateFormatOptions, NumberFormatOptions } from '@syncfusion/react-base';
 import { AggregateType, CellTypes, RenderType, ScrollMode } from '../types/enum';
 import { FilterSettings, FilterEvent, filterModule } from '../types/filter.interfaces';
@@ -9,19 +8,27 @@ import { InlineEditFormRef, payload, editModule, CellEditFormRef } from '../type
 import { selectionModule } from '../types/selection.interfaces';
 import { CellSelectionModel } from '../types/cell-selection.interfaces';
 import { PagerRef } from '@syncfusion/react-pager';
-import { AggregateColumnProps, AggregateData, AggregateRowProps } from '../types/aggregate.interfaces';
-import { GridActionEvent, IGrid, IGridBase } from '../types/grid.interfaces';
-import { PageEvent } from '../types/page.interfaces';
+import { AggregateColumnProps, AggregateRowProps, CustomAggregateData } from '../types/aggregate.interfaces';
+import { GridActionEvent, GridRef, IGrid, IGridBase } from '../types/grid.interfaces';
+import { PageEvent, pagerModule } from '../types/page.interfaces';
 import { searchModule, SearchSettings, SearchEvent } from './search.interfaces';
 import { SortSettings, SortModule, SortEvent, SortDescriptor } from '../types/sort.interfaces';
 import { ToolbarAPI } from './toolbar.interfaces';
 import * as React from 'react';
 import { UseCommandColumnResult } from './command.interfaces';
 import { VirtualSettings } from './virtualization.interface';
-import { ContextMenuPanelRef } from './context.interfaces';
+import { contextMenuModule, ContextMenuPanelRef } from './context.interfaces';
 import { InfiniteScrollState } from './infinite-scroll.interface';
-import { GroupedData } from './grouping.interfaces';
-import { UseGroupResult } from '../hooks/useGroup';
+import { GroupedData, UseGroupResult } from './grouping.interfaces';
+import { columnChooserModule } from './column-chooser.interface';
+import { ReturnType, DataManager, Predicate, Query, DataResult, Aggregates } from '@syncfusion/react-data';
+import { ColumnResizeModule, ColumnWidthInfo } from './resize.interfaces';
+import { ColumnAutoFitModule } from './auto-fit.interfaces';
+import {detailGridModule} from './detail-grid.interfaces';
+import { ColumnReorderModule } from './reorder.interfaces';
+import { PinningModuleResult } from './pinning.interfaces';
+import { FormulaModuleResult } from './formula.interfaces';
+import { ITreeDataResult, ITreeDataSettings } from './treeData.interfaces';
 
 /**
  * IValueFormatter interface defines the methods for value formatting services
@@ -127,6 +134,20 @@ export interface ICell<T> {
     column?: T;
 
     /**
+     * The React element associated with this cell for header and span rendering.
+     *
+     * @default null
+     */
+    element?: ReactElement<IColumnBase<T>> | any;
+
+    /**
+     * The total width represented by the current cell.
+     *
+     * @default 0
+     */
+    totalWidth?: number;
+
+    /**
      * The aggregate column definition if this is an aggregate cell.
      *
      * @default null
@@ -168,6 +189,14 @@ export interface ICell<T> {
      * @default false
      */
     isSelected?: boolean;
+
+    /**
+     * The depth of the cell in the stacked header hierarchy.
+     * Represents the hierarchical level of the cell.
+     *
+     * @default 0
+     */
+    depth?: number;
 }
 /**
  * Interface defining row properties and metadata for grid rendering.
@@ -176,6 +205,10 @@ export interface ICell<T> {
  */
 export interface IRow<T> {
     spanCells?: ICell<ColumnProps<T>>[];
+    stackedHeaderCells?: ICell<ColumnProps<T>>[];
+    flattedData?: unknown[];
+    currentDepthData?: unknown[];
+    flattedColumns?: ReactElement<IColumnBase<T>>[];
     /**
      * Function to set the row object state.
      *
@@ -252,6 +285,20 @@ export interface IRow<T> {
      * @default false
      */
     isSelected?: boolean;
+
+    /**
+     * Indicates whether the row is pinned to the top or bottom section.
+     *
+     * @default false
+     */
+    isPinned?: boolean;
+
+    /**
+     * Specifies the pin bucket location: 'top', 'bottom', or undefined for unpinned.
+     *
+     * @default undefined
+     */
+    pinBucket?: 'top' | 'bottom';
 
     /**
      * Indicates whether the selection is in an intermediate state.
@@ -370,12 +417,18 @@ export interface Scroll {
     // isDataOperationTotalCountChange: RefObject<boolean>;
     scrollToVirtualColumnIndex: (index?: number) => void;
     setVirtualColumnEndIndex: (visibleColumns?: ColumnProps[]) => void;
+    leftPinnedWidth: number;
 }
 
 /**
  * @private
  */
 export interface MutableGridBase<T = unknown> {
+    /**
+     * Suppresses automatic column resize recalculation during filter dialog interaction.
+     */
+    disableResizeObserver?: RefObject<boolean>;
+
     /**
      * Column directives element
      */
@@ -472,9 +525,24 @@ export interface MutableGridBase<T = unknown> {
     groupModule?: UseGroupResult<T>;
 
     /**
+     * The `pinningModule` manages row pinning state and the pin/unpin operations.
+     */
+    pinningModule?: PinningModuleResult<T>;
+
+    /**
      * The `editModule` is used to manipulate editing in the Data Grid.
      */
     editModule?: editModule<T>;
+
+    /**
+     * The `formulaModule` evaluates formula-enabled grid cells.
+     */
+    formulaModule?: FormulaModuleResult<T>;
+
+    /**
+     * The `detailGridModule` is used to manipulate master-detail rows in the Data Grid.
+     */
+    detailGridModule?: detailGridModule;
 
     /**
      * Manages user-selected aggregate types via context menu.
@@ -491,6 +559,11 @@ export interface MutableGridBase<T = unknown> {
     loadedPageWiseVirtualGroupStartEndRowIndexes?: RefObject<Map<number, {startIndex: number, endIndex: number}>>;
     singleGroupColumn?: ColumnProps<T> | undefined;
     groupCaptionAggregateType?: Map<string, string[]>;
+    fieldOrderMap?: Map<string, number>;
+    uidOrderMap?: Map<string, number>;
+    leftPinnedColumns?: Map<string, {Column: ReactNode, Col: ReactNode}>;
+    rightPinnedColumns?: Map<string, {Column: ReactNode, Col: ReactNode}>;
+    columnUidMap?: Map<string, ColumnProps<T>>;
     responseData?: Object;
     setResponseData?: Dispatch<SetStateAction<Object>>;
     commandColumnModule?: UseCommandColumnResult<T>;
@@ -523,6 +596,21 @@ export interface MutableGridBase<T = unknown> {
      * The toolbar module for toolbar operations
      */
     toolbarModule?: ToolbarAPI;
+
+    /**
+     * The pager module for pager operations.
+     */
+    pagerModule?: pagerModule;
+
+    /**
+     * The context menu module for all grid operations.
+     */
+    contextMenuModule?: contextMenuModule;
+
+    /**
+     * The context menu module for all grid operations.
+     */
+    columnChooserModule?: columnChooserModule;
 
     /**
      * Indicates whether the grid has a checkbox selection column
@@ -575,6 +663,20 @@ export interface MutableGridBase<T = unknown> {
      * @returns {void}
      */
     onExpandStateChange?: (rowIndex: number, rowData?: T) => void;
+
+    resizeModule?: ColumnResizeModule;
+    autoFitModule?: ColumnAutoFitModule;
+    reorderModule?: ColumnReorderModule<T>;
+    columnWidthInfo?: RefObject<ColumnWidthInfo>;
+    setColumnWidthState?: Dispatch<SetStateAction<Object>>;
+    aggregateModule?: aggregateModule;
+
+    /**
+     * The `treeModule` manages tree/hierarchical data state operations.
+     */
+    treeModule?: ITreeDataResult;
+    isOffline?: boolean;
+    treeDataSettings?: ITreeDataSettings;
 }
 
 /**
@@ -693,6 +795,70 @@ export interface IRowBase<T = unknown> extends Omit<HTMLAttributes<HTMLTableRowE
      * column cells of the row
      */
     column?: ColumnProps<T>;
+
+    /**
+     * Identifies which pinned section this row belongs to.
+     * Used to apply the `sf-pinned-row-top` or `sf-pinned-row-bottom` CSS class.
+     * Omit (or `undefined`) for regular scrollable rows.
+     *
+     * @default undefined
+     */
+    pinBucket?: 'top' | 'bottom';
+
+    /**
+     * Depth level in tree hierarchy (0 = root, increments with each level).
+     * Populated only when `treeDataSettings.enabled` is true.
+     * Used for indentation and structural hierarchy identification.
+     *
+     * @default undefined
+     */
+    treeLevel?: number;
+
+    /**
+     * Unique identifier for this tree node (e.g., '0', '0_0', '0_0_1').
+     * Generated as parentKey + '_' + childIndex for nested data,
+     * or mapped from data properties for parent ID mode.
+     * Populated only when `treeDataSettings.enabled` is true.
+     *
+     * @default undefined
+     */
+    treeKey?: string;
+
+    /**
+     * Parent node's treeKey identifier (null for root nodes).
+     * Enables parent-child navigation and hierarchy traversal.
+     * Populated only when `treeDataSettings.enabled` is true.
+     *
+     * @default undefined
+     */
+    treeParentKey?: string | null;
+
+    /**
+     * Indicates whether this node has child nodes that can be expanded/collapsed.
+     * True if the node contains children; false for leaf nodes.
+     * Populated only when `treeDataSettings.enabled` is true.
+     *
+     * @default undefined
+     */
+    isTreeParent?: boolean;
+
+    /**
+     * Indicates the current expansion state of this tree node.
+     * True if expanded (children visible); false if collapsed (children hidden).
+     * Populated only when `treeDataSettings.enabled` is true.
+     *
+     * @default true (all nodes start expanded)
+     */
+    isTreeExpanded?: boolean;
+
+    /**
+     * Sequential zero-based position of this row in the flattened tree array.
+     * Updated when the tree is filtered by expansion state or hierarchy changes.
+     * Populated only when `treeDataSettings.enabled` is true.
+     *
+     * @default undefined
+     */
+    index?: number;
 }
 
 /**
@@ -704,7 +870,7 @@ export interface IRowBase<T = unknown> extends Omit<HTMLAttributes<HTMLTableRowE
  * * boolean :- Represents true/false values.
  * ```
  */
-export type ValueType = number | string | Date | boolean;
+export type ValueType = number | string | Date | boolean | undefined;
 
 /**
  * Interface for render reference
@@ -740,7 +906,7 @@ export interface RenderRef<T = unknown> extends HeaderPanelRef, ContentPanelRef<
     /**
      * Pager module reference
      */
-    pagerModule?: PagerRef;
+    pagerRef?: PagerRef;
 
     /**
      * Opens the column chooser dialog programmatically
@@ -749,6 +915,10 @@ export interface RenderRef<T = unknown> extends HeaderPanelRef, ContentPanelRef<
      * @param {number} y - Optional Y coordinate for custom positioning
      */
     openColumnChooser(x?: number, y?: number): void;
+    /**
+     * Closes the column chooser dialog.
+     */
+    closeColumnChooser(): void;
 }
 
 /**
@@ -761,6 +931,16 @@ export interface IRenderBase {
      * Child elements
      */
     children?: ReactNode;
+
+    /**
+     * Notifies the grid of the calculated content height.
+     */
+    onContentHeightChange?: (height: string) => void;
+
+    /**
+     * Notifies the grid when the normal column chooser visibility changes.
+     */
+    onColumnChooserOpenChange?: (isOpen: boolean) => void;
 }
 
 /**
@@ -868,6 +1048,11 @@ export interface ContentPanelRef<T = unknown> extends ContentTableRef<T> {
     readonly contentScrollRef?: HTMLDivElement | null;
 
     /**
+     * Reference to the virtual table wrapper used for scrolling transforms
+     */
+    readonly contentVirtualTableRef?: HTMLDivElement | null;
+
+    /**
      * Reference to the virtual content row scroll element
      */
     readonly virtualContentRowScrollRef?: HTMLDivElement | null;
@@ -876,6 +1061,44 @@ export interface ContentPanelRef<T = unknown> extends ContentTableRef<T> {
      * Reference to the virtual content column scroll element
      */
     readonly virtualContentColumnScrollRef?: HTMLDivElement | null;
+
+    /**
+     * Reference to the pinned top table (for separate access to top pinned rows APIs)
+     */
+    readonly pinnedTopTableRef?: ContentTableRef<T> | null;
+
+    /**
+     * Reference to the pinned bottom table (for separate access to bottom pinned rows APIs)
+     */
+    readonly pinnedBottomTableRef?: ContentTableRef<T> | null;
+
+    /**
+     * Gets the pinned top table DOM element
+     */
+    getPinnedTopTable?: () => HTMLTableElement | null;
+
+    /**
+     * Gets the pinned bottom table DOM element
+     */
+    getPinnedBottomTable?: () => HTMLTableElement | null;
+
+    /**
+     * Gets the content table's cached row objects (content-table-only, used for virtualization)
+     */
+    getContentTableCachedRowObjects?: () => Map<number | string, IRow<ColumnProps<T>>> | undefined;
+
+    getPinnedTopTableCachedRowObjects?: () => Map<number | string, IRow<ColumnProps<T>>> | undefined;
+    getPinnedBottomTableCachedRowObjects?: () => Map<number | string, IRow<ColumnProps<T>>> | undefined;
+
+    /**
+     * Gets the content table's row objects (content-table-only, used for virtualization)
+     */
+    getContentTableRowsObject?: () => IRow<ColumnProps<T>>[] | undefined;
+
+    getPinnedTopTableRowsObject?: () => IRow<ColumnProps<T>>[] | undefined;
+    getPinnedBottomTableRowsObject?: () => IRow<ColumnProps<T>>[] | undefined;
+
+    getContentRowByIndex?: (rowIndex: number) => HTMLTableRowElement | undefined;
 }
 
 /**
@@ -942,7 +1165,16 @@ export interface ContentTableRef<T = unknown> extends ContentRowsRef<T> {
  *
  * @private
  */
-export type IContentTableBase = HTMLAttributes<HTMLTableElement>;
+export interface IContentTableBase extends HTMLAttributes<HTMLTableElement> {
+    /**
+     * Identifies which pinned section this table belongs to.
+     * When `'top'` or `'bottom'`, only pinned rows for that bucket are rendered.
+     * Omit (or `undefined`) for the regular scrollable content table.
+     *
+     * @default undefined
+     */
+    pinBucket?: 'top' | 'bottom';
+}
 
 /**
  * Interface for content rows reference
@@ -1096,7 +1328,16 @@ export interface FooterRowsRef {
  *
  * @private
  */
-export type IContentRowsBase = HTMLAttributes<HTMLTableSectionElement>;
+export interface IContentRowsBase extends HTMLAttributes<HTMLTableSectionElement> {
+    /**
+     * Identifies which pinned section these rows belong to.
+     * When `'top'` or `'bottom'`, only pre-filtered pinned rows for that bucket are rendered.
+     * Omit (or `undefined`) for the regular scrollable rows.
+     *
+     * @default undefined
+     */
+    pinBucket?: 'top' | 'bottom';
+}
 
 /**
  * Defines event arguments for custom data service requests in the Data Grid component.
@@ -1463,10 +1704,16 @@ export interface VirtualColumnInfo extends VirtualInfo {
     offsetX: number;
     scrollFocusCurrentAriaColIndex: number;
     columns: ColumnProps[];
+    prevStackedFocusCell: {
+        mappingUid: string | null,
+        width: number;
+        isHiddenCellFocus: boolean;
+    };
     /**
      * Visible header cell metadata for the current virtual column viewport.
      */
     visibleHeaderColumns?: ColumnProps[];
+    visibleStackedHeaderColumns?: ColumnProps[];
 }
 
 /**
@@ -1673,6 +1920,8 @@ export interface GridResult<T> {
         setCurrentPage: Dispatch<SetStateAction<number>>;
         setTotalRecordsCount: Dispatch<SetStateAction<number>>;
         setGridAction: Dispatch<SetStateAction<Object>>;
+        handleGridPointerDown: (e: React.PointerEvent) => void;
+        handleGridPointerUp: (e: React.PointerEvent) => void;
     };
 
     /**
@@ -1765,3 +2014,54 @@ export interface Group<T = unknown> {
     field?: string;
     result?: T[];
 }
+
+
+/**
+ * Defines the function signature for custom aggregate calculation implementations.
+ * Specifies the contract for functions that perform specialized summary operations on grid data.
+ * Enables implementation of custom aggregation logic beyond standard built-in calculation types.
+ *
+ * @private
+ */
+export type CustomSummaryType<T> = (data: AggregateData<T>[] | CustomAggregateData<T>, column: AggregateColumnProps<T>) => Object;
+
+/** @private */
+export type aggregateModule = {
+    aggregates: AggregateRowProps[],
+    FooterPanelBase: React.ForwardRefExoticComponent<Partial<IFooterPanelBase> & React.RefAttributes<FooterPanelRef>>
+};
+
+/** @private */
+export interface AggregatesComponent extends React.FunctionComponent<{ children?: ReactNode }> {
+    AggregateModule: <T>(
+        props: Partial<IGridBase<T>>,
+        gridRef?: RefObject<GridRef<T>>,
+        directiveAggregates?: ReactElement
+    ) => aggregateModule;
+}
+/**
+ * Represents the structure of aggregate result values returned by the Data Grid component.
+ * Includes raw numeric values for computation and formatted display values for rendering.
+ *
+ * Raw values are keyed by `field - type` (e.g., `Freight - sum` for summation on the "Freight" field).
+ * Formatted values are keyed by `AggregateType` enum members (e.g., `Sum` for rendering summation results).
+ *
+ * Used in `footerTemplate` rendering and custom aggregation logic.
+ *
+ * @template T - Data model used for grid aggregate columns.
+ *
+ * @example
+ * ```ts
+ * {
+ *   "Freight - sum": 1234.56,
+ *   "Salary - max": 98000,
+ *   Sum: "$1,234.56",
+ *   Max: "$98,000"
+ * }
+ * ```
+ */
+export type AggregateData<T = unknown> = {
+    [key in `${Extract<keyof T, string>} - ${Lowercase<AggregateType>}`]?: string | number;
+} & {
+    [type in AggregateType]?: string;
+};

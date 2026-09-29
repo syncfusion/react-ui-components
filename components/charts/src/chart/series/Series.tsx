@@ -2,7 +2,7 @@
  * @module Chart/Series
  */
 import * as React from 'react';
-import { useContext, useEffect, useRef } from 'react';
+import { useContext, useEffect, useRef, useMemo } from 'react';
 import { ChartDataLabelProps, ChartMarkerProps, ChartSeriesProps, SeriesProps, ChartErrorBarProps, ChartSeriesLabelProps, ChartLastValueLabelProps } from '../base/interfaces';
 import { ChartContext } from '../layout/ChartProvider';
 import { defaultChartConfigs } from '../base/default-properties';
@@ -13,6 +13,9 @@ import { ChartTrendlineModel, SeriesProperties } from '../chart-area/chart-inter
 import { ChartTrendline, ChartTrendlineCollection } from './Trendlines';
 import { ChartSeriesLabel } from './SeriesLabel';
 import { buildParetoSignature, handleParetoInGetSeries, handleParetoInDeepSignature } from '../utils/pareto';
+import { extractGradientChildren, extractStops, buildParsedGradient } from '../utils/gradient/gradientParsing';
+import { ChartLinearGradientProps, ChartRadialGradientProps } from '../base/interfaces';
+import { buildGradientSignature } from '../utils/gradient/gradientPipeline';
 
 /**
  * Extracts primitive properties from an object, ignoring objects, functions, and the 'children' property.
@@ -119,21 +122,39 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
     const childArray: React.ReactNode[] = React.Children.toArray(props.children);
 
     /**
-     * Extracts a specific property from all chart series children and returns it as a JSON string.
-     * Used to track changes in specific series properties for dependency arrays in useEffect.
+     * Extracts a specific property from all chart series children and creates a lightweight signature.
+     * Optimized: uses array identity and shallow comparison instead of expensive JSON.stringify.
      *
      * @param {React.ReactNode[]} children - Array of React children nodes to process.
      * @param {string} propertyName - Name of the property to extract from each series.
-     * @returns {string} JSON string representation of the extracted property values.
+     * @returns {string} Lightweight signature based on property changes.
      */
     const extractProperty: (children: React.ReactNode[], propertyName: string) => string = (
         children: React.ReactNode[],
         propertyName: string
-    ): string => JSON.stringify(children.map((child: React.ReactNode) =>
-        React.isValidElement(child) && child.type === ChartSeries
-            ? (child.props as ChartSeriesProperty)[propertyName as keyof ChartSeriesProperty]
-            : null
-    ));
+    ): string => {
+        // Optimized: create lightweight signature without JSON.stringify
+        const values: (string | number | boolean | null)[] = [];
+        for (let i: number = 0; i < children.length; i++) {
+            const child: React.ReactNode = children[i as number];
+            if (React.isValidElement(child) && child.type === ChartSeries) {
+                const value: unknown = (child.props as ChartSeriesProperty)[propertyName as keyof ChartSeriesProperty];
+                // For arrays (like dataSource), only track length instead of full serialization
+                if (Array.isArray(value)) {
+                    values.push(value.length);
+                } else if (typeof value === 'object' && value !== null) {
+                    values.push(Object.keys(value as Record<string, unknown>).join(','));
+                } else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+                    values.push(value);
+                } else {
+                    values.push(null);
+                }
+            } else {
+                values.push(null);
+            }
+        }
+        return values.join('|');
+    };
 
     // Extract commonly changed properties from series for dependency tracking
     const dataSourcesSignature: string = extractProperty(childArray, 'dataSource');
@@ -146,6 +167,24 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
     const legendShape: string = extractProperty(childArray, 'legendShape');
     const pointColorMapping: string = extractProperty(childArray, 'pointColorMapping');
     const isClosedPath: string = extractProperty(childArray, 'isClosedPath');
+    const gradientSignature: string = childArray
+        .map((child: React.ReactNode): string => {
+            if (
+                !React.isValidElement(child) ||
+                child.type !== ChartSeries
+            ) {
+                return 'none';
+            }
+
+            const seriesChildProps: ChartSeriesProperty =
+                child.props as ChartSeriesProperty;
+
+            return buildGradientSignature(
+                seriesChildProps.children
+            );
+        })
+        .join('|');
+
 
     /**
      * String representation of marker configurations for all series.
@@ -462,6 +501,23 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
                         // Process Pareto options configuration (including nested marker and data label)
                         handleParetoInGetSeries(seriesChild, seriesProps as SeriesProperties);
 
+                        const seriesGradProps: ChartLinearGradientProps | ChartRadialGradientProps | null =
+                            extractGradientChildren(
+                                (child.props as ChartSeriesProperty).children
+                            );
+                        if (seriesGradProps) {
+                            const parsedSeries: ReturnType<typeof buildParsedGradient> =
+                                buildParsedGradient(
+                                    seriesGradProps,
+                                    extractStops(seriesGradProps.children)
+                                );
+                            if (parsedSeries && parsedSeries.stops && parsedSeries.kind) {
+                                (seriesProps as SeriesProperties).gradientProps = seriesGradProps;
+                                (seriesProps as SeriesProperties).gradientStops = parsedSeries.stops;
+                                (seriesProps as SeriesProperties).gradientKind = parsedSeries.kind;
+                            }
+                        }
+
                         // Process trendline collection configuration
                         if (React.isValidElement(seriesChild)) {
                             const childType: React.ElementType =
@@ -575,6 +631,27 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
                                                         );
                                                     }
 
+                                                    const tlGradProps: ChartLinearGradientProps | ChartRadialGradientProps | null =
+                                                        extractGradientChildren(
+                                                            (trendlineChild.props as ChartSeriesProperty).children
+                                                        );
+                                                    if (tlGradProps) {
+                                                        const parsedTl: ReturnType<typeof buildParsedGradient> =
+                                                            buildParsedGradient(
+                                                                tlGradProps,
+                                                                extractStops(tlGradProps.children)
+                                                            );
+                                                        if (parsedTl && parsedTl.stops && parsedTl.kind) {
+                                                            mergedTrendlineConfig.gradientProps = tlGradProps;
+                                                            mergedTrendlineConfig.gradientStops = parsedTl.stops;
+                                                            mergedTrendlineConfig.gradientKind = parsedTl.kind;
+                                                            mergedTrendlineConfig.gradientIndex =
+                                                                ((seriesProps as SeriesProperties
+                                                                ).trendlines as ChartTrendlineModel[])
+                                                                    .length;
+                                                        }
+                                                    }
+
                                                     // Add the trendline to the series
                                                     ((seriesProps).trendlines as  ChartTrendlineModel[]).push(
                                                         mergedTrendlineConfig as ChartTrendlineModel);
@@ -603,8 +680,10 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
      * Creates a deep signature of all series components, their properties, and nested children.
      * This signature is used to determine when the series configuration has fundamentally changed
      * and needs to be reprocessed.
+     *
+     * Optimized: Wrapped with useMemo to prevent unnecessary recalculation of expensive JSON.stringify
      */
-    const deepSignature: string = JSON.stringify(
+    const deepSignature: string = useMemo(() => JSON.stringify(
         childArray.map((child: React.ReactNode) => {
             if (!React.isValidElement(child)) { return null; }
             const typeName: string = typeof child.type === 'string'
@@ -773,13 +852,15 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
             return { typeName, ...seriesPropsSignature };
         }),
         getCircularReplacer()
-    );
+    ), [childArray]); // useMemo dependency: only recalculate when childArray reference changes
 
     /**
      * String representation of trendline configurations for all series, including nested markers and data labels.
      * Used to track changes in trendline properties for dependency arrays in useEffect.
+     *
+     * Optimized: Wrapped with useMemo to prevent unnecessary recalculation
      */
-    const trendlineSignature: string = JSON.stringify(
+    const trendlineSignature: string = useMemo(() => JSON.stringify(
         childArray.map((child: React.ReactNode): Partial<ChartSeriesProperty>[] | null => {
             if (
                 React.isValidElement(child) &&
@@ -826,6 +907,10 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
                                                     const trendlineChildren: React.ReactNode =
                                                         (trendlineChild.props as ChartSeriesProperty).children;
 
+                                                    (trendlineSignature as Partial<ChartSeriesProperty> & {
+                                                        gradientSignature?: string;
+                                                    }).gradientSignature = buildGradientSignature(trendlineChildren);
+
                                                     if (trendlineChildren) {
                                                         React.Children.forEach(
                                                             trendlineChildren,
@@ -864,9 +949,11 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
                                                                                         if (!trendlineSignature.marker) {
                                                                                             trendlineSignature.marker = {};
                                                                                         }
-                                                                                        (trendlineSignature.marker as { dataLabel?: Partial<
-                                                                                        ChartSeriesProperty> }).dataLabel
-                                                                                        = dataLabelSignature;
+                                                                                        (trendlineSignature.marker as {
+                                                                                            dataLabel?: Partial<
+                                                                                            ChartSeriesProperty>
+                                                                                        }).dataLabel
+                                                                                            = dataLabelSignature;
                                                                                     }
                                                                                 }
                                                                             }
@@ -892,7 +979,7 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
             }
             return null;
         })
-    );
+    ), [childArray]); // useMemo dependency: only recalculate when childArray reference changes
 
     /**
      * Effect that performs a deep comparison of series data and updates the chart only when necessary.
@@ -909,7 +996,7 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
             previousSeriesRef.current = seriesArray;
             context?.setChartSeries(seriesArray);
         }
-    }, [deepSignature]);
+    }, [deepSignature, gradientSignature]);
 
     /**
      * Effect that updates the chart series whenever key properties change.
@@ -930,6 +1017,7 @@ export const ChartSeriesCollection: React.FC<SeriesProps> = (props: SeriesProps)
         seriesLabelSignature,
         lastValueLabelSignature,
         trendlineSignature,
+        gradientSignature,
         deepSignature,
         splineType,
         legendShape,

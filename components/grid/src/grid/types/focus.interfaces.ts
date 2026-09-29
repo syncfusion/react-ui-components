@@ -1,16 +1,6 @@
 import { MouseEvent, KeyboardEvent, RefObject } from 'react';
-import { IRow } from '../types';
+import { IRow } from '../types/interfaces';
 import { ColumnProps } from '../types/column.interfaces';
-import { useFocusStrategy } from '../hooks';
-
-/**
- * Defines the type for the focus strategy module in the Data Grid.
- * Represents the return type of the useFocusStrategy hook for managing focus navigation.
- * Used internally to encapsulate focus-related functionality.
- *
- * @private
- */
-export type FocusStrategyModule = ReturnType<typeof useFocusStrategy>;
 
 /**
  * Represents the matrix object for managing focusable cells in the Data Grid.
@@ -583,7 +573,8 @@ export interface FocusStrategyResult {
      * @param {Matrix} matrixType - Optional. The matrix type containing the cell.
      * @returns {void}
      */
-    navigateToCell: (rowIndex: number, colIndex: number, matrixType?: Matrix) => void;
+    navigateToCell: (rowIndex: number, colIndex: number, matrixType?: Matrix, virtualFocusDebounceTimer?: NodeJS.Timeout,
+        preventColIndexUpdate?: boolean) => void;
 
     /**
      * Navigates focus to the next cell in the specified direction.
@@ -727,6 +718,15 @@ export interface FocusStrategyResult {
      */
     lastFocusableAggregateCellIndex: number[];
 }
+
+/**
+ * Defines the type for the focus strategy module in the Data Grid.
+ * Represents the return type of the useFocusStrategy hook for managing focus navigation.
+ * Used internally to encapsulate focus-related functionality.
+ *
+ * @private
+ */
+export type FocusStrategyModule = FocusStrategyResult;
 
 /**
  * Defines callback functions for focus-related events in the Data Grid.

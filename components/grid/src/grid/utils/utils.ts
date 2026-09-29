@@ -1,14 +1,102 @@
 
-import { DateFormatOptions, isNullOrUndefined, isUndefined, NumberFormatOptions, extend as baseExtend, getDatePattern, removeClass, addClass, extend, initializeTelemetryFeature } from '@syncfusion/react-base';
-import { DataManager, DataUtil, Predicate, Query } from '@syncfusion/react-data';
-import { EditSettings, IValueFormatter, ValueType, ColumnType, AutoSelectMode, VirtualSettings, IRow, GridProps, ChildInfoResult,
-    GroupedData, GroupSettings, GridTelemetryFeatures, ScrollMode, AggregateRowProps} from '../types';
+import { DateFormatOptions, NumberFormatOptions } from '@syncfusion/react-base/src/internationalization';
+import { isNullOrUndefined, isUndefined, extend as baseExtend, extend } from '@syncfusion/react-base/src/util';
+import { getDatePattern } from '@syncfusion/react-base/src/internationalization';
+import { removeClass, addClass } from '@syncfusion/react-base/src/dom';
+import { initializeTelemetryFeature } from '@syncfusion/react-base/src/telemetry';
+import { EditSettings } from '../types/edit.interfaces';
+import { ChildInfoResult, GroupSummary } from '../types/grouping.interfaces';
+import { IValueFormatter, ValueType } from '../types/interfaces';
+import { AggregateType, ColumnType, AutoSelectMode, GroupSummaryPosition, ColumnPinDirection, PinScope } from '../types/enum';
+import { VirtualSettings } from '../types/virtualization.interface';
+import { IRow } from '../types/interfaces';
+import { GridProps } from '../types/grid.interfaces';
+import { GroupedData, GroupSettings } from '../types/grouping.interfaces';
+import { GridTelemetryFeatures, ScrollMode } from '../types/enum';
+import { AggregateData, AggregateRowProps } from '../types/aggregate.interfaces';
 import { FilterPredicates } from '../types/filter.interfaces';
 import { ServiceLocator } from '../types/interfaces';
 import { payload } from '../types/edit.interfaces';
-import { GridRef, IGridBase } from '../types/grid.interfaces';
-import { ColumnProps, HeaderValueAccessorProps, ValueAccessorProps, IColumnBase } from '../types/column.interfaces';
-import { RefObject } from 'react';
+import { GridRef, GridModules, IGridBase } from '../types/grid.interfaces';
+import { SideBarToolPanel } from '../types/sidebar.interfaces';
+import { ColumnProps, HeaderValueAccessorProps, ValueAccessorProps, IColumnBase, PinDirectionInput } from '../types/column.interfaces';
+import { PinningSettings } from '../types/pinning.interfaces';
+import { ReactElement, RefObject, Children, ReactNode, isValidElement, JSX, cloneElement } from 'react';
+import { Columns, RenderBase } from '../views/Render';
+import { DataManager, DataUtil, Predicate, Query } from '@syncfusion/react-data';
+import {
+    MODULE_INJECTION_REMINDER_HEADER,
+    buildModuleInjectionReminderBody,
+    CLIPBOARD_MODULE_REQUIRED_REMINDER,
+    SEARCH_MODULE_REQUIRED_REMINDER,
+    FILTER_MODULE_REQUIRED_REMINDER,
+    COLUMN_TOOL_PANEL_MODULE_REQUIRED_REMINDER,
+    FILTER_TOOL_PANEL_MODULE_REQUIRED_REMINDER,
+    EDIT_MODULE_REQUIRED_REMINDER,
+    GROUP_MODULE_REQUIRED_REMINDER,
+    TREE_MODULE_REQUIRED_REMINDER,
+    PAGER_MODULE_REQUIRED_REMINDER,
+    AGGREGATE_MODULE_REQUIRED_REMINDER,
+    TOOLBAR_MODULE_REQUIRED_REMINDER,
+    CONTEXTMENU_MODULE_REQUIRED_REMINDER,
+    ROWREORDER_MODULE_REQUIRED_REMINDER,
+    COLUMNCHOOSER_MODULE_REQUIRED_REMINDER,
+    COMMANDCOLUMN_MODULE_REQUIRED_REMINDER,
+    DETAILGRID_MODULE_REQUIRED_REMINDER,
+    REORDER_MODULE_REQUIRED_REMINDER,
+    RESIZE_MODULE_REQUIRED_REMINDER,
+    PINNING_MODULE_REQUIRED_REMINDER
+} from '../constants/warnings';
+import { Aggregates } from '../views/Aggregate';
+import { FormulaModuleResult, FormulaValue } from '../types';
+
+const CHILD_GRID_STORAGE_REGEX: RegExp = /^detail-grid::/i;
+
+/**
+ * Removes child-grid local storage entries created by master-detail grids.
+ *
+ * @param {boolean} isParentGrid - Whether the caller is the top-level parent grid.
+ * @returns {void}
+ * @private
+ */
+export const clearChildGridLocalStorage: (isParentGrid?: boolean) => void = (isParentGrid?: boolean): void => {
+    if (!window?.localStorage || !isParentGrid) {
+        return;
+    }
+    const keysToRemove: string[] = [];
+    for (let i: number = 0; i < window.localStorage.length; i++) {
+        const key: string | null = window.localStorage.key(i);
+        if (key && CHILD_GRID_STORAGE_REGEX.test(key)) {
+            keysToRemove.push(key);
+        }
+    }
+    keysToRemove.forEach((key: string): void => {
+        window.localStorage.removeItem(key);
+    });
+};
+
+/**
+ * Determines whether row pinning is enabled for the configured pinning scope.
+ *
+ * @param {PinningSettings | undefined} pinningSettings - Grid pinning configuration.
+ * @returns {boolean} `true` when row pinning is enabled.
+ * @private
+ */
+export const isRowPinningEnabled: (pinningSettings?: PinningSettings) => boolean =
+    (pinningSettings?: PinningSettings): boolean => !!pinningSettings?.enabled &&
+        (pinningSettings.type === PinScope.Row || pinningSettings.type === PinScope.Both);
+
+/**
+ * Determines whether column pinning is enabled for the configured pinning scope.
+ *
+ * @param {PinningSettings | undefined} pinningSettings - Grid pinning configuration.
+ * @returns {boolean} `true` when column pinning is enabled.
+ * @private
+ */
+export const isColumnPinningEnabled: (pinningSettings?: PinningSettings) => boolean =
+    (pinningSettings?: PinningSettings): boolean => !!pinningSettings?.enabled &&
+        (pinningSettings.type === PinScope.Column || pinningSettings.type === PinScope.Both);
+
 /**
  * Function to get value from provided data
  *
@@ -254,6 +342,24 @@ export function getActualPropFromColl(collection: Object[]): Object[] {
 }
 
 /**
+ * Collects rows from pinned-top, content and pinned-bottom tables into a single array.
+ *
+ * @param {RefObject<GridRef>} gridRef - Grid ref containing table accessors
+ * @param {string} [selector] - Optional selector to filter returned rows
+ * @returns {HTMLTableRowElement[]} Combined array of content row elements
+ * @private
+ */
+export function getAllContentRows(gridRef: RefObject<GridRef>, selector?: string): HTMLTableRowElement[] {
+    const rows: HTMLTableRowElement[] = [
+        ...Array.from(gridRef.current?.getPinnedTopTable?.()?.rows ?? []),
+        ...Array.from(gridRef.current?.getContentTable?.()?.rows ?? []),
+        ...Array.from(gridRef.current?.getPinnedBottomTable?.()?.rows ?? [])
+    ];
+
+    return selector ? rows.filter((row: HTMLTableRowElement) => row.matches(selector)) : rows;
+}
+
+/**
  * @param {Object[]} collection - Defines the array
  * @param {Object} predicate - Defines the predicate
  * @returns {Object} Returns the object
@@ -424,6 +530,323 @@ export function parseUnit(value: string | number): number {
     // Use parseFloat directly, which safely extracts leading numeric value
     const parsed: number = parseFloat(value);
     return isNaN(parsed) ? 0 : parsed;
+}
+
+/**
+ * Builds the visible colgroup entries for a virtualized table while preserving the
+ * default column order for non-pinned grids and only applying the pinned-column
+ * override when pinning is active.
+ *
+ * @param {JSX.Element[]} colElements - All generated `<col>` elements.
+ * @param {ColumnProps<T>[]} visibleColumns - The currently visible column model.
+ * @param {Map<string, {Column: ReactNode, Col: ReactNode}>} [leftPinnedColumns] - Left-pinned column map.
+ * @param {Map<string, {Column: ReactNode, Col: ReactNode}>} [rightPinnedColumns] - Right-pinned column map.
+ * @param {number} [startIndex] - Virtualized start index.
+ * @param {number} [endIndex] - Virtualized end index.
+ * @returns {{ visibleCols: JSX.Element[], totalWidth: number }} The ordered visible columns and their total width.
+ * @private
+ */
+export function buildVisibleColumnGroup<T>(
+    colElements: JSX.Element[],
+    visibleColumns: ColumnProps<T>[],
+    leftPinnedColumns?: Map<string, { Column: ReactNode, Col: ReactNode }>,
+    rightPinnedColumns?: Map<string, { Column: ReactNode, Col: ReactNode }>,
+    startIndex: number = 0,
+    endIndex: number = colElements.length
+): { visibleCols: JSX.Element[]; totalWidth: number } {
+    const visibleCols: JSX.Element[] = [];
+    const leftColumns: Map<string, { Column: ReactNode, Col: ReactNode }> = leftPinnedColumns ?? new Map();
+    const rightColumns: Map<string, { Column: ReactNode, Col: ReactNode }> = rightPinnedColumns ?? new Map();
+    const hasPinnedColumns: boolean = leftColumns.size > 0 || rightColumns.size > 0;
+    let totalWidth: number = 0;
+
+    if (!hasPinnedColumns) {
+        const visibleColumnIds: Set<string> = new Set<string>();
+        for (let i: number = startIndex; i < endIndex; i++) {
+            const columnUid: string | undefined = visibleColumns[i as number]?.uid;
+            if (columnUid && !visibleColumnIds.has(columnUid)) {
+                const col: JSX.Element = colElements[i as number];
+                if (!col) { continue; }
+                visibleCols.push(col);
+                visibleColumnIds.add(columnUid);
+                totalWidth += parseUnit(col?.props?.style?.width);
+            }
+        }
+        return { visibleCols, totalWidth };
+    }
+
+    const uniqueUid: Set<string> = new Set<string>();
+    const pinnedUids: Set<string> = new Set<string>([
+        ...Array.from(leftColumns.values()).map((item: { Column: ReactNode, Col: ReactNode }) =>
+            (item.Column as JSX.Element)?.props?.uid),
+        ...Array.from(rightColumns.values()).map((item: { Column: ReactNode, Col: ReactNode }) =>
+            (item.Column as JSX.Element)?.props?.uid)
+    ]);
+    const colByUid: Map<string, JSX.Element> = new Map<string, JSX.Element>(
+        colElements.map((col: JSX.Element) => [String(col.props?.['data-uid']), col])
+    );
+
+    for (const field of leftColumns.keys()) {
+        const sourceCol: JSX.Element = leftColumns.get(field)?.Col as JSX.Element;
+        const pinnedColumn: JSX.Element = leftColumns.get(field)?.Column as JSX.Element;
+        const col: JSX.Element = cloneElement(sourceCol, {
+            style: {
+                ...sourceCol.props?.style,
+                width: pinnedColumn?.props?.width ?? sourceCol.props?.style?.width
+            },
+            'data-order-index': pinnedColumn?.props?.orderIndex ?? sourceCol.props?.['data-order-index']
+        });
+        visibleCols.push(col);
+        const styleWidth: number = col?.props?.style?.width;
+        uniqueUid.add((leftColumns.get(field)?.Column as JSX.Element)?.props?.uid);
+        totalWidth += parseUnit(styleWidth);
+    }
+
+    for (let i: number = startIndex; i < endIndex; i++) {
+        const visibleColumn: ColumnProps<T> | undefined = visibleColumns[i as number];
+        const columnUid: string | undefined = visibleColumn?.uid;
+        if (columnUid && !uniqueUid.has(columnUid) && !pinnedUids.has(columnUid)) {
+            const col: JSX.Element | undefined = colByUid.get(String(columnUid));
+            if (!col) { continue; }
+            const sizedCol: JSX.Element = cloneElement(col, {
+                style: { ...col.props?.style, width: visibleColumn.width },
+                'data-order-index': visibleColumn.orderIndex
+            });
+            visibleCols.push(sizedCol);
+            const styleWidth: number = sizedCol?.props?.style?.width;
+            uniqueUid.add(columnUid);
+            totalWidth += parseUnit(styleWidth);
+        }
+    }
+
+    for (const field of rightColumns.keys()) {
+        const pinnedColumn: JSX.Element = rightColumns.get(field)?.Column as JSX.Element;
+        const sourceCol: JSX.Element = rightColumns.get(field)?.Col as JSX.Element;
+        if (field && !uniqueUid.has(pinnedColumn?.props?.uid)) {
+            const col: JSX.Element = cloneElement(sourceCol, {
+                style: {
+                    ...sourceCol.props?.style,
+                    width: pinnedColumn?.props?.width ?? sourceCol.props?.style?.width
+                },
+                'data-order-index': pinnedColumn?.props?.orderIndex ?? sourceCol.props?.['data-order-index']
+            });
+            visibleCols.push(col);
+            const styleWidth: number = col?.props?.style?.width;
+            uniqueUid.add((rightColumns.get(field)?.Column as JSX.Element)?.props?.uid);
+            totalWidth += parseUnit(styleWidth);
+        }
+    }
+
+    return { visibleCols, totalWidth };
+}
+
+/**
+ * Determines whether a column width uses a dynamic CSS width value.
+ * Identifies empty strings, the `auto` keyword, and percentage-based widths.
+ *
+ * @param {string | number} width - The column width to evaluate.
+ * @returns {boolean} True when the width is dynamic; otherwise, false.
+ * @private
+ */
+export function isDynamicWidth(width: string | number): boolean {
+    return typeof width === 'string' && (width === 'auto' || width === '' || width.indexOf('%') > -1);
+}
+
+/**
+ * Normalises a `ColumnProps.pinDirection` value to a concrete `ColumnPinDirection` enum.
+ *
+ * Accepted inputs (matches the `cellClass`-style ergonomics):
+ * `ColumnPinDirection` enum member — returned as-is.
+ * `string` — case-insensitive match against `'Left' | 'Right' | 'None'`; unknown strings collapse to `fallback` (defaults to `ColumnPinDirection.None`).
+ * `(column) => ColumnPinDirection | string` — invoked once with `column` and the result is re-resolved recursively.
+ *
+ * @template T - Row item type carried by the column.
+ * @param {PinDirectionInput<T>} value - Column-level pin direction input (static value or callback).
+ * @param {ColumnProps<T>} column - Column passed to the callback form so the function variant is fully exercised.
+ * @param {ColumnPinDirection} [fallback] - Direction returned when no recognisable value is produced.
+ * @returns {ColumnPinDirection} The resolved pin direction enum value.
+ * @private
+ */
+export function resolvePinDirection<T>(
+    value: PinDirectionInput<T>,
+    column: ColumnProps<T>,
+    fallback: ColumnPinDirection = ColumnPinDirection.None
+): ColumnPinDirection {
+    if (typeof value === 'function') {
+        return resolvePinDirection<T>(value(column), column, fallback);
+    }
+    if (typeof value === 'string') {
+        const normalized: string = value.toLowerCase();
+        if (normalized === 'left') { return ColumnPinDirection.Left; }
+        if (normalized === 'right') { return ColumnPinDirection.Right; }
+        if (normalized === 'none') { return ColumnPinDirection.None; }
+        return fallback;
+    }
+    return value ?? fallback;
+}
+
+/**
+ * Calculates cumulative sticky offsets for left-pinned columns.
+ *
+ * @template T - Row data type carried by the columns.
+ * @param {RefObject<ColumnProps<T>[]>} uiColumns - Ref to the current grid columns, if available.
+ * @param {ColumnProps<T>[]} columns - Prepared grid columns.
+ * @returns {Map<string, number>} Left offsets keyed by field or header text.
+ * @private
+ */
+export function getLeftPinnedOffsets<T>(uiColumns: RefObject<ColumnProps<T>[]>, columns: ColumnProps<T>[]): Map<string, number> {
+    const result: Map<string, number> = new Map<string, number>();
+    const cols: ColumnProps<T>[] =
+        [...((uiColumns.current ?? columns) as ColumnProps<T>[])]
+            .sort((a: ColumnProps<T>, b: ColumnProps<T>) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+    let acc: number = 0;
+    for (const col of cols) {
+        if (col.visible !== false && col.pinDirection === ColumnPinDirection.Left) {
+            result.set(col.field ?? col.headerText, acc);
+            acc += parseUnit(col.width);
+        }
+    }
+    return result;
+}
+
+/**
+ * Calculates cumulative sticky offsets for right-pinned columns.
+ *
+ * @template T - Row data type carried by the columns.
+ * @param {RefObject<ColumnProps<T>[]>} uiColumns - Ref to the current grid columns, if available.
+ * @param {ColumnProps<T>[]} columns - Prepared grid columns.
+ * @returns {Map<string, number>} Right offsets keyed by field or header text.
+ * @private
+ */
+export function getRightPinnedOffsets<T>(uiColumns: RefObject<ColumnProps<T>[]>, columns: ColumnProps<T>[]): Map<string, number> {
+    const result: Map<string, number> = new Map<string, number>();
+    const cols: ColumnProps<T>[] =
+        [...((uiColumns.current ?? columns) as ColumnProps<T>[])]
+            .sort((a: ColumnProps<T>, b: ColumnProps<T>) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+    let acc: number = 0;
+    for (let i: number = cols.length - 1; i >= 0; i--) {
+        const col: ColumnProps<T> = cols[i as number];
+        if (col.visible !== false && col.pinDirection === ColumnPinDirection.Right) {
+            result.set(col.field ?? col.headerText, acc);
+            acc += parseUnit(col.width);
+        }
+    }
+    return result;
+}
+
+/**
+ * Calculates the width of left-pinned columns that occur after the first gap
+ * in their original visible-column positions.
+ *
+ * @param {Map<string, {Column: ReactNode, Col: ReactNode}>} leftPinnedColumns - Left-pinned column elements keyed by field.
+ * @param {Map<string, number>} uidOrderMap - Original visible-column positions keyed by UID.
+ * @returns {number} Width of non-contiguous left-pinned columns.
+ * @private
+ */
+export function getNonContinuousLeftPinnedWidth(
+    leftPinnedColumns?: Map<string, {Column: ReactNode; Col: ReactNode}>,
+    uidOrderMap?: Map<string, number>
+): number {
+    const pinnedColumns: Array<{order: number; width: number}> = Array.from(leftPinnedColumns?.values() ?? [])
+        .map((pinnedColumn: {Column: ReactNode; Col: ReactNode}) => {
+            const column: JSX.Element = pinnedColumn.Column as JSX.Element;
+            const uid: string = column?.props?.uid;
+            return {
+                order: uidOrderMap?.get(uid) ?? Number.MAX_SAFE_INTEGER,
+                width: parseUnit(column?.props?.width ?? (pinnedColumn.Col as JSX.Element)?.props?.style?.width)
+            };
+        })
+        .filter((column: {order: number; width: number}) => column.order !== Number.MAX_SAFE_INTEGER)
+        .sort((first: {order: number}, second: {order: number}) => first.order - second.order);
+    const firstGapIndex: number = pinnedColumns.findIndex((column: {order: number}, index: number) => index > 0 &&
+        column.order !== pinnedColumns[index - 1].order + 1);
+    return firstGapIndex === -1 ? 0 : pinnedColumns
+        .slice(firstGapIndex)
+        .reduce((width: number, column: {width: number}) => width + column.width, 0);
+}
+
+/**
+ * Calculates the width of left-pinned columns outside the active virtual column range.
+ *
+ * @param {Map<string, {Column: ReactNode, Col: ReactNode}>} leftPinnedColumns - Left-pinned column elements keyed by field.
+ * @param {number} startIndex - First active virtual column index.
+ * @param {number} endIndex - Exclusive end of the active virtual column range.
+ * @returns {number} Width used to offset the virtual table.
+ * @private
+ */
+export function getLeftPinnedWidth(
+    leftPinnedColumns: Map<string, {Column: ReactNode; Col: ReactNode}>,
+    startIndex: number,
+    endIndex: number
+): number {
+    let width: number = 0;
+    for (const pinnedColumn of leftPinnedColumns?.values() ?? []) {
+        const column: JSX.Element = pinnedColumn.Column as JSX.Element;
+        const orderIndex: number | undefined = column?.props?.orderIndex;
+        if (orderIndex !== undefined && (orderIndex < startIndex || orderIndex >= endIndex)) {
+            width += parseUnit(column?.props?.width ?? (pinnedColumn.Col as JSX.Element)?.props?.style?.width);
+        }
+    }
+    return width;
+}
+
+/**
+ * Gets the outermost left-pinned column field from cumulative offsets.
+ *
+ * @param {Map<string, number>} offsets - Left-pinned offsets ordered by column position.
+ * @returns {string | undefined} Outermost left-pinned field.
+ * @private
+ */
+export function getLeftPinnedBoundaryField(offsets: Map<string, number>): string | undefined {
+    let boundaryField: string | undefined;
+    let boundaryOffset: number = -1;
+    offsets.forEach((offset: number, field: string) => {
+        if (offset > boundaryOffset) {
+            boundaryOffset = offset;
+            boundaryField = field;
+        }
+    });
+    return boundaryField;
+}
+
+/**
+ * Gets the outermost right-pinned column field from cumulative offsets.
+ *
+ * @param {Map<string, number>} offsets - Right-pinned offsets ordered by column position.
+ * @returns {string | undefined} Outermost right-pinned field.
+ * @private
+ */
+export function getRightPinnedBoundaryField(offsets: Map<string, number>): string | undefined {
+    let boundaryField: string | undefined;
+    let boundaryOffset: number = -1;
+    offsets.forEach((offset: number, field: string) => {
+        if (offset > boundaryOffset) {
+            boundaryOffset = offset;
+            boundaryField = field;
+        }
+    });
+    return boundaryField;
+}
+
+/**
+ * Clamps a proposed column width to the column's `minWidth` / `maxWidth` constraints.
+ * Always floors the value at `0` before clamping so negative inputs collapse to 0, then honor the lower bound, then the upper bound.
+ * Returns the constrained value as a positive number safe to write back as `<column>.width`.
+ *
+ * @param {ColumnProps} column - Column whose `minWidth` and `maxWidth` constraints are applied.
+ * @param {number} proposedWidth - Proposed pixel width before constraint enforcement.
+ * @returns {number} Constrained width in pixels within `[0, column.maxWidth]` (with a `column.minWidth` floor when defined).
+ * @private
+ */
+export function applyColumnWidthConstraints(column: ColumnProps, proposedWidth: number): number {
+    let constrained: number = Math.max(0, proposedWidth);
+    if (!isNullOrUndefined(column.minWidth) && constrained < column.minWidth) {
+        constrained = column.minWidth;
+    }
+    if (!isNullOrUndefined(column.maxWidth) && constrained > column.maxWidth) {
+        constrained = column.maxWidth;
+    }
+    return constrained;
 }
 
 /**
@@ -671,8 +1094,9 @@ export function buildDeletepayload<T>(gridRef: GridRef<T>, deleteOption?: 'page'
 }
 
 export const updateUIColumnType: (data: Object, newColumn: Partial<IColumnBase>, serviceLocator: ServiceLocator,
-    isColTypeDef?: RefObject<boolean>) => ColumnProps =
-(data: Object, newColumn: Partial<IColumnBase>, serviceLocator: ServiceLocator, isColTypeDef?: RefObject<boolean>): ColumnProps => {
+    isColTypeDef?: RefObject<boolean>, getPrimaryKeyFieldNames?: () => string[], formulaModule?: FormulaModuleResult) => ColumnProps =
+(data: Object, newColumn: Partial<IColumnBase>, serviceLocator: ServiceLocator,
+ isColTypeDef?: RefObject<boolean>, getPrimaryKeyFieldNames?: () => string[], formulaModule?: FormulaModuleResult ): ColumnProps => {
     if (!isNullOrUndefined(newColumn.getCommandItems)) {
         newColumn.type = ColumnType.Command;
     }
@@ -702,11 +1126,13 @@ export const updateUIColumnType: (data: Object, newColumn: Partial<IColumnBase>,
     }
     if (newColumn.sortComparer && !isNullOrUndefined(isColTypeDef)) {
         let a: Function = newColumn.sortComparer;
-        newColumn.sortComparer = (x: number | string, y: number | string, xObj?: Object, yObj?: Object) => {
+        newColumn.sortComparer = function(this: ColumnProps, x: number | string, y: number | string,
+                                          xObj?: Object, yObj?: Object): number | string {
+            const sortDirection: string = this?.sortDirection ?? newColumn.sortDirection;
             if (typeof a === 'string') {
                 a = getObject(a, window) as Function;
             }
-            if (newColumn.sortDirection === 'Descending') {
+            if (sortDirection === 'Descending') {
                 const z: number | string = x as number | string;
                 x = y;
                 y = z;
@@ -714,7 +1140,53 @@ export const updateUIColumnType: (data: Object, newColumn: Partial<IColumnBase>,
                 xObj = yObj;
                 yObj = obj;
             }
-            return a(x, y, xObj, yObj, newColumn.sortDirection);
+            return a(x, y, xObj, yObj, sortDirection);
+        };
+    }
+    if (!newColumn.sortComparer && newColumn.allowFormula && formulaModule) {
+        newColumn.sortComparer = function(this: ColumnProps, x: string | number, y: string | number,
+                                          xObj?: Object, yObj?: Object): number | string {
+            let xValue: string | number = x;
+            let yValue: string | number = y;
+            const sortDirection: string = this?.sortDirection ?? newColumn.sortDirection;
+            if (xObj && yObj) {
+                const primaryKeyField: string | undefined = getPrimaryKeyFieldNames?.()[0];
+                if (primaryKeyField) {
+                    const xPrimaryKey: string | number = xObj[`${primaryKeyField}`] as string | number;
+                    const yPrimaryKey: string | number = yObj[`${primaryKeyField}`] as string | number;
+                    if (!isNullOrUndefined(xPrimaryKey) && !isNullOrUndefined(yPrimaryKey)) {
+                        const xFormulaValue: FormulaValue | undefined = typeof xValue === 'string' && xValue.trim().startsWith('=') ?
+                            formulaModule.getFormulaValue(xPrimaryKey, newColumn.field)
+                            : xValue;
+                        const yFormulaValue: FormulaValue | undefined = typeof yValue === 'string' && yValue.trim().startsWith('=') ?
+                            formulaModule.getFormulaValue(yPrimaryKey, newColumn.field)
+                            : yValue;
+                        xValue = xFormulaValue as string | number;
+                        yValue = yFormulaValue as string | number;
+                    } else {
+                        xValue = xObj[newColumn.field];
+                        yValue = yObj[newColumn.field];
+                    }
+                }
+            }
+            return sortDirection === 'Descending' ? DataUtil.fnDescending(xValue, yValue)
+                : DataUtil.fnAscending(xValue, yValue);
+        };
+    }
+    if (!newColumn.filterComparer && newColumn.allowFormula && formulaModule) {
+        newColumn.filterComparer = function(field: string, record: Object): FormulaValue {
+            const primaryKeyField: string | undefined = getPrimaryKeyFieldNames?.()[0];
+            if (primaryKeyField) {
+                const xPrimaryKey: string | number = record[`${primaryKeyField}`];
+                const value: string | number = record[`${field}`];
+                if (typeof value === 'string' && value.trim().startsWith('=') && !isNullOrUndefined(xPrimaryKey)) {
+                    const xFormulaValue: FormulaValue = formulaModule.getFormulaValue(xPrimaryKey, newColumn.field);
+                    return xFormulaValue;
+                } else {
+                    return value;
+                }
+            }
+            return undefined;
         };
     }
     if (typeof (newColumn.format) === 'string') {
@@ -760,7 +1232,6 @@ export function getPredicate(columns: FilterPredicates[], isExecuteLocal?: boole
 export function generatePredicate(cols: FilterPredicates[], isExecuteLocal?: boolean, moduleName?: string): Predicate {
     const len: number = cols.length;
     let predicate: Predicate;
-    const operate: string = 'or';
     const first: FilterPredicates = cols[0];
     first.ignoreAccent = !isNullOrUndefined(first.ignoreAccent) ? first.ignoreAccent : false;
     if (first.type === 'date' || first.type === 'datetime' || first.type === 'dateonly') {
@@ -769,7 +1240,7 @@ export function generatePredicate(cols: FilterPredicates[], isExecuteLocal?: boo
         predicate = first.ejpredicate ? first.ejpredicate as Predicate :
             new Predicate(
                 first.field, first.operator, first.value, !getCaseValue(first),
-                first.ignoreAccent) as Predicate;
+                first.ignoreAccent, false, false, first.filterComparer) as Predicate;
         if (moduleName === 'UrlAdaptor') {
             predicate.operator = predicate?.operator?.toLowerCase();
         }
@@ -785,27 +1256,29 @@ export function generatePredicate(cols: FilterPredicates[], isExecuteLocal?: boo
                 predicate.predicates.push(new Predicate(
                     cols[p as number].field, cols[parseInt(p.toString(), 10)].operator,
                     cols[parseInt(p.toString(), 10)].value, !getCaseValue(cols[parseInt(p.toString(), 10)]),
-                    cols[parseInt(p.toString(), 10)].ignoreAccent));
+                    cols[parseInt(p.toString(), 10)].ignoreAccent, false, false, cols[parseInt(p.toString(), 10)].filterComparer));
             }
         } else {
             if (cols[p as number].type === 'date' || cols[p as number].type === 'datetime' || cols[p as number].type === 'dateonly') {
                 if (cols[parseInt(p.toString(), 10)].predicate === 'and' && cols[parseInt(p.toString(), 10)].operator === 'equal') {
-                    predicate = (predicate[`${operate}`] as Function)(
+                    predicate = (predicate[((cols[parseInt(p.toString(), 10)] as Predicate).predicate) as string] as Function)?.(
                         getDatePredicate(cols[parseInt(p.toString(), 10)], cols[parseInt(p.toString(), 10)].type, isExecuteLocal),
-                        cols[parseInt(p.toString(), 10)].type, cols[parseInt(p.toString(), 10)].ignoreAccent);
+                        cols[parseInt(p.toString(), 10)].type, cols[parseInt(p.toString(), 10)].ignoreAccent,
+                        cols[parseInt(p.toString(), 10)].filterComparer);
                 } else {
-                    predicate = (predicate[((cols[parseInt(p.toString(), 10)] as Predicate).predicate) as string] as Function)(
+                    predicate = (predicate[((cols[parseInt(p.toString(), 10)] as Predicate).predicate) as string] as Function)?.(
                         getDatePredicate(cols[parseInt(p.toString(), 10)], cols[parseInt(p.toString(), 10)].type, isExecuteLocal),
-                        cols[parseInt(p.toString(), 10)].type, cols[parseInt(p.toString(), 10)].ignoreAccent);
+                        cols[parseInt(p.toString(), 10)].type, cols[parseInt(p.toString(), 10)].ignoreAccent,
+                        cols[parseInt(p.toString(), 10)].filterComparer);
                 }
             } else {
                 predicate = cols[parseInt(p.toString(), 10)].ejpredicate ?
                     (predicate[(cols[parseInt(p.toString(), 10)] as Predicate)
-                        .predicate as string] as Function)(cols[parseInt(p.toString(), 10)].ejpredicate) :
-                    (predicate[(cols[parseInt(p.toString(), 10)].predicate) as string] as Function)(
+                        .predicate as string] as Function)?.(cols[parseInt(p.toString(), 10)].ejpredicate) :
+                    (predicate[(cols[parseInt(p.toString(), 10)].predicate) as string] as Function)?.(
                         cols[parseInt(p.toString(), 10)].field, cols[parseInt(p.toString(), 10)].operator,
                         cols[parseInt(p.toString(), 10)].value, !getCaseValue(cols[parseInt(p.toString(), 10)]),
-                        cols[parseInt(p.toString(), 10)].ignoreAccent);
+                        cols[parseInt(p.toString(), 10)].ignoreAccent, cols[parseInt(p.toString(), 10)].filterComparer);
             }
         }
         if (moduleName === 'UrlAdaptor' && predicateLength !== predicate.predicates.length) {
@@ -841,20 +1314,27 @@ export function refreshFilteredColsUid<T>(grid: GridRef<T>, filteredCols: Filter
  * @private
  * @param {GroupedData[]} groupedData - Grouped data array
  * @param {Function} shouldExpandGroup - Expansion predicate function
+ * @param {GroupSummary | GroupSummaryPosition} groupSummary - Group summary configuration
+ * @param {Map<string, string[]>} groupCaptionAggregateType - Map of group caption aggregate types
  * @param {GroupSettings} groupSettings - Group configuration
  * @param {Set<string>} collapsedGroupKeys - Collapsed group keys
  * @param {ValueType} parentKey - Parent group key
+ * @param {boolean} isToggle - Whether the group is toggled
+ * @param {AggregateData<T>} aggregateData - Aggregate data for the group
  * @returns {Object} Result with count, currentViewData, expandedGroups, collapsedGroups
  */
-//  * @param {boolean} isExpandOnlyRequired - Whether expansion is mandatory
 export function getGroupLayoutFlattedData<T>(
     groupedData: GroupedData<T>[],
     shouldExpandGroup: GridProps<T>['shouldExpandGroup'],
+    groupSummary: GroupSummary | GroupSummaryPosition,
+    groupCaptionAggregateType: Map<string, string[]>,
     groupSettings: GroupSettings,
     collapsedGroupKeys: Set<string> = new Set(),
     // expandedGroupKeys: Set<string> = new Set(),
     // isExpandOnlyRequired: boolean = true,
-    parentKey: ValueType = ''
+    parentKey: ValueType = '',
+    isToggle: boolean = false,
+    aggregateData?: AggregateData<T>
 ): ChildInfoResult<T> {
     let count: number = 0;
     const currentViewData: (GroupedData<T> | T)[] = [];
@@ -870,7 +1350,27 @@ export function getGroupLayoutFlattedData<T>(
         const groupKey: string = (parentKey !== '' ? parentKey + '-' : '') + groupKeyValue;
         const groupItem: GroupedData<T> | undefined = groupedData[groupIndex as number];
         const groupCount: number | undefined = groupItem?.count;
-        if (groupCount && groupKey) {
+        const groupSummaryPosition: GroupSummaryPosition = typeof groupSummary === 'function' ? groupSummary?.(groupKey, level) :
+            groupSummary;
+        const generateGroupSummaryData: (aggregates: AggregateData<T>) => T = (aggregates: AggregateData<T>) => {
+            const summaryData: object = groupSettings.columns.reduce((acc: T) => {
+                if (groupCaptionAggregateType && groupCaptionAggregateType?.size) {
+                    groupCaptionAggregateType?.forEach((aggregateType: string[], aggregateField: string) => {
+                        acc[aggregateField as string] = aggregateType.map((type: string) =>
+                            (aggregates)?.[`${aggregateField} - ${type.toLowerCase()}`] ?? ''
+                        ).join(', ');
+                    });
+                }
+                return acc;
+            }, {});
+            return ({
+                flattedGroupSummary: true,
+                ...summaryData
+            } as T);
+        };
+        const indexStr: string = groupIndex.toString();
+        const itemAtIndex: GroupedData<T> = groupedData[parseInt(indexStr, 10) as number];
+        if (groupCount && (groupKey || !isNullOrUndefined(groupKey))) {
             const isExpanded: boolean = (!shouldExpandGroup && ((
                 (typeof(groupSettings?.defaultExpanded) === 'number' &&
                 groupSettings?.defaultExpanded >= flattedLevel) ||
@@ -880,17 +1380,23 @@ export function getGroupLayoutFlattedData<T>(
             if (isExpanded) {
                 count += groupCount;
             }
-            const indexStr: string = groupIndex.toString();
-            const itemAtIndex: GroupedData<T> = groupedData[parseInt(indexStr, 10) as number];
             itemAtIndex.flattedKey = groupKey;
             itemAtIndex.flattedLevel = flattedLevel;
 
+            if (groupSummaryPosition === GroupSummaryPosition.Top && isToggle && !isExpanded && groupIndex === 0) {
+                currentViewData.push({flattedKey: parentKey + '-footer', flattedLevel: flattedLevel, ...generateGroupSummaryData(aggregateData)});
+                count += 1;
+            }
             currentViewData.push(itemAtIndex);
+            if (groupSummaryPosition === GroupSummaryPosition.Top && isExpanded && !isToggle) {
+                currentViewData.push({flattedKey: groupKey + '-footer', flattedLevel: flattedLevel, ...generateGroupSummaryData(itemAtIndex?.aggregates)});
+                count += 1;
+            }
             type GroupItemType = GroupedData<T> & {items?: GroupedData<T>[]};
             const groupedDataAtIndex: GroupItemType | undefined = groupedData?.[groupIndex as number] as GroupItemType | undefined;
             const childItems: GroupedData<T>[] = groupedDataAtIndex?.items as GroupedData<T>[];
             const childInfo: ChildInfoResult<T> = getGroupLayoutFlattedData(
-                childItems, shouldExpandGroup, groupSettings, collapsedGroupKeys, groupKey //, expandedGroupKeys isExpandOnlyRequired
+                childItems, shouldExpandGroup, groupSummary, groupCaptionAggregateType, groupSettings, collapsedGroupKeys, groupKey //, expandedGroupKeys isExpandOnlyRequired
             );
             if (isExpanded) {
                 expandedGroups.push(groupKey, ...childInfo.expandedGroups);
@@ -932,9 +1438,21 @@ export function getGroupLayoutFlattedData<T>(
                 count += childInfo.count;
                 currentViewData.push(...childInfo.currentViewData);
             }
+            if (groupSummaryPosition === GroupSummaryPosition.Bottom &&
+                ((isExpanded && !isToggle) || (isToggle && !isExpanded && dataLength - 1 === groupIndex))) {
+                currentViewData.push({flattedKey: isToggle ? parentKey : groupKey + '-footer', flattedLevel: flattedLevel,
+                    ...generateGroupSummaryData(isToggle ? aggregateData : itemAtIndex?.aggregates)});
+                count += 1;
+            }
         } else {
             if (!collapsedGroupKeys.has(parentKey as string)) {
+                if (aggregateData && groupSummaryPosition === GroupSummaryPosition.Top) {
+                    currentViewData.push({flattedKey: groupKey + '-footer', flattedLevel: flattedLevel, ...generateGroupSummaryData(aggregateData)});
+                }
                 currentViewData.push(...groupedData);
+                if (aggregateData && groupSummaryPosition === GroupSummaryPosition.Bottom) {
+                    currentViewData.push({flattedKey: groupKey + '-footer', flattedLevel: flattedLevel, ...generateGroupSummaryData(aggregateData)});
+                }
             }
             break;
         }
@@ -1015,18 +1533,42 @@ export const getPageFromRowIndex: (startRowIndex: number, endRowIndex: number, p
  * @returns {ColumnProps[]} Returns the without checkbox and command columns.
  * @private
  */
-export function getWithoutCheckBoxandCommandColumn(visibleColumns: ColumnProps[]): ColumnProps[] {
-    return visibleColumns?.filter((column: ColumnProps) => column.type !== 'checkbox' && !column.getCommandItems);
+export function getWithoutSpecialColumns(visibleColumns: ColumnProps[]): ColumnProps[] {
+    return visibleColumns?.filter((column: ColumnProps) => column.type !== 'checkbox' && !column.getCommandItems &&
+        column.type !== ColumnType.RowDragAndDrop && column.type !== ColumnType.RowNumber);
 }
 
 // Type guard to check if an item is of type GroupedData<T>.
+/**
+ * @param {unknown} item - The value to check
+ * @returns {boolean} True if the item is a GroupedData
+ */
 export function isGroupedData<T>(item: unknown): item is GroupedData<T> {
     return typeof item === 'object' && item !== null && 'items' in item && 'key' in item && 'count' in item;
 }
 
+const getSideBarPanelIds: <T>(sideBarConfig: unknown) => Array<string | SideBarToolPanel<T>> =
+<T, >(sideBarConfig: unknown): Array<string | SideBarToolPanel<T>> => {
+    if (sideBarConfig === true) {
+        return ['columns', 'filters'];
+    }
+    if (typeof sideBarConfig === 'string') {
+        return [sideBarConfig];
+    }
+    if (Array.isArray(sideBarConfig)) {
+        return sideBarConfig as Array<string | SideBarToolPanel<T>>;
+    }
+    if (sideBarConfig !== null && typeof sideBarConfig === 'object') {
+        const toolPanels: unknown = (sideBarConfig as { toolPanels?: unknown }).toolPanels;
+        return Array.isArray(toolPanels) ? toolPanels as Array<string | SideBarToolPanel<T>> : [];
+    }
+    return [];
+};
+
 /**
  * @param {Partial<IGridBase<T>>} props - User provided Grid props
  * @param {AggregateRowProps[]} reactChildNodeBasedProps - React child node based props values.
+ * @param {AggregateRowProps[]} reactChildNodeBasedProps.aggregates - The aggregate rows
  * @returns {void}
  * @private
  */
@@ -1034,42 +1576,565 @@ export const setGridTelemetryFeatureList: <T>(props: Partial<IGridBase<T>>, reac
     aggregates: AggregateRowProps[]
 }) => void =
     <T>(props: Partial<IGridBase<T>>, reactChildNodeBasedProps: { aggregates: AggregateRowProps[] }): void => {
-        if (props.searchSettings?.enabled) {
-            initializeTelemetryFeature(GridTelemetryFeatures.Search, 'grid');
+        const gridModules: GridModules<T> | undefined = props.modules?.GridAllModules ?? props.modules;
+
+        if (gridModules?.SearchModule && props.searchSettings?.enabled) {
+            initializeTelemetryFeature(GridTelemetryFeatures.Search, 'DataGrid');
         }
-        if (props.filterSettings?.enabled) {
-            initializeTelemetryFeature(GridTelemetryFeatures.Filter, 'grid');
+        if (gridModules?.FilterModule && props.filterSettings?.enabled) {
+            initializeTelemetryFeature(GridTelemetryFeatures.Filter, 'DataGrid');
         }
         if (props.sortSettings?.enabled) {
-            initializeTelemetryFeature(GridTelemetryFeatures.Sort, 'grid');
+            initializeTelemetryFeature(GridTelemetryFeatures.Sort, 'DataGrid');
         }
-        if (props.groupSettings?.enabled) {
-            initializeTelemetryFeature(GridTelemetryFeatures.Group, 'grid');
+        if (gridModules?.GroupModule && props.groupSettings?.enabled) {
+            initializeTelemetryFeature(GridTelemetryFeatures.Group, 'DataGrid');
         }
-        if (props.editSettings?.allowAdd || props.editSettings?.allowEdit || props.editSettings?.allowDelete) {
-            initializeTelemetryFeature(GridTelemetryFeatures.Crud, 'grid');
+        if (gridModules?.TreeDataModule && props.isTreeMode) {
+            initializeTelemetryFeature(GridTelemetryFeatures.TreeData, 'DataTreeGrid');
+        }
+        const isEditFeatureActive: boolean = !!(
+            props.editSettings?.allowAdd || props.editSettings?.allowEdit || props.editSettings?.allowDelete
+        );
+        if ((gridModules?.EditModule || gridModules?.CommandColumnModule) && isEditFeatureActive) {
+            initializeTelemetryFeature(GridTelemetryFeatures.Crud, 'DataGrid');
         }
         if (props.virtualizationSettings?.scrollMode === ScrollMode.Virtual) {
-            initializeTelemetryFeature(GridTelemetryFeatures.VirtualScroll, 'grid');
+            initializeTelemetryFeature(GridTelemetryFeatures.VirtualScroll, 'DataGrid');
         } else if (props.virtualizationSettings?.scrollMode === ScrollMode.Infinite) {
-            initializeTelemetryFeature(GridTelemetryFeatures.InfiniteScroll, 'grid');
+            initializeTelemetryFeature(GridTelemetryFeatures.InfiniteScroll, 'DataGrid');
         }
-        if (props.pageSettings?.enabled) {
-            initializeTelemetryFeature(GridTelemetryFeatures.Pager, 'grid');
+        if (gridModules?.PagerModule && props.pageSettings?.enabled) {
+            initializeTelemetryFeature(GridTelemetryFeatures.Pager, 'DataGrid');
         }
-        if (props.aggregates?.length || reactChildNodeBasedProps?.aggregates?.length) {
-            initializeTelemetryFeature(GridTelemetryFeatures.Aggregate, 'grid');
+        if (gridModules?.ResizeModule && props.resizeSettings?.enabled) {
+            initializeTelemetryFeature(GridTelemetryFeatures.Resize, 'DataGrid');
         }
-        if (props.showColumnChooser) {
-            initializeTelemetryFeature(GridTelemetryFeatures.ColumnChooser, 'grid');
+        if (gridModules?.ReorderModule && props.reorderSettings?.enabled) {
+            initializeTelemetryFeature(GridTelemetryFeatures.Reorder, 'DataGrid');
         }
-        if (props.contextMenuSettings?.enabled) {
-            initializeTelemetryFeature(GridTelemetryFeatures.ContextMenu, 'grid');
+        if (gridModules?.AggregateModule && (props.aggregates?.length || reactChildNodeBasedProps?.aggregates?.length)) {
+            initializeTelemetryFeature(GridTelemetryFeatures.Aggregate, 'DataGrid');
+        }
+        if (gridModules?.ColumnChooserModule && props.showColumnChooser) {
+            initializeTelemetryFeature(GridTelemetryFeatures.ColumnChooser, 'DataGrid');
+        }
+        if (gridModules?.ContextMenuModule && props.contextMenuSettings?.enabled) {
+            initializeTelemetryFeature(GridTelemetryFeatures.ContextMenu, 'DataGrid');
         }
         if (props.selectionSettings?.enabled !== false) {
-            initializeTelemetryFeature(GridTelemetryFeatures.Selection, 'grid');
+            initializeTelemetryFeature(GridTelemetryFeatures.Selection, 'DataGrid');
         }
         if (props?.isMasterDetail) {
-            initializeTelemetryFeature(GridTelemetryFeatures.DetailRow, 'grid');
+            initializeTelemetryFeature(GridTelemetryFeatures.DetailRow, 'DataGrid');
         }
     };
+
+/**
+ * Recursively retrieves all field names from a collection of columns,
+ * excluding columns where allowGroup is false.
+ * Useful for collecting groupable fields in stacked header scenarios.
+ *
+ * @param {(ColumnProps<unknown> | ReactElement)[]} columns - The columns to extract fields from
+ * @param {string[]} [fields=[]] - Accumulator array for collected field names
+ * @returns {string[] | undefined} Array of field names from groupable columns
+ * @private
+ */
+export function getAllFields(columns: (ColumnProps<unknown> | ReactElement<IColumnBase>)[], fields: string[] = []): string[] | undefined {
+    // Normalize input: convert single element to array
+    const columnsArray: (ColumnProps<unknown> | ReactElement)[] = Array.isArray(columns) ? columns : [columns];
+    columnsArray.forEach((col: ColumnProps) => {
+        if (col?.allowGroup === false || (col as ReactElement<IColumnBase>).props?.allowGroup === false) {
+            return;
+        }
+        if (col?.field || (col as ReactElement<IColumnBase>).props?.field) {
+            fields.push(col.field || (col as ReactElement<IColumnBase>).props.field);
+        }
+        if (col?.columns?.length || ((col as ReactElement<IColumnBase>).props?.children as ReactElement<IColumnBase>[])) {
+            getAllFields(col?.columns || (col as ReactElement<IColumnBase>).props?.children as ReactElement<IColumnBase>[], fields);
+        }
+    });
+    return fields;
+}
+
+export function getColumnByPath( columns: ColumnProps[], parentIndex: string, columnIndex: number): ColumnProps {
+    let current: ColumnProps[] = columns;
+    // Traverse parent path
+    for (const idx of parentIndex.split('-')) {
+        current = current?.[Number(idx)]?.columns;
+        if (!current) {
+            return undefined;
+        }
+    }
+    // Get leaf column
+    return current?.[columnIndex as number];
+}
+
+/**
+ * Resolves the effective order index for a column, using the last bottom-most child for stacked headers.
+ *
+ * @template T - Row data type
+ * @param {ColumnProps<T>} column - Column whose effective order index is resolved
+ * @returns {number} Effective leaf-column order index
+ * @private
+ */
+export function getEffectiveOrderIndex<T>(column: ColumnProps<T>): number {
+    let currentColumn: ColumnProps<T> = column;
+    while (currentColumn?.columns?.length) {
+        currentColumn = currentColumn.columns[currentColumn.columns.length - 1] as ColumnProps<T>;
+    }
+    return currentColumn?.orderIndex;
+}
+
+/**
+ * Checks whether column definitions contain nested columns in object or JSX form.
+ *
+ * @param {ColumnProps<T>[]} columns - Object-based column definitions
+ * @param {ReactNode} children - JSX column definitions
+ * @private
+ * @returns {boolean} Whether nested columns are present
+ */
+export function hasNestedColumns<T>(columns?: ColumnProps<T>[], children?: ReactNode): boolean {
+    if (Array.isArray(columns) && columns.some((column: ColumnProps<T>) =>
+        column.columns?.length || hasNestedColumns(column.columns, column.children))) {
+        return true;
+    }
+
+    return Children.toArray(children).some((child: ReactElement) => {
+        if (!isValidElement(child) || child.type === Aggregates) {
+            return false;
+        }
+        const childProps: ColumnProps<T> = child.props as ColumnProps<T>;
+        const hasNestedObjectColumns: boolean = Boolean(childProps.columns?.length);
+        const hasNestedJSXColumns: boolean = child.type !== Columns && child.type !== RenderBase &&
+            Children.count(childProps.children) > 0;
+        return hasNestedObjectColumns || hasNestedJSXColumns || hasNestedColumns(childProps.columns, childProps.children);
+    });
+}
+
+/**
+ * Checks if the provided children contains a Columns component
+ * Handles both array and non-array children by normalizing them to an array
+ *
+ * @param {React.ReactNode} children - The React children to check
+ * @returns { boolean }  Object containing the child array and boolean flag
+ * @private
+ */
+export function isColumnsChild( children: React.ReactNode): boolean {
+    const childArray: ReactElement[] = children ? Array.isArray(children) ? (children as ReactElement[])
+        : (Children.toArray(children) as ReactElement[]) : [];
+    const hasColumnsChild: boolean = !isNullOrUndefined(
+        childArray.find((child: ReactElement) => isValidElement(child) && (child.type === Columns || child.type === RenderBase))
+    );
+    return hasColumnsChild;
+}
+
+/**
+ * Emits a single `console.warn` during initial mount when `enableDevMode` is
+ * true and at least one user-enabled feature is missing the corresponding
+ * module from the `modules` prop.
+ *
+ * Runs once per grid instance, parallel to `setGridTelemetryFeatureList`.
+ * Does not affect the telemetry path; both warnings are independent.
+ *
+ * @param {Partial<IGridBase<T>>} props - User-provided Grid props.
+ * @param {object} reactChildNodeBasedProps - React child node derived state.
+ * @param {AggregateRowProps[]} reactChildNodeBasedProps.aggregates - Aggregate rows resolved from `<Aggregates>` children.
+ * @param {boolean} reactChildNodeBasedProps.isCommandEditEnabled - True when at least one column declares `getCommandItems`.
+ * @returns {void}
+ * @private
+ */
+export const setGridModuleInjectionWarning: <T>(props: Partial<IGridBase<T>>, reactChildNodeBasedProps: {
+    aggregates: AggregateRowProps[];
+    isCommandEditEnabled: boolean;
+}) => void =
+    <T>(props: Partial<IGridBase<T>>, reactChildNodeBasedProps: {
+        aggregates: AggregateRowProps[];
+        isCommandEditEnabled: boolean;
+    }): void => {
+        // Honour the same opt-out the user has for other dev warnings.
+        if (props.enableDevMode === false) {
+            return;
+        }
+        const modules: GridModules<T> | undefined = props.modules;
+        const reminders: string[] = [];
+        // Clipboard is enabled by default; treat the prop as on unless the
+        // consumer has explicitly set it to `false`.
+        const isClipboardRequested: boolean = props.clipboardSettings?.enabled !== false;
+        if (isClipboardRequested && !modules?.ClipboardModule && !modules?.AutoFillModule && !modules?.GridAllModules) {
+            reminders.push(CLIPBOARD_MODULE_REQUIRED_REMINDER);
+        }
+        if (props.searchSettings?.enabled && !modules?.SearchModule && !modules?.GridAllModules) {
+            reminders.push(SEARCH_MODULE_REQUIRED_REMINDER);
+        }
+        if (props.filterSettings?.enabled && !modules?.FilterModule && !modules?.GridAllModules) {
+            reminders.push(FILTER_MODULE_REQUIRED_REMINDER);
+        }
+        const sidebarPanels: Array<string | SideBarToolPanel<T>> = getSideBarPanelIds<T>(props.sideBar);
+        const hasColumnsToolPanel: boolean = sidebarPanels.some((panel: string | SideBarToolPanel<T>) =>
+            (typeof panel === 'string' ? panel : panel.id) === 'columns'
+        );
+        const hasFiltersToolPanel: boolean = sidebarPanels.some((panel: string | SideBarToolPanel<T>) =>
+            (typeof panel === 'string' ? panel : panel.id) === 'filters'
+        );
+        if (hasColumnsToolPanel && !modules?.ColumnToolPanelModule && !modules?.GridAllModules) {
+            reminders.push(COLUMN_TOOL_PANEL_MODULE_REQUIRED_REMINDER);
+        }
+        if (hasFiltersToolPanel && !modules?.FilterToolPanelModule && !modules?.GridAllModules) {
+            reminders.push(FILTER_TOOL_PANEL_MODULE_REQUIRED_REMINDER);
+        }
+        if (props.resizeSettings?.enabled && !modules?.ResizeModule && !modules?.GridAllModules) {
+            reminders.push(RESIZE_MODULE_REQUIRED_REMINDER);
+        }
+        if (props.reorderSettings?.enabled && !modules?.ReorderModule && !modules?.GridAllModules) {
+            reminders.push(REORDER_MODULE_REQUIRED_REMINDER);
+        }
+        if ((props.editSettings?.allowAdd || props.editSettings?.allowEdit || props.editSettings?.allowDelete) &&
+            !modules?.EditModule && !modules?.CommandColumnModule && !modules?.GridAllModules) {
+            reminders.push(EDIT_MODULE_REQUIRED_REMINDER);
+        }
+        if (props.groupSettings?.enabled && !modules?.GroupModule && !modules?.GridAllModules) {
+            reminders.push(GROUP_MODULE_REQUIRED_REMINDER);
+        }
+        if (props.isTreeMode && !modules?.TreeDataModule && !modules?.GridAllModules) {
+            reminders.push(TREE_MODULE_REQUIRED_REMINDER);
+        }
+        if (props.pageSettings?.enabled && !modules?.PagerModule && !modules?.GridAllModules) {
+            reminders.push(PAGER_MODULE_REQUIRED_REMINDER);
+        }
+        if (props.pinningSettings?.enabled && !modules?.PinningModule && !modules?.GridAllModules) {
+            reminders.push(PINNING_MODULE_REQUIRED_REMINDER);
+        }
+        const hasAggregates: boolean = !!(
+            props.aggregates?.length || reactChildNodeBasedProps?.aggregates?.length
+        );
+        if (hasAggregates && !modules?.AggregateModule && !modules?.GridAllModules) {
+            reminders.push(AGGREGATE_MODULE_REQUIRED_REMINDER);
+        }
+        if (props.toolbar && props.toolbar.length > 0 && !modules?.ToolbarModule && !modules?.SearchModule &&
+            !modules?.ColumnChooserModule && !modules?.EditModule && !modules?.GridAllModules) {
+            reminders.push(TOOLBAR_MODULE_REQUIRED_REMINDER);
+        }
+        if (props.contextMenuSettings?.enabled && !modules?.ContextMenuModule && !modules?.GridAllModules) {
+            reminders.push(CONTEXTMENU_MODULE_REQUIRED_REMINDER);
+        }
+        if (props.dragAndDropSettings?.enabled && !modules?.ReorderModule && !modules?.GridAllModules) {
+            reminders.push(ROWREORDER_MODULE_REQUIRED_REMINDER);
+        }
+        const hasColumnChooserItem: boolean = !!(
+            props.showColumnChooser ||
+            (Array.isArray(props.toolbar) && props.toolbar.some((item: string | { id?: string }) =>
+                (typeof item === 'string' && item === 'ColumnChooser')
+            ))
+        );
+        if (hasColumnChooserItem && !modules?.ColumnChooserModule && !modules?.GridAllModules) {
+            reminders.push(COLUMNCHOOSER_MODULE_REQUIRED_REMINDER);
+        }
+        if (reactChildNodeBasedProps?.isCommandEditEnabled && !modules?.CommandColumnModule && !modules?.GridAllModules) {
+            reminders.push(COMMANDCOLUMN_MODULE_REQUIRED_REMINDER);
+        }
+        if (props.isMasterDetail && !modules?.DetailGridModule && !modules?.GridAllModules) {
+            reminders.push(DETAILGRID_MODULE_REQUIRED_REMINDER);
+        }
+        if (reminders.length === 0) {
+            return;
+        }
+        console.warn(`${MODULE_INJECTION_REMINDER_HEADER}\n${buildModuleInjectionReminderBody(reminders)}`);
+    };
+
+
+interface FlatItem {
+    uid: string;
+    node: ColumnProps;
+    ancestors: ColumnProps[];
+}
+
+/**
+ * Collect reorderable items.
+ * Leaf columns are reorderable.
+ * Group columns are reorderable as a whole subtree.
+ *
+ * @param {ColumnProps[]} columns - Columns to flatten.
+ * @param {ColumnProps[]} ancestors - Ancestor columns for the current item.
+ * @param {FlatItem[]} result - Accumulator for flattened column items.
+ * @returns {FlatItem[]} Flattened column items.
+ */
+function flattenColumns(columns: ColumnProps[], ancestors: ColumnProps[] = [], result: FlatItem[] = []): FlatItem[] {
+    for (const column of columns) {
+        const ancestorCopy: ColumnProps[] = ancestors.map((a: ColumnProps): ColumnProps => ({...a, columns: undefined}));
+        result.push({uid: column.uid, node: column, ancestors: ancestorCopy});
+        if (column.columns?.length) {
+            flattenColumns(column.columns, [...ancestorCopy, { ...column, columns: undefined }], result);
+        }
+    }
+
+    return result;
+}
+
+/**
+ * Deep clone without children.
+ *
+ * @param {ColumnProps} column - Column to clone.
+ * @returns {ColumnProps} Column clone without child columns.
+ */
+function cloneWithoutChildren(column: ColumnProps): ColumnProps {
+    const clone: ColumnProps = { ...column };
+    delete clone.columns;
+    return clone;
+}
+
+/**
+ * Creates a branch (parent chain) for a leaf column during reorder.
+ * Newly created ancestor columns should have undefined uid to avoid uid reuse.
+ * Only leaf columns keep their original uid.
+ *
+ * @param {ColumnProps[]} ancestors - Ancestor columns for the leaf.
+ * @param {ColumnProps} node - Leaf column to place in the branch.
+ * @returns {ColumnProps} Rebuilt column branch.
+ */
+function createBranch(
+    ancestors: ColumnProps[],
+    node: ColumnProps
+): ColumnProps {
+    // Leaf column keeps original uid
+    let current: ColumnProps = { ...node };
+    // Build ancestor chain from leaf upward
+    // Ancestors created during reorder should have undefined uid
+    for (let i: number = ancestors.length - 1; i >= 0; i--) {
+        const ancestorClone: ColumnProps = cloneWithoutChildren(ancestors[i as number]);
+        // Clear uid for newly created ancestor columns
+        // This prevents uid reuse and ensures new parent columns don't have identifiers
+        ancestorClone.uid = undefined;
+        current = {
+            ...ancestorClone,
+            columns: [current]
+        };
+    }
+
+    return current;
+}
+
+/**
+ * Merge consecutive parents having the same header.
+ *
+ * @param {ColumnProps[]} target - Existing branches to update.
+ * @param {ColumnProps} branch - Branch to merge into the target.
+ * @returns {void}
+ */
+function mergeBranches(target: ColumnProps[], branch: ColumnProps): void {
+    const last: ColumnProps = target[target.length - 1];
+    if ( last && last.headerText === branch.headerText && !!last.columns && !!branch.columns) {
+        // Recursively merge children to handle nested duplicates
+        // For each child in the new branch, try to merge with existing children
+        for (const branchChild of branch.columns) {
+            mergeBranches(last.columns, branchChild);
+        }
+        return;
+    }
+
+    target.push(branch);
+}
+
+/**
+ * Regenerate orderIndex values for field-bearing columns in the rebuilt tree.
+ * Stacked header parents do not participate in column ordering and retain an
+ * undefined orderIndex. Leaf columns receive sequential indices in depth-first order.
+ *
+ * @param {ColumnProps[]} columns - Columns tree to regenerate orderIndex for.
+ * @param {number} startIndex - Starting index for orderIndex generation.
+ * @returns {number} Updated startIndex after processing all columns.
+ */
+function regenerateColumnOrderIndex(columns: ColumnProps[], startIndex: number = 0): number {
+    let index: number = startIndex;
+    for (const column of columns) {
+        if (column.field) {
+            column.orderIndex = index;
+            index++;
+        } else {
+            column.orderIndex = undefined;
+        }
+        // Recursively regenerate orderIndex for nested columns
+        if (column.columns?.length) {
+            index = regenerateColumnOrderIndex(column.columns, index);
+        }
+    }
+    return index;
+}
+
+/**
+ * Build reordered output.
+ *
+ * @template T - Type of column data.
+ * @param {ColumnProps[]} columns - Columns tree to reorder.
+ * @param {string} draggedUid - UID of the dragged column.
+ * @param {string} targetUid - UID of the target column.
+ * @param {'before' | 'after'} position - Insertion position relative to the target.
+ * @private
+ * @returns {ColumnProps<T>[]} Reordered columns.
+ */
+export function reorderStackedColumns<T>(columns: ColumnProps[], draggedUid: string, targetUid: string,
+                                         position: 'before' | 'after' = 'before'
+): ColumnProps<T>[] {
+    const flat: FlatItem[] = flattenColumns(columns);
+    const dragged: FlatItem | undefined = flat.find((x: FlatItem) => x.uid === draggedUid);
+    const target: FlatItem | undefined = flat.find((x: FlatItem) => x.uid === targetUid);
+    if (!dragged || !target) {
+        return columns as ColumnProps<T>[];
+    }
+    const draggedNode: ColumnProps<unknown> = dragged.node;
+    const leaves: FlatItem[] = [];
+    function flattenLeaves(source: ColumnProps[], ancestors: ColumnProps[] = []): void {
+        for (const column of source) {
+            if (!column.columns?.length) {
+                leaves.push({uid: column.uid, node: column, ancestors});
+            } else {
+                flattenLeaves(column.columns, [...ancestors, cloneWithoutChildren(column)]);
+            }
+        }
+    }
+    flattenLeaves(columns);
+
+    const targetLeafUids: Set<string> = new Set();
+    const collectTargetLeafUids: (column: ColumnProps) => void = (column: ColumnProps): void => {
+        if (!column.columns?.length) {
+            targetLeafUids.add(column.uid);
+            return;
+        }
+        for (const child of column.columns) {
+            collectTargetLeafUids(child);
+        }
+    };
+    collectTargetLeafUids(target.node);
+    const draggedLeaves: FlatItem[] = [];
+    function collectDraggedLeaves(column: ColumnProps, ancestors: ColumnProps[]): void {
+        if (!column.columns?.length) {
+            draggedLeaves.push({uid: column.uid, node: column, ancestors});
+            return;
+        }
+        for (const child of column.columns) {
+            collectDraggedLeaves(child, [...ancestors, cloneWithoutChildren(column)]);
+        }
+    }
+    collectDraggedLeaves(draggedNode, dragged.ancestors);
+    const draggedLeafUids: Set<string> = new Set(draggedLeaves.map((x: FlatItem) => x.uid));
+    const remainingLeaves: FlatItem[] = leaves.filter((x: FlatItem) => !draggedLeafUids.has(x.uid));
+    let targetBoundaryIndex: number = leaves.findIndex((leaf: FlatItem) => targetLeafUids.has(leaf.uid));
+    if (position === 'after') {
+        for (let index: number = leaves.length - 1; index >= 0; index--) {
+            if (targetLeafUids.has(leaves[index as number].uid)) {
+                targetBoundaryIndex = index;
+                break;
+            }
+        }
+    }
+    const targetBoundaryUid: string = leaves[targetBoundaryIndex as number]?.uid;
+    const targetLeafIndex: number = remainingLeaves.findIndex(
+        (leaf: FlatItem) => leaf.uid === targetBoundaryUid
+    );
+    let insertIndex: number = targetLeafIndex === -1 ? remainingLeaves.length : targetLeafIndex;
+    if (position === 'after' && targetLeafIndex !== -1) {
+        insertIndex++;
+    }
+    remainingLeaves.splice(insertIndex, 0, ...draggedLeaves);
+    const result: ColumnProps[] = [];
+    for (const leaf of remainingLeaves) {
+        const branch: ColumnProps<unknown> = createBranch(leaf.ancestors, leaf.node);
+        mergeBranches(result, branch);
+    }
+    // Regenerate orderIndex values to ensure they are sequential after reordering
+    regenerateColumnOrderIndex(result);
+    return result as ColumnProps<T>[];
+}
+
+/**
+ * Executes a grid action and returns a promise that resolves only after the grid's UI has committed the
+ * change (an `actionComplete` DOM event), rejects when an `actionFailure` DOM event is observed, and resolves
+ * when a `cancelBegin` DOM event is observed.
+ *
+ * @param {RefObject<GridRef>} gridRef - Reference to the grid component.
+ * @param {string} requestType - The `ActionType` (or custom discriminator) identifying the action being awaited.
+ * @param {Function} operation - The synchronous or asynchronous action to invoke.
+ * @returns {Promise<void>} Resolves after the completion or cancel event fires; rejects on failure.
+ * @private
+ */
+export function executeGridAsyncAction(
+    gridRef: RefObject<GridRef>,
+    requestType: string,
+    operation: () => void | Promise<void>
+): Promise<void> {
+    if (requestType === 'CellValueUpdate' || requestType === 'RowDataUpdate' || requestType === 'BulkSave') {
+        return Promise.resolve(operation()).then(() => undefined);
+    }
+    const element: (HTMLElement & { addEventListener?: HTMLElement['addEventListener'] }) | null | undefined =
+        gridRef?.current?.element;
+    if (!element) {
+        return Promise.resolve(operation()).then(() => undefined);
+    }
+    return new Promise<void>((resolve: () => void, reject: (reason?: Error) => void) => {
+        const cleanup: () => void = () => {
+            element.removeEventListener('actionComplete', onComplete);
+            element.removeEventListener('actionFailure', onFailure);
+            element.removeEventListener('cancelBegin', onCancel);
+        };
+        const onComplete: () => void = () => {
+            cleanup();
+            resolve();
+        };
+        const onFailure: (event: Event) => void = (event: Event) => {
+            cleanup();
+            const failureError: unknown = (event as any)?.detail?.error;
+            reject(failureError instanceof Error ? failureError : new Error(`Grid action '${requestType}' failed.`));
+        };
+        const onCancel: () => void = () => {
+            cleanup();
+            resolve();
+        };
+        element.addEventListener('actionComplete', onComplete);
+        element.addEventListener('actionFailure', onFailure);
+        element.addEventListener('cancelBegin', onCancel);
+        try {
+            Promise.resolve(operation()).catch((error: Error) => {
+                cleanup();
+                reject(error);
+            });
+        } catch (error) {
+            cleanup();
+            reject(error as Error);
+        }
+    });
+}
+
+/**
+ * Dispatches a `cancelBegin` DOM event on the grid's root element so a pending `executeGridAsyncAction` promise
+ * settles instead of remaining pending when an action is vetoed or is a no-op.
+ *
+ * @param {RefObject<GridRef>} gridRef - Reference to the grid component.
+ * @param {string} requestType - The `ActionType` (or custom discriminator) identifying the vetoed/no-op action.
+ * @returns {void}
+ * @private
+ */
+export function dispatchGridCancelBegin(gridRef: RefObject<GridRef>, requestType: string): void {
+    const element: HTMLElement | null | undefined = gridRef?.current?.element;
+    element?.dispatchEvent(new CustomEvent('cancelBegin', { detail: { requestType } }));
+}
+
+/**
+ * Returns the aggregate operations supported by a column type.
+ *
+ * @param {string} columnType - The column type to evaluate.
+ * @returns {AggregateType[]} The supported aggregate operations.
+ * @private
+ */
+export function getApplicableAggregateTypes(columnType?: string): AggregateType[] {
+    const numberAggregates: AggregateType[] = [AggregateType.Sum, AggregateType.Average, AggregateType.Min, AggregateType.Max];
+    const booleanAggregates: AggregateType[] = [AggregateType.TrueCount, AggregateType.FalseCount];
+    const allAggregates: AggregateType[] = [AggregateType.Count, AggregateType.Custom];
+    switch (columnType) {
+    case ColumnType.Number:
+        return [...numberAggregates, ...allAggregates];
+    case ColumnType.Boolean:
+        return [...booleanAggregates, ...allAggregates];
+    default:
+        return allAggregates;
+    }
+}

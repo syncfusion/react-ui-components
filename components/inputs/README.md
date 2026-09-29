@@ -170,6 +170,49 @@ export default function App() {
 - [TextBox Demo/Docs](https://react.syncfusion.com/react-ui/textbox)
 - [TextBox API](https://react.syncfusion.com/api/textbox/overview)
 
+## React FileUpload
+
+The FileUpload component enables users to select and upload files or folders to a server with support for drag-and-drop, validation, chunk upload. It supports both single and multiple file, and exposes a flexible composition API for customizing, drop hint, file list, and action buttons.
+
+**Key features**
+
+- **Drag-and-drop:** Supports native drag-and-drop file selection and the optional use of an external element as the drop target through the `dropArea` ref.
+
+- **File validation:** Built-in validation for accepted file types, minimum and maximum file size, minimum and maximum file count, and duplicate detection, surfaced through the `onValidationError` event.
+
+- **Auto and manual upload:** Upload files immediately on selection with `autoUpload`, or queue them for manual upload via the provided `Upload` action.
+
+- **Chunk upload:** Split large files into configurable chunk sizes for resilient, resumable uploads, with per-chunk pause, resume, and cancel controls.
+
+- **Composition API:** Customize the UI with compound children — `<BrowseButton>`, `<DragHint>`, `<FileList>`, and `<Actions>` — to tailor the trigger, hint, list, and action buttons.
+
+**Usage**
+
+```tsx
+import { FileUpload, BrowseButton, DragHint, Actions, UploadButton, ClearButton } from "@syncfusion/react-inputs";
+
+export default function App() {
+  return (
+    <FileUpload
+      saveUrl="https://services.syncfusion.com/react/production/api/FileUploader/Save"
+      removeUrl="https://services.syncfusion.com/react/production/api/FileUploader/Remove"
+    >
+      <BrowseButton>Select files</BrowseButton>
+      <DragHint>Or drag and drop files here</DragHint>
+      <Actions>
+        <UploadButton />
+        <ClearButton />
+      </Actions>
+    </FileUpload>
+  );
+}
+```
+
+**Resources**
+
+- [FileUpload Demo/Docs](https://react.syncfusion.com/react-ui/file-upload)
+- [FileUpload API](https://react.syncfusion.com/api/file-upload/overview)
+
 <p align="center">
 Trusted by the world's leading companies
   <a href="https://www.syncfusion.com/">

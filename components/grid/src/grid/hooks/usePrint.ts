@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { printService } from '../services/print-service';
 import { PrintResult, PrintSettings, UseGridPrintOptions, UseGridPrintReturn } from '../types/print.interfaces';
-import { initializeTelemetryFeature } from '@syncfusion/react-base';
+import { initializeTelemetryFeature } from '@syncfusion/react-base/src/telemetry';
 import { GridTelemetryFeatures } from '../types/enum';
 
 /**
@@ -27,7 +27,7 @@ export function useGridPrint<T>(options: UseGridPrintOptions<T>): UseGridPrintRe
     );
 
     useEffect(() => {
-        initializeTelemetryFeature(GridTelemetryFeatures.Print, 'grid');
+        initializeTelemetryFeature(GridTelemetryFeatures.Print, 'DataGrid');
     }, []);
 
     /**

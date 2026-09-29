@@ -107,7 +107,11 @@ type ITextBoxProps = TextBoxProps & Omit<InputHTMLAttributes<HTMLInputElement>, 
  * ```typescript
  * import { TextBox } from "@syncfusion/react-inputs";
  *
- * <TextBox defaultValue="Initial text" placeholder="Enter text" />
+ * export default function App() {
+ *      return (
+ *              <TextBox defaultValue="Initial text" placeholder="Enter text" />
+ *      );
+ * }
  * ```
  */
 export const TextBox: ForwardRefExoticComponent<ITextBoxProps & RefAttributes<ITextBox>> =

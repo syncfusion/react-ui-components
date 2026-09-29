@@ -9,6 +9,8 @@ export type CalendarType = 'gregorian' | 'islamic';
 
 /**
  * Options used to generate a view matrix.
+ *
+ * @private
  */
 export interface CalendarOptions {
     /**
@@ -60,6 +62,8 @@ export interface CalendarOptions {
 
 /**
  * A single cell within a view matrix (month, year, or decade).
+ *
+ * @private
  */
 export interface CalendarCellData {
     /**

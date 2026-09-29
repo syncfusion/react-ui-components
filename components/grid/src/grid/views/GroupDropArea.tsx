@@ -1,10 +1,13 @@
 import { memo, useCallback, JSX } from 'react';
-import { ChevronRightIcon, DragAndDropIcon, SortAscendingListIcon, SortDescendingListIcon } from '@syncfusion/react-icons';
-import { Chip, ChipDeleteEvent } from '@syncfusion/react-buttons';
-import { SortDirection } from '../types/enum';
-import { useGridComputedProvider, useGridMutableProvider } from '../contexts';
-import { ColumnProps, IGroupModule } from '../types';
-import { IL10n } from '@syncfusion/react-base';
+import { ChevronRightIcon } from '@syncfusion/react-icons/src/icons/chevron-right';
+import { DragAndDropIcon } from '@syncfusion/react-icons/src/icons/drag-and-drop';
+import { SortAscendingListIcon } from '@syncfusion/react-icons/src/icons/sort-ascending-list';
+import { SortDescendingListIcon } from '@syncfusion/react-icons/src/icons/sort-descending-list';
+import { Chip, ChipDeleteEvent } from '@syncfusion/react-buttons/src/chip/chip';
+import { useGridComputedProvider, useGridMutableProvider } from '../contexts/GridProviders';
+import { ColumnProps } from '../types/column.interfaces';
+import { GroupDropAreaProps } from '../types/grouping.interfaces';
+import { IL10n } from '@syncfusion/react-base/src/l10n';
 
 /** CSS class constants for GroupDropArea */
 const CSS_DROP_AREA: string = 'sf-group-drop-area';
@@ -14,38 +17,6 @@ const CSS_GROUP_CHIP_TEMPLATE: string = 'sf-group-chip-template';
 const CSS_CHIP_SELECTOR: string = '.sf-chip';
 const CSS_ASCENDING_CLASS: string = 'sf-ascending';
 const CSS_DESCENDING_CLASS: string = 'sf-descending';
-
-/**
- * Props for the GroupDropArea component.
- *
- * @private
- */
-export interface GroupDropAreaProps {
-    /**
-     * Array of field names currently in the grouping hierarchy (ordered).
-     *
-     */
-    groupColumns: ColumnProps[];
-
-    /**
-     * Optional CSS class name for custom styling of the group drop area container.
-     */
-    cssClass?: string;
-
-    /**
-     * Callback fired when user clicks the ungroup (close) button on a group chip.
-     *
-     * @param field - Field name to remove from grouping
-     */
-    onUngroupColumn?: IGroupModule['ungroupColumn'];
-
-    /**
-     * Current sort direction for each grouped column.
-     *
-     * Key = field name, value = sort direction.
-     */
-    sortDirections?: Record<string, SortDirection | string>;
-}
 
 /**
  * GroupDropArea renders the drag-drop zone displayed above the grid table

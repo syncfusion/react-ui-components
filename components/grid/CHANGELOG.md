@@ -1,6 +1,43 @@
 # Changelog
 
-## 34.1.29 (2026-08-03)
+## 35.1.37 (2026-09-29)
+
+### Data Grid
+
+**Features**
+ 
+- Added column resizing, reordering, and pinning: Flexible layout control with dynamic column adjustments. Explore the demo [here](https://react.syncfusion.com/react-ui/data-grid/columns/column-resizing).
+- Introduced row ordering and pinning: Organize rows with intuitive drag‑drop ordering and pinning. Explore the demo [here](https://react.syncfusion.com/react-ui/data-grid/row/row-drag-and-drop).
+- Enabled batch editing with undo/redo: Simplified bulk data entry with reversible actions. Explore the demo [here](https://react.syncfusion.com/react-ui/data-grid/editing/batch-editing).
+- Added formula cell support: Perform calculations directly in grid cells. Explore the demo [here](https://react.syncfusion.com/react-ui/data-grid/formulas/overview).
+- Introduced Tree Grid and Pivot Table views: Hierarchical and analytical views integrated with Data Grid. Explore the demo [here](https://react.syncfusion.com/react-ui/data-grid/tree-data/overview).
+- Provided `async` data operations: Improved responsiveness with asynchronous data handling.
+- Delivered multi exporting: Export data in Excel, PDF, and CSV formats. Explore the demo [here](https://react.syncfusion.com/react-ui/data-grid/excel-export/#export-multiple-grids).
+- Added filter menu support: Enhanced filtering with menu‑based options. Explore the demo [here](https://react.syncfusion.com/react-ui/data-grid/filtering/menu-filter).
+- Provided sidebar tools: Manage columns, filters, and editing tools via sidebar. Explore the demo [here](https://react.syncfusion.com/react-ui/data-grid/tool-panel/overview).
+- Delivered clipboard and autofill: Copy/paste grid content and autofill for faster workflows. Explore the demo [here](https://react.syncfusion.com/react-ui/data-grid/clipboard).
+- Enhanced bundle optimization: Reduced package size with module‑wise feature loading. Explore the demo [here](https://react.syncfusion.com/react-ui/data-grid/getting-started/#registering-feature-modules).
+ 
+| Module              | Feature                 |
+|---------------------|-------------------------|
+| `PagerModule`         | Paging                  |
+| `FilterModule`        | Filtering               |
+| `GroupModule`         | Grouping                |
+| `AggregateModule`     | Aggregates              |
+| `ToolbarModule`       | Toolbar                 |
+| `ContextMenuModule`   | Context Menu            |
+| `ClipboardModule`     | Clipboard               |
+| `SearchModule`        | Searching               |
+| `ColumnChooserModule` | Column Chooser          |
+| `EditModule`          | Editing                 |
+| `CommandColumnModule` | Command Column Editing  |
+| `AutoFillModule`      | AutoFill                |
+| `ReorderModule`       | Column & Row Reordering |
+| `ResizeModule`        | Column Resizing         |
+| `DetailGridModule`    | Master‑Detail View      |
+| `PinningModule`       | Row & Column Pinning    |
+
+## 34.2.2 (2026-08-05)
 
 ### Data Grid
 
@@ -11,9 +48,7 @@
 
 **Breaking Changes**
 
-- Enhanced PDF export header and footer customization support. The `headerText` and `footerText` PDF export properties have been deprecated in favor of the new customization options.
-
-### Data Grid
+- Enhanced PDF export header and footer customization support. The `headerText` and `footerText` PDF export properties have been deprecated and replaced by the new customization options.
 
 ## 34.1.31 (2026-07-14)
 

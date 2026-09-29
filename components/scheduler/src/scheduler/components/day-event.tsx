@@ -10,6 +10,7 @@ import { DraggableEvent } from './drag-and-drop';
 import { useSchedulerLocalization } from '../common/locale';
 import ResizeHandlers from './resizeHandlers';
 import { useEventRendering } from '../hooks/useEventRendering';
+import { useResourceGroupingContext } from '../context/resource-grouping-context';
 
 export const DayEvent: FC<DayEventProps> = (props: DayEventProps) => {
     const {
@@ -28,6 +29,7 @@ export const DayEvent: FC<DayEventProps> = (props: DayEventProps) => {
 
     const { locale } = useProviderContext();
     const { getString } = useSchedulerLocalization(locale || 'en-US');
+    const { groupConfig } = useResourceGroupingContext();
     const eventRef: RefObject<HTMLDivElement> = useRef<HTMLDivElement>(null);
 
     const {
@@ -115,6 +117,9 @@ export const DayEvent: FC<DayEventProps> = (props: DayEventProps) => {
     const children: ReactNode = renderEventContent();
     const allowEdit: boolean = !isBlockedEvent && !eventInfo.event.isReadonly && !readOnly;
 
+    const hasPreviousHandle: boolean = isOverflowLeft || (groupConfig?.byDate && eventInfo?.isFirstDay === false);
+    const hasNextHandle: boolean = isOverflowRight || (groupConfig?.byDate && eventInfo?.isLastDay === false);
+
     return (
         eventDrag?.enable && allowEdit ? (
             <DraggableEvent
@@ -126,8 +131,8 @@ export const DayEvent: FC<DayEventProps> = (props: DayEventProps) => {
                 {eventResize?.enable && allowEdit ? (
                     <ResizeHandlers
                         data={processedEvent}
-                        hasPrevious={isOverflowLeft}
-                        hasNext={isOverflowRight}
+                        hasPrevious={hasPreviousHandle}
+                        hasNext={hasNextHandle}
                     >
                         {children}
                     </ResizeHandlers>
@@ -140,8 +145,8 @@ export const DayEvent: FC<DayEventProps> = (props: DayEventProps) => {
                 {eventResize?.enable && allowEdit ? (
                     <ResizeHandlers
                         data={processedEvent}
-                        hasPrevious={isOverflowLeft}
-                        hasNext={isOverflowRight}
+                        hasPrevious={hasPreviousHandle}
+                        hasNext={hasNextHandle}
                     >
                         {children}
                     </ResizeHandlers>

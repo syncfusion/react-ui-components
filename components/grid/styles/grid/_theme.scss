@@ -20,12 +20,40 @@
     .sf-grid-pager .sf-focused {
       outline: none;
     }
+
+    .sf-grid-tool-panel-button:hover,
+    .sf-grid-tool-panel-button:active,
+    .sf-grid-tool-panel-button:focus {
+      background-color: $grid-group-drop-area-background-color;
+    }
   }
 
   .sf-grid-content {
     background-color: $grid-row-bg-color;
   }
 
+  .sf-grid-header-row,
+  .sf-filter-row {
+    .sf-left-pinned-cell,
+    .sf-right-pinned-cell {
+      background: $grid-header-bg-color;
+    }
+  }
+
+  .sf-grid-content-row {
+    .sf-left-pinned-cell,
+    .sf-right-pinned-cell {
+      background-color: $grid-row-bg-color;
+    }
+  }
+
+  .sf-grid-summary-row {
+    .sf-left-pinned-cell,
+    .sf-right-pinned-cell {
+      background: $grid-summary-row-bg;
+    }
+  }
+  
   .sf-grid-filterbar .sf-input-group.sf-outline .sf-label-top {
     background: $grid-header-bg-color;
   }
@@ -52,19 +80,32 @@
 
   .sf-grid-content-row .sf-cell,
   .sf-group-togglebtn,
+  .sf-tree-toggle-btn
   .sf-detail-toggle-icon,
   .sf-grid-summary-row .sf-cell {
     color: $grid-text-color;
   }
 
   .sf-row-hover .sf-grid-content-row:not(.sf-grid-edit-row):hover {
-    .sf-cell:not(.sf-active, .sf-cell-selected) {
-      @include bgcolor-color-styles($grid-hover-bg-color, $grid-hover-content-text-color);
+    .sf-cell:not(.sf-active, .sf-cell-selected, .sf-row-number:first-child):not(.sf-grid-cell-batch,.sf-grid-row-batch) {
+    @include bgcolor-color-styles($grid-hover-bg-color, $grid-hover-content-text-color);
+
+      // Pinned variants inherit the same hover tone.
+      &.sf-left-pinned-cell,
+      &.sf-right-pinned-cell {
+        background: $grid-hover-bg-color;
+      }
     }
 
-    .sf-cell,
-    .sf-cell-selected {
+    .sf-cell:not(.sf-row-number):not(.sf-grid-cell-batch,.sf-grid-row-batch),
+    .sf-cell-selected:not(.sf-row-number:first-child):not(.sf-grid-cell-batch,.sf-grid-row-batch) {
       @include bgcolor-color-styles($grid-row-selection-hover-bg-color, $grid-text-color);
+
+      // Pinned variants inherit the same selection-hover tone.
+      &.sf-left-pinned-cell,
+      &.sf-right-pinned-cell {
+        background: $grid-row-selection-hover-bg-color;
+      }
     }
   }
 
@@ -72,9 +113,41 @@
     @include bgcolor-color-styles($grid-sort-order-bg, $grid-sort-order-text-color);
   }
 
-  td.sf-active,
-  .sf-cell-selected {
+  td.sf-active:not(.sf-row-number:first-child),
+  .sf-cell-selected:not(.sf-row-number:first-child) {
     @include bgcolor-color-styles($grid-row-selection-bg-color, $grid-text-color);
+
+    // Pinned variants inherit the same selection tone.
+    &.sf-left-pinned-cell,
+    &.sf-right-pinned-cell {
+      background: $grid-row-selection-bg-color;
+    }
+  }
+
+  .sf-grid-content-row .sf-cell.sf-grid-row-batch,
+  .sf-grid-content-row .sf-cell.sf-grid-row-batch.sf-cell-selected,
+  .sf-grid-content-row .sf-cell.sf-grid-row-batch.sf-active,
+  .sf-row-hover .sf-grid-content-row:not(.sf-grid-edit-row):hover .sf-cell.sf-grid-row-batch {
+    background: $grid-row-batch-edit;
+  }
+
+  .sf-grid-content-row .sf-cell.sf-grid-cell-batch,
+  .sf-grid-content-row .sf-cell.sf-grid-cell-batch.sf-cell-selected,
+  .sf-grid-content-row .sf-cell.sf-grid-cell-batch.sf-active,
+  .sf-row-hover .sf-grid-content-row:not(.sf-grid-edit-row):hover .sf-cell.sf-grid-cell-batch {
+    background: $grid-cell-batch-edit;
+  }
+
+  .sf-cell.sf-clipboard-feedback {
+    position: relative;
+  
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: $grid-clipboard-feedback-bg-color;
+      pointer-events: none;
+    }
   }
 
   .sf-grid-edit-row .sf-cell {
@@ -116,11 +189,14 @@
   }
 
   .sf-excel-filter .sf-search-container,
+  .sf-filter-panel-column .sf-search-container,
   .sf-grid-excel-filter-container  {
     border-top-color: rgb($border-light);
   }
 
-  .sf-excel-filter .sf-virtual-scroll-container {
+  .sf-excel-filter .sf-virtual-scroll-container,
+  .sf-filter-panel-column .sf-virtual-scroll-container
+   {
     border-bottom-color: $excel-virtual-bottom-border-color;
   }
 
@@ -133,11 +209,14 @@
   }
 
   .sf-groupable-header-clone,
-  .sf-groupable-header-clone:hover {
+  .sf-groupable-header-clone:hover,
+  .sf-columnchooser-header-clone,
+  .sf-columnchooser-header-clone:hover,
+  .sf-row-number:first-child {
     @include bgcolor-color-styles($grid-header-bg-color, $grid-header-text-color);
   }
 
-  .sf-group-togglebtn, .sf-detail-toggle-icon {
+  .sf-group-togglebtn, .sf-detail-toggle-icon, .sf-tree-toggle-btn {
     background-color: transparent;
 
     &:hover {
@@ -154,7 +233,7 @@
   }
   
   .sf-active {
-    .sf-group-togglebtn, .sf-detail-toggle-icon {
+    .sf-group-togglebtn, .sf-detail-toggle-icon, .sf-tree-toggle-btn {
       &:hover {
         background-color: $grid-group-togglebtn-selected-hover-color;
       }
@@ -162,10 +241,35 @@
   }
 
   .sf-focused:not(.sf-active) {
-    .sf-group-togglebtn, .sf-detail-toggle-icon {
+    .sf-group-togglebtn, .sf-detail-toggle-icon, .sf-tree-toggle-btn {
       &:focus {
         background-color: $grid-group-togglebtn-non-selected-focus-color;
       }
     }
+  }
+
+  .sf-fill-handle {
+    background-color: $grid-cell-range-selection-border-color;
+  }
+
+  .sf-fill-preview-cell,
+  .sf-cell.sf-fill-source-cell {
+    background: transparent;
+  }
+
+  .sf-grid-content-row .sf-cell:not(.sf-display-none).sf-fill-preview-top {
+    border-top: $grid-border-1 dashed $grid-cell-range-selection-border-color;
+  }
+
+  .sf-grid-content-row .sf-cell:not(.sf-display-none).sf-fill-preview-bottom {
+    border-bottom: $grid-border-1 dashed $grid-cell-range-selection-border-color;
+  }
+
+  .sf-grid-content-row .sf-cell:not(.sf-display-none).sf-fill-preview-left {
+    border-left: $grid-border-1 dashed $grid-cell-range-selection-border-color;
+  }
+
+  .sf-grid-content-row .sf-cell:not(.sf-display-none).sf-fill-preview-right {
+    border-right: $grid-border-1 dashed $grid-cell-range-selection-border-color;
   }
 }

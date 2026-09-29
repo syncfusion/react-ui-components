@@ -1,0 +1,144 @@
+﻿@use 'mixin' as *;
+@use 'theme-variables' as *;
+
+@include export-module('tab-theme') {
+  .sf-tabs {
+    color: $sf-tabs-color;
+
+    &.sf-tabs-fill .sf-tab-selected {
+      background: $tab-fill-bgcolor;
+      color: $tab-fill-color;
+
+      &::after {
+        display: none;
+      }
+
+      &.sf-tab {
+        &:hover,
+        &:active,
+        &:focus {
+          @include tab-state($tab-hover-activetab-bg, $tab-hover-state-color);
+        }
+
+        &.sf-tab-selected {
+          &:hover,
+          &:active,
+          &:focus {
+            @include tab-state($tab-fill-bgcolor, $tab-fill-color);
+          }
+        }
+      }
+    }
+
+    &.sf-tabs-accent .sf-tab-selected {
+      background: $tab-fill-bgcolor;
+      color: $tab-fill-color;
+
+      &::after {
+        background-color: $tab-accent-indicator-color;
+        inline-size: $tab-fill-inline-size;
+        left: $tab-fill-left;
+        block-size: $tab-fill-block-size;
+      }
+
+      &.sf-tab {
+        &:hover,
+        &:active,
+        &:focus,
+        &.sf-tab-selected:hover,
+        &.sf-tab-selected:active,
+        &.sf-tab-selected:focus {
+          @include tab-state($tab-fill-bgcolor, $tab-fill-color);
+        }
+      }
+    }
+  }
+
+  .sf-tab {
+    background: $tab-background;
+    color: $tab-color;
+    padding-block: $tab-padding-block;
+    padding-inline: $tab-padding-inline;
+    font-size: $tab-font-size;
+    font-weight: $tab-font-weight;
+    line-height: $tab-line-height;
+    letter-spacing: $tab-letter-spacing;
+
+    &:hover  { @include tab-state($tab-hover-state-bgcolor, $tab-hover-state-color); }
+    &:active { @include tab-state($tab-active-state-bgcolor, $tab-active-state-color); }
+    &:focus  { @include tab-state($tab-focus-state-bgcolor, $tab-focus-state-color); }
+
+    &.sf-tab-selected {
+      color: $tab-active-color;
+
+      &:hover {
+        background-color: $tab-hover-activetab-bg;
+      }
+
+      &:active,
+      &:focus {
+        background-color: $tab-active-activetab-bg;
+      }
+    }
+
+    &::after {
+      background-color: $tab-underline-color;
+    }
+  }
+
+  .sf-tab-indicator {
+    background-color: $tab-underline-color;
+
+    &.sf-tab-indicator-horizontal-bottom,
+    &.sf-tab-indicator-horizontal {
+      inline-size: var(--tab-indicator-width, 0);
+      block-size: $tab-underline-size;
+      transition:
+        inset-inline-start $tab-indicator-transition-duration $tab-indicator-transition-easing,
+        inset-inline-end $tab-indicator-transition-duration $tab-indicator-transition-easing,
+        inline-size $tab-indicator-transition-duration $tab-indicator-transition-easing;
+    }
+
+    &.sf-tab-indicator-vertical,
+    &.sf-tab-indicator-vertical-right {
+      block-size: var(--tab-indicator-height, 0);
+      inline-size: $tab-underline-size;
+      transition:
+        inset-block-start $tab-indicator-transition-duration $tab-indicator-transition-easing,
+        block-size $tab-indicator-transition-duration $tab-indicator-transition-easing;
+    }
+  }
+
+  .sf-tabs-overflow-trigger {
+    &:hover {
+      background: $tab-overflow-trigger-hover-bg;
+    }
+
+    &:focus,
+    &:active {
+      background: $tab-overflow-trigger-focus-bg;
+    }
+
+    &.sf-tabs-overflow-open {
+      background: $tab-overflow-trigger-open-bg;
+      color: $tab-active-color;
+    }
+  }
+
+  .sf-tabs .sf-tab-close.sf-btn {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    color: inherit;
+    padding: 0;
+
+    &:hover,
+    &:focus,
+    &:active {
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+      color: inherit;
+    }
+  }
+}

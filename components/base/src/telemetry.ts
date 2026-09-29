@@ -1,29 +1,45 @@
-import { productToComponentsMap } from './validate-lic';
+/**
+ * Product to components map - groups components by their product
+ * More efficient than component-to-product as it avoids duplication
+ */
+const sdkMap: { [key: string]: string[] } = {
+    'PDFViewerSDK': ['PDFViewer'],
+    'DocumentSDK': ['PDFLibrary'],
+    'DOCXEditorSDK': ['DOCXEditor'],
+    'SpreadsheetEditorSDK': ['SpreadsheetEditor'],
+    'SchedulerSDK': ['Scheduler'],
+    'GanttSDK': ['Gantt', 'Kanban'],
+    'DiagramSDK': ['Diagram'],
+    'FileManagerSDK': ['FileManager'],
+    'GridSDK': ['DataGrid', 'PivotTable', 'TreeGrid'],
+    'RichTextEditorSDK': ['RichTextEditor', 'BlockEditor', 'RichTextEditorUI', 'HeadlessEditor'],
+    'ChartSDK': ['Charts']
+};
 
 // sdk version is set to the variable SDK_VERSION. This variable is used to set the sdkVersion in TelemetryOptions.
-export const SDK_VERSION: string = '__SDK_VERSION__';
+export const SDK_VERSION: string = '35.1.37';
 
 /**
- * Gets the SDK name for a given component by looking it up in the productToComponentsMap
+ * Gets the SDK name for a given component by looking it up in the sdkMap
  *
  * @param {string} componentName - The name of the component
- * @returns {string | null} - The SDK name if found, null otherwise
+ * @returns {string} - The SDK name if found, defaults to 'Syncfusion.Telemetry'
  */
-export function getSdkNameForComponent(componentName: string): string | null {
+export function getSdkNameForComponent(componentName: string): string {
     if (!componentName) {
-        return 'Syncfusion.Telemetry';
+        return 'ESUISDK';
     }
     // eslint-disable-next-line security/detect-object-injection
-    for (const sdkName in productToComponentsMap) {
-        if (Object.prototype.hasOwnProperty.call(productToComponentsMap, sdkName)) {
+    for (const sdkName in sdkMap) {
+        if (Object.prototype.hasOwnProperty.call(sdkMap, sdkName)) {
             // eslint-disable-next-line security/detect-object-injection
-            const components: string[] = productToComponentsMap[sdkName];
+            const components: string[] = sdkMap[sdkName];
             if (components.indexOf(componentName) !== -1) {
                 return sdkName;
             }
         }
     }
-    return 'Syncfusion.Telemetry';
+    return 'ESUISDK';
 }
 
 /**
@@ -33,11 +49,14 @@ export function getSdkNameForComponent(componentName: string): string | null {
  * @private
  */
 export function initializeTelemetry(componentName: string): void {
-    const componentSdkName: any = getSdkNameForComponent(componentName);
+    if (typeof process !== 'undefined' && process.env?.CI) {
+        return;
+    }
+    const componentSdkName: string = getSdkNameForComponent(componentName);
     Telemetry.configure((options: TelemetryOptions): void => {
-        options.sdkVersion = SDK_VERSION || '34.1.29';
+        options.sdkVersion = SDK_VERSION;
     });
-    Telemetry.trackComponent(`pure-react-${componentName}`, componentSdkName);
+    Telemetry.trackComponent(componentName, componentSdkName);
 }
 
 /**
@@ -48,19 +67,25 @@ export function initializeTelemetry(componentName: string): void {
  * @private
  */
 export function initializeTelemetryFeature(featureName: string, componentName: string): void {
-    const featureSdkName: any = getSdkNameForComponent(componentName);
+    if (typeof process !== 'undefined' && process.env?.CI) {
+        return;
+    }
+    const featureSdkName: string = getSdkNameForComponent(componentName);
     Telemetry.configure((options: TelemetryOptions): void => {
-        options.sdkVersion = SDK_VERSION || '34.1.29';
+        options.sdkVersion = SDK_VERSION;
     });
-    Telemetry.trackFeature(featureName, `pure-react-${componentName}`, featureSdkName);
+    Telemetry.trackFeature(featureName, componentName, featureSdkName);
 }
 
 // Provides static access to telemetry configuration and tracking.
 export class Telemetry {
     private static client: TelemetryClient | null = null;
-    public static isTelemetryEnable: boolean = true;
+    public static isTelemetryEnable: boolean = false;
     static disable(): void {
         this.isTelemetryEnable = false;
+    }
+    static enable(): void {
+        this.isTelemetryEnable = true;
     }
     static configure(configure: (options: TelemetryOptions) => void): void {
         if (this.client) {
@@ -68,7 +93,7 @@ export class Telemetry {
         }
         const options: TelemetryOptions = new TelemetryOptions();
         configure(options);
-        if (options.enabled && this.isTelemetryEnable) {
+        if (this.isTelemetryEnable) {
             this.client = new TelemetryClient(options);
         }
     }
@@ -120,11 +145,9 @@ export class TelemetryOptions {
     connectionString: string;
     sdkName: string;
     sdkVersion: string;
-    serviceName: string;
-    serviceVersion: string;
     framework: string;
     frameworkVersion: string;
-    assemblyName: string;
+    platform: string;
     readonly endpoint: string;
     readonly operatingSystem: string;
     readonly architecture: string;
@@ -142,13 +165,11 @@ export class TelemetryOptions {
         this.enabled = true;
         this.connectionString = 'SW5zdHJ1bWVudGF0aW9uS2V5PWQ0ODg0NjhiLTEyNzYtNGJhNS04NGY0LTE3ZmZjNzMzNjQ1ZTtJbmdlc3Rpb25FbmRwb2ludD1odHRwczovL2Vhc3R1cy04LmluLmFwcGxpY2F0aW9uaW5zaWdodHMuYXp1cmUuY29tLzs=';
         this.endpoint = 'https://dc.services.visualstudio.com';
-        this.sdkName = 'Syncfusion.Telemetry';
-        this.sdkVersion = 'unknown';
-        this.serviceName = '';
-        this.serviceVersion = '';
+        this.sdkName = 'ESUISDK';
+        this.sdkVersion = SDK_VERSION;
         this.framework = this.getFrameWork();
         this.frameworkVersion = this.getFrameWorkVersion();
-        this.assemblyName = '';
+        this.platform = 'PureReact';
         this.operatingSystem = this.getOperatingSystem();
         this.architecture = this.getArchitecture();
         this.environmentName = this.getEnvironment();
@@ -173,38 +194,12 @@ export class TelemetryOptions {
                         return renderers[0].version;
                     }
                 }
-                return 'unknown';
             } catch {
-                return 'unknown';
+                // Intentionally ignored
             }
-        } else {
-            // Try to detect TypeScript version
-            const ts: { version?: string } | undefined = (window as Window & {
-                ts?: { version?: string };
-            }).ts;
-            if (ts && ts.version) {
-                return ts.version;
-            }
-            const tsVersion: string | undefined = (window as Window & {
-                __TS_VERSION__?: string;
-            }).__TS_VERSION__;
-            if (tsVersion) {
-                return tsVersion;
-            }
-            // Fallback: detect ECMAScript version from browser
-            const userAgent: string = navigator.userAgent;
-            const match: RegExpMatchArray | null = userAgent.match(/Chrome\/(\d+)/);
-            const browserVersion: number | null = match ? parseInt(match[1], 10) : null;
-            if (!browserVersion) { return 'unknown'; }
-            if (browserVersion >= 120) { return 'es2024+'; }
-            if (browserVersion >= 100) { return 'es2022'; }
-            if (browserVersion >= 80) { return 'es2020'; }
-            if (browserVersion >= 70) { return 'es2018'; }
-            if (browserVersion >= 60) { return 'es2017'; }
-            if (browserVersion >= 50) { return 'es2016'; }
-            if (browserVersion >= 45) { return 'es6 (es2015)'; }
-            return 'es5 or older';
+            return '19';
         }
+        return '7';
     }
     private getFrameWork(): string {
         if ((window as any).__REACT_DEVTOOLS_GLOBAL_HOOK__ ||
@@ -264,7 +259,7 @@ export class TelemetryOptions {
                 }
             }
         }
-        return 'Unknown';
+        return 'x64';
     }
     private getOperatingSystem(): string {
         if (typeof navigator !== 'undefined' && navigator.userAgent) {
@@ -282,7 +277,7 @@ export class TelemetryOptions {
                 return 'Linux';
             }
         }
-        return 'Unknown';
+        return 'Windows';
     }
 
     // Gets the runtime environment name.
@@ -323,6 +318,7 @@ export interface TelemetryEvent {
     componentName?: string;
     featureName?: string;
     framework?: string;
+    platform?: string;
     frameworkVersion?: string;
     environment?: string;
     priority?: string;
@@ -339,6 +335,7 @@ export interface TelemetryBatch {
 
 // Generates a random identifier value.
 export function randomUUID(): string {
+    const hasCrypto: boolean = typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function';
     const hexDigits: string = '0123456789abcdef';
     let uuid: string = '';
     for (let i: number = 0; i < 36; i++) {
@@ -346,10 +343,17 @@ export function randomUUID(): string {
             uuid += '-';
         } else if (i === 14) {
             uuid += '4';
-        } else if (i === 19) {
-            uuid += hexDigits[(Math.random() * 4) | 8];
         } else {
-            uuid += hexDigits[(Math.random() * 16) | 0];
+            if (hasCrypto) {
+                const randomByte: number = crypto.getRandomValues(new Uint8Array(1))[0];
+                if (i === 19) {
+                    uuid += hexDigits[(randomByte & 0x03) | 0x08];
+                } else {
+                    uuid += hexDigits[randomByte & 0x0f];
+                }
+            } else {
+                uuid += i;
+            }
         }
     }
     return uuid.replace(/-/g, '');
@@ -421,35 +425,9 @@ function addProp(target: Record<string, string>, key: string, value: unknown): v
     }
     const s: string = String(value).trim();
     if (s.length > 0) {
-        target[key as string] = s;
+        // eslint-disable-next-line security/detect-object-injection
+        target[key] = s;
     }
-}
-
-function getMachineSignature(): string {
-    const parts: string[] = [];
-    if (typeof window !== 'undefined' && window.location && window.location.hostname) {
-        parts.push(window.location.hostname.toLowerCase());
-    }
-    if (typeof navigator !== 'undefined') {
-        if (navigator.userAgent) {
-            parts.push(navigator.userAgent.toLowerCase());
-        }
-        if (navigator.platform) {
-            parts.push(navigator.platform.toLowerCase());
-        }
-        const navAny: any = navigator as any;
-        if (navAny.deviceMemory) {
-            parts.push(`mem:${String(navAny.deviceMemory)}`);
-        }
-        if (navAny.hardwareConcurrency) {
-            parts.push(`cpu:${String(navAny.hardwareConcurrency)}`);
-        }
-    }
-    if (typeof screen !== 'undefined') {
-        parts.push(`screen:${screen.width}x${screen.height}`);
-        parts.push(`color:${screen.colorDepth}`);
-    }
-    return parts.length > 0 ? parts.join('|') : 'unknown-machine';
 }
 
 function getSessionDedupKey(evt: TelemetryEvent): string {
@@ -578,7 +556,7 @@ export class HttpTelemetrySender implements ITelemetrySender {
         addProp(properties, 'sdk.version', ev.sdkVersion || opts.sdkVersion);
         addProp(properties, 'framework', ev.framework || opts.framework);
         addProp(properties, 'framework.version', ev.frameworkVersion || opts.frameworkVersion);
-        addProp(properties, 'assembly.name', opts.assemblyName);
+        addProp(properties, 'platform', ev.platform || opts.platform);
         addProp(properties, 'os', opts.operatingSystem);
         addProp(properties, 'architecture', opts.architecture);
 
@@ -617,13 +595,16 @@ export class TelemetryClient {
     readonly options: TelemetryOptions;
     private readonly sender: ITelemetrySender;
     private readonly queue: TelemetryEvent[] = [];
-    private static readonly sessionDedup: Set<string> = new Set<string>();
-    private static readonly dailyDedup: Set<string> = new Set<string>();
+    private readonly sessionDedup: Map<string, number> = new Map<string, number>();
+    private readonly dailyDedup: Map<string, number> = new Map<string, number>();
     private timer: ReturnType<typeof setInterval> | null = null;
+    private cleanupTimer: ReturnType<typeof setInterval> | null = null;
     private static sessionId: string = '';
     static machineName: string = '';
     private isFlushing: boolean = false;
     private disposed: boolean = false;
+    private readonly maxDedupSize: number = 500;
+    private readonly dedupCleanupThreshold: number = 0.8;
     constructor(options: TelemetryOptions) {
         this.options = options;
         this.sender = new HttpTelemetrySender(options);
@@ -634,6 +615,9 @@ export class TelemetryClient {
             this.timer = setInterval(() => {
                 this.flushAsync().catch(() => { /* ignore */ });
             }, this.options.batchInterval);
+            this.cleanupTimer = setInterval(() => {
+                this.cleanupStaleKeys();
+            }, 5 * 60 * 1000);
         }
     }
     trackComponent(componentName: string, componentSdkName: string): void {
@@ -652,6 +636,7 @@ export class TelemetryClient {
             featureName: 'Init',
             framework: this.options.framework,
             frameworkVersion: this.options.frameworkVersion,
+            platform: this.options.platform,
             environment: this.options.environmentName,
             priority: 'Normal'
         };
@@ -674,6 +659,7 @@ export class TelemetryClient {
             componentName: compname,
             framework: this.options.framework,
             frameworkVersion: this.options.frameworkVersion,
+            platform: this.options.platform,
             environment: this.options.environmentName,
             priority: 'Normal'
         };
@@ -694,14 +680,14 @@ export class TelemetryClient {
                 const events: TelemetryEvent[] = this.queue.splice(0, take);
                 const batch: TelemetryBatch = {
                     schemaVersion: '1.0',
-                    sdkVersion: this.options.sdkVersion || 'unknown',
+                    sdkVersion: this.options.sdkVersion,
                     sessionId: TelemetryClient.sessionId,
                     createdAt: new Date(),
                     events
                 };
                 let attempt: number = 0;
                 const max: number = Math.max(0, this.options.maxRetries);
-                for (;;) {
+                while (attempt <= max) {
                     try {
                         await this.sender.sendAsync(batch);
                         break;
@@ -727,6 +713,10 @@ export class TelemetryClient {
         if (this.timer) {
             clearInterval(this.timer);
             this.timer = null;
+        }
+        if (this.cleanupTimer) {
+            clearInterval(this.cleanupTimer);
+            this.cleanupTimer = null;
         }
         this.queue.length = 0;
     }
@@ -772,10 +762,24 @@ export class TelemetryClient {
         if (TelemetryClient.machineName) {
             return TelemetryClient.machineName;
         }
-        const signature: string = getMachineSignature();
-        const machineName: string = this.hashId(signature);
-        TelemetryClient.machineName = machineName;
-        return machineName;
+        const storageKey: string = 'telemetry_machine_id';
+        try {
+            const storedId: string | null | undefined = localStorage && localStorage.getItem(storageKey);
+            if (storedId) {
+                return storedId;
+            }
+        } catch {
+            /* ignore */
+        }
+        // Step 2: Generate NEW unique ID (signature + random UUID + timestamp)
+        const randomId: string = randomUUID();
+        const machineId: string = this.hashId(randomId);
+        try {
+            localStorage.setItem(storageKey, machineId);
+        } catch {
+            // Intentionally ignored
+        }
+        return machineId;
     }
     private generateSessionId(): string {
         if (TelemetryClient.sessionId) {
@@ -783,9 +787,8 @@ export class TelemetryClient {
         }
         const key: string = 'telemetry_session_id';
         try {
-            const sessionId: string | null = sessionStorage.getItem(key);
+            const sessionId: string | null | undefined = sessionStorage && sessionStorage.getItem(key);
             if (sessionId) {
-                TelemetryClient.sessionId = sessionId;
                 return sessionId;
             }
         } catch {
@@ -793,7 +796,6 @@ export class TelemetryClient {
         }
         const guid: string = randomUUID();
         const sessionId: string = this.hashId(guid);
-        TelemetryClient.sessionId = sessionId;
         try {
             sessionStorage.setItem(key, sessionId);
         } catch {
@@ -818,27 +820,53 @@ export class TelemetryClient {
     private isDuplicate(evt: TelemetryEvent): boolean {
         const sessionKey: string = getSessionDedupKey(evt);
         const dailyKey: string = getDailyDedupKey(evt);
-        const sessionDedup: Set<string> = TelemetryClient.sessionDedup;
-        const dailyDedup: Set<string> = TelemetryClient.dailyDedup;
-        if (!sessionDedup.has(sessionKey)) {
-            sessionDedup.add(sessionKey);
-            dailyDedup.add(dailyKey);
+        const now: number = Date.now();
+        if (!this.sessionDedup.has(sessionKey)) {
+            this.sessionDedup.set(sessionKey, now);
+            this.dailyDedup.set(dailyKey, now);
+            this.enforceMaxSize(this.sessionDedup);
+            this.enforceMaxSize(this.dailyDedup);
             return false;
         }
-        if (dailyDedup.has(dailyKey)) {
+        if (this.dailyDedup.has(dailyKey)) {
             return true;
         }
-        let matchedKey: string | null = null;
-        dailyDedup.forEach((key: string) => {
-            if (!matchedKey && key.startsWith(sessionKey)) {
-                matchedKey = key;
-            }
-        });
-        if (matchedKey) {
-            dailyDedup.delete(matchedKey);
-        }
-        dailyDedup.add(dailyKey);
+        this.dailyDedup.set(dailyKey, now);
+        this.enforceMaxSize(this.dailyDedup);
         return false;
+    }
+    private enforceMaxSize(dedupMap: Map<string, number>): void {
+        const maxSize: number = this.maxDedupSize;
+        const threshold: number = Math.floor(maxSize * this.dedupCleanupThreshold);
+        if (dedupMap.size >= threshold) {
+            const toRemove: number = Math.ceil(maxSize * 0.2);
+            const entries: Array<[string, number]> = Array.from(dedupMap.entries());
+            entries.sort((a: [string, number], b: [string, number]): number => a[1] - b[1]); // Sort by timestamp
+            for (let i: number = 0; i < toRemove && i < entries.length; i++) {
+                // eslint-disable-next-line security/detect-object-injection
+                dedupMap.delete(entries[i][0]);
+            }
+        }
+    }
+    private cleanupStaleKeys(): void {
+        const now: number = Date.now();
+        const staleThreshold: number = 1 * 60 * 60 * 1000;
+        try {
+            const sessionEntries: Array<[string, number]> = Array.from(this.sessionDedup.entries());
+            for (const [key, timestamp] of sessionEntries) {
+                if (now - timestamp > staleThreshold) {
+                    this.sessionDedup.delete(key);
+                }
+            }
+            const dailyEntries: Array<[string, number]> = Array.from(this.dailyDedup.entries());
+            for (const [key, timestamp] of dailyEntries) {
+                if (now - timestamp > staleThreshold) {
+                    this.dailyDedup.delete(key);
+                }
+            }
+        } catch {
+            // Intentionally ignored
+        }
     }
 }
 export default Telemetry;

@@ -582,6 +582,7 @@ function calculateAxisLineOptions(
  */
 export function drawXAxisLabels(axis: AxisModel, index: number, rect: Rect, chart: Chart, xScale: Function): JSX.Element {
     const labelElements: JSX.Element[] = [];
+    axis.axislabelOptions = [];
     let pointX: number = 0;
     let pointY: number = 0;
     let previousLabel: number = 0;
@@ -616,10 +617,15 @@ export function drawXAxisLabels(axis: AxisModel, index: number, rect: Rect, char
         label = extend({}, axis.visibleLabels[i as number], undefined, true) as VisibleLabel;
         isAxisBreakLabel = isBreakLabel(label.originalText) || (axis.labelStyle.intersectAction === 'Wrap' && label.text.length > 1);
         pointX = xScale(label.value, rect, axis);
-        elementSize = label.size;
-        if (axis.labelStyle.enableWrap) {
-            elementSize.height = measureText(label.text as string, axis.labelStyle as TextStyleModel,
-                                             chart.themeStyle.axisLabelFont).height;
+        elementSize = label.isAxisLabelTemplate && label.templateSize
+            ? label.templateSize
+            : label.size;
+        if (axis.labelStyle.enableWrap && !label.isAxisLabelTemplate) {
+            elementSize.height = measureText(
+                label.text as string,
+                axis.labelStyle as TextStyleModel,
+                chart.themeStyle.axisLabelFont
+            ).height;
         }
         intervalLength = rect.width / length;
         labelWidth = isAxisBreakLabel ? label.breakLabelSize.width : elementSize.width;
@@ -688,6 +694,11 @@ export function drawXAxisLabels(axis: AxisModel, index: number, rect: Rect, char
             XPositionWidth: width,
             isAxisBreakLabel: isAxisBreakLabel
         };
+        if (label.isAxisLabelTemplate && label.templateHtml) {
+            options.templateHtml = label.templateHtml;
+            options.templateSize = label.templateSize;
+            options.isAxisLabelTemplate = true;
+        }
 
         if (angle !== 0) {
             rotatedLabelSize = getRotatedTextSize(label.originalText, label.labelStyle as TextStyleModel,
@@ -824,8 +835,14 @@ export function drawXAxisLabels(axis: AxisModel, index: number, rect: Rect, char
                 }
                 rect = { x: options.x + xAdjustment, y: options.y - (yAdjustment), width: label.breakLabelSize.width, height: height };
             } else {
-                height = (pointY) - (options.y - ((label.size.height / 2)));
-                rect = { x: options.x, y: options.y - ((label.size.height / 2) - 5), width: label.size.width, height: height };
+                height = (pointY) - (options.y - ((elementSize.height / 2)));
+
+                rect = {
+                    x: options.x,
+                    y: options.y - ((elementSize.height / 2) - 5),
+                    width: elementSize.width,
+                    height: height
+                };
             }
             const rectCoordinates: ChartLocationProps[] = getRectanglePoints(rect);
             const rectCenterX: number = isAxisBreakLabel ? rect.x + (rect.width / 2) : pointX;
@@ -848,8 +865,10 @@ export function drawXAxisLabels(axis: AxisModel, index: number, rect: Rect, char
             const rotateAngle: boolean = ((angle > 0 && angle < 90) || (angle > 180 && angle < 270) ||
                 (angle < -90 && angle > -180) || (angle < -270 && angle > -360));
             const textRect: Rect = {
-                x: options.x, y: options.y - (elementSize.height / 2 + padding / 2),
-                width: label.size.width, height: height
+                x: options.x,
+                y: options.y - (elementSize.height / 2 + padding / 2),
+                width: elementSize.width,
+                height: height
             };
             const textRectCoordinates: ChartLocationProps[] = getRectanglePoints(textRect);
             const rectPoints: ChartLocationProps[] = [];
@@ -874,36 +893,38 @@ export function drawXAxisLabels(axis: AxisModel, index: number, rect: Rect, char
             }
         }
         axis.axislabelOptions.push(options);
-        labelElements.push(
-            <text
-                key={options.id}
-                id={options.id}
-                x={options.x}
-                y={options.y}
-                textAnchor={options.anchor as TextAnchor}
-                style={{
-                    transition: 'fill 0.4s ease, opacity 0.4s ease'
-                }}
-                fill={options.fill}
-                fontFamily={options.fontFamily}
-                fontSize={options.fontSize}
-                fontStyle={options.fontStyle}
-                fontWeight={options.fontWeight}
-                opacity={options.opacity}
-                dominantBaseline={options.baseLine as DominantBaseLine}
-                transform={axis.angle !== undefined ? `rotate(${axis.angle}, ${options.x}, ${options.y})` : ''}
-            >
-                {typeof options.text !== 'string' && options.text.length > 1
-                    ? options.text.map((line: string, index: number) => (
-                        <tspan key={index} x={options.x}
-                            dy={index === 0 ? 0 : elementSize.height}>
-                            {line}
-                        </tspan>
-                    ))
-                    : options.text
-                }
-            </text>
-        );
+        if (!label.isAxisLabelTemplate) {
+            labelElements.push(
+                <text
+                    key={options.id}
+                    id={options.id}
+                    x={options.x}
+                    y={options.y}
+                    textAnchor={options.anchor as TextAnchor}
+                    style={{
+                        transition: 'fill 0.4s ease, opacity 0.4s ease'
+                    }}
+                    fill={options.fill}
+                    fontFamily={options.fontFamily}
+                    fontSize={options.fontSize}
+                    fontStyle={options.fontStyle}
+                    fontWeight={options.fontWeight}
+                    opacity={options.opacity}
+                    dominantBaseline={options.baseLine as DominantBaseLine}
+                    transform={axis.angle !== undefined ? `rotate(${axis.angle}, ${options.x}, ${options.y})` : ''}
+                >
+                    {typeof options.text !== 'string' && options.text.length > 1
+                        ? options.text.map((line: string, index: number) => (
+                            <tspan key={index} x={options.x}
+                                dy={index === 0 ? 0 : elementSize.height}>
+                                {line}
+                            </tspan>
+                        ))
+                        : options.text
+                    }
+                </text>
+            );
+        }
     }
 
     const labelBorder: ChartBorderProps = (axis.labelStyle?.border as ChartBorderProps);
@@ -1051,6 +1072,7 @@ export function findAxisLabel(axis: AxisModel, label: string, width: number, cha
  */
 export function drawYAxisLabels(axis: AxisModel, index: number, rect: Rect, chart: Chart, yScale: Function): JSX.Element {
     const labelElements: JSX.Element[] = [];
+    axis.axislabelOptions = [];
     let label: VisibleLabel;
     let pointX: number = 0;
     let pointY: number = 0;
@@ -1096,7 +1118,11 @@ export function drawYAxisLabels(axis: AxisModel, index: number, rect: Rect, char
     for (let i: number = 0, len: number = axis.visibleLabels.length; i < len; i++) {
         label = axis.visibleLabels[i as number];
         isAxisBreakLabel = isBreakLabel(label.originalText);
-        elementSize = isAxisBreakLabel ? axis.visibleLabels[i as number].breakLabelSize : label.size;
+        elementSize = isAxisBreakLabel
+            ? label.breakLabelSize
+            : (label.isAxisLabelTemplate && label.templateSize
+                ? label.templateSize
+                : label.size);
         pointY = yScale(label.value, axis.updatedRect, axis);
         textHeight = ((elementSize.height / 8) * axis.visibleLabels[i as number].text.length / 2);
         textPadding = (chart.requireInvertedAxis && axis.labelStyle.position === 'Inside') ? 0 : ((elementSize.height / 4) * 3) + 3;
@@ -1185,38 +1211,44 @@ export function drawYAxisLabels(axis: AxisModel, index: number, rect: Rect, char
         }
         previousEnd = isInverse ? previousYValue : currentYValue;
         // ------- Hide Calculation (End) -------------;
-
+        if (label.isAxisLabelTemplate && label.templateHtml) {
+            options.templateHtml = label.templateHtml;
+            options.templateSize = label.templateSize;
+            options.isAxisLabelTemplate = true;
+        }
         axis.axislabelOptions.push(options);
-        labelElements.push(
-            <text
-                key={options.id}
-                id={options.id}
-                x={options.x}
-                y={options.y}
-                textAnchor={options.anchor as TextAnchor}
-                style={{
-                    transition: 'fill 0.4s ease, opacity 0.4s ease'
-                }}
-                fill={options.fill}
-                fontFamily={options.fontFamily}
-                fontSize={options.fontSize}
-                fontStyle={options.fontStyle}
-                fontWeight={options.fontWeight}
-                opacity={options.opacity}
-                dominantBaseline={options.baseLine as DominantBaseLine}
-                transform={axis.angle !== undefined ? `rotate(${axis.angle}, ${options.x}, ${pointY})` : ''}
-            >
-                {typeof options.text !== 'string' && options.text.length > 1
-                    ? options.text.map((line: string, index: number) => (
-                        <tspan key={index} x={options.x}
-                            dy={index === 0 ? 0 : label.size.height}>
-                            {line}
-                        </tspan>
-                    ))
-                    : options.text
-                }
-            </text>
-        );
+        if (!label.isAxisLabelTemplate) {
+            labelElements.push(
+                <text
+                    key={options.id}
+                    id={options.id}
+                    x={options.x}
+                    y={options.y}
+                    textAnchor={options.anchor as TextAnchor}
+                    style={{
+                        transition: 'fill 0.4s ease, opacity 0.4s ease'
+                    }}
+                    fill={options.fill}
+                    fontFamily={options.fontFamily}
+                    fontSize={options.fontSize}
+                    fontStyle={options.fontStyle}
+                    fontWeight={options.fontWeight}
+                    opacity={options.opacity}
+                    dominantBaseline={options.baseLine as DominantBaseLine}
+                    transform={axis.angle !== undefined ? `rotate(${axis.angle}, ${options.x}, ${pointY})` : ''}
+                >
+                    {typeof options.text !== 'string' && options.text.length > 1
+                        ? options.text.map((line: string, index: number) => (
+                            <tspan key={index} x={options.x}
+                                dy={index === 0 ? 0 : label.size.height}>
+                                {line}
+                            </tspan>
+                        ))
+                        : options.text
+                    }
+                </text>
+            );
+        }
     }
     const labelBorder: ChartBorderProps = (axis.labelStyle?.border as ChartBorderProps);
     const borderSvgPath: string = (labelBorder?.width as number) > 0 ? drawYAxisBorder(axis, rect, chart) : '';

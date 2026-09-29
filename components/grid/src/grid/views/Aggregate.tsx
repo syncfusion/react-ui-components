@@ -1,5 +1,6 @@
-import { JSX, ReactNode, FunctionComponent } from 'react';
-import { AggregateRowProps, AggregateColumnProps } from '../types/aggregate.interfaces';
+import { JSX } from 'react';
+import { AggregateRowProps, AggregateColumnProps, AggregatesComponent } from '../types/aggregate.interfaces';
+import { AggregateModule } from '../hooks/useAggregate';
 
 /**
  * Aggregates component for declarative usage in user code.
@@ -9,9 +10,10 @@ import { AggregateRowProps, AggregateColumnProps } from '../types/aggregate.inte
  * @param {ReactNode} [props.children] - Aggregate row and column definitions
  * @returns {JSX.Element} Rendered component
  */
-export const Aggregates: FunctionComponent<{ children?: ReactNode }> = (): JSX.Element => {
+export const Aggregates: AggregatesComponent = (): JSX.Element => {
     return null;
 };
+Aggregates.AggregateModule = AggregateModule;
 
 /**
  * AggregateRow component for declarative usage in user code.
@@ -19,6 +21,7 @@ export const Aggregates: FunctionComponent<{ children?: ReactNode }> = (): JSX.E
  *
  * @component
  * @param {Partial<AggregateRowProps>} props - Aggregate row configuration properties
+ * @param _props
  * @param {AggregateColumnProps[]} props.columns - Columns to aggregate
  * @example
  * ```tsx
@@ -39,6 +42,7 @@ export const AggregateRow: (props: Partial<AggregateRowProps>) => JSX.Element = 
  * @template T - Data type for the column
  * @param {Partial<AggregateColumnProps<T>>} props - Aggregate column configuration properties
  * @param {string} props.field - Field name for aggregation
+ * @param _props
  * @param {string} props.type - Aggregation type (Sum, Average, Count, Min, Max, etc.)
  * @param {string} [props.footerTemplate] - Template for footer cell
  * @example

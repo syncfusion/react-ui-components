@@ -1,7 +1,7 @@
 /**
  * Defines the view options for the Scheduler component.
  */
-export type View = 'Day' | 'Week' | 'WorkWeek' | 'Month' | 'Agenda';
+export type View = 'Day' | 'Week' | 'WorkWeek' | 'Month' | 'TimelineDay' | 'TimelineWeek' | 'TimelineWorkWeek' | 'TimelineMonth' | 'Agenda';
 
 /**
  * An enum that holds the options to render the spanned events in all day row or time slot.

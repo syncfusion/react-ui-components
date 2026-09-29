@@ -1,27 +1,50 @@
-import { ComponentType, HTMLAttributes, ReactElement, ReactNode } from 'react';
-import { DataManager, DataResult, Query, ReturnType as DataReturnType, Aggregates } from '@syncfusion/react-data';
-import { IL10n } from '@syncfusion/react-base';
-import { HeaderCellRenderEvent, CellRenderEvent, RowRenderEvent, ServiceLocator } from '../types/interfaces';
-import { GridLine, SortDirection, WrapMode, Action, ClipMode, ValueType, RowType, ToolbarItems, Theme, LoadingIndicatorType, ContextMenuOpenEvent, ContextMenuSettings, DataResponse } from './index';
-import { FilterSettings, FilterEvent, FilterDialogBeforeOpenEvent, FilterDialogAfterOpenEvent } from '../types/filter.interfaces';
-import { ColumnProps } from '../types/column.interfaces';
-import { CellFocusEvent } from '../types/focus.interfaces';
+import { ComponentType, Dispatch, HTMLAttributes, ReactElement, ReactNode, RefObject, SetStateAction } from 'react';
+import { IL10n } from '@syncfusion/react-base/src/l10n';
+import { HeaderCellRenderEvent, CellRenderEvent, RowRenderEvent, ServiceLocator, RenderRef, MutableGridBase, DataChangeRequestEvent, DataRequestEvent, IRowBase, IValueFormatter, ValueType, UseDataResult } from '../types/interfaces';
+import { GridLine, SortDirection, WrapMode, Action, ClipMode, RowType, ToolbarItems, Theme, LoadingIndicatorType, ScrollMode, ActionType, GroupSummaryPosition, AutoFitMode, ColumnPinDirection } from '../types/enum';
+import { DataResponse } from './infinite-scroll.interface';
+import { ContextMenuClickEvent, contextMenuModule, ContextMenuOpenEvent, ContextMenuSettings } from './context.interfaces';
+import { FilterSettings, FilterEvent, FilterDialogBeforeOpenEvent, FilterDialogAfterOpenEvent, filterModule } from '../types/filter.interfaces';
+import { ColumnProps, FlattenedColumn, IColumnBase } from '../types/column.interfaces';
+import { CellFocusEvent, FocusStrategyResult } from '../types/focus.interfaces';
 import { EditSettings, FormRenderEvent, RowEditEvent, CellEditEvent, DeleteEvent,
-    RowAddEvent, SaveEvent, FormCancelEvent, DeleteDialogEventArgs } from '../types/edit.interfaces';
-import { AggregateCellRenderEvent, AggregateRowRenderEvent, AggregateRowProps } from '../types/aggregate.interfaces';
-import { GroupedData, GroupSettings, OnGroupArgs, ShouldExpandGroupEvent } from '../types';
-import { ToolbarClickEvent, ToolbarItemProps } from '../types/toolbar.interfaces';
-import { RenderRef, MutableGridBase, DataChangeRequestEvent, DataRequestEvent, IRowBase, IValueFormatter } from '../types/interfaces';
-import { IsRowSelectable, RowSelectEvent, RowSelectingEvent, SelectionSettings } from '../types/selection.interfaces';
-import { PageEvent, PageSettings } from '../types/page.interfaces';
+    RowAddEvent, SaveEvent, FormCancelEvent, DeleteDialogEventArgs, UseEditResult, editModule } from '../types/edit.interfaces';
+import { AggregateCellRenderEvent, AggregateRowRenderEvent, AggregateRowProps, aggregateModule } from '../types/aggregate.interfaces';
+import { GroupedData, GroupSettings, GroupSummary, OnGroupArgs, ShouldExpandGroupEvent, UseGroupResult } from '../types/grouping.interfaces';
+import { ToolbarAPI, ToolbarClickEvent, ToolbarConfig, ToolbarItemProps } from '../types/toolbar.interfaces';
+import { IsRowSelectable, RowSelectEvent, RowSelectingEvent, SelectionModel, SelectionSettings, selectionModule } from '../types/selection.interfaces';
+import { PageEvent, pagerModule, PageSettings } from '../types/page.interfaces';
 import { SortEvent, SortSettings } from '../types/sort.interfaces';
-import { SearchEvent, SearchSettings } from '../types/search.interfaces';
-import { VirtualizationSettings } from './virtualization.interface';
-import { SpinnerProps } from '@syncfusion/react-popups';
-import { SkeletonProps } from '@syncfusion/react-notifications';
+import { SearchAPI, SearchEvent, SearchSettings } from '../types/search.interfaces';
+import { VirtualizationSettings, VirtualSettings } from './virtualization.interface';
+import { SpinnerProps } from '@syncfusion/react-popups/src/spinner/spinner';
+import { SkeletonProps } from '@syncfusion/react-notifications/src/skeleton/skeleton';
 import { CellSelectionModel, CellSelectEvent, CellSelectingEvent, CellDeselectEvent, CellDeselectingEvent, RowCellInfo, CellIdentifier } from '../types/cell-selection.interfaces';
-import { MenuSelectEvent } from '@syncfusion/react-navigations';
+import { MenuSelectEvent } from '@syncfusion/react-navigations/src/menu/types';
 import { DetailRowTemplate, RowExpandEvent, RowCollapseEvent } from './master-detail';
+import { DetailCellRendererParams } from './detail-cell-renderer.interfaces';
+import { ClipboardCopyEvent, ClipboardCutEvent, ClipboardPasteEvent, ClipboardSettings, ClipboardModuleType, Clipboard } from './clipboard.interfaces';
+import { UseCommandColumnResult } from './command.interfaces';
+import { columnChooserModule } from './column-chooser.interface';
+import { DataManager, Query, DataResult, ReturnType as DataReturnType, Aggregates } from '@syncfusion/react-data';
+import { AutoFitColumn, AutoFitModuleType } from './auto-fit.interfaces';
+import { UndoStartEvent, UndoCompleteEvent, RedoStartEvent, RedoCompleteEvent, UseUndoRedoResult } from './undoredo.interfaces';
+import { ColumnResizeEndEvent, ColumnResizeEvent, ColumnResizeStartEvent, ResizeColumn, ResizeModuleType, ResizeSettings } from './resize.interfaces';
+import { AutoFillModuleType, AutoFillSettings, CellFillCompletedEvent, CellFillStartedEvent, AutoFill, AutoFillRange } from './autofill.interfaces';
+import { RowDragEventArgs } from './row-reordering.interfaces';
+import { DetailGridModuleType } from './detail-grid.interfaces';
+import { ColumnReorderEndEvent, ColumnReorderEvent, ColumnReorderStartEvent, ReorderModuleType, ReorderSettings } from './reorder.interfaces';
+import { RowPinningEvent, PinningSettings, PinningModuleType, PinningModuleResult } from './pinning.interfaces';
+import { FormulaModuleType, FormulaSettings } from './formula.interfaces';
+import { StagedRowData } from './batch-edit.interfaces';
+import { TreeGridRow } from './treeData.interfaces';
+import { TreeDataSettings, UseTreeDataResult } from '../hooks/useTreeData';
+import { PivotModuleType } from './pivot.interfaces';
+import { PivotSettings, PivotColumnContext, PivotColumnOverrides,
+    PivotColumnGroupContext, PivotColumnGroupOverrides } from './pivot.interfaces';
+import { PivotChangeEvent } from './pivot.interfaces';
+import { PivotErrorEvent } from './pivot.interfaces';
+import { SideBar, SideBarToolPanelModule } from './sidebar.interfaces';
 
 /**
  * Defines settings for the loading indicator displayed during grid data operations.
@@ -89,6 +112,36 @@ export interface LoadingIndicatorSettings {
  */
 export interface ColumnChooserSettings {
     /**
+     * Specifies when column visibility changes are committed.
+     *
+     * @default 'deferred'
+     *
+     * @example
+     * ```tsx
+     * <Grid
+     *   columnChooserSettings={{ mode: 'immediate' }}
+     *   showColumnChooser={true}
+     * />
+     * ```
+     */
+    mode?: 'deferred' | 'immediate';
+
+    /**
+     * Specifies the debounce delay for Immediate mode column visibility updates in milliseconds.
+     *
+     * @default 1500
+     */
+    immediateModeDelay?: number;
+
+    /**
+     * Enables drag-and-drop reordering inside the column chooser.
+     * Requires grid-level column reordering to be enabled.
+     *
+     * @default false
+     */
+    enableReorder?: boolean;
+
+    /**
      * Enables or disables the search box in the `ColumnChooser` dialog.
      *
      * @default true
@@ -150,6 +203,7 @@ export interface ColumnChooserSettings {
      *   * `None` — Display columns in their original order.
      *   * `Ascending` — Sort columns alphabetically A-Z by `field`.
      *   * `Descending` — Sort columns alphabetically Z-A by `field`.
+     *
      * @default 'None'
      *
      * @example
@@ -259,6 +313,112 @@ export interface ColumnChooserSettings {
 }
 
 /**
+ * Configuration for the per-column header menu displayed inside header cells.
+ * Use `columnMenuSettings.enabled` to turn the feature on or off.
+ */
+export interface ColumnMenuSettings {
+    /**
+     * When true, displays the column menu trigger inside header cells.
+     *
+     * @default false
+     */
+    enabled?: boolean;
+    /**
+     * When true, renders a "Filter" item inside the per-column menu which opens
+     * the column's filter dialog when selected. If false (default), the filter
+     * can still be opened via the header filter icon but will not appear in the
+     * column menu.
+     *
+     * @default false
+     */
+    showFilter?: boolean;
+}
+
+/**
+ * Defines the event arguments passed when the column menu is opened.
+ * Provides the target column and available menu actions before display.
+ */
+export interface ColumnMenuOpenEvent {
+    /**
+     * Indicates whether the column menu should be canceled.
+     *
+     * @default false
+     */
+    cancel?: boolean;
+    /**
+     * The list of menu item identifiers that are available in the menu.
+     */
+    items: string[];
+    /**
+     * The column associated with the menu trigger.
+     */
+    column?: ColumnProps;
+    /**
+     * The HTML element that triggered the menu.
+     */
+    target?: HTMLElement;
+    /**
+     * Native event associated with the menu open action, when available.
+     */
+    event?: Event;
+}
+
+/**
+ * Defines the event arguments passed when a column menu item is clicked.
+ */
+export interface ColumnMenuClickEvent {
+    /**
+     * The selected menu item identifier.
+     */
+    item: string;
+    /**
+     * The column associated with the menu trigger.
+     */
+    column?: ColumnProps;
+    /**
+     * The HTML element that triggered the menu.
+     */
+    target?: HTMLElement;
+    /**
+     * Native menu selection event.
+     */
+    event?: MenuSelectEvent;
+}
+
+/**
+ * Defines the event arguments passed when the column menu is closed.
+ */
+export interface ColumnMenuCloseEvent {
+    /**
+     * The column associated with the closed menu.
+     */
+    column?: ColumnProps;
+    /**
+     * The HTML element that triggered the menu.
+     */
+    target?: HTMLElement;
+    /**
+     * Native close event, when available.
+     */
+    event?: Event;
+}
+
+/**
+ * Configures row drag-and-drop between grid instances.
+ */
+export interface DragAndDropSettings {
+    /**
+     * Enables row drag-and-drop.
+     */
+    enabled?: boolean;
+
+    /**
+     * Specifies the id of a grid that accepts dropped rows.
+     */
+    targetID?: string;
+}
+
+/**
  * Props passed to the Column Chooser footer template.
  */
 export interface ColumnChooserFooterProps {
@@ -354,6 +514,22 @@ export interface ColumnChooserTemplateProps<T = unknown> {
  */
 export interface ColumnChooserBeforeOpenEvent extends GridActionEvent {
     /**
+     * Specifies when Immediate mode visibility changes are committed.
+     *
+     * @type {'deferred' | 'immediate'}
+     * @default 'deferred'
+     */
+    mode?: 'deferred' | 'immediate';
+
+    /**
+     * Specifies the debounce delay for Immediate mode visibility changes in milliseconds.
+     *
+     * @type {number}
+     * @default 1500
+     */
+    immediateModeDelay?: number;
+
+    /**
      * Enables or disables the search functionality in the `ColumnChooser` dialog.
      *
      * @type {boolean}
@@ -409,6 +585,22 @@ export interface ColumnChooserBeforeOpenEvent extends GridActionEvent {
  * chooser settings and a visibility map for all columns.
  */
 export interface ColumnChooserApplyEvent extends GridActionEvent {
+    /**
+     * Specifies when Immediate mode visibility changes are committed.
+     *
+     * @type {'deferred' | 'immediate'}
+     * @default 'deferred'
+     */
+    mode?: 'deferred' | 'immediate';
+
+    /**
+     * Specifies the debounce delay for Immediate mode visibility changes in milliseconds.
+     *
+     * @type {number}
+     * @default 1500
+     */
+    immediateModeDelay?: number;
+
     /**
      * Enables or disables the search functionality in the `ColumnChooser` dialog.
      *
@@ -545,11 +737,55 @@ export interface RowInfo<T = unknown> {
  */
 export interface GridRef<T = unknown> extends Omit<RenderRef<T>, 'refresh'>, IGrid<T>, MutableGridBase<T> {
     /**
+     * Reference to the grid's clipboard module state.
+     *
+     * @private
+     */
+    clipboardModule?: Clipboard;
+
+    /**
      * Reference to the grid's root DOM element.
      *
      * @default null
      */
     element?: HTMLDivElement | null;
+
+    /**
+     * Pins one or more rows to the specified section.
+     *
+     * @param {T[]} rows - Row data objects to pin.
+     * @param {'top' | 'bottom'} position - Pinned section.
+     * @returns {Promise<void>}
+     */
+    pinRows(rows: T[], position?: 'top' | 'bottom'): void;
+
+    /**
+     * Removes one or more rows from the pinned section.
+     *
+     * @param {T[]} rows - Row data objects to unpin.
+     * @returns {void}
+     */
+    unpinRows(rows: T[]): void;
+
+    /**
+     * Pins a column (identified by its `field`) to the requested side. Only
+     * available when `PinningModule` is present in the `modules` prop.
+     *
+     * @param {string} field - Field name of the column to pin.
+     * @param {ColumnPinDirection.Left | ColumnPinDirection.Right | string} direction - Pin side
+     * (static enum or its `'Left' | 'Right'` string alias).
+     * @returns {void}
+     */
+    pinColumn(field: string, direction: ColumnPinDirection.Left | ColumnPinDirection.Right | string): void;
+
+    /**
+     * Removes the pin from a column (collapses its direction to `None`). Only
+     * available when `PinningModule` is present in the `modules` prop.
+     *
+     * @param {string} field - Field name of the column to unpin.
+     * @returns {void}
+     */
+    unpinColumn(field: string): void;
 
     /**
      * Current view data available in the grid.
@@ -564,6 +800,84 @@ export interface GridRef<T = unknown> extends Omit<RenderRef<T>, 'refresh'>, IGr
      * @returns {Object[]} The current records
      */
     getCurrentViewRecords(): T[];
+
+    /**
+     * Resizes the specified columns to the supplied widths.
+     * Accepts a required array of `ResizeColumn` entries (`field` + `width`) and applies each width after clamping to the column's `minWidth`/`maxWidth` constraints.
+     *
+     * @param {ResizeColumn[]} columns - List of columns to resize with their target widths in pixels.
+     * @returns {void}
+     *
+     * @example
+     * ```tsx
+     * const gridRef = useRef<GridRef>(null);
+     *
+     * gridRef.current?.resizeColumns([
+     *   { field: 'id', width: 100 },
+     *   { field: 'name', width: 200 }
+     * ]);
+     * ```
+     */
+    resizeColumns(columns: ResizeColumn[]): void;
+
+    /**
+     * Auto-fits columns to their widest header and/or content cell (based on the supplied or grid-level `autoFit` mode), clamped to `minWidth`/`maxWidth`.
+     * Accepts an optional array of `AutoFitColumn` entries; when omitted, auto-fits every visible column.
+     *
+     * @param {AutoFitColumn[]} [columns] - Optional list of columns to auto-fit. When omitted, processes every visible column with a defined `field`.
+     * @returns {void}
+     *
+     * @example
+     * ```tsx
+     * const gridRef = useRef<GridRef>(null);
+     *
+     * // Auto-fit all visible columns
+     * gridRef.current?.autoFitColumns();
+     *
+     * // Auto-fit specific columns
+     * gridRef.current?.autoFitColumns([
+     *   { field: 'name' },
+     *   { field: 'email', autoFit: AutoFitMode.Header }
+     * ]);
+     * ```
+     */
+    autoFitColumns(columns?: AutoFitColumn[]): void;
+
+    /**
+     * Reorders the column at `fromIndex` to `toIndex`.
+     *
+     * @param {number} fromIndex - Index of the column to move.
+     * @param {number} toIndex - Target index.
+     * @returns {void}
+     *
+     * @example
+     * ```tsx
+     * const gridRef = useRef<GridRef>(null);
+     *
+     * gridRef.current?.reorderColumnByIndex(0, 2);
+     * ```
+     */
+    reorderColumnByIndex(fromIndex: number, toIndex: number): Promise<void>;
+
+    /**
+     * Reorders the column(s) whose `field` matches `fieldName` to `toIndex`.
+     *
+     * @param {string | string[]} fieldName - Single field name or array of field names identifying the column(s) to move.
+     * @param {number} toIndex - Target index.
+     * @returns {Promise<void>}
+     *
+     * @example
+     * ```tsx
+     * const gridRef = useRef<GridRef>(null);
+     *
+     * // Move a single column by field name
+     * gridRef.current?.reorderColumns('OrderID', 2);
+     *
+     * // Move multiple columns in a single call
+     * gridRef.current?.reorderColumns(['CustomerID', 'Freight'], 3);
+     * ```
+     */
+    reorderColumns(fieldName: string | string[], toIndex: number): Promise<void>;
 
     /**
      * Defines the selected row indexes.
@@ -601,12 +915,294 @@ export interface GridRef<T = unknown> extends Omit<RenderRef<T>, 'refresh'>, IGr
      * @default undefined
      */
     cellSelectionModule?: CellSelectionModel;
+
+    /**
+     * Reference to the cell fill module for programmatic autofill operations.
+     * Enables methods such as fillSelectedToRange and clearFillRange.
+     *
+     * @default undefined
+     */
+    autoFillModule?: AutoFill;
+
+    /**
+     * @private
+     */
+    getGroupCaptionAggregateType?: () => Map<string, string[]>;
+}
+
+
+export interface GridModules<T = unknown> {
+    /**
+     * Injects the Columns sidebar tool-panel shell.
+     */
+    ColumnToolPanelModule?: SideBarToolPanelModule<T>;
+
+    /**
+     * Injects the Filters sidebar tool-panel shell.
+     */
+    FilterToolPanelModule?: SideBarToolPanelModule<T>;
+
+    /**
+     * Injects the selection-aware editing sidebar tool panel.
+     */
+    EditToolPanelModule?: SideBarToolPanelModule<T>;
+
+    /**
+     * Injects clipboard functionality into the Grid.
+     * Enables copy, paste, and cut operations.
+     *
+     * @example
+     * ```tsx
+     * modules={{ ClipboardModule }}
+     * ```
+     */
+    ClipboardModule?: ClipboardModuleType<T>;
+
+    /**
+     * Injects column resizing functionality into the Grid.
+     * Enables users to resize columns by dragging column headers.
+     *
+     * @example
+     * ```tsx
+     * modules={{ ResizeModule }}
+     * ```
+     */
+    ResizeModule?: ResizeModuleType<T>;
+
+    /**
+     * Injects column reordering functionality into the Grid.
+     *
+     * @example
+     * ```tsx
+     * modules={{ ReorderModule }}
+     * ```
+     */
+    ReorderModule?: ReorderModuleType<T>;
+
+    /**
+     * Injects column auto-fitting functionality into the Grid.
+     * Enables automatic adjustment of column widths based on header and/or content dimensions.
+     *
+     * @example
+     * ```tsx
+     * modules={{ AutoFitModule }}
+     * ```
+     */
+    AutoFitModule?: AutoFitModuleType<T>;
+
+    /**
+     * Injects autofill functionality into the Grid.
+     * Enables fill-handle rendering and cell fill operations.
+     *
+     * @example
+     * ```tsx
+     * modules={{ AutoFillModule }}
+     * ```
+     */
+    AutoFillModule?: AutoFillModuleType<T>;
+
+    /**
+     * Injects master-detail row functionality into the Grid.
+     * Enables rendering of detail rows and nested detail grids.
+     *
+     * @example
+     * ```tsx
+     * modules={{ DetailGridModule }}
+     * ```
+     */
+    DetailGridModule?: DetailGridModuleType;
+    FilterModule?: (
+        gridRef?: RefObject<GridRef<unknown>>,
+        filterSetting?: FilterSettings,
+        setGridAction?: (action: FilterEvent | Record<string, unknown>) => void,
+        serviceLocator?: ServiceLocator,
+        setCurrentPage?: Dispatch<SetStateAction<number>>,
+        virtualSettings?: VirtualSettings,
+        scrollMode?: ScrollMode
+    ) => filterModule;
+    EditModule?: <T>(
+        _gridRef: RefObject<GridRef<T>>,
+        serviceLocator: ServiceLocator,
+        columns: ColumnProps<T>[],
+        currentViewData: (GroupedData<T> | T)[],
+        dataOperations: UseDataResult<T>,
+        focusModule: FocusStrategyResult,
+        selectionModule: selectionModule<T>,
+        editSettings: EditSettings<T>,
+        setGridAction: Dispatch<SetStateAction<Object>>,
+        setCurrentPage: Dispatch<SetStateAction<number>>,
+        setResponseData: Dispatch<SetStateAction<Object>>,
+        commandColumnModule: UseCommandColumnResult<T>,
+        virtualSettings: VirtualSettings,
+        pinningModule: PinningModuleResult<T>,
+        batchEditStagedRowsRef?: RefObject<Map<string | number, StagedRowData<T>>>,
+        undoRedoModule?: UseUndoRedoResult
+    ) => UseEditResult<T>;
+    PagerModule?: () => pagerModule;
+    GroupModule?: <T = unknown>(
+        _gridRef?: RefObject<GridRef<T>>,
+        groupSettingsProp?: GroupSettings,
+        setGridAction?: (action: OnGroupArgs & { requestType: ActionType }) => void,
+        setCurrentViewData?: Dispatch<SetStateAction<GroupedData<T>[]>>,
+        currentViewData?: (GroupedData<T> | T)[],
+        setVirtualCachedViewData?: Dispatch<SetStateAction<Map<number, (T | GroupedData<T>)>>>,
+        virtualizationSettings?: VirtualizationSettings,
+        loadedPageWiseGroupExpandedCountRef?: RefObject<Map<number, number>>,
+        loadedPageWiseVirtualGroupStartEndRowIndexes?: RefObject<Map<number, {
+            startIndex: number;
+            endIndex: number;
+        }>>,
+        pageWiseGroupResponseViewData?: Map<number, GroupedData<T>[]>,
+        totalRecordCount?: number,
+        gridProps?: Partial<IGridBase<T>>,
+        setCurrentPage?: Dispatch<SetStateAction<number>>,
+        uiColumns?: RefObject<ColumnProps<T>[]>,
+        setColumnChooserState?: Dispatch<SetStateAction<object>>,
+        groupSummary?: GroupSummary | GroupSummaryPosition,
+        groupCaptionAggregateType?: Map<string, string[]>
+    ) => UseGroupResult<T>;
+    TreeDataModule?: (
+        _gridRef?: RefObject<GridRef<T>>,
+        setCurrentViewData?: Dispatch<SetStateAction<(TreeGridRow | T[])>>,
+        data?: TreeGridRow[] | T[],
+        settings?: TreeDataSettings,
+        pageSettings?: PageSettings,
+        filterSettings?: FilterSettings,
+        sortSettings?: SortSettings,
+        searchSettings?: SearchSettings,
+        setTotalRecordsCount?: Dispatch<SetStateAction<number>>,
+        currentPage?: number,
+        isOffline?: boolean
+    ) => UseTreeDataResult;
+    ToolbarModule?: (
+        config: ToolbarConfig,
+        editModule?: editModule,
+        selectionModule?: SelectionModel,
+        currentViewData?: unknown[],
+        allowSearching?: boolean,
+        commandColumnModule?: UseCommandColumnResult,
+        selectionSettings?: SelectionSettings,
+        showColumnChooser?: boolean,
+        virtualSettings?: VirtualSettings,
+        totalRecordsCount?: number,
+        gridRef?: RefObject<GridRef>
+    ) => ToolbarAPI;
+    ContextMenuModule?: () => contextMenuModule;
+    ColumnChooserModule?: () => columnChooserModule;
+    SearchModule?: (
+        gridRef?: RefObject<GridRef<unknown>>,
+        searchSetting?: SearchSettings,
+        setGridAction?: (action: SearchEvent) => void,
+        setCurrentPage?: Dispatch<SetStateAction<number>>,
+        virtualSettings?: VirtualSettings,
+        scrollMode?: ScrollMode
+    ) => SearchAPI;
+    CommandColumnModule?: <T>(isCommandColumnEnabled?: boolean) => UseCommandColumnResult<T>;
+    AggregateModule?: <T>(
+        props: Partial<IGridBase<T>>,
+        gridRef?: RefObject<GridRef<T>>,
+        directiveAggregates?: ReactElement
+    ) => aggregateModule;
+    GridAllModules?: Omit<GridModules<T>, 'GridAllModules'>;
+
+    /**
+     * Injects row pinning functionality into the Grid.
+     * Enables row pin and unpin operations.
+     *
+     * @example
+     * ```tsx
+     * modules={{ PinningModule }}
+     * ```
+     */
+    PinningModule?: PinningModuleType<T>;
+    /**
+     * Injects pivot calculation and field configuration controls into the Grid.
+     * Registers the pivot view responsible for relational result calculation,
+     * report-field configuration, member filtering and pivot result presentation.
+     *
+     * @default undefined
+     * @example
+     * ```tsx
+     * import { Grid } from '@syncfusion/react-grid';
+     * import { PivotModule } from '@syncfusion/react-grid';
+     *
+     * <Grid
+     *   dataSource={salesData}
+     *   modules={{ PivotModule }}
+     *   pivotSettings={{
+     *     enabled: true,
+     *     rows: ['country'],
+     *     values: [{ field: 'sales', type: 'Sum' }]
+     *   }}
+     * />
+     * ```
+     */
+    PivotModule?: PivotModuleType;
+    /**
+     * Injects spreadsheet-style formula evaluation and formula-cell editing support.
+     *
+     * @example
+     * ```tsx
+     * modules={{ FormulaModule }}
+     * formulaSettings={{ enabled: true }}
+     * ```
+     */
+    FormulaModule?: FormulaModuleType<T>;
+}
+
+export interface RowNumberSettings {
+    /**
+     * Enables the display of sequential row numbers in a dedicated grid column.
+     *
+     * @default false
+     *
+     * @example
+     * ```tsx
+     * <Grid rowNumberSettings={{ enabled: true }} />
+     * ```
+     */
+    enabled?: boolean;
 }
 
 /**
  * @private
  */
 export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivElement>, 'children' | 'onError'> {
+    /**
+     * Fires before a Grid-level undo request is applied.
+     *
+     * @event onUndoStart
+     */
+    onUndoStart?: (event: UndoStartEvent) => void;
+
+    /**
+     * Fires after a Grid-level undo request completes.
+     *
+     * @event onUndoComplete
+     */
+    onUndoComplete?: (event: UndoCompleteEvent) => void;
+
+    /**
+     * Fires before a Grid-level redo request is applied.
+     *
+     * @event onRedoStart
+     */
+    onRedoStart?: (event: RedoStartEvent) => void;
+
+    /**
+     * Fires after a Grid-level redo request completes.
+     *
+     * @event onRedoComplete
+     */
+    onRedoComplete?: (event: RedoCompleteEvent) => void;
+
+    /**
+     * Configures the optional grid sidebar and its tool panels.
+     *
+     * @default undefined
+     */
+    sideBar?: SideBar<T>;
+
     /**
      * Specifies a unique identifier for the grid component.
      * Provides a distinct ID for the grid instance, enabling targeted interactions, styling, or accessibility features.
@@ -623,6 +1219,24 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
      * ```
      */
     id?: string;
+
+    /**
+     * Indicates whether the grid is a child grid within a master-detail relationship.
+     * When true, the grid is treated as a detail grid and may inherit certain behaviors or styles from its parent.
+     *
+     * @private
+     * @default false
+     * @example
+     *
+     * ```tsx
+     * <Grid
+     *   isChildrenGrid={true}
+     *   dataSource={detailData}
+     *   columns={detailColumns}
+     * />
+     * ```
+     */
+    isChildrenGrid?: boolean;
 
     /**
      * Supplies the data to be displayed in the grid.
@@ -839,6 +1453,22 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
     enableDevMode?: boolean;
 
     /**
+     * Configures the display of sequential row numbers in the grid.
+     *
+     * @default { enabled: false }
+     *
+     * @example
+     * ```tsx
+     * <Grid
+     *   dataSource={employees}
+     *   columns={columns}
+     *   rowNumberSettings={{ enabled: true }}
+     * />
+     * ```
+     */
+    rowNumberSettings?: RowNumberSettings;
+
+    /**
      * Controls whether keyboard navigation is enabled for the Data Grid.
      *
      * By default, navigation and interaction with grid elements can be performed using keyboard shortcuts and arrow keys.
@@ -868,6 +1498,25 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
     clipMode?: ClipMode | string;
 
     /**
+     * Enables chart options in the context menu.
+     *
+     * @default false
+     */
+    enableGridChart?: boolean;
+
+    /**
+     * Defines the default auto-fit scope applied to columns that omit a per-column `autoFit` value.
+     * Determines which cells the auto-fit measurement considers: `AutoFitMode.Header` (header only), `AutoFitMode.Content` (content only), or `AutoFitMode.All` (widest of both).
+     *
+     * @default null
+     * @example
+     * ```tsx
+     * <Grid autoFit={AutoFitMode.All} />
+     * ```
+     */
+    autoFit?: AutoFitMode;
+
+    /**
      * Determines whether the `sf-alt-row` CSS class is added to alternate rows in the Data Grid.
      *
      * When set to true, the grid adds the `sf-alt-row` class to alternate row elements.
@@ -895,6 +1544,25 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
     enableAltRow?: boolean;
 
     /**
+     * Configures row drag-and-drop between grid instances.
+     *
+     * @default { enabled: false }
+     *
+     * @example
+     * ```tsx
+     * <Grid
+     *   dataSource={employees}
+     *   columns={columns}
+     *   dragAndDropSettings={{
+     *     enabled: true,
+     *     targetID: 'destination-grid'
+     *   }}
+     * />
+     * ```
+     */
+    dragAndDropSettings?: DragAndDropSettings;
+
+    /**
      * Enables right-to-left (RTL) direction for the grid.
      *
      * When set to true, the grid's layout changes to support right-to-left languages like Arabic.
@@ -917,7 +1585,7 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
      * Configures the grid's selection settings, determines whether `Single` or `Multiple` selections are allowed.
      * Used to customize the selection experience for user interactions.
      *
-     * @default { enabled: true, mode: 'Single', enableToggle: true }
+     * @default { enabled: true, mode: 'Single', enableToggle: false }
      *
      * @example
      * ```tsx
@@ -933,6 +1601,90 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
      * ```
      */
     selectionSettings?: SelectionSettings;
+
+    /**
+     * Enables cell fill (autofill) behavior when selection and editing are active.
+     * Allows dragging selected cells to fill adjacent cells with repeated or sequential values.
+     *
+     * @default undefined
+     *
+     * @example
+     * ```tsx
+     * <Grid
+     *   dataSource={data}
+     *   columns={columns}
+     *   editSettings={{ allowEdit: true }}
+     *   selectionSettings={{ type: 'Cell' }}
+     *   autoFillSettings={{ isEnabled: true }}
+     * />
+     * ```
+     */
+    autoFillSettings?: AutoFillSettings;
+
+    /**
+     * Fires when a cell fill operation begins.
+     *
+     * @event onCellFillStart
+     * @param {CellFillStartedEvent} args - Fill start event arguments
+     * @returns {void}
+     */
+    onCellFillStart?: (args: CellFillStartedEvent) => void;
+
+    /**
+     * Fires when a cell fill operation completes.
+     *
+     * @event onCellFillComplete
+     * @param {CellFillCompletedEvent<T>} args - Fill complete event arguments
+     * @returns {void}
+     */
+    onCellFillComplete?: (args: CellFillCompletedEvent<T>) => void;
+
+    /**
+     * Configures clipboard copy and paste functionality for the grid.
+     * Enables or disables copy/paste operations on selected cells or rows.
+     *
+     * @default { enabled: true }
+     *
+     * @example
+     * ```tsx
+     * <Grid
+     *   dataSource={employees}
+     *   columns={columns}
+     *   clipboardSettings={{ enabled: true }}
+     * />
+     * ```
+     */
+    clipboardSettings?: ClipboardSettings;
+
+    /**
+     * Defines the feature modules to be injected into the Grid.
+     * Injecting modules enables optional functionality and improves tree-shaking by
+     * including only the required features in the application bundle.
+     *
+     * To enable clipboard operations such as copy, paste, cut, and copy with headers,
+     * inject the `ClipboardModule`.
+     *
+     * @default {}
+     *
+     * @example
+     * ```tsx
+     * import { Grid, ClipboardModule } from '@syncfusion/react-grid';
+     *
+     * <Grid
+     *   dataSource={employees}
+     *   columns={columns}
+     *   modules={{ ClipboardModule }}
+     * />
+     * ```
+     */
+    modules?: GridModules<T>;
+
+    /**
+     * Configures spreadsheet-style formula processing for explicitly enabled columns.
+     *
+     * @default { enabled: false }
+     */
+    formulaSettings?: FormulaSettings;
 
     /**
      * Callback to determine whether a row is selectable and how its checkbox renders.
@@ -1001,6 +1753,100 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
     groupSettings?: GroupSettings;
 
     /**
+     * Enable tree mode for hierarchical data display.
+     * When enabled, uses individual tree props for configuration instead of treeDataSettings object.
+     * Provides a simplified root-level API for tree grid functionality.
+     *
+     * @default false
+     *
+     * @example
+     * ```tsx
+     * <Grid
+     *   dataSource={employeeData}
+     *   isTreeMode={true}
+     *   treeColumnIndex={1}
+     *   treeDataIdMapping="id"
+     *   treeDataParentIdField="managerId"
+     * />
+     * ```
+     */
+    isTreeMode?: boolean;
+
+    /**
+     * Column index where tree expand/collapse UI should render.
+     * Specifies which column displays the expand/collapse buttons and indentation.
+     * Used when `isTreeMode` is enabled.
+     *
+     * @default 0
+     *
+     * @example
+     * ```tsx
+     * <Grid isTreeMode={true} treeColumnIndex={1} />
+     * ```
+     */
+    treeColumnIndex?: number;
+
+    /**
+     * Field name containing children array for nested tree data mode.
+     * Expects an array field at the specified field name containing child objects.
+     * Used when `isTreeMode` is enabled.
+     *
+     * @default null
+     *
+     * @example
+     * ```tsx
+     * <Grid isTreeMode={true} treeDataChildrenField="teams" />
+     * ```
+     */
+    treeDataChildrenField?: string;
+
+    /**
+     * Unique identifier field name for parent ID tree mode.
+     * Used in conjunction with `treeDataParentIdField` to establish parent-child relationships.
+     * Used when `isTreeMode` is enabled.
+     *
+     * @default null
+     *
+     * @example
+     * ```tsx
+     * <Grid isTreeMode={true} treeDataIdMapping="id" treeDataParentIdField="managerId" />
+     * ```
+     */
+    treeDataIdMapping?: string;
+
+    /**
+     * Parent identifier field name for parent ID tree mode.
+     * References the parent node using the value from `treeDataIdMapping` field.
+     * Root nodes have null or undefined values in this field.
+     * Used when `isTreeMode` is enabled.
+     *
+     * @default null
+     *
+     * @example
+     * ```tsx
+     * <Grid isTreeMode={true} treeDataIdMapping="id" treeDataParentIdField="managerId" />
+     * ```
+     */
+    treeDataParentIdField?: string;
+
+    /**
+     * Excludes child nodes from filtered tree results when a parent row matches the active filter.
+     * Useful when filtering a tree should keep only matching parent rows and hide descendant rows unless they individually match.
+     * Used when `isTreeMode` is enabled.
+     *
+     * @default false
+     *
+     * @example
+     * ```tsx
+     * <Grid
+     *   isTreeMode={true}
+     *   treeDataChildrenField="children"
+     *   excludeChildrenWithFiltering={true}
+     * />
+     * ```
+     */
+    excludeChildrenWithFiltering?: boolean;
+    /**
      * Specifies the filtering configuration for the grid, controlling the filter UI and behavior.
      * Includes options to enable/disable filtering, set the filter UI type, define custom operators, and configure case or accent sensitivity.
      * Used to tailor the filtering experience to match application requirements and data types.
@@ -1046,6 +1892,29 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
      * ```
      */
     searchSettings?: SearchSettings;
+
+    /**
+     * Configures the column resize feature at grid scope.
+     * Controls the resize handle rendering, drag and keyboard resize interactions, distribution mode, keyboard step, and throttle interval.
+     *
+     * @default { enabled: false, mode: ResizeMode.Auto, throttle: 150, resizeKeyboardStep: 10 }
+     * @example
+     * ```tsx
+     * <Grid resizeSettings={{ enabled: false, mode: ResizeMode.Normal }} />
+     * ```
+     */
+    resizeSettings?: ResizeSettings;
+
+    /**
+     * Configures the column reorder feature at grid scope.
+     *
+     * @default { enabled: false }
+     * @example
+     * ```tsx
+     * <Grid reorderSettings={{ enabled: true }} />
+     * ```
+     */
+    reorderSettings?: ReorderSettings;
 
     /**
      * Specifies the pagination configuration for the grid, controlling how data is divided and navigated.
@@ -1481,6 +2350,116 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
     detailRowTemplate?: DetailRowTemplate<T> | ReactElement | string;
 
     /**
+     * Configuration and callbacks for auto-rendering nested detail grids.
+     * Enables hierarchical data display with callback-driven data binding.
+     * When provided with `isMasterDetail={true}`, automatically renders nested grids
+     * for expanded rows based on the specified `childDataPath`.
+     *
+     * @optional
+     * @default undefined
+     *
+     * @template T - The row data type
+     *
+     * @example
+     * ```tsx
+     * <Grid
+     *   isMasterDetail={true}
+     *   detailCellRendererParams={{
+     *     detailGridOptions: {
+     *       columns: childColumns,
+     *       height: 250,
+     *     },
+     *     getDetailRowData: (params) => {
+     *       // Provide child data via callback
+     *       params.successCallback(params.data.orderLines);
+     *     },
+     *     onDetailGridCreate: (context) => {
+     *       console.log(`Detail grid created at depth ${context.nestingDepth}`);
+     *     },
+     *   }}
+     *   childDataPath="orderLines"
+     *   maxNestingDepth={3}
+     * />
+     * ```
+     *
+     * @remarks
+     * - Requires `isMasterDetail={true}` to be enabled
+     * - Works in conjunction with `childDataPath` and `maxNestingDepth` props
+     * - Supports both synchronous and asynchronous data binding via callback
+     * - Cannot be used simultaneously with `detailRowTemplate` (this takes precedence)
+     */
+    detailCellRendererParams?: DetailCellRendererParams<T>;
+
+    /**
+     * Path to child data in the parent row object.
+     * Specifies which property contains the array of child rows for nested detail grids.
+     * Used in conjunction with `detailCellRendererParams` for auto-rendering.
+     *
+     * @optional
+     * @default undefined
+     *
+     * @example
+     * ```tsx
+     * // String notation (for simple property access)
+     * childDataPath="orderLines"
+     *
+     * // Dot notation for nested properties
+     * childDataPath="metadata.children"
+     * ```
+     *
+     * @remarks
+     * - Accepts string notation for property path (e.g., "address.details")
+     * - If specified without `detailCellRendererParams`, child data is displayed in default format
+     * - Used by `getDetailRowData` callback to extract and identify child data
+     * - Ignored if `detailRowTemplate` is specified (uses old API)
+     */
+    childDataPath?: string;
+
+    /**
+     * Maximum nesting depth for recursive detail grids.
+     * Prevents infinite recursion when child grids also have nested children.
+     * Once `nestingDepth >= maxNestingDepth`, detail grids cannot have further nested grids.
+     *
+     * @optional
+     * @default 3
+     *
+     * @example
+     * ```tsx
+     * // Allow: Master → Level1 → Level2 (3 levels total)
+     * maxNestingDepth={2}
+     *
+     * // Allow: Master → Level1 → Level2 → Level3 (4 levels total)
+     * maxNestingDepth={3}
+     * ```
+     *
+     * @remarks
+     * - Must be a positive integer (> 0)
+     * - Default is 3, suitable for most hierarchical data structures
+     * - Prevents memory issues with deeply nested data
+     * - Check `canNestDeeper` from `useDetailGrid` hook to enforce limit
+     * - Depth counting starts at 0 for first-level detail grids
+     */
+    maxNestingDepth?: number;
+
+    /**
+     * Current nesting level in grid hierarchy (internal use).
+     * Automatically set by recursive DetailCellRenderer rendering.
+     * Used to track depth and enforce maxNestingDepth limit in nested grids.
+     * Level 0 = Master grid, Level 1 = First detail grid, Level 2 = Second detail grid, etc.
+     *
+     * @optional
+     * @default 0
+     * @internal
+     *
+     * @remarks
+     * - This prop is for internal use only and should not be set by end users
+     * - Automatically incremented by DetailCellRenderer for each nesting level
+     * - Used by DetailCellRenderer to prevent exceeding maxNestingDepth
+     * - Should not be modified directly in user code
+     */
+    currentNestingDepth?: number;
+
+    /**
      * Fires when a master row is expanded.
      *
      * @private
@@ -1595,6 +2574,42 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
     columnChooserSettings?: ColumnChooserSettings;
 
     /**
+     * Settings for the inline column menu displayed inside header cells.
+     * When `enabled` is true, a small per-column menu trigger will render in the header cell.
+     */
+    columnMenuSettings?: ColumnMenuSettings;
+
+    /**
+     * Fires when the column menu is opened for a specific header column.
+     * Provides the menu items and the target column for customization or cancellation.
+     *
+     * @event onColumnMenuOpen
+     * @param {ColumnMenuOpenEvent} event - Event payload containing the column and available actions.
+     * @returns {ColumnMenuOpenEvent | Promise<ColumnMenuOpenEvent>} The updated event or a Promise resolving to it.
+     */
+    onColumnMenuOpen?: (event: ColumnMenuOpenEvent) => void | ColumnMenuOpenEvent | Promise<ColumnMenuOpenEvent>;
+
+    /**
+     * Fires when the column menu is closed.
+     * Useful for resetting UI state after the menu finishes interacting.
+     *
+     * @event onColumnMenuClose
+     * @param {ColumnMenuCloseEvent} event - Event payload containing the closed column.
+     * @returns {void}
+     */
+    onColumnMenuClose?: (event: ColumnMenuCloseEvent) => void;
+
+    /**
+     * Fires when a column menu item is selected.
+     * Provides the item identifier and the target column for custom logic.
+     *
+     * @event onColumnMenuClick
+     * @param {ColumnMenuClickEvent} event - Event payload containing the clicked item and column.
+     * @returns {void}
+     */
+    onColumnMenuClick?: (event: ColumnMenuClickEvent) => void;
+
+    /**
      * Applies a CSS class to each grid row either globally or conditionally.
      * Accepts a static class name or a callback function that returns a class name based on row context.
      *
@@ -1660,6 +2675,7 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
      *
      * - Enable or disable the context menu
      * - Define default or custom menu items
+     *
      * @default { enabled: false, items: [], menuSettings: {} }
      *
      * @example
@@ -1752,13 +2768,13 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
      * Provides context about the selected item, target row/column, and triggering element.
      *
      * @event onContextMenuClick
-     * @param {MenuSelectEvent} event - Event arguments containing selected item details and grid context.
+     * @param {ContextMenuClickEvent} event - Event arguments containing selected item details and grid context.
      * @returns {void}
      *
      * @example
      * ```tsx
      * const GridComponent = () => {
-     *   const handleContextMenuClick = (event: MenuSelectEvent) => {
+     *   const handleContextMenuClick = (event: ContextMenuClickEvent) => {
      *     // Handle the selected context menu action
      *   };
      *
@@ -1773,7 +2789,7 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
      * };
      * ```
      */
-    onContextMenuClick?: (event: MenuSelectEvent) => void;
+    onContextMenuClick?: (event: ContextMenuClickEvent) => void;
 
     /**
      * Fires at the start of grid initialization before data processing. and component mount.
@@ -2266,6 +3282,115 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
     onSearch?: (event: SearchEvent) => void;
 
     /**
+     * Fires when a column resize interaction begins.
+     * Triggered on pointer-down of the resize handle, keyboard focus activation, or the start of a programmatic resize/auto-fit.
+     *
+     * @event onColumnResizeStart
+     * @param {ColumnResizeStartEvent} event - Event arguments containing the target column, current width, and a cancelable flag.
+     * @returns {void}
+     * @example
+     * ```tsx
+     * const handleResizeStart = (event: ColumnResizeStartEvent) => {
+     *   if (event.column.field === 'id') {
+     *     event.cancel = true;
+     *   }
+     * };
+     *
+     * return <Grid onColumnResizeStart={handleResizeStart} />;
+     * ```
+     */
+    onColumnResizeStart?: (event: ColumnResizeStartEvent) => void;
+
+    /**
+     * Fires as the column width changes during an active resize interaction.
+     * Triggered continuously while the user drags the resize handle, steps with the keyboard, or when a programmatic resize/auto-fit updates a column.
+     *
+     * @event onColumnResize
+     * @param {ColumnResizeEvent} event - Event arguments containing the target column and the new width in pixels.
+     * @returns {void}
+     * @example
+     * ```tsx
+     * const handleResize = (event: ColumnResizeEvent) => {
+     *   console.log(event.column.field, event.width);
+     * };
+     *
+     * return <Grid onColumnResize={handleResize} />;
+     * ```
+     */
+    onColumnResize?: (event: ColumnResizeEvent) => void;
+
+    /**
+     * Fires when a column resize interaction ends.
+     * Triggered on pointer-up of the resize handle, end of a keyboard resize step, or completion of a programmatic resize/auto-fit on each updated column.
+     *
+     * @event onColumnResizeEnd
+     * @param {ColumnResizeEndEvent} event - Event arguments containing the target column and the final width in pixels.
+     * @returns {void}
+     * @example
+     * ```tsx
+     * const handleResizeEnd = (event: ColumnResizeEndEvent) => {
+     *   console.log('Final width:', event.column.field, event.width);
+     * };
+     *
+     * return <Grid onColumnResizeEnd={handleResizeEnd} />;
+     * ```
+     */
+    onColumnResizeEnd?: (event: ColumnResizeEndEvent) => void;
+
+    /**
+     * Fires when a column reorder interaction begins.
+     *
+     * @event onColumnReorderStart
+     * @param {ColumnReorderStartEvent<T>} event - Event arguments containing the targeted column, `fromIndex`, initial `toIndex`, and a cancelable flag.
+     * @returns {void}
+     * @example
+     * ```tsx
+     * const handleReorderStart = (event: ColumnReorderStartEvent) => {
+     *   if (event.column.field === 'OrderID') {
+     *     event.cancel = true;
+     *   }
+     * };
+     *
+     * return <Grid onColumnReorderStart={handleReorderStart} />;
+     * ```
+     */
+    onColumnReorderStart?: (event: ColumnReorderStartEvent<T>) => void;
+
+    /**
+     * Fires while a column reorder drag is in progress.
+     *
+     * @event onColumnDrag
+     * @param {ColumnReorderEvent<T>} event - Event arguments containing the targeted column, `fromIndex`, and current `toIndex`.
+     * @returns {void}
+     * @example
+     * ```tsx
+     * const handleColumnDrag = (event: ColumnReorderEvent) => {
+     *   console.log('Dragging', event.column.field, 'from', event.fromIndex, 'to', event.toIndex);
+     * };
+     *
+     * return <Grid onColumnDrag={handleColumnDrag} />;
+     * ```
+     */
+    onColumnDrag?: (event: ColumnReorderEvent<T>) => void;
+
+    /**
+     * Fires when a column reorder interaction ends.
+     *
+     * @event onColumnReorderEnd
+     * @param {ColumnReorderEndEvent<T>} event - Event arguments containing the targeted column, `fromIndex`, final `toIndex`, and a cancelable flag.
+     * @returns {void}
+     * @example
+     * ```tsx
+     * const handleReorderEnd = (event: ColumnReorderEndEvent) => {
+     *   console.log('Reordered', event.column.field, 'from', event.fromIndex, 'to', event.toIndex);
+     * };
+     *
+     * return <Grid onColumnReorderEnd={handleReorderEnd} />;
+     * ```
+     */
+    onColumnReorderEnd?: (event: ColumnReorderEndEvent<T>) => void;
+
+    /**
      * Fires when a grid row is clicked.
      * Provides details about the clicked row for custom actions.
      *
@@ -2406,6 +3531,33 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
      * ```
      */
     onRowSelect?: (event: RowSelectEvent<T>) => void;
+
+    /**
+     * Fires when a data row drag operation starts.
+     *
+     * @event onRowDragStart
+     * @param {RowDragEventArgs<T>} args - Dragged rows and source index.
+     * @returns {void}
+     */
+    onRowDragStart?: (args: RowDragEventArgs<T>) => void;
+
+    /**
+     * Fires while a data row drag operation is in progress.
+     *
+     * @event onRowDrag
+     * @param {RowDragEventArgs<T>} args - Dragged rows and current target index.
+     * @returns {void}
+     */
+    onRowDrag?: (args: RowDragEventArgs<T>) => void;
+
+    /**
+     * Fires when a data row drag operation ends.
+     *
+     * @event onRowDrop
+     * @param {RowDragEventArgs<T>} args - Dragged rows and final target index.
+     * @returns {void}
+     */
+    onRowDrop?: (args: RowDragEventArgs<T>) => void;
 
     /**
      * Fires before a row is deselected.
@@ -2785,6 +3937,287 @@ export interface GridProps<T = unknown> extends Omit<HTMLAttributes<HTMLDivEleme
      * ```
      */
     onDeleteDialogOpen?: (eventArgs: DeleteDialogEventArgs) => void;
+
+    /**
+     * Fires when data is copied to the clipboard from the Grid.
+     * Triggered after the copy operation completes, providing details about the copied content,
+     * selected rows/cells, and allowing cancellation of the operation.
+     *
+     * Use Cases:
+     * - Audit copying operations for sensitive data
+     * - Modify clipboard content before writing (via beforeClipboardCopy alternative event if available)
+     * - Track user interactions with grid data
+     * - Prevent copying from specific rows or in certain conditions
+     *
+     * @event onClipboardCopy
+     * @param {ClipboardCopyEvent} args - Event arguments containing copied data, selection info, and cancellation option
+     * @returns {void}
+     *
+     * @example
+     * ```tsx
+     * const handleClipboardCopy = (args: ClipboardCopyEvent) => {
+     *   console.log('Data copied to clipboard');
+     *   console.log('Selection type:', args.selectionType);
+     *   console.log('Selected rows:', args.selectedRowIndexes);
+     *   console.log('Copied text:', args.clipboardText);
+     * };
+     *
+     * return (
+     *   <Grid
+     *     dataSource={employees}
+     *     columns={columns}
+     *     selectionSettings={{ mode: 'Multiple', type: 'Row' }}
+     *     clipboardSettings={{ enabled: true }}
+     *     onClipboardCopy={handleClipboardCopy}
+     *   />
+     * );
+     * ```
+     */
+    onClipboardCopy?: (args: ClipboardCopyEvent) => void;
+
+    /**
+     * Fires when data is cut from the grid using Ctrl+X.
+     * Triggered when cut operation completes, providing details about the cut content,
+     * selected rows/cells, and allowing cancellation of the operation.
+     *
+     * Use Cases:
+     * - Audit cutting operations for sensitive data
+     * - Track user interactions with grid data
+     * - Prevent cutting from primary key columns
+     * - Prevent cutting from specific rows in certain conditions
+     * - Log or transform cut operations before data is cleared
+     *
+     * @event onClipboardCut
+     * @param {ClipboardCutEvent} args - Event arguments containing cut data, selection info, and cancellation option
+     * @returns {void}
+     *
+     * @example
+     * ```tsx
+     * const handleClipboardCut = (args: ClipboardCutEvent) => {
+     *   console.log('Data cut from grid');
+     *   console.log('Selection type:', args.selectionType);
+     *   console.log('Selected rows:', args.selectedRowIndexes);
+     *   console.log('Cut text:', args.clipboardText);
+     *
+     *   // Prevent cutting primary key columns
+     *   if (args.selectedCells?.some(cell => cell.fieldName === 'id')) {
+     *     args.cancel = true;
+     *   }
+     * };
+     *
+     * return (
+     *   <Grid
+     *     dataSource={employees}
+     *     columns={columns}
+     *     editSettings={{ allowEdit: true }}
+     *     selectionSettings={{ mode: 'Multiple', type: 'Cell' }}
+     *     clipboardSettings={{ enabled: true }}
+     *     onClipboardCut={handleClipboardCut}
+     *   />
+     * );
+     * ```
+     */
+    onClipboardCut?: (args: ClipboardCutEvent) => void;
+
+    /**
+     * Fires when data is pasted from the clipboard into the Grid.
+     * Triggered after paste operation completes, providing details about the pasted data,
+     * target location, and allowing cancellation of the operation.
+     *
+     * Use Cases:
+     * - Validate pasted data before applying to grid
+     * - Log paste operations for compliance or audit purposes
+     * - Prevent pasting into read-only rows or columns
+     * - Transform or filter pasted content
+     *
+     * @event onClipboardPaste
+     * @param {ClipboardPasteEvent} args - Event arguments containing pasted data, target location, and cancellation option
+     * @returns {void}
+     *
+     * @example
+     * ```tsx
+     * const handleClipboardPaste = (args: ClipboardPasteEvent) => {
+     *   console.log('Data pasted from clipboard');
+     *   console.log('Target row index:', args.startRowIndex);
+     *   console.log('Pasted matrix:', args.pasteMatrix);
+     *
+     *   // Prevent pasting into read-only rows
+     *   if (args.startRowIndex >= readOnlyRowStart) {
+     *     args.cancel = true;
+     *   }
+     * };
+     *
+     * return (
+     *   <Grid
+     *     dataSource={employees}
+     *     columns={columns}
+     *     editSettings={{ allowEdit: true }}
+     *     clipboardSettings={{ enabled: true }}
+     *     onClipboardPaste={handleClipboardPaste}
+     *   />
+     * );
+     * ```
+     */
+    onClipboardPaste?: (args: ClipboardPasteEvent) => void;
+
+    /**
+     * Callback that determines whether a row should be pinned and to which position.
+     *
+     * Invoked for each data row during rendering to determine its pinning bucket.
+     * Returning `'top'` places the row in the top-pinned section,
+     * returning `'bottom'` places it in the bottom-pinned section,
+     * and returning `null` or `undefined` places it in the regular scrollable section.
+     *
+     * @default undefined
+     *
+     * @example
+     * ```tsx
+     * <Grid
+     *   dataSource={employees}
+     *   isRowPinned={(row) => row.isPinned ? 'top' : null}
+     * />
+     * ```
+     */
+    isRowPinned?: (row: T) => 'top' | 'bottom' | null | undefined;
+
+    /**
+     * Callback that determines whether a row is eligible for pinning.
+     *
+     * Invoked for each row to determine if pinning actions (such as context menu options)
+     * should be available for that row. Returning `false` disables pinning for the row.
+     *
+     * @default undefined
+     *
+     * @example
+     * ```tsx
+     * <Grid
+     *   dataSource={employees}
+     *   isRowPinnable={(row) => row.allowPin !== false}
+     * />
+     * ```
+     */
+    isRowPinnable?: (row: T) => boolean;
+
+    /**
+     * Global configuration settings for pinning behavior across both rows and columns.
+     *
+     * Controls whether pinning is enabled, which dimensions (`type`) are eligible,
+     * and which sides are permitted (top/bottom for rows, left/right for columns).
+     * Follows the same composition pattern as `virtualizationSettings`.
+     *
+     * @default undefined
+     *
+     * @example
+     * ```tsx
+     * <Grid
+     *   dataSource={employees}
+     *   pinningSettings={{ enabled: true, type: PinScope.Both }}
+     *   isRowPinned={(row) => row.isPinned ? 'top' : null}
+     * />
+     * ```
+     */
+    pinningSettings?: PinningSettings;
+
+    /**
+     * Fires when a row changes its pinning state due to user interaction or programmatic update.
+     * Provides the affected row, its previous pin bucket, its current pin bucket, and the action performed.
+     *
+     * @event onPinnedRowsChanged
+     *
+     * @example
+     * ```tsx
+     * const GridComponent = () => {
+     *   const handlePinnedRowsChanged = (event: RowPinningEvent) => {
+     *     console.log('Row:', event.rowData);
+     *     console.log('Pin bucket:', event.previousPinBucket, '->', event.currentPinBucket);
+     *   };
+     *
+     *   return (
+     *     <Grid
+     *       dataSource={employees}
+     *       onPinnedRowsChanged={handlePinnedRowsChanged}
+     *     />
+     *   );
+     * };
+     * ```
+     */
+    onPinnedRowsChanged?: (event: RowPinningEvent<T>) => void;
+
+    /**
+     * Configures client-side relational pivoting for the Grid.
+     * Defines report fields, aggregate values, member filters, result totals,
+     * expansion defaults, generated-column limits and execution behavior.
+     * Requires `PivotModule` in the `modules` property.
+     *
+     * @default undefined
+     * @example
+     * ```tsx
+     * <Grid
+     *   dataSource={salesData}
+     *   modules={{ PivotModule }}
+     *   pivotSettings={{
+     *     enabled: true,
+     *     rows: ['country'],
+     *     columns: ['year'],
+     *     values: [{ field: 'sales', type: 'Sum' }]
+     *   }}
+     * />
+     * ```
+     */
+    pivotSettings?: PivotSettings<T>;
+
+    /**
+     * Returns presentation overrides for generated pivot value columns on the UI thread.
+     * Pure callbacks may run repeatedly. User presentation adjustments take precedence.
+     * Templates receive generated pivot rows, not source records. Omitted callbacks preserve defaults.
+     */
+    customizePivotColumn?: (context: PivotColumnContext<T>) => PivotColumnOverrides | undefined;
+
+    /**
+     * Returns presentation overrides for generated pivot group headers on the UI thread.
+     * Custom header templates retain the built-in expand/collapse control.
+     * Pure callbacks may run repeatedly; exceptions propagate to the React error boundary.
+     */
+    customizePivotColumnGroup?: (context: PivotColumnGroupContext<T>) => PivotColumnGroupOverrides | undefined;
+
+    /**
+     * Fires after interactive pivot configuration changes are applied.
+     * Triggered when report fields, member filters, sorting, totals or other
+     * pivot settings change through the integrated pivot controls.
+     *
+     * @event onPivotChange
+     * @param {PivotChangeEvent<T>} event - Event arguments containing the applied pivot settings.
+     * @returns {void}
+     * @example
+     * ```tsx
+     * <Grid
+     *   onPivotChange={(event) => {
+     *     console.log('Pivot settings:', event.settings);
+     *   }}
+     * />
+     * ```
+     */
+    onPivotChange?: (event: PivotChangeEvent<T>) => void;
+
+    /**
+     * Fires when pivot calculation or configuration validation fails.
+     * Triggered when the pivot report contains invalid fields or settings,
+     * unsupported data-source or scroll-mode combinations, exceeds the column limit,
+     * or encounters a calculation failure.
+     *
+     * @event onPivotError
+     * @param {PivotErrorEvent} event - Event arguments containing the error code and message.
+     * @returns {void}
+     * @example
+     * ```tsx
+     * <Grid
+     *   onPivotError={(event) => {
+     *     console.error(event.code, event.message);
+     *   }}
+     * />
+     * ```
+     */
+    onPivotError?: (event: PivotErrorEvent) => void;
 }
 
 /**
@@ -2874,6 +4307,59 @@ export interface IGrid<T = unknown> extends GridProps<T> {
     getVisibleColumns(): ColumnProps<T>[];
 
     /**
+     * Flattened column entries (with depth and leaf count) shared by header and content rendering.
+     *
+     * @private
+     */
+    stackedHeaderColumns?: FlattenedColumn<T>[];
+
+    /**
+     * Flattened leaf column elements shared by header and content rendering.
+     *
+     * @private
+     */
+    stackedFlattedColumns?: ReactElement<IColumnBase<T>>[];
+
+    /**
+     * Indicates whether the grid is currently using stacked headers.
+     */
+    isStackedHeader?: boolean;
+
+    /**
+     * Array of stacked header data where each item contains uid as key and headerText as value.
+     * Generated from stackedHeaderColumns for convenient access to header mappings.
+     *
+     * @private
+     */
+    visibleStackedHeaderColumns?: ColumnProps<T>[];
+
+    /**
+     * Flat collection of every column prop (parent and leaf) participating in a stacked header
+     * hierarchy. Useful for external consumers that need to iterate the full set without
+     * re-traversing the nested `columns` tree.
+     *
+     * @private
+     */
+    allStackedColumnProps?: ColumnProps<T>[];
+
+    /**
+     * Flat collection of leaf column props (columns with a `field`) participating in a stacked
+     * header hierarchy. Mirrors `stackedFlattedColumns` but as plain prop objects rather than
+     * React elements, for convenient access from non-rendering code paths.
+     *
+     * @private
+     */
+    stackedFlattedColumnProps?: ColumnProps<T>[];
+
+    /**
+     * Matrix of stacked header rows, where the outer index represents the depth in the column
+     * hierarchy and the inner array contains the column props rendered at that depth.
+     *
+     * @private
+     */
+    stackedRowEntries?: ColumnProps<T>[][];
+
+    /**
      * Retrieves the column configuration object for a specified unique identifier (UID).
      * Used for dynamically accessing or modifying column settings at runtime using a unique identifier.
      *
@@ -2957,6 +4443,51 @@ export interface IGrid<T = unknown> extends GridProps<T> {
      */
     setCellValue(key: string | number, field: string, value: ValueType | null,
         isDataSourceChangeRequired?: boolean): void;
+
+    /**
+     * Updates one or more fields across multiple records in bulk.
+     *
+     * @param {Object} changedData - Field names and their new values to apply to all matching records.
+     * @param {Object[]} [rowData] - Optional records to update. Falls back to selected records.
+     * @param {Function} [callback] - Optional callback invoked with the result after the changes are saved.
+     *
+     * @returns {void}
+     */
+    saveBulkChanges(changedData: Object, rowData?: Object[], callBack?: Function): void;
+
+    /**
+     * Updates and refreshes a specific row’s data and resolves once the grid's UI has committed the change.
+     * Resolves without rejecting when the row is not found or is not currently rendered (no-op).
+     *
+     * @param {string | number} key - The primary key value of the record to update.
+     * @param {Object} data - The new data object for the row.
+     * @param {boolean} isDataSourceChangeRequired - Optional. If true, updates the underlying data source.
+     * @returns {Promise<void>} Resolves after the row value is updated.
+     */
+    setRowDataAsync(key: string | number, data: T, isDataSourceChangeRequired?: boolean): Promise<void>;
+
+    /**
+     * Updates a specific cell’s value and resolves once the grid's UI has committed the change.
+     * Resolves without rejecting when the row is not found or is not currently rendered (no-op).
+     *
+     * @param {string | number} key - The primary key value of the record containing the cell.
+     * @param {string} field - The field name of the column to update.
+     * @param {ValueType | null} value - The new value for the cell.
+     * @param {boolean} isDataSourceChangeRequired - Optional. If true, updates the underlying data source.
+     * @returns {Promise<void>} Resolves after the cell value is updated.
+     */
+    setCellValueAsync(key: string | number, field: string, value: ValueType | null,
+        isDataSourceChangeRequired?: boolean): Promise<void>;
+
+    /**
+     * Updates one or more fields across multiple records in bulk and resolves when the changes are saved.
+     *
+     * @param {Object} changedData - Field names and their new values to apply to all matching records.
+     * @param {Object[]} [rowData] - Optional records to update. Falls back to selected records.
+     *
+     * @returns {Promise<Object>} A promise that resolves with the save result once the operation completes.
+     */
+    saveBulkChangesAsync(changedData: Object, rowData?: Object[]): Promise<Object | void>;
 
     /**
      * Retrieves the current configuration of all columns in the grid.
@@ -3085,6 +4616,70 @@ export interface IGrid<T = unknown> extends GridProps<T> {
      * @returns {void}
      */
     clearSelection(): void;
+
+    /**
+     * Copies the currently selected cells or rows to the clipboard.
+     * Can optionally include column headers in the copied content.
+     *
+     * @param {boolean} withHeaders - Optional. Includes column headers when true.
+     * @returns {Promise<void>}
+     *
+     * @example
+     * ```tsx
+     * await gridRef.current?.copyToClipboard(true);
+     * ```
+     */
+    copyToClipboard(withHeaders?: boolean): Promise<void>;
+
+    /**
+     * Pastes clipboard text into the current grid selection.
+     * The data is applied starting from the active cell or first selected row.
+     *
+     * @param {string} clipboardText - Clipboard content to paste into the grid.
+     * @returns {void}
+     *
+     * @example
+     * ```tsx
+     * gridRef.current?.pasteFromClipboard('10248\tVINET');
+     * ```
+     */
+    pasteFromClipboard(clipboardText: string): void;
+
+    /**
+     * Cuts the current grid selection to the clipboard.
+     * The selected data is copied and then removed from the grid.
+     *
+     * @returns {Promise<void>}
+     *
+     * @example
+     * ```tsx
+     * await gridRef.current?.cutToClipboard();
+     * ```
+     */
+    cutToClipboard(): Promise<void>;
+
+    /**
+     * Executes cell fill from source selection to destination range.
+     * Generates fill values based on detected patterns and applies them to grid.
+     *
+     * @param {AutoFillRange} fillRange - The destination range to fill
+     * @returns {Promise<void>} Resolves when fill operation completes
+     *
+     * @example
+     * ```tsx
+     * const gridRef = useRef<GridRef>(null);
+     *
+     * const handleFill = async () => {
+     *   await gridRef.current?.applyFill({
+     *     targetCells: destinationCells,
+     *     direction: 'down',
+     *     fillCount: 5,
+     *     isRangeReduction: false
+     *   });
+     * };
+     * ```
+     */
+    applyFill(fillRange: AutoFillRange): Promise<void>;
 
     /**
      * Selects a single cell specified by row key and field name.
@@ -3231,6 +4826,34 @@ export interface IGrid<T = unknown> extends GridProps<T> {
      */
     clearSort(fields?: string[]): void;
 
+    /**
+     * Sorts a specified column and resolves once the grid's UI has committed the new sort order.
+     * Resolves without rejecting when the sort is vetoed by `onSortStart` or is a no-op.
+     * Used to sequence a subsequent grid action so it operates on the post-sort grid state.
+     *
+     * @param {string} columnName - The name of the column to sort (e.g., field name).
+     * @param {SortDirection | string} sortDirection - The sorting direction ('Ascending' or 'Descending').
+     * @param {boolean} isMultiSort - Optional. Specifies whether to maintain previously sorted columns.
+     * @returns {Promise<void>} Resolves after the sort completes.
+     */
+    sortColumnAsync(columnName: string, sortDirection: SortDirection | string, isMultiSort?: boolean): Promise<void>;
+
+    /**
+     * Removes sorting from a specified column and resolves once the grid's UI has committed the change.
+     *
+     * @param {string} columnName - The name of the column to remove sorting from (e.g., field name).
+     * @returns {Promise<void>} Resolves after the sort is removed.
+     */
+    removeSortColumnAsync(columnName: string): Promise<void>;
+
+    /**
+     * Clears sorting from all columns and resolves once the grid's UI has committed the unsorted state.
+     *
+     * @param {string[]} fields - Optional. An array of field names to clear sorts for. If omitted, clears all sorts.
+     * @returns {Promise<void>} Resolves after sorting is cleared.
+     */
+    clearSortingAsync(fields?: string[]): Promise<void>;
+
 
     /**
      * Filters grid rows by a specified column with given options.
@@ -3261,6 +4884,33 @@ export interface IGrid<T = unknown> extends GridProps<T> {
     clearFilter(fields?: string[]): void;
 
     /**
+     * Applies a filter to a specific column and resolves once the grid's UI has committed the filtered result.
+     * Resolves without rejecting when the filter is vetoed by `onFilterStart` or is a no-op.
+     * Used to sequence a subsequent grid action so it operates on the post-filter grid state.
+     *
+     * @param {string} fieldName - The `field` name of the column to filter.
+     * @param {string} filterOperator - The operator to apply (e.g., 'contains', 'equal').
+     * @param {ValueType | Array<ValueType>} filterValue - The value to filter against.
+     * @param {string} predicate - Optional. The relationship between filter queries ('AND' or 'OR').
+     * @param {boolean} caseSensitive - Optional. If true, performs case-sensitive filtering. If false, ignores case.
+     * @param {boolean} ignoreAccent - Optional. If true, ignores diacritic characters during filtering.
+     * @returns {Promise<void>} Resolves after the filter is applied.
+     */
+    filterByColumnAsync(fieldName: string, filterOperator: string,
+        filterValue: ValueType| ValueType[],
+        predicate?: string, caseSensitive?: boolean,
+        ignoreAccent?: boolean): Promise<void>;
+
+    /**
+     * Clears filters applied to the specified fields and resolves once the grid's UI has committed
+     * the unfiltered state.
+     *
+     * @param {string[]} fields - An array of field names to clear filters for.
+     * @returns {Promise<void>} Resolves after filtering is cleared.
+     */
+    clearFilteringAsync(fields: string[]): Promise<void>;
+
+    /**
      * Removes the filter applied to a specific column by its field name.
      * Clears the filter for the specified column, optionally resetting the filter bar’s input value.
      * Used to programmatically remove filtering from a single column.
@@ -3283,6 +4933,15 @@ export interface IGrid<T = unknown> extends GridProps<T> {
     search(searchString?: string): void;
 
     /**
+     * Searches grid records and resolves once the grid's UI has committed the search results.
+     * Resolves without rejecting when the search is vetoed by `onSearchStart` or is a no-op.
+     *
+     * @param {string} searchString - Optional. The search term to apply. If omitted, clears the search.
+     * @returns {Promise<void>} Resolves after the search completes.
+     */
+    searchAsync(searchString?: string): Promise<void>;
+
+    /**
      * Navigates to a specific page in the grid’s paginated data.
      * Updates the grid to display the data for the specified page number.
      *
@@ -3290,6 +4949,15 @@ export interface IGrid<T = unknown> extends GridProps<T> {
      * @returns {void}
      */
     goToPage(pageNumber: number): void;
+
+    /**
+     * Navigates to a specific page and resolves once the grid's UI has committed the new page's data.
+     * Resolves without rejecting when the navigation is vetoed by `onPageChangeStart` or is a no-op.
+     *
+     * @param {number} pageNumber - The page number to navigate to.
+     * @returns {Promise<void>} Resolves after the page change completes.
+     */
+    goToPageAsync(pageNumber: number): Promise<void>;
 
     /**
      * Updates the text of an external message displayed in the grid.
@@ -3395,6 +5063,36 @@ export interface IGrid<T = unknown> extends GridProps<T> {
      * @returns {void}
      */
     updateRecord(index: number, data: T): void;
+
+    /**
+     * Adds a new record and resolves once the grid's UI has committed the new row.
+     * Resolves without rejecting when the add is vetoed or is a no-op.
+     *
+     * @param {Object} data - Optional. The data object for the new record.
+     * @param {number} index - Optional. The index at which to insert the new record.
+     * @returns {Promise<void>} Resolves after the add operation completes.
+     */
+    addRecordAsync(data?: T, index?: number): Promise<void>;
+
+    /**
+     * Deletes a record and resolves once the grid's UI has committed the removal.
+     * Resolves without rejecting when the delete is vetoed or is a no-op.
+     *
+     * @param {string} fieldName - Optional. The field name to match for identifying the record to delete.
+     * @param {Object | Object[]} data - Optional. The data object or array of objects to match for deletion.
+     * @returns {Promise<void>} Resolves after the delete operation completes.
+     */
+    deleteRecordAsync(fieldName?: string, data?: T): Promise<void>;
+
+    /**
+     * Updates a specific row and resolves once the grid's UI has committed the change.
+     * Resolves without rejecting when the update is vetoed or is a no-op.
+     *
+     * @param {number} index - The zero-based index of the row to update.
+     * @param {Object} data - The new data object for the row.
+     * @returns {Promise<void>} Resolves after the update operation completes.
+     */
+    updateRecordAsync(index: number, data: T): Promise<void>;
 
     /**
      * Validates all fields in the current edit or add form against their defined rules.
@@ -3540,6 +5238,160 @@ export interface IGrid<T = unknown> extends GridProps<T> {
      * @returns {void}
      */
     clearGrouping(): void;
+
+    /**
+     * Groups the grid by the specified column fields and resolves once the grid's UI has committed the change.
+     * Resolves without rejecting when the group is vetoed by `onGroupStart` or is a no-op.
+     *
+     * @param {string[]} fields - The collection of field names of the column to group by.
+     * @param {boolean} [isResetRequired] - If true, resets existing groupings before applying the new grouping.
+     * @returns {Promise<void>} Resolves after grouping completes.
+     */
+    groupColumnAsync(fields: string[], isResetRequired?: boolean): Promise<void>;
+
+    /**
+     * Removes grouping for the specified column fields and resolves once the grid's UI has committed the change.
+     *
+     * @param {string[]} fields - The collection field names of the column to ungroup.
+     * @returns {Promise<void>} Resolves after ungrouping completes.
+     */
+    ungroupColumnAsync(fields: string[]): Promise<void>;
+
+    /**
+     * Removes all active groupings and resolves once the grid's UI has committed the ungrouped state.
+     *
+     * @returns {Promise<void>} Resolves after grouping is cleared.
+     */
+    clearGroupingAsync(): Promise<void>;
+
+    /**
+     * Reverts the most recent grid operation (edit, add, delete, paste, autofill, or batch save).
+     * Restores the previous state in the grid's canonical data source and refreshes the view.
+     * Requires `editSettings.allowUndoRedo` to be enabled.
+     *
+     * @returns {Promise<void>} Resolves after the undo operation completes.
+     *
+     * @example
+     * ```tsx
+     * const gridRef = useRef<GridRef>(null);
+     *
+     * // Undo the last operation
+     * await gridRef.current?.undo();
+     * ```
+     */
+    undo(): Promise<void>;
+
+    /**
+     * Reapplies the most recently undone grid operation.
+     * Restores the committed state in the grid's canonical data source and refreshes the view.
+     * Requires `editSettings.allowUndoRedo` to be enabled.
+     *
+     * @returns {Promise<void>} Resolves after the redo operation completes.
+     *
+     * @example
+     * ```tsx
+     * const gridRef = useRef<GridRef>(null);
+     *
+     * // Redo the last undone operation
+     * await gridRef.current?.redo();
+     * ```
+     */
+    redo(): Promise<void>;
+
+    /**
+     * Returns the current number of undoable actions in the history stack.
+     * Each committed operation (edit, add, delete, paste, autofill, batch save) counts as one action.
+     * Requires `editSettings.allowUndoRedo` to be enabled.
+     *
+     * @returns {number} The number of actions available to undo.
+     *
+     * @example
+     * ```tsx
+     * const gridRef = useRef<GridRef>(null);
+     *
+     * const undoCount = gridRef.current?.getUndoActionsCount() ?? 0;
+     * console.log(`${undoCount} operations can be undone`);
+     * ```
+     */
+    getUndoActionsCount(): number;
+
+    /**
+     * Returns the current number of redoable actions in the history stack.
+     * After an undo operation, the undone action becomes available for redo.
+     * Requires `editSettings.allowUndoRedo` to be enabled.
+     *
+     * @returns {number} The number of actions available to redo.
+     *
+     * @example
+     * ```tsx
+     * const gridRef = useRef<GridRef>(null);
+     *
+     * const redoCount = gridRef.current?.getRedoActionsCount() ?? 0;
+     * console.log(`${redoCount} operations can be redone`);
+     * ```
+     */
+    getRedoActionsCount(): number;
+
+    /**
+     * Clears all undo and redo history, removing all recorded operations.
+     * Useful for resetting the history after data source changes, sorting, filtering, or other structural changes.
+     * Requires `editSettings.allowUndoRedo` to be enabled.
+     *
+     * @returns {void}
+     *
+     * @example
+     * ```tsx
+     * const gridRef = useRef<GridRef>(null);
+     *
+     * // Clear history after refreshing the data source
+     * gridRef.current?.clearUndoRedoHistory();
+     * ```
+     */
+    clearUndoRedoHistory(): void;
+
+    /**
+     * Toggles the expansion state of a specific tree node.
+     * If expanded, it collapses; if collapsed, it expands.
+     *
+     * @param {string} treeKey - The unique identifier of the node to toggle (e.g., '0', '0_0', '0_0_1').
+     * @returns {void}
+     *
+     * @example
+     * ```tsx
+     * const gridRef = useRef<GridRef>(null);
+     *
+     * // Toggle a node's expansion state
+     * gridRef.current?.treeToggleNodeExpansion?.('0_0');
+     * ```
+     */
+    treeToggleNodeExpansion?: (treeKey: string, rowData: TreeGridRow) => void;
+
+    /**
+     * Provides access to the rendered tree data array (flattened, filtered by expansion state).
+     * Used for integration with custom rendering or data transformation pipelines.
+     *
+     * @private
+     *
+     */
+    treeRenderData?: any[];
+
+    /**
+     * Provides access to the complete normalized tree data array (including collapsed nodes).
+     * Contains all tree hierarchy information with metadata properties (treeLevel, treeKey, treeParentKey, etc.).
+     *
+     * @private
+     *
+     */
+    treeNormalizedData?: any[];
+
+    /**
+     * Provides access to the Set of currently expanded node keys.
+     * Used to track which nodes are currently expanded in the tree view.
+     *
+     * @private
+     *
+     */
+    treeExpandedKeys?: Set<string>;
 }
 
 /**

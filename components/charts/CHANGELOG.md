@@ -1,40 +1,62 @@
 # Changelog
 
+## 35.1.37 (2026-09-29)
+
+### Chart
+
+#### Features
+
+- **Excel and CSV Export:** Enables exporting chart data directly to Excel (.xlsx) and CSV formats, making it easy to save, share, or further analyze the underlying data outside the chart. View [Excel and CSV Export](https://react.syncfusion.com/react-ui/charts/print-and-export/?theme=material#excel-export) demo.
+
+- **Linear and Radial Gradient:** Introduces linear and radial gradient fill support for series, backgrounds, and other chart elements, enabling smoother color transitions and richer visual styling. View [Linear and Radial Gradient](https://react.syncfusion.com/react-ui/charts/layout-and-styling/?theme=material#gradient) demo.
+
+- **Axis Label Template:** Supports template-based rendering of axis labels, allowing custom HTML content, icons, and styling to be applied for more informative and visually distinct axes. View [Axis Label Template](https://react.syncfusion.com/react-ui/charts/axis-configuration/axis-labels/?theme=material#label-template) demo.
+
+- **Minimum Visible Points in Zooming:** Introduces a configurable minimum number of visible data points during zoom operations, preventing excessive zoom-in and preserving chart readability. View [Minimum Visible Points](https://react.syncfusion.com/react-ui/charts/interactivity/zooming-and-panning/?theme=material#minimum-visible-points) demo.
+
+## 34.2.4 (2026-08-18)
+
+### Chart
+
+#### Bug Fixes
+
+- Enhanced Chart performance for faster rendering and a more responsive user experience.
+
 ## 34.1.29 (2026-07-06)
 
 ### Chart
 
 #### Features
 
-- **Stacked and 100% Stacked Line:** Introduces stacked and 100% stacked line series for visualizing cumulative values across categories, with configurable stacking groups and percentage normalization. View [Stacked and 100% Stacked Line ](https://react.syncfusion.com/react-ui/charts/line-charts/line-chart/?theme=material#stacked-line)demo.
+- **Stacked and 100% Stacked Line:** Introduces stacked and 100% stacked line series for visualizing cumulative values across categories, with configurable stacking groups and percentage normalization. View [Stacked and 100% Stacked Line](https://react.syncfusion.com/react-ui/charts/line-charts/line-chart/?theme=material#stacked-line)demo.
 
-- **Range and Stacked Step Area:** Introduces range step area and stacked step area series for visualizing step-wise data transitions with support for stacking and range-based rendering. View [Range and Stacked Step Area ](https://react.syncfusion.com/react-ui/charts/area-charts/range-area-chart/?theme=material#range-step-area)demo.
+- **Range and Stacked Step Area:** Introduces range step area and stacked step area series for visualizing step-wise data transitions with support for stacking and range-based rendering. View [Range and Stacked Step Area](https://react.syncfusion.com/react-ui/charts/area-charts/range-area-chart/?theme=material#range-step-area)demo.
 
-- **Box and Whisker :** Introduces the Box and Whisker (box plot) series for visualizing data distribution, including minimum, maximum, median, quartiles, and outliers. View [Box and Whisker ](https://react.syncfusion.com/react-ui/charts/box-and-whisker-chart/?theme=material)demo.
+- **Box and Whisker :** Introduces the Box and Whisker (box plot) series for visualizing data distribution, including minimum, maximum, median, quartiles, and outliers. View [Box and Whisker](https://react.syncfusion.com/react-ui/charts/box-and-whisker-chart/?theme=material)demo.
 
-- **Cylindrical Column and Bar support:** Provides cylindrical rendering for column and bar series to enhance visual appearance with 3D-like styling. View [Cylindrical Column and Bar ](https://react.syncfusion.com/react-ui/charts/column-and-bar-charts/column-chart/?theme=material#cylindrical-column)demo.
+- **Cylindrical Column and Bar support:** Provides cylindrical rendering for column and bar series to enhance visual appearance with 3D-like styling. View [Cylindrical Column and Bar](https://react.syncfusion.com/react-ui/charts/column-and-bar-charts/column-chart/?theme=material#cylindrical-column)demo.
 
-- **Polar and Radar Series:** Introduces Polar and Radar chart types for visualizing multivariate data in a circular layout. View [Polar and Radar Series ](https://react.syncfusion.com/react-ui/charts/polar-and-radar-charts/polar/?theme=material)demo.
+- **Polar and Radar Series:** Introduces Polar and Radar chart types for visualizing multivariate data in a circular layout. View [Polar and Radar Series](https://react.syncfusion.com/react-ui/charts/polar-and-radar-charts/polar/?theme=material)demo.
 
-- **Technical Indicators:** Built-in financial indicators such as ATR, RSI, MACD, Bollinger Bands, SMA, EMA, and Stochastic are now available to support advanced analysis, trend evaluation, and technical insights. View [Technical Indicators ](https://react.syncfusion.com/react-ui/charts/chart-elements/indicators/?theme=material)demo.
+- **Technical Indicators:** Built-in financial indicators such as ATR, RSI, MACD, Bollinger Bands, SMA, EMA, and Stochastic are now available to support advanced analysis, trend evaluation, and technical insights. View [Technical Indicators](https://react.syncfusion.com/react-ui/charts/chart-elements/indicators/?theme=material)demo.
 
-- **Scrollbars:** Enables efficient navigation of large datasets through integrated scrollbars, ensuring smooth interaction and seamless coordination with zooming behavior. View[ Scrollbars ](https://react.syncfusion.com/react-ui/charts/interactivity/zooming-and-panning/?theme=material#scrollbar)demo.
+- **Scrollbars:** Enables efficient navigation of large datasets through integrated scrollbars, ensuring smooth interaction and seamless coordination with zooming behavior. View [Scrollbars](https://react.syncfusion.com/react-ui/charts/interactivity/zooming-and-panning/?theme=material#scrollbar)demo.
 
-- **Series Labels:** Supports displaying series-level labels directly within the chart area, improving readability and clear identification of multiple data series. View [Series Labels ](https://npmci-react.syncfusion.com/development-react-ui/charts/chart-elements/series-label/?theme=material)demo,
+- **Series Labels:** Supports displaying series-level labels directly within the chart area, improving readability and clear identification of multiple data series. View [Series Labels](https://react.syncfusion.com/react-ui/charts/chart-elements/series-label/?theme=material)demo,
 
-- **Last Value Labels:** Displays the last data point value for each series, with customizable formatting for improved clarity and data insight. View [Last Value Labels ](https://react.syncfusion.com/react-ui/charts/chart-elements/last-value-label/?theme=material)demo.
+- **Last Value Labels:** Displays the last data point value for each series, with customizable formatting for improved clarity and data insight. View [Last Value Labels](https://react.syncfusion.com/react-ui/charts/chart-elements/last-value-label/?theme=material)demo.
 
-- **No Data Template Support:** Introduces customizable templates to display informative UI when no data is available. View [No Data Template ](https://npmci-react.syncfusion.com/react-ui/charts/layout-and-styling/?theme=material#no-data-template)demo.
+- **No Data Template Support:** Introduces customizable templates to display informative UI when no data is available. View [No Data Template](https://react.syncfusion.com/react-ui/charts/layout-and-styling/?theme=material#no-data-template)demo.
 
-- **Range Color Mapping:** Applies color variations based on value ranges or conditions to improve visual clarity and highlight patterns. View [Range Color Mapping ](https://react.syncfusion.com/react-ui/charts/layout-and-styling/?theme=material#range-color-mapping)demo.
+- **Range Color Mapping:** Applies color variations based on value ranges or conditions to improve visual clarity and highlight patterns. View [Range Color Mapping](https://react.syncfusion.com/react-ui/charts/layout-and-styling/?theme=material#range-color-mapping)demo.
 
-- **Multi-level Labels:** Supports rendering hierarchical axis labels across multiple levels, improving readability and grouping of categorized data. View [Multi-level Labels ](https://react.syncfusion.com/react-ui/charts/axis-configuration/axis-labels/?theme=material#multilevel-labels)demo.
+- **Multi-level Labels:** Supports rendering hierarchical axis labels across multiple levels, improving readability and grouping of categorized data. View [Multi-level Labels](https://react.syncfusion.com/react-ui/charts/axis-configuration/axis-labels/?theme=material#multilevel-labels)demo.
 
 ### Pie Chart
 
 #### Features
 
-- **Annotation:** Adds support for placing custom annotations such as text, images, or HTML elements at specific positions within pie and donut charts. View  [Annotation ](https://npmci-react.syncfusion.com/react-ui/charts/pie-charts/pie/?theme=material#pie-annotation)demo.
+- **Annotation:** Adds support for placing custom annotations such as text, images, or HTML elements at specific positions within pie and donut charts. View [Annotation](https://react.syncfusion.com/react-ui/charts/pie-charts/pie/?theme=material#pie-annotation)demo.
 
 ## 33.1.44 (2026-03-16)
 

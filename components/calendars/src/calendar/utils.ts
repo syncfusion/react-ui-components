@@ -1,6 +1,8 @@
 import { CalendarView } from '../calendar/types';
 import { CalendarCellData, CalendarSystem } from '../calendar-core';
 
+type RangePrecision = 'date' | 'month' | 'year';
+
 export const getViewNumber: (view: CalendarView) => number = (view: CalendarView): number => {
     switch (view) {
     case CalendarView.Month:
@@ -284,31 +286,30 @@ export const buildCellState: (
     let isRangeEndpointSelected: boolean = false;
     if (isMonthView) {
         isSelected = computeSelectedForMonth(date, ctx.normalizedDates, !!ctx.multiSelect);
-        if (!isSelected && ctx.range && Array.isArray(ctx.range) &&
-            (cell.inRange || (!!ctx.focusTodayOnOtherMonth && !ctx.isRangePreview))) {
+        if (!isSelected && ctx.range && Array.isArray(ctx.range)) {
             const [start, end] = ctx.range;
+            const canApplyStartSelection: boolean = cell.inRange || !!ctx.focusTodayOnOtherMonth;
+            const canApplyEndSelection: boolean = cell.inRange || (!!ctx.focusTodayOnOtherMonth && !ctx.isRangePreview);
             if (!ctx.suppressRangeSelection) {
-                if (start instanceof Date && !isNaN(start.getTime())) {
-                    isRangeEndpointSelected = date.toDateString() === start.toDateString();
+                if (canApplyStartSelection && isValidDateObj(start)) {
+                    isRangeEndpointSelected = calendarSystem.isSameDate(date, start);
                     isSelected = isRangeEndpointSelected;
                 }
-                if (!isSelected && end instanceof Date && !isNaN(end.getTime())) {
-                    isRangeEndpointSelected = date.toDateString() === end.toDateString();
+                if (!isSelected && canApplyEndSelection && isValidDateObj(end)) {
+                    isRangeEndpointSelected = calendarSystem.isSameDate(date, end);
                     isSelected = isRangeEndpointSelected;
                 }
             }
         }
     } else if (isYearView) {
-        if (ctx.range && Array.isArray(ctx.range) && (cell.inRange || !!ctx.focusTodayOnOtherMonth)) {
+        if (ctx.range && Array.isArray(ctx.range) && cell.inRange) {
             const [start, end] = ctx.range;
             if (!ctx.suppressRangeSelection) {
-                if (start instanceof Date && !isNaN(start.getTime())) {
-                    isRangeEndpointSelected = calendarSystem.isSameMonth(date, start);
-                    isSelected = isRangeEndpointSelected;
+                if (isValidDateObj(start)) {
+                    isSelected = calendarSystem.isSameMonth(date, start);
                 }
-                if (!isSelected && end instanceof Date && !isNaN(end.getTime())) {
-                    isRangeEndpointSelected = calendarSystem.isSameMonth(date, end);
-                    isSelected = isRangeEndpointSelected;
+                if (!isSelected && isValidDateObj(end)) {
+                    isSelected = calendarSystem.isSameMonth(date, end);
                 }
             }
         }
@@ -316,14 +317,16 @@ export const buildCellState: (
             isSelected = !!ctx.selectedDate && calendarSystem.isSameMonth(date, ctx.selectedDate);
         }
     } else {
-        if (ctx.range && Array.isArray(ctx.range) && (cell.inRange || (!!ctx.focusTodayOnOtherMonth && !ctx.isRangePreview))) {
+        if (ctx.range && Array.isArray(ctx.range)) {
             const [start, end] = ctx.range;
+            const canApplyStartSelection: boolean = cell.inRange || !!ctx.focusTodayOnOtherMonth;
+            const canApplyEndSelection: boolean = cell.inRange || (!!ctx.focusTodayOnOtherMonth && !ctx.isRangePreview);
             if (!ctx.suppressRangeSelection) {
-                if (start instanceof Date && !isNaN(start.getTime())) {
+                if (canApplyStartSelection && isValidDateObj(start)) {
                     isRangeEndpointSelected = calendarSystem.isSameYear(date, start);
                     isSelected = isRangeEndpointSelected;
                 }
-                if (!isSelected && end instanceof Date && !isNaN(end.getTime())) {
+                if (!isSelected && canApplyEndSelection && isValidDateObj(end)) {
                     isRangeEndpointSelected = calendarSystem.isSameYear(date, end);
                     isSelected = isRangeEndpointSelected;
                 }
@@ -439,31 +442,71 @@ export const isDateDisabledByRule: (
     return false;
 };
 
-export const isCellWithinRange: (
-    cellDate: Date,
-    range: [Date | null, Date | null] | undefined,
-    precision: 'month' | 'year',
-    calendarSystem?: CalendarSystem
-) => boolean = (
-    cellDate: Date,
-    range: [Date | null, Date | null] | undefined,
-    precision: 'month' | 'year',
-    calendarSystem?: CalendarSystem
-): boolean => {
+const getRangeValue: ( date: Date,  precision: RangePrecision, calendarSystem?: CalendarSystem) => number = (
+    date: Date, precision: RangePrecision, calendarSystem?: CalendarSystem): number => {
+    if (precision === 'date') {
+        return date.getTime();
+    }
+    const year: number = calendarSystem ? calendarSystem.getYear(date) : date.getFullYear();
+    if (precision === 'month') {
+        const month: number = calendarSystem ? calendarSystem.getMonth(date) : date.getMonth();
+        return year * 12 + month;
+    }
+    return year;
+};
+
+const isSameRangeUnit: (firstDate: Date, secondDate: Date, precision: RangePrecision, calendarSystem?: CalendarSystem) => boolean = (
+    firstDate: Date, secondDate: Date, precision: RangePrecision, calendarSystem?: CalendarSystem): boolean => {
+    if (calendarSystem) {
+        if (precision === 'date') {
+            return calendarSystem.isSameDate(firstDate, secondDate);
+        }
+        if (precision === 'month') {
+            return calendarSystem.isSameMonth(firstDate, secondDate);
+        }
+        return calendarSystem.isSameYear(firstDate, secondDate);
+    }
+    const isSameYear: boolean = firstDate.getFullYear() === secondDate.getFullYear();
+    if (precision === 'year') {
+        return isSameYear;
+    }
+    const isSameMonth: boolean = isSameYear && firstDate.getMonth() === secondDate.getMonth();
+    if (precision === 'month') {
+        return isSameMonth;
+    }
+    return isSameMonth && firstDate.getDate() === secondDate.getDate();
+};
+
+export const getRangeClassName: ( cellDate: Date, range: [Date | null, Date | null] | undefined,  precision: RangePrecision,
+    calendarSystem?: CalendarSystem, cellInRange?: boolean,  suppressRangeSelection?: boolean) => string = (
+    cellDate: Date, range: [Date | null, Date | null] | undefined, precision: RangePrecision, calendarSystem?: CalendarSystem,
+    cellInRange: boolean = true, suppressRangeSelection: boolean = false): string => {
     const [start, end] = range ?? [null, null];
     if (!isValidDateObj(start) || !isValidDateObj(end)) {
-        return false;
+        return '';
     }
-    const getComparableValue: (date: Date) => number = (date: Date): number => {
-        const year: number = calendarSystem ? calendarSystem.getYear(date) : date.getFullYear();
-        if (precision === 'month') {
-            const month: number = calendarSystem ? calendarSystem.getMonth(date) : date.getMonth();
-            return year * 12 + month;
+    if (isSameRangeUnit(start, end, precision, calendarSystem)) {
+        return '';
+    }
+    const cellValue: number = getRangeValue(cellDate, precision, calendarSystem);
+    const startValue: number = getRangeValue(start, precision, calendarSystem);
+    const endValue: number = getRangeValue(end, precision, calendarSystem);
+    const isInSelectedRange: boolean = cellInRange && cellValue >=
+        Math.min(startValue, endValue) && cellValue <= Math.max(startValue, endValue);
+    const isRangeStart: boolean = isSameRangeUnit(cellDate, start, precision, calendarSystem);
+    const isRangeEnd: boolean = isSameRangeUnit(cellDate, end, precision, calendarSystem);
+    const isRangeEndpoint: boolean = isRangeStart || isRangeEnd;
+    let rangeClass: string = '';
+    if (isInSelectedRange || (suppressRangeSelection && isRangeEndpoint)) {
+        rangeClass += ' sf-in-range';
+    }
+    if (!suppressRangeSelection) {
+        if (isRangeStart) {
+            rangeClass += ' sf-range-start';
         }
-        return year;
-    };
-    const cellValue: number = getComparableValue(cellDate);
-    const startValue: number = getComparableValue(start);
-    const endValue: number = getComparableValue(end);
-    return cellValue > Math.min(startValue, endValue) && cellValue < Math.max(startValue, endValue);
+        if (isRangeEnd) {
+            rangeClass += ' sf-range-end';
+        }
+    }
+    return rangeClass;
 };

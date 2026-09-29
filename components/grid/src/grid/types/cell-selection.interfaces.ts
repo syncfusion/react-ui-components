@@ -510,6 +510,16 @@ export interface CellSelectionModel {
     isDragging: boolean;
 
     /**
+     * Retrieves the starting (anchor) cell of the current range selection.
+     * This is the first cell selected by the user and is used as the
+     * source cell for autofill operations and source-cell styling.
+     *
+     * @returns {CellPosition | null} The selection start cell, or null if no
+     * range selection has been established.
+     */
+    getSelectionStartCell(): CellPosition | null;
+
+    /**
      * Retrieves the cell position corresponding to a DOM element.
      * Converts an HTML cell element to its row and column indexes in the grid.
      *
@@ -568,9 +578,30 @@ export interface CellSelectionModel {
     /**
      * Helper method to find the row index corresponding to a given primary key value.
      * Uses gridRef to access currentViewData or virtualized data source as needed.
+     *
      * @private
      * @param {string | number} rowKey - The primary key value of the row to find.
      * @returns {number | undefined} The zero-based index of the row with the specified key, or undefined if not found.
      */
     findRowIndexByKey(rowKey: string | number): number | undefined;
+
+    /**
+     * Helper method to build a rowKey -> rowIndex lookup map using currently available
+     * virtualized rows. Intended for scenarios that require multiple
+     * row key lookups to avoid repeated searches.
+     *
+     * @private
+     * @returns {Map<string | number, number>} Map containing row key and row index pairs.
+     */
+    buildRowKeyToIndexMap(): Map<string | number, number>;
+
+    /**
+     * Builds a rowIndex -> columnIndex lookup map of currently selected cells.
+     * Useful for determining whether the current selection forms a contiguous
+     * rectangular block without reconstructing positions from row keys and fields.
+     *
+     * @private
+     * @returns {Map<number, Set<number>>}
+     */
+    buildSelectedCellPositionMap(): Map<number, Set<number>>;
 }

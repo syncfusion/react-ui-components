@@ -2,8 +2,10 @@ import { useMemo, useCallback } from 'react';
 import { useProviderContext, cldrData, getValue, getDefaultDateObject, Browser } from '@syncfusion/react-base';
 import { useSchedulerPropsContext } from '../context/scheduler-context';
 import { CellData } from '../types/internal-interface';
-import { ResourceGroupingService } from '../services/ResourceGroupingService';
+import { ResourceGroupingService, ResourceLevel } from '../services/ResourceGroupingService';
 import { useResourceGroupingContext } from '../context/resource-grouping-context';
+import { useSchedulerRenderDatesContext } from '../context/scheduler-render-dates-context';
+import { DateService } from '../services/DateService';
 
 /**
  * Interface for weekday header cell data
@@ -48,6 +50,16 @@ interface WeekDayHeaderResult {
 }
 
 /**
+ * Internal interface for weekday items
+ */
+interface WeekdayItem {
+    label: string;
+    actualDayIndex: number;
+    isCurrentDay: boolean;
+    sourceIndex: number;
+}
+
+/**
  * Custom hook for weekday header logic
  *
  * @returns {WeekDayHeaderResult} Weekday header data
@@ -55,8 +67,9 @@ interface WeekDayHeaderResult {
  */
 export function useWeekDayHeader(): WeekDayHeaderResult {
     const { locale } = useProviderContext();
-    const { firstDayOfWeek, showWeekend, workDays } = useSchedulerPropsContext();
-    const { isGroupingEnabled, resourceTree, leafResources, groupConfig } = useResourceGroupingContext();
+    const { firstDayOfWeek, showWeekend, workDays, timezone } = useSchedulerPropsContext();
+    const { isGroupingEnabled, resourceTree, leafResources, groupConfig, isCompact, selectedLeaf } = useResourceGroupingContext();
+    const { renderDates } = useSchedulerRenderDatesContext();
 
     /**
      * Get the weekday names for the month view header
@@ -86,22 +99,19 @@ export function useWeekDayHeader(): WeekDayHeaderResult {
         });
     }, [firstDayOfWeek, locale]);
 
-    /* weekdayHeaderCells defined after weekdayItems to avoid temporal dead zone */
+    const isCurrentMonth: boolean = useMemo(() => {
+        if (!renderDates || renderDates.length === 0) {
+            return false;
+        }
+        const today: Date = DateService.getCurrentTime(timezone);
+        const renderStart: Date = DateService.normalizeDate(renderDates[0]);
+        const renderEnd: Date = DateService.normalizeDate(renderDates[renderDates.length - 1]);
+        return today >= renderStart && today <= renderEnd;
+    }, [renderDates]);
 
-    /**
-     * Build weekday slots for month view grouping
-     * Each slot represents a weekday column for resource grouping
-     */
     /**
      * Generate a neutral list of weekday items to share logic
      */
-    interface WeekdayItem {
-        label: string;
-        actualDayIndex: number;
-        isCurrentDay: boolean;
-        sourceIndex: number;
-    }
-
     const weekdayItems: WeekdayItem[] = useMemo(() => {
         const weekDayNames: string[] = getWeekDayNames();
         const items: WeekdayItem[] = [];
@@ -110,14 +120,14 @@ export function useWeekDayHeader(): WeekDayHeaderResult {
         if (showWeekend) {
             weekDayNames.forEach((day: string, index: number) => {
                 const actualDayIndex: number = (index + firstDayOfWeek) % 7;
-                const isCurrentDay: boolean = actualDayIndex === dayOfWeek;
+                const isCurrentDay: boolean = isCurrentMonth && actualDayIndex === dayOfWeek;
                 items.push({ label: day, actualDayIndex, isCurrentDay, sourceIndex: index });
             });
         } else {
             for (let i: number = 0; i < 7; i++) {
                 const actualDayIndex: number = (i + firstDayOfWeek) % 7;
                 if (workDays.includes(actualDayIndex)) {
-                    const isCurrentDay: boolean = actualDayIndex === dayOfWeek;
+                    const isCurrentDay: boolean = isCurrentMonth && actualDayIndex === dayOfWeek;
                     items.push({
                         label: weekDayNames[i >= 0 && i < weekDayNames.length ? i : 0],
                         actualDayIndex,
@@ -129,7 +139,7 @@ export function useWeekDayHeader(): WeekDayHeaderResult {
         }
 
         return items;
-    }, [firstDayOfWeek, showWeekend, workDays, getWeekDayNames]);
+    }, [firstDayOfWeek, showWeekend, workDays, getWeekDayNames, isCurrentMonth]);
 
     /**
      * Map neutral weekday items to `CellData[]` slots
@@ -161,13 +171,18 @@ export function useWeekDayHeader(): WeekDayHeaderResult {
      */
     const monthColumnLevels: CellData[][] = useMemo(() => {
         if (!isGroupingEnabled) { return undefined; }
-        return ResourceGroupingService.generateColumnLevels(
+        const leavesForLevels: ResourceLevel[] = isCompact && selectedLeaf ? [selectedLeaf] : leafResources;
+        const levels: CellData[][] = ResourceGroupingService.generateColumnLevels(
             resourceTree,
             groupConfig,
             weekdaySlots,
-            leafResources
+            leavesForLevels
         );
-    }, [isGroupingEnabled, weekdaySlots, resourceTree, groupConfig, leafResources]);
+        if (isCompact && levels.length > 1) {
+            return groupConfig.byDate ? [levels[0]] : [levels[levels.length - 1]];
+        }
+        return levels;
+    }, [isGroupingEnabled, weekdaySlots, resourceTree, groupConfig, leafResources, isCompact, selectedLeaf]);
 
     return {
         weekdayHeaderCells,

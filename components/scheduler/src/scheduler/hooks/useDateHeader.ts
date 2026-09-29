@@ -3,7 +3,7 @@ import { DateService } from '../services/DateService';
 import { useProviderContext, formatDate } from '@syncfusion/react-base';
 import { useSchedulerPropsContext } from '../context/scheduler-context';
 import { useSchedulerRenderDatesContext } from '../context/scheduler-render-dates-context';
-import { SchedulerViewChangeEvent, SchedulerDateChangeEvent } from '../types/scheduler-types';
+import { SchedulerDateChangeEvent } from '../types/scheduler-types';
 import { ViewService } from '../services/ViewService';
 
 /**
@@ -147,14 +147,14 @@ export function useDateHeader(): DateHeaderResult {
 }
 
 /**
- * Interface for naviagte hook result
+ * Interface for navigate hook result
  */
 interface NavigateResult {
 
     /**
-     * Handle date click to navigate to day view
+     * Handle date click to navigate to day view (for vertical views)
      */
-    handleDateClick: (event: MouseEvent<HTMLElement>, date: Date) => void;
+    handleDateClick: (event: MouseEvent<HTMLElement>, date: Date, isTimelineView?: boolean) => void;
 }
 
 /**
@@ -175,23 +175,21 @@ export function useNavigate(): NavigateResult {
      *
      * @param {MouseEvent<HTMLElement>} event - The mouse event that initiated the date click.
      * @param {Date} date - The date that was clicked
+     * @param {boolean} isTimeline - Whether the click occurred in a timeline view
      */
-    const handleDateClick: (event: MouseEvent<HTMLElement>, date: Date) => void =
-    useCallback((event: MouseEvent<HTMLElement>, date: Date): void => {
+    const handleDateClick: (event: MouseEvent<HTMLElement>, date: Date, isTimeline?: boolean) => void =
+    useCallback((event: MouseEvent<HTMLElement>, date: Date, isTimeline?: boolean): void => {
         event.preventDefault();
         event.stopPropagation();
         const isDayViewAvailable: boolean = ViewService.isDayViewAvailable(getAvailableViews);
-        if (isDayViewAvailable) {
-            const dateChangeEvent: SchedulerDateChangeEvent = {
-                value: date
-            };
+        const isAgendaViewAvailable: boolean = ViewService.isAgendaViewAvailable(getAvailableViews);
+        const dateChangeEvent: SchedulerDateChangeEvent = { value: date };
+        const targetView: string | null = isTimeline ? (isAgendaViewAvailable ? 'Agenda' : null) : (isDayViewAvailable ? 'Day' : null);
+        if (targetView) {
             onSelectedDateChange(dateChangeEvent);
-            const viewChangeEvent: SchedulerViewChangeEvent = {
-                value: 'Day'
-            };
-            onViewChange(viewChangeEvent);
+            onViewChange({ value: targetView });
         }
-    }, [onSelectedDateChange, onViewChange]);
+    }, [onSelectedDateChange, onViewChange, getAvailableViews]);
 
     return {
         handleDateClick

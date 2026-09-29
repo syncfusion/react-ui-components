@@ -1,9 +1,12 @@
 import {  Dispatch, RefObject, SetStateAction, useCallback, useEffect, useState } from 'react';
 import {  SearchEvent, SearchSettings } from '../types/search.interfaces';
-import { isNullOrUndefined} from '@syncfusion/react-base';
+import { isNullOrUndefined } from '@syncfusion/react-base/src/util';
 import { GridRef } from '../types/grid.interfaces';
 import { SearchAPI } from '../types/search.interfaces';
-import { ActionType, ScrollMode, VirtualSettings } from '../types';
+import { ActionType, ScrollMode } from '../types/enum';
+import { VirtualSettings } from '../types/virtualization.interface';
+import { ToolbarModule } from './useToolbar';
+import { executeGridAsyncAction, dispatchGridCancelBegin } from '../utils/utils';
 
 /**
  * Manages search configuration and execution for the Grid component.
@@ -19,7 +22,7 @@ import { ActionType, ScrollMode, VirtualSettings } from '../types';
  * @param {ScrollMode} scrollMode - Current scroll mode determining virtualization behavior
  * @returns {SearchAPI} Object containing search method, searchSettings state, and setSearchSetting updater function
  */
-export const useSearch: (gridRef?: RefObject<GridRef>, searchSetting?: SearchSettings,
+const useSearch: (gridRef?: RefObject<GridRef>, searchSetting?: SearchSettings,
     setGridAction?: (action: SearchEvent) => void, setCurrentPage?: Dispatch<SetStateAction<number>>, virtualSettings?: VirtualSettings,
     scrollMode?: ScrollMode) => SearchAPI = (gridRef?: RefObject<GridRef>, searchSetting?: SearchSettings,
                                              setGridAction?: (action: SearchEvent) => void,
@@ -87,12 +90,13 @@ export const useSearch: (gridRef?: RefObject<GridRef>, searchSetting?: SearchSet
             }
             const args: SearchEvent = { cancel: false, requestType: ActionType.Searching, value: searchValue };
             args.type = ActionType.Searching;
-            const confirmResult: boolean = await gridRef.current?.editModule?.checkUnsavedChanges?.();
+            const confirmResult: boolean = await gridRef.current?.editModule?.checkUnsavedChanges?.() ?? true;
             if (!isNullOrUndefined(confirmResult) && !confirmResult) {
                 return;
             }
             gridRef.current.onSearchStart?.(args);
             if (args.cancel) {
+                dispatchGridCancelBegin(gridRef, ActionType.Searching);
                 return;
             }
             gridRef.current.searchSettings.value = searchValue;
@@ -108,6 +112,16 @@ export const useSearch: (gridRef?: RefObject<GridRef>, searchSetting?: SearchSet
         }
     };
 
+    /**
+     * Searches the grid and resolves once the grid's UI has committed the search results.
+     * Resolves without rejecting when the search is vetoed by `onSearchStart` or is a no-op.
+     *
+     * @param {string} searchString - Search query string to filter grid records across configured fields.
+     * @returns {Promise<void>} Resolves after the search completes.
+     */
+    const searchAsync: (searchString: string) => Promise<void> = (searchString: string): Promise<void> =>
+        executeGridAsyncAction(gridRef, ActionType.Searching, () => search(searchString));
 
-    return { search, searchSettings, setSearchSetting };
+    return { search, searchSettings, setSearchSetting, ToolbarModule, searchAsync };
 };
+export { useSearch as SearchModule };

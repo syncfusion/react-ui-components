@@ -1,11 +1,12 @@
 import { useCallback, useRef, useEffect, RefObject, MouseEvent, KeyboardEvent, useMemo } from 'react';
-import { closest } from '@syncfusion/react-base';
+import { closest } from '@syncfusion/react-base/src/dom';
 import { CellSelectionModel, CellPosition, CellRange, CellSelectEvent, CellSelectingEvent, CellDeselectEvent, CellDeselectingEvent, CellData, RowCellInfo, CellIdentifier } from '../types/cell-selection.interfaces';
 import { SelectionSettings } from '../types/selection.interfaces';
 import { GridRef } from '../types/grid.interfaces';
 import { ColumnProps } from '../types/column.interfaces';
-import { CellSelectionType, IRow, SelectionMode } from '../types';
-import { getRowObjFromElement } from '../utils';
+import { CellSelectionType, SelectionMode } from '../types/enum';
+import { IRow } from '../types/interfaces';
+import { getRowObjFromElement } from '../utils/utils';
 
 /**
  * Initializes cell selection module for the grid.
@@ -90,14 +91,15 @@ CellSelectionModel => {
         return getPrimaryKeyField().length > 0;
     }, [selectionSettings, getPrimaryKeyField]);
 
-    //Parses a data-based cell key to extract rowKey and fieldName.
-    // Data-based format: "primaryKeyValue:fieldName"
+    // Parses a data-based cell key to extract rowKey and fieldName.
+    // Autofill-enabled pinned selections include an internal region suffix.
     const parseCellKeyData: (key: string) => CellIdentifier | null = useCallback((key: string): CellIdentifier | null => {
         const parts: string[] = key.split(':');
-        if (parts.length !== 2) { return null; }
+        if (parts.length < 2) { return null; }
+        const fieldName: string = parts.slice(1).join(':').replace(/::sf-pin-(top|bottom)$/, '');
         return {
             rowKey: parts[0],
-            fieldName: parts[1]
+            fieldName
         };
     }, []);
 
@@ -168,10 +170,11 @@ CellSelectionModel => {
             return null;
         }, [findRowIndexByKey, findColumnIndexByField]);
 
-    // Generates a cell key in data-based format: "primaryKeyValue:fieldName"
-    // This format persists across paging, sorting, and filtering operations.
+    // Generates a cell key in data-based format: "primaryKeyValue:fieldName".
+    // Autofill-enabled pinned rows use a region-specific suffix so their cells
+    // do not share selection state with the matching content row.
     const getCellKey: (rowIndex: number, columnIndex: number, rowData?: T) => string = useCallback(
-        (_rowIndex: number, columnIndex: number, rowData?: T): string => {
+        (rowIndex: number, columnIndex: number, rowData?: T): string => {
             const primaryKeyField: string = getPrimaryKeyField();
 
             const column: ColumnProps | undefined = isSpannedColumns ?
@@ -181,7 +184,21 @@ CellSelectionModel => {
             if (primaryKeyField && column?.field && rowData) {
                 const primaryKeyValue: unknown = rowData[primaryKeyField as keyof T];
                 const fieldName: string = column.field;
-                return `${primaryKeyValue}:${fieldName}`;
+                let pinSuffix: string = '';
+                const isAutoFillAllowed: boolean = gridRef.current?.autoFillModule?.isAutoFillAllowed?.([{
+                    rowKey: primaryKeyValue as string | number,
+                    fieldName,
+                    rowIndex,
+                    columnIndex
+                }]) === true;
+                if (isAutoFillAllowed) {
+                    const isTopPinned: boolean = (gridRef.current?.getPinnedTopTableRowsObject?.() ?? [])
+                        .some((row: IRow<ColumnProps<T>>) => row.rowIndex === rowIndex);
+                    const isBottomPinned: boolean = !isTopPinned && (gridRef.current?.getPinnedBottomTableRowsObject?.() ?? [])
+                        .some((row: IRow<ColumnProps<T>>) => row.rowIndex === rowIndex);
+                    pinSuffix = isTopPinned ? '::sf-pin-top' : isBottomPinned ? '::sf-pin-bottom' : '';
+                }
+                return `${primaryKeyValue}:${fieldName}${pinSuffix}`;
             }
 
             // Fallback: if primary key or data is missing, return empty key
@@ -244,7 +261,10 @@ CellSelectionModel => {
             // Build rowKey -> rowData map for O(1) lookups from virtualized rows
             const rowDataMap: Map<string | number, T> = new Map();
             for (const rowObj of rowsObj) {
-                const key: string | number = String((rowObj?.data as T)[primaryKeyField as keyof T]);
+                if (!(rowObj?.data as T)) {
+                    continue;
+                }
+                const key: string | number = String((rowObj?.data as T)?.[primaryKeyField as keyof T]);
                 rowDataMap.set(key, rowObj?.data as T);
             }
 
@@ -406,6 +426,10 @@ CellSelectionModel => {
         if (!column || !column.field) { return undefined; }
         return rowData?.[column.field as keyof T];
     }, [getColumnByIndex]);
+
+    const getSelectionStartCell: () => CellPosition | null = useCallback((): CellPosition | null => {
+        return rangeStartCellRef.current;
+    }, []);
 
     const isValidCellPosition: (position: CellPosition) => boolean = useCallback((position: CellPosition): boolean => {
         if (!position || position.rowIndex < 0 || position.columnIndex < 0) { return false; }
@@ -852,8 +876,11 @@ CellSelectionModel => {
 
                 // Construct cell keys and find corresponding positions
                 cellGroup.fieldNames.forEach((fieldName: string) => {
-                    const cellKey: string = `${cellGroup.rowKey}:${fieldName}`;
-                    if (selectedCellsRef.current.has(cellKey)) {
+                    const cellKey: string | undefined = Array.from(selectedCellsRef.current).find((selectedCellKey: string) => {
+                        const selectedCell: CellIdentifier | null = parseCellKeyData(selectedCellKey);
+                        return String(selectedCell?.rowKey) === String(cellGroup.rowKey) && selectedCell?.fieldName === fieldName;
+                    });
+                    if (cellKey) {
                         // O(1) lookup using pre-computed map
                         const rowIndex: number = rowKeyToIndex.get(cellGroup.rowKey);
                         const columnIndex: number = findColumnIndexByField(fieldName);
@@ -962,7 +989,11 @@ CellSelectionModel => {
     // ===============================
 
     const handleGridClick: (event: MouseEvent) => void = useCallback((event: MouseEvent): void => {
-        if (!isCellSelectionEnabled()) {
+        if (!event) {
+            return;
+        }
+        const target: Element = event.target as Element;
+        if (!isCellSelectionEnabled() || target.closest('.sf-fill-handle') || !closest(target, '.sf-grid-content-row')) {
             return;
         }
         // If a drag occurred, skip the subsequent click action (finalized by doc mouseup)
@@ -971,7 +1002,6 @@ CellSelectionModel => {
             return;
         }
 
-        const target: Element = event.target as Element;
         const position: CellPosition | null = getCellPositionFromElement(target);
         if (!position || !closest(target, '.sf-cell')) {
             return;
@@ -1454,7 +1484,9 @@ CellSelectionModel => {
         selectRange,
         selectCellsByRange,
         selectCellByIndex,
+        buildSelectedCellPositionMap,
         buildRowCellMap,
+        buildRowKeyToIndexMap,
         clearCellSelection,
         getSelectedCellsData,
         getCellKey,
@@ -1465,6 +1497,7 @@ CellSelectionModel => {
         handleGridClick,
         handleGridMouseDown,
         handleKeyDown,
+        getSelectionStartCell,
         activeCell: activeCellRef.current,
         selectedRanges: selectedRangesRef.current,
         selectedCells: selectedCellsRef.current,

@@ -1,7 +1,12 @@
 /**
  * Row Grouping Type Definitions for React Grid
  */
-import { AggregateData, GroupType, ValueType } from '.';
+import { Dispatch, NamedExoticComponent, RefObject, SetStateAction } from 'react';
+import { ValueType } from './interfaces';
+import { GroupSummaryPosition, GroupType, SortDirection } from './enum';
+import { AggregateData } from './aggregate.interfaces';
+import { RowInfo } from './grid.interfaces';
+import { ColumnProps } from './column.interfaces';
 
 /**
  * Configuration settings for row grouping feature.
@@ -96,6 +101,15 @@ export interface GroupSettings {
      * @default false
      */
     showDropArea?: boolean;
+
+
+    /**
+     * Enables group summary functionality for the grid.
+     * When set to true, the grid calculates and displays summary values for grouped data.
+     *
+     * @default false
+     */
+    groupSummaryPosition?: GroupSummary | GroupSummaryPosition;
 
     // /**
     //  * Keeps grouped columns visible in grid header after grouping.
@@ -260,6 +274,31 @@ export interface IGroupModule {
     clearGrouping: () => void;
 
     /**
+     * Add a column to grouping hierarchy and resolve once the grid's UI has committed the change.
+     * Resolves without rejecting when the group is vetoed by `onGroupStart` or is a no-op.
+     *
+     * @param {string[]} fields - Field names to group by.
+     * @param {boolean} [isResetRequired] - If true, resets existing groupings before applying the new grouping.
+     * @returns {Promise<void>} Resolves after grouping completes.
+     */
+    groupColumnAsync?: (fields: string[], isResetRequired?: boolean) => Promise<void>;
+
+    /**
+     * Remove a column from grouping hierarchy and resolve once the grid's UI has committed the change.
+     *
+     * @param {string[]} fields - Field names to ungroup.
+     * @returns {Promise<void>} Resolves after ungrouping completes.
+     */
+    ungroupColumnAsync?: (fields: string[]) => Promise<void>;
+
+    /**
+     * Clear all grouping and resolve once the grid's UI has committed the flat row display.
+     *
+     * @returns {Promise<void>} Resolves after grouping is cleared.
+     */
+    clearGroupingAsync?: () => Promise<void>;
+
+    /**
      * Expand all groups in the grid.
      *
      * @OnGroup Triggers `onGroup` event with operation 'expandall'
@@ -272,6 +311,80 @@ export interface IGroupModule {
      * @OnGroup Triggers `onGroup` event with operation 'collapseall'
      */
     collapseAll: () => void;
+}
+
+/**
+ * Callback type for determining row selectability and checkbox visibility per row.
+ *
+ * @template T - Row data type
+ * @param groupKey - The unique key of the group being evaluated
+ * @param groupLevel - The nesting level of the group (0=top-level, 1=nested, etc.)
+ * @returns GroupSummaryPosition
+ */
+export type GroupSummary = (groupKey: string, groupLevel: number) => GroupSummaryPosition;
+
+/**
+ * Props for the GroupDropArea component.
+ *
+ * @private
+ */
+export interface GroupDropAreaProps {
+    /**
+     * Array of field names currently in the grouping hierarchy (ordered).
+     *
+     */
+    groupColumns: ColumnProps[];
+
+    /**
+     * Optional CSS class name for custom styling of the group drop area container.
+     */
+    cssClass?: string;
+
+    /**
+     * Callback fired when user clicks the ungroup (close) button on a group chip.
+     *
+     * @param field - Field name to remove from grouping
+     */
+    onUngroupColumn?: IGroupModule['ungroupColumn'];
+
+    /**
+     * Current sort direction for each grouped column.
+     *
+     * Key = field name, value = sort direction.
+     */
+    sortDirections?: Record<string, SortDirection | string>;
+}
+
+/**
+ * Return type for useGroup hook
+ *
+ * @template T - Data type of grid rows
+ * @private
+ */
+export interface UseGroupResult<T = unknown> extends IGroupModule {
+    /** Set of currently expanded group keys */
+    expandedGroups: Set<string>;
+    /** Set of currently collapsed group keys */
+    collapsedGroups: Set<string>;
+    /** All currently grouped column field names (ordered) */
+    groupedColumns: string[];
+    fieldBasedExpandedGroupKeysRef: RefObject<Map<string, Set<string>>>;
+    fieldBasedCollapsedGroupKeysRef: RefObject<Map<string, Set<string>>>;
+    /** Toggle a single group row expanded/collapsed. Updates expandedGroupCountRef based on rowObject.items.length */
+    toggleGroup: (rowObject: RowInfo<T>) => void;
+    /** Determine if a group key is expanded */
+    isGroupExpanded: (key: string, field?: string) => boolean;
+    /** Current groupSettings snapshot */
+    groupSettings: GroupSettings;
+    /** Internal: update grouped columns list */
+    setGroupedColumns: (columns: string[]) => void;
+    /** Internal: update expanded groups Set */
+    setExpandedGroups: Dispatch<SetStateAction<Set<string>>>;
+    /** Internal: update collapsed groups Set */
+    setCollapsedGroups: Dispatch<SetStateAction<Set<string>>>;
+    /** Ref for the group drop area element, used for height calculations in Render */
+    groupDropAreaRef: RefObject<HTMLDivElement>;
+    GroupDropArea: NamedExoticComponent<GroupDropAreaProps>
 }
 
 /**

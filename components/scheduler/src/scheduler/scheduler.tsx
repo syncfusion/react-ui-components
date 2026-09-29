@@ -37,6 +37,9 @@ import { EditorProvider } from './context/scheduler-editor-popup-context';
 import { showRecurrenceAlert } from './utils/event-base';
 import { SchedulerPopupStateProvider } from './context/scheduler-popup-state-context';
 import { ResourceGroupingProvider } from './context/resource-grouping-context';
+import { CompactViewHeader } from './components/compact-view-header';
+import { CompactViewSidebar } from './components/compact-view-sidebar';
+import { SchedulerHeaderRowsProvider } from './context/scheduler-header-rows-context';
 
 export interface IScheduler extends SchedulerProps {
     /**
@@ -75,29 +78,51 @@ export interface IScheduler extends SchedulerProps {
     element?: HTMLDivElement | null;
 
     /**
-     * Gets the details of the currently selected event.
-     * Returns null if no event is selected.
+     * Gets the details of the currently selected event based on the appointment element or ref.
+     * Returns null if no event is selected or the event cannot be resolved from the element.
+     *
+     * @param {Element | RefObject<HTMLElement> | null} element Optional appointment element or ref whose `data-guid`
+     *  attribute is used to look up the event. When omitted, the element is resolved from the current selection.
+     * @returns {EventModel | null} The matching `EventModel` from the Scheduler data source, or `null` when not found.
      */
-    getEventDetails(appointmentEl?: Element | RefObject<HTMLElement> | null): EventModel | null;
+    getEventDetails(element?: Element | RefObject<HTMLElement> | null): EventModel | null;
 
     /**
      * Gets the details of the currently selected cell (time range, all-day state, etc.).
      * Returns null if no cell is selected.
+     *
+     * @param {Element | Element[] | null} cells Optional cell element or collection of cell elements from which the
+     *  start time, end time, and all-day state are computed. When omitted, the cells are resolved from the current selection.
+     * @returns {SchedulerCellDetails | null} The computed cell details containing `startTime`, `endTime`,
+     *  `isAllDay`, and the originating `element`, or `null` when no cell can be resolved.
      */
     getCellDetails(cells?: Element | Element[] | null): SchedulerCellDetails | null;
 
     /**
      * Opens the event editor.
      *
-     * @param action - Specifies whether to add a new event or edit the selected event.
-     * @param element - Optional context for the editor (cell to create new from a cell, or event to edit an event).
+     * @param {CrudAction} action Specifies the editor mode — `Add` to create a new event from a cell, or
+     *  `Edit`/`EditSeries`/`EditOccurrence` to edit an existing event (including recurrence variants).
+     * @param {SchedulerCellDetails | EventModel} data Optional context for the editor: a `SchedulerCellDetails`
+     *  to seed a new event from a cell, or an `EventModel` to edit. Required when `action` is `Add`;
+     *  for edit actions the event is also resolved from the current selection when omitted.
+     * @returns {void}
      */
     openEditor(action: CrudAction, data?: SchedulerCellDetails | EventModel): void;
 
     /** Closes the Editor popup */
     closeEditor(): void;
 
-    /** Opens the Quick Info popup for a cell or event */
+    /**
+     * Opens the Quick Info popup for a cell or event.
+     *
+     * @param {SchedulerCellDetails | EventModel} data The target context for the popup. When the value carries an
+     *  `event`/`guid` field it is treated as an event and the appointment popup is shown; otherwise it is treated as
+     *  cell details and the cell (new-event) popup is shown.
+     * @param {HTMLElement | null} element Optional DOM element anchoring the popup. For events this is the appointment
+     *  element used to position the popup; for cells it is the cell element from the cell details.
+     * @returns {void}
+     */
     openQuickInfoPopup(data: SchedulerCellDetails | EventModel, element: HTMLElement | null): void;
 
     /** Closes the Quick Info popup if open */
@@ -198,6 +223,8 @@ export const Scheduler: ForwardRefExoticComponent<SchedulerProps & RefAttributes
             scrollToSettings,
             timezone,
             timezoneDataSource,
+            headerRows,
+            onResourceChange,
             ...rest
         } = mergeSchedulerProps(defaultSchedulerProps, props) as SchedulerProps;
 
@@ -326,7 +353,9 @@ export const Scheduler: ForwardRefExoticComponent<SchedulerProps & RefAttributes
             viewComponents,
             weekRule,
             timezone,
-            timezoneDataSource
+            timezoneDataSource,
+            headerRows,
+            onResourceChange
         });
 
         const {
@@ -383,7 +412,7 @@ export const Scheduler: ForwardRefExoticComponent<SchedulerProps & RefAttributes
                     endTime?: Date;
                     isAllDay: boolean;
                     element: HTMLElement;
-                } = getCellDetails(cells as any, timeScale);
+                } = getCellDetails(cells, timeScale);
                 const evt: SchedulerCellDetails = {
                     startTime: details.startTime as Date,
                     endTime: details.endTime as Date,
@@ -436,12 +465,12 @@ export const Scheduler: ForwardRefExoticComponent<SchedulerProps & RefAttributes
         }, [APIs]);
 
         useEffect(() => {
-            initializeTelemetry('schedule');
+            initializeTelemetry('Scheduler');
             preRender('schedule');
         }, []);
 
         useEffect(() => {
-            requestAnimationFrame(() => scrollToWorkHour(scrollToSettings, schedulerElementRef));
+            requestAnimationFrame(() => scrollToWorkHour(scrollToSettings, schedulerElementRef, internalSelectedDate));
         }, [internalCurrentView, internalSelectedDate, scrollToSettings?.enable, scrollToSettings?.mode, scrollToSettings?.offset]);
 
         useImperativeHandle(ref, () => APIs, [APIs]);
@@ -478,7 +507,7 @@ export const Scheduler: ForwardRefExoticComponent<SchedulerProps & RefAttributes
         const tooltipProps: SchedulerTooltipProps | undefined =
             typeof eventTooltip === 'object' ? (eventTooltip as SchedulerTooltipProps) : undefined;
 
-        const schedulerTable: JSX.Element = (
+        const tableContent: JSX.Element = (
             <>
                 <div className={CSS_CLASSES.TABLE_CONTAINER}>
                     <div className={CSS_CLASSES.TABLE_WRAP}>
@@ -493,6 +522,12 @@ export const Scheduler: ForwardRefExoticComponent<SchedulerProps & RefAttributes
                     ref={morePopupRef}
                 />
             </>
+        );
+
+        const schedulerTable: JSX.Element = (
+            <CompactViewSidebar>
+                {tableContent}
+            </CompactViewSidebar>
         );
 
         return (
@@ -510,68 +545,72 @@ export const Scheduler: ForwardRefExoticComponent<SchedulerProps & RefAttributes
                     <SchedulerRenderDatesContext.Provider value={{ renderDates }}>
                         <SchedulerEventsContext.Provider value={{ eventsData, eventsProcessed }}>
                             <ResourceGroupingProvider>
-                                <SchedulerPopupStateProvider>
-                                    {header !== false &&
-                                        <SchedulerToolbar
-                                            view={internalCurrentView}
-                                            availableViews={viewComponents}
-                                            onViewButtonClick={handleViewButtonClick}
-                                            onPreviousClick={handlePreviousClick}
-                                            onNextClick={handleNextClick}
-                                            onTodayClick={handleTodayClick}
-                                            onDateDropdownClick={handleDateDropdownClick}
-                                            dateRangeText={dateRangeText}
-                                            isCalendarOpen={showCalendar}
-                                            calendarView={calendarView}
-                                            selectedDate={internalSelectedDate}
-                                            firstDayOfWeek={activeViewProps.firstDayOfWeek}
-                                            onCalendarChange={handleCalendarChange}
-                                            renderDates={renderDates}
-                                            customizeHeader={typeof header === 'function' ? header : undefined}
-                                            schedulerElementRef={schedulerElementRef}
+                                <SchedulerHeaderRowsProvider>
+                                    <SchedulerPopupStateProvider>
+                                        {header !== false &&
+                                            <SchedulerToolbar
+                                                view={internalCurrentView}
+                                                availableViews={viewComponents}
+                                                onViewButtonClick={handleViewButtonClick}
+                                                onPreviousClick={handlePreviousClick}
+                                                onNextClick={handleNextClick}
+                                                onTodayClick={handleTodayClick}
+                                                onDateDropdownClick={handleDateDropdownClick}
+                                                dateRangeText={dateRangeText}
+                                                isCalendarOpen={showCalendar}
+                                                calendarView={calendarView}
+                                                selectedDate={internalSelectedDate}
+                                                firstDayOfWeek={activeViewProps.firstDayOfWeek}
+                                                onCalendarChange={handleCalendarChange}
+                                                renderDates={renderDates}
+                                                customizeHeader={typeof header === 'function' ? header : undefined}
+                                                schedulerElementRef={schedulerElementRef}
+                                            />
+                                        }
+
+                                        <CompactViewHeader />
+
+                                        {isTooltipEnabled ? (
+                                            <SchedulerTooltip
+                                                {...(tooltipProps || {})}
+                                                onTooltipOpen={onTooltipOpen}
+                                                containerRef={schedulerElementRef}
+                                            >
+                                                {schedulerTable}
+                                            </SchedulerTooltip>
+                                        ) : (
+                                            schedulerTable
+                                        )}
+
+                                        <QuickInfoPopup
+                                            ref={cellEditRef}
+                                            onClose={handleClose}
+                                            onEditEvent={onEditEvent}
+                                            onMoreDetails={onMoreDetails}
                                         />
-                                    }
 
-                                    {isTooltipEnabled ? (
-                                        <SchedulerTooltip
-                                            {...(tooltipProps || {})}
-                                            onTooltipOpen={onTooltipOpen}
-                                            containerRef={schedulerElementRef}
-                                        >
-                                            {schedulerTable}
-                                        </SchedulerTooltip>
-                                    ) : (
-                                        schedulerTable
-                                    )}
+                                        <EditorProvider editorState={editorState}>
+                                            <EditorPopup
+                                                open={open}
+                                                onClose={onClose}
+                                                data={data}
+                                                action={action}
+                                                originalData={originalData}
+                                            />
+                                        </EditorProvider>
 
-                                    <QuickInfoPopup
-                                        ref={cellEditRef}
-                                        onClose={handleClose}
-                                        onEditEvent={onEditEvent}
-                                        onMoreDetails={onMoreDetails}
-                                    />
-
-                                    <EditorProvider editorState={editorState}>
-                                        <EditorPopup
-                                            open={open}
-                                            onClose={onClose}
-                                            data={data}
-                                            action={action}
-                                            originalData={originalData}
+                                        <ConfirmationDialog
+                                            visible={dialogState.visible}
+                                            title={dialogState.title}
+                                            message={dialogState.message}
+                                            confirmText={dialogState.confirmText}
+                                            showCancel={dialogState.showCancel}
+                                            action={dialogState.action}
+                                            onConfirm={dialogState.onConfirm || (() => confirmationDialog.hide())}
+                                            onCancel={confirmationDialog.hide}
                                         />
-                                    </EditorProvider>
-
-                                    <ConfirmationDialog
-                                        visible={dialogState.visible}
-                                        title={dialogState.title}
-                                        message={dialogState.message}
-                                        confirmText={dialogState.confirmText}
-                                        showCancel={dialogState.showCancel}
-                                        action={dialogState.action}
-                                        onConfirm={dialogState.onConfirm || (() => confirmationDialog.hide())}
-                                        onCancel={confirmationDialog.hide}
-                                    />
-                                </SchedulerPopupStateProvider>
+                                    </SchedulerPopupStateProvider>
+                                </SchedulerHeaderRowsProvider>
                             </ResourceGroupingProvider>
                         </SchedulerEventsContext.Provider>
                     </SchedulerRenderDatesContext.Provider>

@@ -1,9 +1,9 @@
 import { useRef, useEffect, useState, forwardRef, useImperativeHandle, useCallback, useMemo, RefObject, ForwardRefExoticComponent, RefAttributes, Ref, CSSProperties, memo, InputHTMLAttributes } from 'react';
-import { calculatePosition, OffsetPosition, calculateRelativeBasedPosition } from '../common/position';
+import { calculatePosition, applyPosition } from '../common/popup-positioning';
 import { AnimationOptions, IAnimation, preRender, useProviderContext } from '@syncfusion/react-base';
 import { Animation } from '@syncfusion/react-base';
-import { flip, fit, isCollide, CollisionCoordinates, getFixedScrollableParent, getZindexPartial, getElementReact, getTransformElement, getZoomValue } from '../common/collision';
-import { CollisionAxis, CollisionType, PositionAxis } from '../';
+import { getFixedScrollableParent, getZindexPartial, getCollisions, flip, getCoordinateContainer, isElementVisibleAcrossScrollParents, DEFAULT_ANCHOR_ALIGN, DEFAULT_POPUP_ALIGN } from '../common/collision-handler';
+import { CollisionAxis, CollisionType, AlignmentPoint, CollisionCoordinates, FlipResult, EMPTY_POSITION } from '../';
 
 /**
  * Defines how the popup should behave when scroll events occur in the parent container.
@@ -44,11 +44,6 @@ export interface PopupAnimationOptions {
     hide?: AnimationOptions;
 }
 
-/**
- * Specifies how the popup interprets its anchor when calculating position.
- */
-export type TargetType = 'relative' | 'container';
-
 export interface PopupProps {
 
     /**
@@ -62,14 +57,25 @@ export interface PopupProps {
      */
     open?: boolean;
 
-    /** Reference to the target element to which the popup is anchored. */
-    targetRef?: RefObject<HTMLElement>;
-
-    /** Defines the X and Y position of the popup relative to the target element.
+    /**
+     * Specifies the point on the anchor element used for popup positioning. The selected point on the anchor element is used as the reference for aligning the popup.
      *
-     * @default {X:'left', Y:'top'}
+     * - horizontal: 'left' | 'center' | 'right'
+     * - vertical: 'top' | 'center' | 'bottom'
+     *
+     * @default { horizontal: 'left', vertical: 'top' }
      */
-    position?: PositionAxis;
+    anchorAlign?: AlignmentPoint;
+
+    /**
+     * Specifies the point on the popup element that aligns with the anchor point. The selected point on the popup is positioned against the point defined by the `anchorAlign` property.
+     *
+     * - horizontal: 'left' | 'center' | 'right'
+     * - vertical: 'top' | 'center' | 'bottom'
+     *
+     * @default { horizontal: 'left', vertical: 'bottom' }
+     */
+    popupAlign?: AlignmentPoint;
 
     /** Horizontal offset for positioning the popup.
      *
@@ -102,19 +108,13 @@ export interface PopupProps {
      *
      * @default 'body'
      */
-    relateTo?: HTMLElement | string;
+    relateTo?: HTMLElement;
 
     /** Reference to an optional viewport element for collision detection.
      *
      * @default null
      */
     viewPortElementRef?: RefObject<HTMLElement | null>;
-
-    /** Defines the popup relate's element when opening the popup.
-     *
-     * @default null
-     */
-    relativeElement?: HTMLElement | null;
 
     /** Z-index of the popup to manage stacking context.
      *
@@ -145,15 +145,6 @@ export interface PopupProps {
      * @default false
      */
     autoReposition?: boolean;
-
-    /**
-     * Specifies how to interpret the anchor for positioning:
-     * - 'relative'  => position relative to the anchor element's box (tooltip/dropdown)
-     * - 'container' => position relative to the container viewport (BODY or a panel)
-     *
-     * @default 'relative'
-     */
-    targetType?: TargetType;
 
     /** Callback invoked when the popup is opened.
      *
@@ -221,7 +212,8 @@ type IPopupProps = PopupProps & Omit<InputHTMLAttributes<HTMLDivElement>, keyof 
  * <Popup
  *   open={true}
  *   relateTo={elementRef}
- *   position={{ X: 'left', Y: 'bottom' }}
+ *   popupAlign={{ horizontal: 'left', vertical: 'bottom' }}
+ *   anchorAlign={{ horizontal: 'left', vertical: 'bottom' }}
  * >
  *   <div>Popup content</div>
  * </Popup>
@@ -232,9 +224,8 @@ export const Popup: ForwardRefExoticComponent<IPopupProps & RefAttributes<IPopup
         const {
             children,
             open = false,
-            targetRef,
-            relativeElement = null,
-            position = { X: 'left', Y: 'top' },
+            anchorAlign = DEFAULT_ANCHOR_ALIGN,
+            popupAlign = DEFAULT_POPUP_ALIGN,
             offsetX = 0,
             offsetY = 0,
             collision = { X: CollisionType.None, Y: CollisionType.None },
@@ -250,15 +241,14 @@ export const Popup: ForwardRefExoticComponent<IPopupProps & RefAttributes<IPopup
                     timingFunction: 'ease-out'
                 }
             },
-            relateTo = 'body',
-            viewPortElementRef,
+            relateTo = typeof document !== 'undefined' ? document.body : null,
+            viewPortElementRef = typeof document !== 'undefined' ? { current: document.body } : null,
             zIndex = 1000,
             width = 'auto',
             height = 'auto',
             className = '',
             actionOnScroll = ActionOnScrollType.Reposition,
             autoReposition = false,
-            targetType = 'relative',
             onOpen,
             onClose,
             onTargetExitViewport,
@@ -271,8 +261,9 @@ export const Popup: ForwardRefExoticComponent<IPopupProps & RefAttributes<IPopup
         const [topPosition, setTopPosition] = useState<number>(0);
         const [popupClass, setPopupClass] = useState<string>(CLASSNAME_CLOSE);
         const [popupZIndex, setPopupZIndex] = useState<number>(1000);
+        const [currentAnchorAlign, setAnchorAlign] = useState<AlignmentPoint>(anchorAlign);
+        const [currentPopupAlign, setPopupAlign] = useState<AlignmentPoint>(popupAlign);
         const { dir } = useProviderContext();
-        const [currentRelatedElement, setRelativeElement] = useState<HTMLElement | null>(relativeElement);
         const scrollParents: RefObject<Element | null> = useRef<Element | null>(null);
         const resizeObserverRef: RefObject<ResizeObserver | null> = useRef<ResizeObserver | null>(null);
         const fixedParent: RefObject<boolean> = useRef<boolean>(false);
@@ -295,32 +286,23 @@ export const Popup: ForwardRefExoticComponent<IPopupProps & RefAttributes<IPopup
         useEffect(() => {
             preRender('popup');
             return () => {
-                setRelativeElement(null);
                 removeScrollListeners();
             };
         }, []);
-
-        useEffect(() => {
-            if (!open) {
-                return;
-            }
-            updatePosition();
-        }, [targetRef, position, offsetX, offsetY, viewPortElementRef]);
-
-        useEffect(() => {
-            if (!open) {
-                return;
-            }
-            checkCollision();
-        }, [collision]);
 
         useEffect(() => {
             if (!open && initialOpenState.current === open) {
                 return;
             }
             initialOpenState.current = open;
+            setAnchorAlign(anchorAlign);
+            setPopupAlign(popupAlign);
             if (open) {
-                show(animation.show, currentRelatedElement);
+                updatePosition();
+                if (collision.X !== CollisionType.None || collision.Y !== CollisionType.None) {
+                    checkCollision();
+                }
+                show(animation.show, relateTo);
             } else {
                 hide(animation.hide);
             }
@@ -330,9 +312,9 @@ export const Popup: ForwardRefExoticComponent<IPopupProps & RefAttributes<IPopup
             setPopupZIndex(zIndex);
         }, [zIndex]);
 
-        useEffect(() => {
-            setRelativeElement(relativeElement);
-        }, [relativeElement]);
+        const getPopupBodyState: () => boolean = (): boolean => {
+            return !!popupRef.current && popupRef.current.parentElement === document.body;
+        };
 
         useEffect(() => {
             if (animation?.show?.duration === 0 && onOpen && popupClass === CLASSNAME_OPEN && open) {
@@ -359,7 +341,7 @@ export const Popup: ForwardRefExoticComponent<IPopupProps & RefAttributes<IPopup
                     resizeObserverRef.current = null;
                 }
             };
-        }, [open, position]);
+        }, [open]);
 
         useEffect(() => {
             if (!open) { return; }
@@ -368,6 +350,9 @@ export const Popup: ForwardRefExoticComponent<IPopupProps & RefAttributes<IPopup
                 if (rafId != null) { return; }
                 rafId = requestAnimationFrame(() => {
                     rafId = null;
+                    if (popupRef.current && popupRef.current.getAttribute('sf-animate')) {
+                        return;
+                    }
                     refreshPosition();
                 });
             };
@@ -383,7 +368,7 @@ export const Popup: ForwardRefExoticComponent<IPopupProps & RefAttributes<IPopup
                 window.removeEventListener('resize', onResize);
                 window.removeEventListener('orientationchange', onResize);
             };
-        }, [open, position?.X, position?.Y, offsetX, offsetY, targetType, relateTo, collision?.X, collision?.Y]);
+        }, [open, offsetX, offsetY, relateTo, collision?.X, collision?.Y]);
 
         const refreshPosition: (target?: HTMLElement, collision?: boolean) => void = (target?: HTMLElement, collision?: boolean): void => {
             if (target) {
@@ -400,25 +385,23 @@ export const Popup: ForwardRefExoticComponent<IPopupProps & RefAttributes<IPopup
             const relateToElement: HTMLElement = getRelateToElement();
             if (!element) { return; }
 
-            let pos: EleOffsetPosition = { left: 0, top: 0 };
+            let pos: EleOffsetPosition = EMPTY_POSITION;
 
-            if (typeof position.X === 'number' && typeof position.Y === 'number') {
-                pos = { left: position.X, top: position.Y };
-            } else if (style?.top && style?.left) {
+            if (style?.top !== undefined && style?.top !== null && style?.left !== null && style?.left !== undefined) {
                 pos = { left: style.left, top: style.top };
-            } else if ((typeof position.X === 'string' && typeof position.Y === 'number') || (typeof position.X === 'number' && typeof position.Y === 'string')) {
-                const anchorPos: OffsetPosition = getAnchorPosition(relateToElement, element, position, offsetX, offsetY);
-                pos = typeof position.X === 'string' ? { left: anchorPos.left, top: position.Y } : { left: position.X, top: anchorPos.top };
             } else if (relateToElement) {
                 const display: string = element.style.display;
                 element.style.display = '';
-                pos = getAnchorPosition(relateToElement, element, position, offsetX, offsetY);
+                const coordinateContainer: HTMLElement | null = getPopupBodyState() ? null : (viewPortElementRef?.current || null);
+                pos = calculatePosition(
+                    relateToElement, element, currentAnchorAlign, currentPopupAlign, offsetX, offsetY, coordinateContainer);
                 element.style.display = display;
             }
 
             if (pos) {
-                element.style.left = `${pos.left}px`;
-                element.style.top = `${pos.top}px`;
+                const leftNum: number = typeof pos.left === 'string' ? parseFloat(pos.left) : pos.left;
+                const topNum: number = typeof pos.top === 'string' ? parseFloat(pos.top) : pos.top;
+                applyPosition(element, { left: leftNum, top: topNum });
                 setLeftPosition(pos.left as number);
                 setTopPosition(pos.top as number);
             }
@@ -486,150 +469,55 @@ export const Popup: ForwardRefExoticComponent<IPopupProps & RefAttributes<IPopup
             removeScrollListeners();
         };
 
-        const callFit: (param: CollisionCoordinates) => void = (param: CollisionCoordinates) => {
+        const applyCollisionRecovery: (collisionAxis: CollisionCoordinates) => void = (collisionAxis: CollisionCoordinates) => {
             const element: HTMLDivElement | null = popupRef.current;
-            const viewPortElement: HTMLElement | undefined | null = viewPortElementRef?.current;
-
-            if (!element) { return; }
-
-            if (isCollide(element, viewPortElement || null).length !== 0) {
-                if (!viewPortElement) {
-                    const currentPos: OffsetPosition = { left: parseFloat(element.style.left) || leftPosition,
-                        top: parseFloat(element.style.top) || topPosition };
-                    const data: OffsetPosition = fit(element, null, param, currentPos) as OffsetPosition;
-                    if (param.X) { element.style.left = `${data.left}px`; setLeftPosition(data.left); }
-                    if (param.Y) { element.style.top = `${data.top}px`; setTopPosition(data.top); }
-                } else {
-                    const elementRect: DOMRect = getElementReact(element) as DOMRect;
-                    const viewPortRect: DOMRect = getElementReact(viewPortElement) as DOMRect;
-                    if (!elementRect || !viewPortRect) { return; }
-                    if (param.Y) {
-                        if (viewPortRect.top > elementRect.top) {
-                            element.style.top = '0px'; setTopPosition(0);
-                        } else if (viewPortRect.bottom < elementRect.bottom) {
-                            const newTop: number = parseInt(element.style.top, 10) - (elementRect.bottom - viewPortRect.bottom);
-                            element.style.top = `${newTop}px`; setTopPosition(newTop);
-                        }
-                    }
-                    if (param.X) {
-                        if (viewPortRect.right < elementRect.right) {
-                            const newLeft: number = parseInt(element.style.left, 10) - (elementRect.right - viewPortRect.right);
-                            element.style.left = `${newLeft}px`; setLeftPosition(newLeft);
-                        } else if (viewPortRect.left > elementRect.left) {
-                            const newLeft: number = parseInt(element.style.left, 10) + (viewPortRect.left - elementRect.left);
-                            element.style.left = `${newLeft}px`; setLeftPosition(newLeft);
-                        }
-                    }
+            const relateToElement: HTMLElement | string = getRelateToElement();
+            const collisionContainer: HTMLElement | null =
+            getCoordinateContainer(element, relateToElement as HTMLElement, viewPortElementRef);
+            const portaled: boolean = getPopupBodyState();
+            const coordinateContainer: HTMLElement | null = portaled ? null : collisionContainer;
+            const usePageAbsolute: boolean = portaled && !!collisionContainer;
+            const collisionAxisConfig: CollisionAxis = { X: collisionAxis.X ? collision.X : CollisionType.None,
+                Y: collisionAxis.Y ? collision.Y : CollisionType.None};
+            const result: FlipResult | null = flip(
+                element, relateToElement as HTMLElement, offsetX, offsetY, currentAnchorAlign, currentPopupAlign,
+                collisionContainer, collisionAxisConfig, coordinateContainer, usePageAbsolute);
+            if (result) {
+                applyPosition(element, result.position);
+                setLeftPosition(result.position.left);
+                setTopPosition(result.position.top);
+                if (result.anchorAlign !== currentAnchorAlign) {
+                    setAnchorAlign(result.anchorAlign);
+                }
+                if (result.popupAlign !== currentPopupAlign) {
+                    setPopupAlign(result.popupAlign);
                 }
             }
         };
 
-        const callFlip: (param: CollisionCoordinates) => void = (param: CollisionCoordinates) => {
+        const checkCollision: () => void = (): void => {
             const element: HTMLDivElement | null = popupRef.current;
-            const relateToElement: string | HTMLElement = getRelateToElement();
-            const viewPortElement: HTMLElement | undefined | null = viewPortElementRef?.current;
-
-            if (!element || !relateToElement) {
+            const relateToElement: HTMLElement = getRelateToElement();
+            if (!element) {
                 return;
             }
-            const flippedPos: OffsetPosition | null = flip(
-                element,
-                relateToElement as HTMLElement,
-                offsetX,
-                offsetY,
-                typeof position.X === 'string' ? position.X : 'left',
-                typeof position.Y === 'string' ? position.Y : 'top',
-                viewPortElement as HTMLElement,
-                param
-            );
-
-            if (flippedPos) {
-                element.style.left = `${flippedPos.left}px`;
-                element.style.top = `${flippedPos.top}px`;
-                setLeftPosition(flippedPos.left);
-                setTopPosition(flippedPos.top);
-            }
-        };
-
-        const checkCollision: () => void = (): void => {
+            const collisionContainer: HTMLElement | null =
+                getCoordinateContainer(element, relateToElement, viewPortElementRef);
+            const usePageAbsolute: boolean = getPopupBodyState() && !!collisionContainer;
             const horz: CollisionType | undefined = collision.X;
             const vert: CollisionType | undefined = collision.Y;
             if (horz === CollisionType.None && vert === CollisionType.None) {
                 return;
             }
-            if (horz === CollisionType.Flip && vert === CollisionType.Flip) {
-                callFlip({X: true, Y: true});
-            } else if (horz === CollisionType.Fit  && vert === CollisionType.Fit) {
-                callFit({X: true, Y: true});
-            } else {
-                if (horz === CollisionType.Flip) {
-                    callFlip({X: true, Y: false});
-                } else if (vert === CollisionType.Flip) {
-                    callFlip({Y: true, X: false});
-                }
-                if (horz === CollisionType.Fit) {
-                    callFit({X: true, Y: false});
-                } else if (vert === CollisionType.Fit) {
-                    callFit({X: false, Y: true});
-                }
+            const hasXCollision: boolean = horz !== CollisionType.None;
+            const hasYCollision: boolean = vert !== CollisionType.None;
+            const currentLeft: number = parseFloat(element.style.left) || leftPosition;
+            const currentTop: number = parseFloat(element.style.top) || topPosition;
+            const collisionEdges: string[] = getCollisions(element, collisionContainer, currentLeft, currentTop, usePageAbsolute);
+            if (collisionEdges.length === 0) {
+                return;
             }
-        };
-
-        const getAnchorPosition: (anchorEle: HTMLElement, element: HTMLElement, position: PositionAxis, offsetX: number,
-            offsetY: number) =>
-        OffsetPosition = (
-            anchorEle: HTMLElement,
-            element: HTMLElement,
-            position: PositionAxis,
-            offsetX: number,
-            offsetY: number
-        ): OffsetPosition => {
-            const eleRect: DOMRect = getElementReact(element) as DOMRect;
-            const anchorRect: DOMRect = getElementReact(anchorEle) as DOMRect;
-            if (!eleRect || !anchorRect) {return { left: 0, top: 0 }; }
-
-            const isBody: boolean = anchorEle.tagName === 'BODY';
-            const posX: string = typeof position.X === 'string' ? position.X : 'left';
-            const posY: string = typeof position.Y === 'string' ? position.Y : 'top';
-
-            const useDocBase: boolean | null = element.offsetParent && (element.offsetParent as HTMLElement).tagName === 'BODY' && isBody;
-            const anchorPos: OffsetPosition = useDocBase
-                ? calculatePosition(anchorEle, posX, posY)
-                : calculateRelativeBasedPosition(anchorEle, element);
-
-            let scaleX: number = 1;
-            let scaleY: number = 1;
-            const transformElement: HTMLElement | null = getTransformElement(element);
-            if (transformElement) {
-                const transformStyle: CSSStyleDeclaration = getComputedStyle(transformElement);
-                const transform: string = transformStyle.transform;
-                if (transform && transform !== 'none') {
-                    const values: RegExpMatchArray | null = transform.match(/matrix\(([^)]+)\)/);
-                    if (values && values[1]) {
-                        const parts: number[] = values[1].split(',').map(parseFloat);
-                        scaleX = parts[0];
-                        scaleY = parts[3];
-                    }
-                }
-                const bodyZoom: number = getZoomValue(document.body as unknown as HTMLElement);
-                scaleX = bodyZoom * scaleX;
-                scaleY = bodyZoom * scaleY;
-            }
-
-            if (targetType === 'relative') {
-                anchorPos.left += posX === 'center' ? (anchorRect.width / 2) : (posX === 'right' ? anchorRect.width : 0);
-                anchorPos.top += posY === 'center' ? (anchorRect.height / 2) : (posY === 'bottom' ? anchorRect.height : 0);
-            } else if (isBody) {
-                anchorPos.left += posX === 'center' ? ((window.innerWidth - eleRect.width) / 2) : (posX === 'right' ? (window.innerWidth - eleRect.width) : 0);
-                anchorPos.top += posY === 'center' ? ((window.innerHeight - eleRect.height) / 2) : (posY === 'bottom' ? (window.innerHeight - eleRect.height) : 0);
-            } else {
-                anchorPos.left += posX === 'center' ? ((anchorRect.width - (eleRect.width / scaleX)) / 2) : (posX === 'right' ? ((anchorRect.width - (eleRect.width / scaleX))) : 0);
-                anchorPos.top += posY === 'center' ? ((anchorRect.height - (eleRect.height / scaleY)) / 2) : (posY === 'bottom' ? ((anchorRect.height - (eleRect.height / scaleY))) : 0);
-            }
-
-            anchorPos.left += offsetX;
-            anchorPos.top += offsetY;
-            return anchorPos;
+            applyCollisionRecovery({ X: hasXCollision, Y: hasYCollision});
         };
 
         const addScrollListeners: () => void = (): void => {
@@ -648,46 +536,12 @@ export const Popup: ForwardRefExoticComponent<IPopupProps & RefAttributes<IPopup
         };
 
         const getRelateToElement: () => HTMLElement = useCallback((): HTMLElement => {
-            const relateToElement: HTMLElement | string = relateTo === '' || relateTo === null || relateTo === 'body' ? document.body : relateTo;
+            const relateToElement: HTMLElement | string = !relateTo ? document.body : relateTo;
             return relateToElement as HTMLElement;
         }, [relateTo]);
 
-        const isPartiallyVisibleInContainer: (element: HTMLElement, container: HTMLElement | Window) => boolean
-            = (element: HTMLElement, container: HTMLElement | Window): boolean => {
-                const elRect: DOMRect = getElementReact(element) as DOMRect;
-                if (!elRect) { return false; }
-                if (container === window) {
-                    const viewRect: { top: number; left: number; right: number; bottom: number; }
-                        = { top: 0, left: 0, right: window.innerWidth, bottom: window.innerHeight };
-                    const interWidth: number = Math.min(elRect.right, viewRect.right) - Math.max(elRect.left, viewRect.left);
-                    const interHeight: number = Math.min(elRect.bottom, viewRect.bottom) - Math.max(elRect.top, viewRect.top);
-                    return interWidth > 0 && interHeight > 0;
-                }
-
-                const cRect: DOMRect = getElementReact(container as HTMLElement) as DOMRect;
-                if (!cRect) { return false; }
-                const interWidth: number = Math.min(elRect.right, cRect.right) - Math.max(elRect.left, cRect.left);
-                const interHeight: number = Math.min(elRect.bottom, cRect.bottom) - Math.max(elRect.top, cRect.top);
-                return interWidth > 0 && interHeight > 0;
-            };
-        const isElementVisibleAcrossScrollParents: (targetEl: HTMLElement) => boolean = (targetEl: HTMLElement): boolean => {
-            const parents: HTMLElement[] = getFixedScrollableParent(targetEl, fixedParent.current);
-            const containers: (HTMLElement | Window)[] = parents.map((parent: HTMLElement) => {
-                return (parent === document.documentElement) ? window : parent;
-            });
-            if (!containers.includes(window)) {
-                containers.push(window);
-            }
-
-            for (const container of containers) {
-                if (!isPartiallyVisibleInContainer(targetEl, container)) {
-                    return false;
-                }
-            }
-            return true;
-        };
-
         const handleScroll: () => void = (): void => {
+            if (!initialOpenState.current) { return; }
             if (actionOnScroll === ActionOnScrollType.Reposition) {
                 refreshPosition();
             } else if (actionOnScroll === ActionOnScrollType.Hide) {
@@ -695,7 +549,7 @@ export const Popup: ForwardRefExoticComponent<IPopupProps & RefAttributes<IPopup
                 onClose?.();
             }
 
-            const targetEl: HTMLElement | null = (targetRef?.current as HTMLElement | null) || getRelateToElement();
+            const targetEl: HTMLElement | null = getRelateToElement();
             if (targetEl) {
                 const isVisible: boolean = isElementVisibleAcrossScrollParents(targetEl);
                 if (!isVisible && !targetInvisibleRef.current) {
@@ -760,12 +614,4 @@ export const Popup: ForwardRefExoticComponent<IPopupProps & RefAttributes<IPopup
 
 export default memo(Popup);
 
-export {
-    calculatePosition,
-    calculateRelativeBasedPosition,
-    flip,
-    fit,
-    isCollide,
-    getZindexPartial,
-    getFixedScrollableParent
-};
+

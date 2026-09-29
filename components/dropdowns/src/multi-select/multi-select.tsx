@@ -29,19 +29,19 @@ export interface IMultiSelect extends MultiSelectProps {
  * import { MultiSelect } from "@syncfusion/react-dropdowns";
  *
  * export default function App() {
- *   const data = [
- *     { text: "Apple", value: "apple" },
- *     { text: "Banana", value: "banana" },
- *     { text: "Cherry", value: "cherry" }
- *   ];
+ *      const data = [
+ *          { text: "Apple", value: "apple" },
+ *          { text: "Banana", value: "banana" },
+ *          { text: "Cherry", value: "cherry" }
+ *      ];
  *
- *   return (
- *     <MultiSelect
- *       id="fruits"
- *       dataSource={data}
- *       fields={{ text: "text", value: "value" }}
- *       placeholder="Select fruits" />
- *   );
+ *      return (
+ *          <MultiSelect
+ *              id="fruits"
+ *              dataSource={data}
+ *              fields={{ text: "text", value: "value" }}
+ *              placeholder="Select fruits" />
+ *      );
  * }
  * ```
  */

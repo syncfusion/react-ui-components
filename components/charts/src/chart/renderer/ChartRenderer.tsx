@@ -16,6 +16,8 @@ import { initSeries } from './SeriesRenderer/ParetoSeriesRenderer';
 import { firstToLowerCase } from '../utils/helper';
 import { ChartSeriesType, IndicatorsType } from '../base/enum';
 import { indicatorModules } from './IndicatorsRenderer/ChartIndicatorsBase';
+import { ExportSourceContext } from '../../common/interfaces';
+import type { ExportSource, LiveSeriesLike } from '../../common/interfaces';
 
 /**
  * Initialize indicator modules and collect their target series into visibleSeries.
@@ -73,7 +75,9 @@ export const ChartRenderer: React.FC<ChartComponentProps> = (props: ChartCompone
     const { layoutRef, availableSize, reportMeasured, phase, setLayoutValue,
         triggerRemeasure, disableAnimation, setDisableAnimation } = useLayout();
     const { parentElement, rows, columns, chartArea, chartSeries, axisCollection, chartZoom, chartTooltip
-        , chartIndicators, chartRangeColor, chartLegend } = useContext(ChartContext);
+        , chartIndicators, chartRangeColor, chartLegend, chartTitle } = useContext(ChartContext);
+    const exportSourceRef: React.MutableRefObject<ExportSource | undefined> | null =
+        useContext(ExportSourceContext);
     const { locale, dir } = useProviderContext();
     useLayoutEffect(() => {
         if (phase === 'measuring') {
@@ -117,8 +121,34 @@ export const ChartRenderer: React.FC<ChartComponentProps> = (props: ChartCompone
             setLayoutValue('chart', chartConfiguration);
             setDisableAnimation?.(false);
             reportMeasured('Chart');
+
+            // Publish the processed series and title for spreadsheet export.
+            if (exportSourceRef) {
+                const liveSeries: LiveSeriesLike[] =
+                    (chartConfiguration.visibleSeries as unknown as LiveSeriesLike[]) || [];
+                exportSourceRef.current = {
+                    kind: 'chart',
+                    visibleSeries: liveSeries,
+                    title: chartTitle?.text
+                };
+            }
         }
     }, [phase, layoutRef]);
+
+    // Sync title-only changes without rebuilding the processed series.
+    useEffect(() => {
+        const ref: React.MutableRefObject<ExportSource | undefined> | null =
+            exportSourceRef;
+        if (!ref) { return; }
+        const prev: ExportSource | undefined = ref.current;
+        if (!prev) { return; }
+        if ((prev.title ?? undefined) === (chartTitle?.text ?? undefined)) { return; }
+        ref.current = {
+            kind: prev.kind,
+            visibleSeries: prev.visibleSeries,
+            title: chartTitle?.text
+        };
+    }, [chartTitle?.text, exportSourceRef]);
 
     useEffect(() => {
         if (phase !== 'measuring') {

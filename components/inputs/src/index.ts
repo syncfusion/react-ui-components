@@ -6,3 +6,4 @@ export * from './textbox/index';
 export * from './textarea/index';
 export * from './form-validator/index';
 export * from './common/index';
+export * from './file-upload/index';

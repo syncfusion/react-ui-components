@@ -1,6 +1,6 @@
 # React Navigation Components
 
-The Syncfusion React Navigation package provides a feature-rich collection of UI components. Includes a context menu and toolbar components for building modern, interactive React applications.
+The Syncfusion React Navigation package provides a feature-rich collection of UI components. Includes a tree view, context menu, toolbar, sidebar, and menu components for building modern, interactive React applications.
 
 ## Setup
 
@@ -140,6 +140,104 @@ export default function App() {
 
 - [Toolbar Demo/Docs](https://react.syncfusion.com/react-ui/toolbar)
 - [Toolbar API](https://react.syncfusion.com/api/toolbar/overview)
+
+## React Sidebar
+
+The Sidebar component renders a collapsible drawer for navigation and custom content. It supports flexible positioning, multiple interaction modes, and a composite layout API that coordinates the drawer, main content, and toggle trigger.
+
+**Key features**
+
+  - **Positioning:** Anchor the sidebar to either the `Left` or `Right` edge of the viewport to fit different navigation patterns.
+  - **Interaction Modes:** Choose between `Over` (floats above content) and `Push` (shifts main content) modes to control how the sidebar coexists with surrounding content.
+  - **Backdrop Overlay:** Render an optional backdrop when the sidebar is open to focus attention and intercept outside interactions.
+  - **Configurable Transitions:** Customize the enter and exit transition durations independently for smooth, polished animations.
+  - **Dockable State:** Collapse the sidebar into a compact docked state that remains visible, configurable via a `dockableWidth` value.
+  - **Responsive Media Queries:** Drive the sidebar's open/closed state automatically based on a media query for adaptive layouts.
+  - **Composite Layout API:** Pair the sidebar with `SidebarLayout`, `SidebarMain`, and `SidebarTrigger` components to coordinate drawer, content area, and toggle button.
+  - **Outside Click Handling:** Automatically close the sidebar when clicking outside, configurable via `closeOnDocumentClick`.
+
+**Usage**
+
+```tsx
+import { useState } from "react";
+import { Sidebar, SidebarLayout, SidebarMain, SidebarTrigger } from "@syncfusion/react-navigations";
+
+export default function App() {
+    const [open, setOpen] = useState(false);
+
+    return (
+        <SidebarLayout>
+            <Sidebar
+                open={open}
+                onChange={(e) => setOpen(e.open)}
+            >
+                <nav>
+                    <ul>
+                        <li>Dashboard</li>
+                        <li>Projects</li>
+                        <li>Settings</li>
+                    </ul>
+                </nav>
+            </Sidebar>
+
+            <SidebarMain>
+                <SidebarTrigger aria-label="Toggle navigation">
+                    ☰
+                </SidebarTrigger>
+
+                <div>Dashboard Content</div>
+            </SidebarMain>
+        </SidebarLayout>
+    );
+};
+```
+
+**Resources**
+
+- [Sidebar Demo/Docs](https://react.syncfusion.com/react-ui/sidebar)
+- [Sidebar API](https://react.syncfusion.com/api/sidebar/overview)
+
+
+## React TreeView
+
+The TreeView component renders structured node collections as an expandable, navigable list. It supports both local arrays and remote `DataManager` data sources, controlled and uncontrolled expansion and selection, multiple selection modes, tri-state checkboxes, inline label editing, and rich keyboard interaction for accessibility.
+
+**Key features**
+
+  - **Hierarchical Data Binding:** Render nested trees from a `children` field, a self-referential `parentId` field, or a remote `DataManager` with a `Query` and lazy-loaded children.
+  - **Custom Field Mapping:** Map any `datasource` property names to the TreeView fields (`id`, `label`, `children`, `parentId`, `disabled`, `icon`, `hasChildren`, `tooltip`, `navigateUrl`, and more) using the `fields` prop.
+  - **Selection Modes:** Choose between `None`, `Single`, `Multiple`, or `Checkbox` selection. Checkbox mode supports tri-state checkboxes with optional cascading to descendants and disabled-children participation via `autoCheck` and `checkDisabledChildren`.
+  - **Expansion Control:** Expand on `Click`, `DoubleClick`, or `None`, and drive the expanded set through `expandedIds` (controlled) or `defaultExpandedIds` (uncontrolled).
+  - **Inline Editing:** Enable `editable` to let users rename nodes in place. The `onNodeEdit` callback receives the old and new label and can return `false` to reject the change. A `TreeViewEditInput` slot is provided for full editor customization.
+  - **Sorting and Empty State:** Sort siblings with `sortOrder` and render a custom `TreeViewEmptyState` when the resolved list is empty.
+  - **Row Templates:** Replace the default row rendering with a `TreeViewNodes` render-prop child, or compose individual parts using `TreeViewItemIcon`, `TreeViewItemLabel`, `TreeViewItemToggle`, and `TreeViewItemCheckbox`.
+  - **Keyboard Navigation:** Comprehensive keyboard support for accessibility, including arrow keys to move focus, Home/End for first/last, Enter/Space to select, and F2 to begin editing.
+
+**Usage**
+
+```tsx
+import { TreeView } from "@syncfusion/react-navigations";
+
+interface Node { id: string; label: string; parentId?: string | null; }
+
+export default function App() {
+    const data: Node[] = [
+        { id: '1', label: 'Documents' },
+        { id: '2', label: 'Reports', parentId: '1' },
+        { id: '3', label: 'Invoices', parentId: '1' },
+        { id: '4', label: 'Downloads' },
+        { id: '5', label: 'Pictures' }
+    ];
+    return (
+        <TreeView data={data} defaultExpandedIds={['1']} />
+    );
+}
+```
+
+**Resources**
+
+- [TreeView Demo/Docs](https://react.syncfusion.com/react-ui/tree-view)
+- [TreeView API](https://react.syncfusion.com/api/tree-view/overview)
 
 <p align="center">
 Trusted by the world's leading companies

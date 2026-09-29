@@ -12,17 +12,10 @@ import {
     useState,
     useLayoutEffect
 } from 'react';
-import { ContentRowsBase } from './index';
-import {
-    ContentTableRef,
-    IContentTableBase,
-    ContentRowsRef
-} from '../types/interfaces';
-import {
-    useGridComputedProvider,
-    useGridMutableProvider
-} from '../contexts';
-import { parseUnit } from '../utils';
+import { ContentRowsBase } from './ContentRows';
+import { ContentTableRef, IContentTableBase, ContentRowsRef } from '../types/interfaces';
+import { useGridComputedProvider, useGridMutableProvider } from '../contexts/GridProviders';
+import { buildVisibleColumnGroup, parseUnit } from '../utils/utils';
 
 /**
  * ContentTableBase component renders the table structure for grid content
@@ -41,8 +34,9 @@ const ContentTableBase: <T>(props: Partial<IContentTableBase> & RefAttributes<Co
     memo(forwardRef<ContentTableRef, Partial<IContentTableBase>>(
         <T, >(props: Partial<IContentTableBase>, ref: RefObject<ContentTableRef<T>>) => {
             // Access grid context providers
-            const { colElements: ColElements, offsetX, virtualSettings } = useGridMutableProvider<T>();
-            const { id, scrollModule } = useGridComputedProvider<T>();
+            const { colElements: ColElements, offsetX, virtualSettings, columnWidthInfo, leftPinnedColumns,
+                rightPinnedColumns } = useGridMutableProvider<T>();
+            const { id, scrollModule, rowNumberSettings, dragAndDropSettings, getVisibleColumns } = useGridComputedProvider<T>();
 
             // Refs for DOM elements and child components
             const contentTableRef: RefObject<HTMLTableElement | null>  = useRef<HTMLTableElement>(null);
@@ -59,18 +53,26 @@ const ContentTableBase: <T>(props: Partial<IContentTableBase> & RefAttributes<Co
                 if (ColElements.length) {
                     if (!virtualSettings.enableColumn) {
                         visibleCols = ColElements;
+                        if (columnWidthInfo.current.maxTableWidth || columnWidthInfo.current.resizeTableWidth) {
+                            totalWidth.current = 0;
+                            for (let i: number = 0; i < ColElements.length; i++) {
+                                const styleWidth: number = ColElements[i as number]?.props?.style?.width;
+                                totalWidth.current += parseUnit(styleWidth);
+                            }
+                        }
                     } else {
                         const startIndex: number = scrollModule?.virtualColumnInfo?.startIndex ?? 0;
                         const endIndex: number = scrollModule?.virtualColumnInfo?.endIndex ?? ColElements.length;
-                        totalWidth.current = 0;
-                        for (let i: number = startIndex; i < endIndex; i++) {
-                            const col: JSX.Element = ColElements[i as number];
-                            visibleCols.push(col);
-
-                            // Optional: If you ever need cumulative width, you can calculate here
-                            const styleWidth: number = col?.props?.style?.width;
-                            totalWidth.current += parseUnit(styleWidth);
-                        }
+                        const nextGroup: { visibleCols: JSX.Element[]; totalWidth: number } = buildVisibleColumnGroup(
+                            ColElements,
+                            getVisibleColumns(),
+                            leftPinnedColumns,
+                            rightPinnedColumns,
+                            startIndex,
+                            endIndex
+                        );
+                        visibleCols = nextGroup.visibleCols;
+                        totalWidth.current = nextGroup.totalWidth;
                     }
                 }
 
@@ -86,10 +88,11 @@ const ContentTableBase: <T>(props: Partial<IContentTableBase> & RefAttributes<Co
                 ColElements,
                 id,
                 offsetX,
+                getVisibleColumns,
                 virtualSettings.enableColumn,
                 scrollModule?.virtualColumnInfo?.startIndex,
                 scrollModule?.virtualColumnInfo?.endIndex,
-                forceRerender, totalWidth.current
+                forceRerender, totalWidth.current, rowNumberSettings?.enabled, dragAndDropSettings?.enabled
             ]);
 
             /**
@@ -116,13 +119,18 @@ const ContentTableBase: <T>(props: Partial<IContentTableBase> & RefAttributes<Co
                 <ContentRowsBase<T>
                     ref={rowSectionRef}
                     role="rowgroup"
+                    pinBucket={props.pinBucket}
                 />
-            ), []);
+            ), [props.pinBucket]);
 
             return (
                 <table
                     ref={contentTableRef}
                     {...props}
+                    style={{
+                        ...props.style, ...(columnWidthInfo.current.maxTableWidth || columnWidthInfo.current.resizeTableWidth ?
+                            { width: totalWidth.current } : {})
+                    }}
                 >
                     {colGroupContent}
                     {contentRows}

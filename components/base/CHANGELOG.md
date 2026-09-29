@@ -1,5 +1,37 @@
 # Changelog
 
+## 35.1.37 (2026-09-29)
+
+### Common
+
+#### Features
+
+- Standalone UI SDKs (v35.1 and Later)
+
+   The Essential Studio UI Edition includes access to Standalone UI SDKs, providing all UI components across supported platforms. Organizations can choose from individual standalone component offerings or a comprehensive UI suite based on application requirements and licensing preferences.
+
+- Consolidated Theme Styles via `index.css`
+
+   The theme package now provides an `index.css` file in each component folder that loads all dependency styles, so importing it alone is sufficient instead of referring individual dependent styles for each component.
+
+- LLM-Ready Documentation and AI Agent Support
+    
+   The [sample browser](https://react.syncfusion.com/react-ui/ai-and-smart-tooling/llms/) now includes LLM-ready documentation, making it easier for AI agents to discover and consume component APIs and samples. Published [skills](https://react.syncfusion.com/react-ui/ai-and-smart-tooling/skills/) for the SDK components are now available, and migration guidance is provided for moving from EJ2 React to the Pure React components.
+
+#### Bug Fixes
+
+- Updated component name casing in telemetry to ensure consistent event tracking and reporting
+
+- Resolved the blocking License Purchase Banner Popup issue.
+
+## 34.2.4 (2026-08-18)
+
+### Common
+
+#### Bug Fixes
+
+- Improved telemetry tracking with standardized event reporting, enhanced identifier management, and optimized session deduplication.
+
 ## 34.2.2 (2026-08-05)
 
 ### Common
@@ -36,7 +68,7 @@ The following Pure React components are production-ready:
 [Tailwind](https://react.syncfusion.com/react-ui/themes/tailwind/) and [Bootstrap](https://react.syncfusion.com/react-ui/themes/bootstrap/)
  themes have been added for Pure React components. Developers can apply these themes to components to match their projects’ design.
 
-## 34.1.44 (2026-03-16)
+## 33.1.44 (2026-03-16)
 
 ### Common 
 

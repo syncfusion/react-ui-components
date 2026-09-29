@@ -300,6 +300,7 @@ export const defaultChartConfigs: ChartConfig = {
             align: 'Center',
             rotationAngle: 0,
             format: '',
+            template: '',
             skeleton: '',
             padding: 5,
             position: 'Outside',
@@ -997,7 +998,8 @@ export const defaultChartConfigs: ChartConfig = {
         accessibility: {},
         mouseWheelZoom: false,
         pinchZoom: false,
-        enableScrollbar: false
+        enableScrollbar: false,
+        minimumVisiblePoints: null
     },
     ChartSelection: {
         mode: 'None',

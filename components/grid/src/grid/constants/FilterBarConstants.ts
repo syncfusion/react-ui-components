@@ -3,7 +3,7 @@
  * Centralizes all hardcoded strings for easier maintenance and consistency
  */
 
-import { LabelMode } from '@syncfusion/react-base';
+import { LabelMode } from '@syncfusion/react-base/src/enums';
 
 /**
  * CSS class names used in FilterBar component

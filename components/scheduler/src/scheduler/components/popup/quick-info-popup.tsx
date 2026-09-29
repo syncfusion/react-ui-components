@@ -7,7 +7,7 @@ import {
 import { TimelineDayIcon, CloseIcon, LocationIcon, PageColumnsIcon, RepeatIcon, TimeZoneIcon, PeopleIcon } from '@syncfusion/react-icons';
 import { Button, Color, IButton, Variant } from '@syncfusion/react-buttons';
 import { TextBoxChangeEvent, TextBox, ITextBox } from '@syncfusion/react-inputs';
-import { Popup, CollisionType, ActionOnScrollType } from '@syncfusion/react-popups';
+import { Popup, CollisionType, ActionOnScrollType, AlignmentPoint } from '@syncfusion/react-popups';
 import { CSS_CLASSES } from '../../common/constants';
 import { DateService } from '../../services/DateService';
 import { SchedulerCellClickEvent, EventModel, SchedulerCellDetails, SchedulerResource } from '../../types/scheduler-types';
@@ -25,7 +25,7 @@ import { useRecurrenceEditorLocalization } from '../../../recurrence-editor/loca
 import { useSchedulerPopupContext } from '../../context/scheduler-popup-state-context';
 import { useSetResourceValues } from '../../hooks/useResourceGrouping';
 import { useResourceGroupingContext } from '../../context/resource-grouping-context';
-import { ResourceLevel } from '../../services/ResourceGroupingService';
+import { ResourceLevel, TimelineResourceRowMeta } from '../../services/ResourceGroupingService';
 
 /**
  * Shared utility function to render close button for popups
@@ -59,7 +59,8 @@ export const renderPopupCloseButton: (onClose: () => void, ariaLabel?: string) =
 export interface PopupWrapperProps {
     visible: boolean;
     target: HTMLElement | null;
-    popupPosition?: { X: string; Y: string };
+    popupAlign?: AlignmentPoint;
+    anchorAlign?: AlignmentPoint;
     schedulerElement: RefObject<HTMLDivElement | null>;
     onClose: () => void;
     onOpen?: () => void;
@@ -74,7 +75,7 @@ export interface PopupWrapperProps {
  * @returns {ReactElement | null} The popup wrapper
  */
 export const PopupWrapper: FC<PopupWrapperProps> = (
-    { visible, target, schedulerElement, popupPosition, onClose, onOpen, children, adaptive }: PopupWrapperProps
+    { visible, target, schedulerElement, popupAlign, anchorAlign, onClose, onOpen, children, adaptive }: PopupWrapperProps
 ) => {
     if (!visible || !target) {
         return null;
@@ -95,7 +96,8 @@ export const PopupWrapper: FC<PopupWrapperProps> = (
         <Popup
             open={visible}
             relateTo={target}
-            position={popupPosition}
+            popupAlign={popupAlign}
+            anchorAlign={anchorAlign}
             collision={{
                 X: CollisionType.Flip,
                 Y: CollisionType.Flip
@@ -211,14 +213,15 @@ forwardRef<IQuickInfoPopup, QuickInfoPopupProps>((props: QuickInfoPopupProps,  r
 
     const { onClose, onEditEvent, onMoreDetails } = props;
 
-    const { schedulerRef, eventSettings, showQuickInfoPopup, showDeleteAlert, showRecurrenceAlert, view, readOnly,
-        timeFormat, quickInfo, resources } = useSchedulerPropsContext();
-    const { leafResources, isGroupingEnabled } = useResourceGroupingContext();
+    const { schedulerRef, eventSettings, showQuickInfoPopup, showDeleteAlert, showRecurrenceAlert, viewType, readOnly,
+        timeFormat, quickInfo, resources, isTimelineView } = useSchedulerPropsContext();
+    const { allLeafResources, isGroupingEnabled, timelineResourceHeaders } = useResourceGroupingContext();
     const [cellData, setCellData] = useState<SchedulerCellClickEvent>({} as SchedulerCellClickEvent);
     const [eventData, setEventData] = useState<EventModel>({} as EventModel);
     const [formData, setFormData] = useState<EventModel>({} as EventModel);
     const [popupType, setPopupType] = useState<'cell' | 'event' | null>(null);
-    const [popupPosition, setPopupPosition] = useState({ X: 'right', Y: 'top' });
+    const [popupAlign, setPopupAlign] = useState<AlignmentPoint>({ horizontal: 'left', vertical: 'top' });
+    const [anchorAlign, setAnchorAlign] = useState<AlignmentPoint>({ horizontal: 'right', vertical: 'top' });
     const [shouldFocus, setShouldFocus] = useState(false);
 
     const textBoxRef: RefObject<ITextBox> = useRef<ITextBox>(null);
@@ -285,11 +288,13 @@ forwardRef<IQuickInfoPopup, QuickInfoPopupProps>((props: QuickInfoPopupProps,  r
     }));
 
     const onOpen: () => void = (): void => {
-        setPopupPosition(
-            ['day', 'agenda'].includes(view?.toLowerCase() ?? '')
-                ? { X: 'center', Y: 'center' }
-                : { X: 'right', Y: 'top' }
-        );
+        if (['agenda'].includes(viewType?.toLowerCase() ?? '')) {
+            setPopupAlign({ horizontal: 'center', vertical: 'center' });
+            setAnchorAlign({ horizontal: 'center', vertical: 'center' });
+        } else {
+            setPopupAlign({ horizontal: 'left', vertical: 'top' });
+            setAnchorAlign({ horizontal: 'right', vertical: 'top' });
+        }
         setShouldFocus(true);
     };
 
@@ -479,7 +484,9 @@ forwardRef<IQuickInfoPopup, QuickInfoPopupProps>((props: QuickInfoPopupProps,  r
                 } else {
                     const argsData: SchedulerCellClickEvent = args as SchedulerCellClickEvent;
                     const groupIndex: number = !isNullOrUndefined(argsData?.groupIndex) ? argsData.groupIndex : 0;
-                    const resourceDetails: ResourceLevel = leafResources[parseInt(groupIndex.toString(), 10)];
+                    const resourceDetails: ResourceLevel | TimelineResourceRowMeta | undefined = isTimelineView
+                        ? timelineResourceHeaders[parseInt(groupIndex.toString(), 10)]
+                        : allLeafResources[parseInt(groupIndex.toString(), 10)];
                     resourceValue = resourceDetails?.resourceData[resourceDetails.resource.textField] as string;
                 }
             }
@@ -528,9 +535,12 @@ forwardRef<IQuickInfoPopup, QuickInfoPopupProps>((props: QuickInfoPopupProps,  r
                         <div className={`${CSS_CLASSES.CELL_TIME} ${CSS_CLASSES.DISPLAY_FLEX}`}>
                             <TimelineDayIcon />
                             <span className={CSS_CLASSES.POPUP_TIME_TEXT}>
-                                {DateService.formatCellDateRange(
-                                    new Date(cellData.startTime),
-                                    new Date(cellData.endTime),
+                                {DateService.formatPopupDateRange(
+                                    {
+                                        startTime: new Date(cellData.startTime),
+                                        endTime: new Date(cellData.endTime),
+                                        isAllDay: cellData.isAllDay
+                                    } as EventModel,
                                     locale,
                                     timeFormat)}
                             </span>
@@ -724,7 +734,8 @@ forwardRef<IQuickInfoPopup, QuickInfoPopupProps>((props: QuickInfoPopupProps,  r
         <PopupWrapper
             visible={visible}
             target={target}
-            popupPosition={popupPosition}
+            anchorAlign={anchorAlign}
+            popupAlign={popupAlign}
             schedulerElement={schedulerElement}
             onClose={handleClose}
             onOpen={onOpen}

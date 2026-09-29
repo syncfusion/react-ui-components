@@ -1,5 +1,7 @@
 import { SchedulerResource, SchedulerGroup } from '../types/scheduler-types';
-import { CellData } from '../types/internal-interface';
+import { CellData, ResourceNodeRef, ResourceTreeItem } from '../types/internal-interface';
+import { isNullOrUndefined } from '@syncfusion/react-base';
+import { getItemByIndex, getItemByKey } from '../utils/array-utils';
 
 /**
  * Represents a single resource in the hierarchy.
@@ -70,6 +72,11 @@ export interface ResourceGroupingMetadata {
     byGroupID: boolean;
 
     /**
+     * Enables creating and editing linked appointments assigned to multiple resources.
+     */
+    groupEdit: boolean
+
+    /**
      * Depth of the resource hierarchy.
      */
     depth: number;
@@ -78,6 +85,60 @@ export interface ResourceGroupingMetadata {
      * Array of leaf-level resources.
      */
     leafResources: ResourceLevel[];
+
+    /**
+     * Whether the scheduler is rendering in compact view mode.
+     * When `true`, the DOM contains only the visible leaf's cells and
+     * cell-index arithmetic must collapse to the date index alone.
+     */
+    enableCompactView: boolean;
+}
+
+/**
+ * Metadata for a timeline resource row used in resource grouping views.
+ *
+ * @private
+ */
+export interface TimelineResourceRowMeta {
+    /**
+     * Resource data associated with this row.
+     */
+    resourceData?: Record<string, any>;
+
+    /**
+     * Resource configuration metadata.
+     */
+    resource?: SchedulerResource;
+
+    /**
+     * Unique index of the resource group.
+     */
+    groupIndex: number;
+
+    /**
+     * Parent resource group index.
+     */
+    parentGroupIndex?: number;
+
+    /**
+     * Number of child resources.
+     */
+    count?: number;
+
+    /**
+     * Display text of the resource row.
+     */
+    resourceName?: string;
+
+    /**
+     * Hierarchy depth level of the resource.
+     */
+    depth?: number;
+
+    /**
+     * Resource hierarchy path used to match timeline events.
+     */
+    groupOrder?: string[];
 }
 
 export class ResourceGroupingService {
@@ -218,13 +279,14 @@ export class ResourceGroupingService {
         groupConfig: SchedulerGroup
     ): ResourceGroupingMetadata {
         const leaves: ResourceLevel[] = this.getLeafResources(resourceTree);
-
         return {
             resourceNames: groupConfig.resources,
             byDate: groupConfig.byDate || false,
             byGroupID: groupConfig.byGroupID || true,
+            groupEdit: groupConfig.groupEdit || false,
             depth: groupConfig.resources.length,
-            leafResources: leaves
+            leafResources: leaves,
+            enableCompactView: groupConfig.enableCompactView === true && leaves.length > 0
         };
     }
 
@@ -247,6 +309,12 @@ export class ResourceGroupingService {
         renderDates?: Date[],
         includeGroupIndex: boolean = false
     ): CellData {
+        const getLeafCount: (node: ResourceLevel) => number = (node: ResourceLevel): number => {
+            if (!node?.children || node.children?.length === 0) {
+                return 1;
+            }
+            return node.children.reduce((sum: number, child: ResourceLevel) => sum + getLeafCount(child), 0);
+        };
         const tdData: CellData = {
             type: 'resourceHeader',
             resource: resource.resource,
@@ -254,7 +322,7 @@ export class ResourceGroupingService {
             resourceLevelIndex: level,
             groupOrder: resource.groupOrder,
             className: ['sf-resource-cells'],
-            colSpan: resource.children.length > 0 ? resource.children.length : 1,
+            colSpan: resource.children.length > 0 ? getLeafCount(resource) : 1,
             cssClass: resource.cssClass
         };
         if (renderDates) {
@@ -417,5 +485,279 @@ export class ResourceGroupingService {
         }
 
         return columnLevels;
+    }
+
+    /**
+     * Determines if a resource row should be hidden based on parent expansion state.
+     *
+     * Traverses the parent hierarchy of a resource row. If any ancestor parent is collapsed
+     * (expandedState = false), the entire row and its descendants are hidden from view.
+     * This ensures child resources of collapsed parents remain hidden from the UI.
+     *
+     * @param {TimelineResourceRowMeta} row - The resource row to evaluate for visibility
+     * @param {Map<number, boolean>} expandedState - Map of groupIndex to expansion state (true = expanded, false = collapsed)
+     * @param {TimelineResourceRowMeta[]} allRows - Complete list of all timeline resource rows for hierarchy lookup
+     * @returns {boolean} True if row should be hidden; false if row should be visible
+     *
+     * @private
+     */
+    static shouldHideTimelineResourceRow(
+        row: TimelineResourceRowMeta,
+        expandedState: Map<number, boolean>,
+        allRows: TimelineResourceRowMeta[]
+    ): boolean {
+        let parentIndex: number | undefined = row.parentGroupIndex;
+        while (typeof parentIndex === 'number') {
+            const parentRow: TimelineResourceRowMeta | undefined =
+                allRows.find((candidate: TimelineResourceRowMeta) => candidate.groupIndex === parentIndex);
+            if (!parentRow) {
+                break;
+            }
+            if (expandedState.get(parentRow.groupIndex) === false) {
+                return true;
+            }
+            parentIndex = parentRow.parentGroupIndex;
+        }
+        return false;
+    }
+
+    /**
+     * Builds flat timeline resource headers from hierarchical tree with proper group indexing.
+     *
+     * @param {ResourceLevel[]} resourceTree - Root resource tree
+     * @param {string} textField - Field name to use for resource name display
+     * @returns {TimelineResourceRowMeta[]} Flat array of timeline resource rows with parent relationships
+     *
+     * @private
+     */
+    static buildTimelineResourceHeaders(resourceTree: ResourceLevel[]): TimelineResourceRowMeta[] {
+        const headers: TimelineResourceRowMeta[] = [];
+        let groupIndex: number = 0;
+
+        const build: (node: ResourceLevel, depth?: number, parentGroupIndex?: number) => void =
+            (node: ResourceLevel, depth: number = 0, parentGroupIndex?: number): void => {
+                const currentIndex: number = groupIndex;
+                headers.push({
+                    groupIndex: currentIndex,
+                    parentGroupIndex,
+                    count: node.children?.length ?? 0,
+                    resourceName: node.resourceData[node.resource?.textField] || '',
+                    depth,
+                    resourceData: node.resourceData,
+                    resource: node.resource,
+                    groupOrder: node.groupOrder
+                });
+                groupIndex++;
+                node.children?.forEach((child: ResourceLevel) => build(child, depth + 1, currentIndex));
+            };
+
+        resourceTree.forEach((root: ResourceLevel) => build(root));
+        return headers;
+    }
+
+    /**
+     * Resolves the leaf-resource index for a given initial resource identifier.
+     * Used by compact view mode to honour `group.selectedResource`.
+     *
+     * @param {ResourceLevel[]} leafResources - All leaf resources, as returned by `getLeafResources`.
+     * @param {string | number | undefined} id - Resource identifier (string or number). Matched against each leaf's value at `resource.idField` (default: `'id'`).
+     * @returns {number} The zero-based index of the matching leaf resource. Returns `0` when no match is found or when `id` is `undefined`.
+     *
+     * @private
+     */
+    static getResourceByInitialId(
+        leafResources: ResourceLevel[],
+        id: string | number | undefined
+    ): number {
+        if (!Array.isArray(leafResources) || leafResources.length === 0 || id === undefined || id === null) {
+            return 0;
+        }
+        const matchIndex: number = leafResources.findIndex((leaf: ResourceLevel) => {
+            const idField: string = leaf.resource?.idField || 'id';
+            const leafId: unknown = getItemByKey(leaf.resourceData, idField);
+            return String(leafId) === String(id);
+        });
+        return matchIndex >= 0 ? matchIndex : 0;
+    }
+
+    /**
+     * Returns a stable, human-readable label for a leaf resource. The fallback
+     * order mirrors the Blazor `RenderResourceHeaderText` resolution
+     * (textField ? name ? id) so the breadcrumb renders correctly even when
+     * `resourceData` is partially populated by upstream consumers.
+     *
+     * @param {ResourceLevel} leaf - The leaf resource whose label should be resolved.
+     * @returns {string} The resolved label; an empty string when no label candidate is found.
+     *
+     * @private
+     */
+    static getLeafLabel(leaf: ResourceLevel | null | undefined): string {
+        if (!leaf || typeof leaf !== 'object') {
+            return '';
+        }
+        const resource: SchedulerResource | undefined = leaf.resource;
+        const data: Record<string, unknown> | undefined = leaf.resourceData;
+        const fieldName: string | undefined = resource?.textField;
+        const value: unknown = fieldName ? getItemByKey(data, fieldName) : undefined;
+        if (value !== undefined && value !== null) {
+            return String(value);
+        }
+        return '';
+    }
+
+    /**
+     * Builds a composite, stable id for a tree node as
+     * `${resource.name}_${getNodeId(node)}`. Used by the compact-view
+     * TreeView so the bound node id is unique across both the resource
+     * type and the resource row, matching how the resource data is
+     * identified elsewhere in the grouping pipeline.
+     *
+     * @param {ResourceNodeRef} node - The node whose composite id should be built.
+     * @returns {string} The composite id; an empty string when the node, its
+     *   `resource` or its resolved id is missing.
+     *
+     * @private
+     */
+    static getTreeNodeId(node: ResourceNodeRef | null | undefined): string {
+        if (!node || typeof node !== 'object' || !node.resource || !node.resourceData) {
+            return '';
+        }
+        const name: string | undefined = node.resource.name;
+        const id: string | number | null = ResourceGroupingService.getNodeId(node);
+        if (isNullOrUndefined(name) || isNullOrUndefined(id)) {
+            return '';
+        }
+        return `${name}_${id}`;
+    }
+
+    /**
+     * Returns the stable identifier of a tree node. Looks up the configured
+     * `idField`, falling back to `'id'`. Returns `null` when the node, its
+     * data or the resolved id is missing — callers can treat `null` as a
+     * non-match rather than crashing on `undefined`.
+     *
+     * @param {ResourceNodeRef | null | undefined} node - Node whose id should be resolved.
+     * @returns {string | number | null} Stable id; `null` when the node, its data, or its id is missing.
+     *
+     * @private
+     */
+    static getNodeId(node: ResourceNodeRef | null | undefined): string | number | null {
+        if (!node || typeof node !== 'object' || !node.resourceData || !node.resource) {
+            return null;
+        }
+        const idField: string = node.resource.idField ?? 'id';
+        const id: unknown = getItemByKey(node.resourceData, idField);
+        if (id === undefined || id === null) {
+            return null;
+        }
+        return id as string | number;
+    }
+
+    /**
+     * Maps `ResourceLevel` tree to compact-view `TreeView` items.
+     *
+     * @param {ResourceLevel[]} resourceTree - Root resource tree.
+     * @returns {ResourceTreeItem[]} Tree items, or `[]` for empty input.
+     * @private
+     */
+    static buildResourceTreeItems(resourceTree: ResourceLevel[] | null | undefined): ResourceTreeItem[] {
+        if (!Array.isArray(resourceTree) || resourceTree.length === 0) {
+            return [];
+        }
+        const build: (node: ResourceLevel) => ResourceTreeItem = (node: ResourceLevel): ResourceTreeItem => {
+            const isParent: boolean = Array.isArray(node.children) && node.children.length > 0;
+            return {
+                id: ResourceGroupingService.getTreeNodeId(node),
+                label: ResourceGroupingService.getLeafLabel(node),
+                selectable: !isParent,
+                child: isParent ? node.children.map(build) : [],
+                leafIndex: isParent ? undefined : node.groupIndex,
+                resourceData: node.resourceData,
+                resource: node.resource
+            };
+        };
+        return resourceTree.map(build);
+    }
+
+    /**
+     * Resolves `selectedIds` for the leaf at `selectedGroupIndex`.
+     *
+     * @param {ResourceLevel[]} leafResources - Leaves in current scope.
+     * @param {number} selectedGroupIndex - Index into `leafResources`, or `-1`.
+     * @returns {string[]} `[nodeId]` or `[]`.
+     * @private
+     */
+    static resolveTreeSelectionId(
+        leafResources: ResourceLevel[] | null | undefined,
+        selectedGroupIndex: number | null | undefined
+    ): string[] {
+        const idx: number = typeof selectedGroupIndex === 'number' ? selectedGroupIndex : -1;
+        const leaf: ResourceLevel | undefined = getItemByIndex(leafResources, idx);
+        const id: string = ResourceGroupingService.getTreeNodeId(leaf);
+        return id.length > 0 ? [id] : [];
+    }
+
+    /**
+     * Resolves `defaultExpandedIds` — every parent row (`count > 0`) is expanded.
+     *
+     * @param {TimelineResourceRowMeta[]} rows - Timeline resource headers.
+     * @returns {string[]} Composite node ids for parent rows.
+     * @private
+     */
+    static resolveDefaultExpandedTreeIds(rows: TimelineResourceRowMeta[] | null | undefined): string[] {
+        if (!Array.isArray(rows) || rows.length === 0) {
+            return [];
+        }
+        const ids: string[] = [];
+        for (const row of rows) {
+            if ((row.count ?? 0) <= 0) {
+                continue;
+            }
+            const id: string = ResourceGroupingService.getTreeNodeId(row);
+            if (id.length > 0) {
+                ids.push(id);
+            }
+        }
+        return ids;
+    }
+
+    /**
+     * Resolves the labels for a leaf resource's hierarchy path.
+     *
+     * @param {ResourceLevel[] | null | undefined} tree - Resource hierarchy.
+     * @param {ResourceLevel | null | undefined} leaf - Leaf resource.
+     * @returns {string[]} Labels for the leaf's hierarchy path.
+     *
+     * @private
+     */
+    static resolveLeafBreadcrumb(
+        tree: ResourceLevel[] | null | undefined,
+        leaf: ResourceLevel | null | undefined
+    ): string[] {
+        if (!leaf) {
+            return [];
+        }
+        const path: (string | number)[] = Array.isArray(leaf.groupOrder) ? [...leaf.groupOrder] : [];
+        if (path.length === 0 || !Array.isArray(tree) || tree.length === 0) {
+            return [];
+        }
+        const labels: string[] = [];
+        let currentLevel: ResourceLevel[] = tree;
+        for (const segment of path) {
+            const target: string = String(segment);
+            const match: ResourceLevel | undefined = currentLevel.find((node: ResourceLevel): boolean => {
+                const nodeId: string | number | null = ResourceGroupingService.getNodeId(node);
+                return nodeId !== null && String(nodeId) === target;
+            });
+            if (!match) {
+                break;
+            }
+            const label: string = ResourceGroupingService.getLeafLabel(match);
+            if (label.length > 0) {
+                labels.push(label);
+            }
+            currentLevel = Array.isArray(match.children) ? match.children : [];
+        }
+        return labels;
     }
 }

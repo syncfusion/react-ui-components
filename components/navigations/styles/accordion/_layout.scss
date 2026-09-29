@@ -1,0 +1,56 @@
+@use 'theme-variables' as *;
+
+@include export-module('accordion-layout') {
+
+    .sf-accordion {
+        border: $accordion-border;
+        border-radius: $accordion-border-radius;
+        font-size: $accordion-font-size;
+        font-weight: $accordion-font-weight;
+        line-height: $accordion-line-height;
+        -webkit-tap-highlight-color: transparent;
+
+        &-panel {
+            border-bottom: $accordion-panel-border-bottom;
+
+            &:last-child {
+                border-bottom: $accordion-panel-last-border-bottom;
+            }
+        }
+
+        &-trigger {
+            width: 100%;
+            padding: $accordion-trigger-padding;
+
+        }
+
+        &-indicator {
+            transition: transform 120ms ease-in-out;
+
+            svg {
+                font-size: $accordion-indicator-font-size;
+            }
+
+            &.sf-accordion-default-open {
+                transform: rotate(180deg);
+            }
+        }
+
+        &-content {
+            padding: $accordion-content-padding;
+            font-weight: $accordion-content-font-weight;
+            font-size: $accordion-content-font-size;
+            line-height: $accordion-content-line-height;
+        }
+
+        &-borderless {
+            border: none;
+            border-radius: $accordion-borderless-border-radius;
+
+            .sf-accordion-panel {
+                border-bottom: none;
+            }
+        }
+
+    }
+}

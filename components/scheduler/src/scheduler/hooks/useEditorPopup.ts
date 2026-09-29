@@ -400,16 +400,19 @@ export const useEditorPopup: (
         if (!time) { return; }
         const startCombined: Date = combineDateAndTime(startDateOnly, time);
         const endCombined: Date = combineDateAndTime(endDateOnly ?? startDateOnly, endTimeOnly);
-        if (!endTimeChanged && DateService.isMidnight(endTimeOnly)) {
+        const isSameDateTime: boolean = !!startCombined && !!endCombined && startCombined.getTime() === endCombined.getTime();
+        if (!endTimeChanged && isSameDateTime) {
             const bumped: Date = new Date(time);
             bumped.setMinutes(bumped.getMinutes() + slotDuration);
             setEndTimeOnly(bumped);
+            formState?.onChange?.('endTime', { value: bumped });
         } else if (startCombined && endCombined && endCombined <= startCombined) {
             const bumped: Date = new Date(time);
             bumped.setMinutes(bumped.getMinutes() + slotDuration);
             setEndTimeOnly(bumped);
+            formState?.onChange?.('endTime', { value: bumped });
         }
-    }, [startDateOnly, endDateOnly, endTimeOnly, endTimeChanged, slotDuration, combineDateAndTime]);
+    }, [startDateOnly, endDateOnly, endTimeOnly, endTimeChanged, slotDuration, combineDateAndTime, formState]);
 
     const handleEndDateChange: (args: CalendarChangeEvent) => void = useCallback((args: CalendarChangeEvent): void => {
         setEndDateOnly(args?.value as Date);
@@ -424,24 +427,25 @@ export const useEditorPopup: (
     const handleIsAllDayChange: (args: CheckboxChangeEvent) => void = useCallback((args: CheckboxChangeEvent): void => {
         setIsAllDay(args?.value);
         if (action === 'Add' && args?.value === false) {
-            if (!endTimeChanged && DateService.isMidnight(endTimeOnly)) {
+            const startCombined: Date = combineDateAndTime(startDateOnly, startTimeOnly);
+            const endCombined: Date = combineDateAndTime(endDateOnly ?? startDateOnly, endTimeOnly);
+            const isSameDateTime: boolean = !!startCombined && !!endCombined && startCombined.getTime() === endCombined.getTime();
+            if (!endTimeChanged && isSameDateTime) {
                 const baseStart: Date = startTimeOnly ? new Date(startTimeOnly) : new Date(0);
                 if (!startTimeOnly) {
                     baseStart.setHours(0, 0, 0, 0);
                 }
                 baseStart.setMinutes(baseStart.getMinutes() + slotDuration);
                 setEndTimeOnly(baseStart);
-            } else {
-                const startCombined: Date = combineDateAndTime(startDateOnly, startTimeOnly);
-                const endCombined: Date = combineDateAndTime(endDateOnly ?? startDateOnly, endTimeOnly);
-                if (startCombined && endCombined && endCombined <= startCombined) {
-                    const base: Date = startTimeOnly ? new Date(startTimeOnly) : new Date(endCombined);
-                    base.setMinutes(base.getMinutes() + slotDuration);
-                    setEndTimeOnly(base);
-                }
+                formState?.onChange?.('endTime', { value: baseStart });
+            } else if (startCombined && endCombined && endCombined <= startCombined) {
+                const base: Date = startTimeOnly ? new Date(startTimeOnly) : new Date(endCombined);
+                base.setMinutes(base.getMinutes() + slotDuration);
+                setEndTimeOnly(base);
+                formState?.onChange?.('endTime', { value: base });
             }
         }
-    }, [action, endTimeChanged, endTimeOnly, startTimeOnly, slotDuration, combineDateAndTime, startDateOnly, endDateOnly]);
+    }, [action, endTimeChanged, endTimeOnly, startTimeOnly, slotDuration, combineDateAndTime, startDateOnly, endDateOnly, formState]);
 
     const handleSubjectChange: (args: TextBoxChangeEvent) => void = useCallback((args: TextBoxChangeEvent): void => {
         setSubject(args.value);

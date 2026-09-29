@@ -131,8 +131,19 @@ type ISplitButtonProps = ISplitButton & Omit<ButtonHTMLAttributes<HTMLButtonElem
  * ```typescript
  * import { SplitButton } from "@syncfusion/react-splitbuttons";
  *
- * const menuItems = [{ text: 'Cut' }, { text: 'Copy' }, { text: 'Paste' }];
- * <SplitButton items={menuItems}>Default Action</SplitButton>
+ * const menuItems = [
+ *      { text: "Cut" },
+ *      { text: "Copy" },
+ *      { text: "Paste" }
+ * ];
+ *
+ * export default function App() {
+ *      return (
+ *          <SplitButton items={menuItems}>
+ *                  Default Action
+ *          </SplitButton>
+ *      );
+ * }
  * ```
  */
 export const SplitButton: React.ForwardRefExoticComponent<ISplitButtonProps & React.RefAttributes<ISplitButton>> =

@@ -1,11 +1,12 @@
 import { initializeTelemetryFeature } from '@syncfusion/react-base';
 
+
 /**
  * Constant identifier for the chart telemetry scope.
  *
  * @private
  */
-export const CHART_TELEMETRY_KEY: string = 'chart';
+export const CHART_TELEMETRY_KEY: string = 'Charts';
 const CHART_TELEMETRY_FEATURE_TITLE: string = 'Title';
 const CHART_TELEMETRY_FEATURE_SUBTITLE: string = 'SubTitle';
 const CHART_TELEMETRY_FEATURE_LEGEND: string = 'Legend';
@@ -13,6 +14,8 @@ const CHART_TELEMETRY_FEATURE_SERIES: string = 'Series';
 const CHART_TELEMETRY_FEATURE_STACK_LABELS: string = 'StackLabels';
 const CHART_TELEMETRY_FEATURE_STRIP_LINE: string = 'StripLine';
 const CHART_TELEMETRY_FEATURE_ANNOTATION: string = 'Annotation';
+const CHART_TELEMETRY_FEATURE_TRENDLINE: string = 'Trendline';
+const CHART_TELEMETRY_FEATURE_INDICATOR: string = 'Indicator';
 
 /**
  * Resolved feature flags derived from the React child tree (mirrors the
@@ -29,6 +32,8 @@ export interface ChartReactChildNodeBasedProps {
     stackLabels: boolean;
     stripLines: boolean;
     annotation: boolean;
+    trendline: boolean;
+    indicator: boolean;
 }
 
 /**
@@ -64,5 +69,11 @@ export const setChartTelemetryFeatureList: (
         }
         if (reactChildNodeBasedProps.annotation) {
             initializeTelemetryFeature(CHART_TELEMETRY_FEATURE_ANNOTATION, CHART_TELEMETRY_KEY);
+        }
+        if (reactChildNodeBasedProps.trendline) {
+            initializeTelemetryFeature(CHART_TELEMETRY_FEATURE_TRENDLINE, CHART_TELEMETRY_KEY);
+        }
+        if (reactChildNodeBasedProps.indicator) {
+            initializeTelemetryFeature(CHART_TELEMETRY_FEATURE_INDICATOR, CHART_TELEMETRY_KEY);
         }
     };

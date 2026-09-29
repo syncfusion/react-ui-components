@@ -1,4 +1,5 @@
 import { SchedulerProps } from '../types/scheduler-types';
+import { getItemByKey, setItemByKey } from './array-utils';
 
 /**
  * Type guard to check if a value is a plain object
@@ -34,11 +35,10 @@ function isPlainObject(value: any): value is PlainObject {
 export function deepMerge<T extends PlainObject>(target: T, source: Partial<T>): T {
     const result: T = { ...target };
 
-    /* eslint-disable security/detect-object-injection */
     for (const key in source) {
         if (Object.prototype.hasOwnProperty.call(source, key)) {
-            const sourceValue: any = source[key];
-            const targetValue: any = result[key];
+            const sourceValue: any = getItemByKey(source, key);
+            const targetValue: any = getItemByKey(result, key);
             // Do not override defaults with undefined values
             if (typeof sourceValue === 'undefined') {
                 continue;
@@ -47,21 +47,20 @@ export function deepMerge<T extends PlainObject>(target: T, source: Partial<T>):
             if (isPlainObject(sourceValue)) {
                 // If both target and source values are plain objects, merge them recursively
                 if (isPlainObject(targetValue)) {
-                    result[key as keyof T] = deepMerge(
+                    setItemByKey(result, key, deepMerge(
                         targetValue as PlainObject,
                         sourceValue as PlainObject
-                    ) as T[keyof T];
+                    ) as T[keyof T]);
                 } else {
                     // If target value is not an object, use source value
-                    result[key as keyof T] = sourceValue as T[keyof T];
+                    setItemByKey(result, key, sourceValue as T[keyof T]);
                 }
             } else {
                 // For primitive values, arrays, or null/undefined, use source value
-                result[key as keyof T] = sourceValue as T[keyof T];
+                setItemByKey(result, key, sourceValue as T[keyof T]);
             }
         }
     }
-    /* eslint-enable security/detect-object-injection */
     return result;
 }
 

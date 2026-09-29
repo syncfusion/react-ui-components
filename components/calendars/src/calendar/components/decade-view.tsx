@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { CalendarView } from '../types';
 import { CalendarCellData, CalendarSystem } from '../../calendar-core';
-import { buildCellState, CellState, getSelectedDateFromValue, isDateDisabledByRule, isCellWithinRange } from '../utils';
+import { buildCellState, CellState, getSelectedDateFromValue, isDateDisabledByRule, getRangeClassName } from '../utils';
 import { CalendarCell, CalendarCellProps } from '../calendar-cell';
 
 export interface DecadeViewProps {
@@ -69,7 +69,7 @@ export const DecadeView: React.FC<DecadeViewProps> = ({
                 row.forEach((cell: CalendarCellData) => {
                     const decadeDate: Date = cell.date;
                     const label: string = String(calendarSystem.getYear(decadeDate));
-                    const rangeClass: string = cell.inRange && isCellWithinRange(decadeDate, range, 'year', calendarSystem) ? ' sf-in-range' : '';
+                    const rangeClass: string = getRangeClassName(decadeDate, range, 'year', calendarSystem, cell.inRange, suppressRangeSelection);
 
                     const state: CellState = buildCellState(
                         'decade',

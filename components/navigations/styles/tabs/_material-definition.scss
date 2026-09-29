@@ -1,0 +1,90 @@
+﻿@use '../../../base/styles/themes/variables' as *;
+
+$tab-background: transparent !default;
+$sf-tabs-color: rgb($content-text-color-alt1) !default;
+$tab-color: rgb($content-text-color-alt1) !default;
+$tab-selected-bgcolor: rgb($primary) !default;
+$tab-active-color: rgb($primary) !default;
+$tab-disabled-opacity: $opacity4 !default;
+
+$tab-divider-color: rgb($surface-variant) !default;
+$tab-border: 0 !default;
+
+$tab-hover-state-bgcolor: rgba($on-surface-variant, $opacity8) !default;
+$tab-hover-state-color: rgb($on-surface-variant) !default;
+$tab-active-state-bgcolor: rgba($on-surface-variant, $opacity12) !default;
+$tab-active-state-color: rgb($on-surface-variant) !default;
+$tab-focus-state-bgcolor: rgba($on-surface-variant, $opacity16) !default;
+$tab-focus-state-color: rgb($on-surface-variant) !default;
+
+$tab-hover-activetab-bg: rgba($primary, $opacity8) !default;
+$tab-active-activetab-bg: rgba($primary, $opacity16) !default;
+$tab-focus-activetab-bg: rgba($primary, $opacity16) !default;
+$tab-fill-bgcolor: rgb($primary) !default;
+$tab-fill-color: rgb($primary-text-color) !default;
+$tab-accent-indicator-color: rgb($primary-text-color) !default;
+
+$tab-padding-block: $spacing-10 !default;
+$tab-padding-inline: $spacing-12 !default;
+$tab-list-gap: $spacing-16 !default;
+$tab-icon-gap: $spacing-6 !default;
+$tab-fill-inline-size: 75% !default;
+$tab-fill-left: $spacing-10 !default;
+$tab-fill-block-size:  $spacing-1 !default;
+
+$tab-underline-size: $spacing-3 !default;
+$tab-underline-radius: $radius-2 !default;
+$tab-underline-color: rgb($primary) !default;
+
+$tab-font-size: $font-size-sm !default;
+$tab-font-weight: $font-weight-medium !default;
+$tab-line-height: $line-height-sm !default;
+$tab-letter-spacing: $letter-spacing-normal !default;
+
+$tab-panels-padding-block: $spacing-12 !default;
+$tab-left-tab-panels-padding: $spacing-16 !default;
+$tab-right-tab-panels-padding: $spacing-16 !default;
+
+$tab-indicator-transition-duration: 200ms !default;
+$tab-indicator-transition-easing: ease !default;
+
+$tab-overflow-trigger-size: $spacing-36 !default;
+$tab-overflow-trigger-min-size: $spacing-36 !default;
+$tab-overflow-trigger-padding: $spacing-0 $spacing-8 !default;
+$tab-overflow-trigger-radius: $radius-2 !default;
+$tab-overflow-trigger-font-size: $font-size-base !default;
+$tab-overflow-trigger-color: $tab-color !default;
+$tab-overflow-trigger-hover-bg: rgba($on-surface-variant, $opacity8) !default;
+$tab-overflow-trigger-focus-bg: rgba($on-surface-variant, $opacity12) !default;
+$tab-overflow-trigger-open-bg: rgba($primary, $opacity12) !default;
+$tab-overflow-trigger-transition: background-color 150ms ease, color 150ms ease !default;
+
+$tab-overflow-popup-bg: rgb($content-bg-color) !default;
+$tab-overflow-popup-border: 1px solid rgb($surface-variant) !default;
+$tab-overflow-popup-radius: $radius-4 !default;
+$tab-overflow-popup-shadow: $shadow-md !default;
+$tab-overflow-popup-min-width: calc(var(--sf-spacing) * 18) !default;
+$tab-overflow-popup-max-height: calc(var(--sf-spacing) * 21) !default;
+$tab-overflow-popup-padding: $spacing-4 $spacing-0 !default;
+$tab-overflow-popup-margin-top: $spacing-4 !default;
+$tab-overflow-popup-zindex: 1000 !default;
+
+$tab-overflow-item-padding: $spacing-10 $spacing-16 !default;
+$tab-overflow-item-font-size: $font-size-sm !default;
+$tab-overflow-item-font-weight: $font-weight-normal !default;
+$tab-overflow-item-color: rgb($content-text-color) !default;
+$tab-overflow-item-hover-bg: rgba($on-surface-variant, $opacity8) !default;
+$tab-overflow-item-active-color: rgb($primary) !default;
+
+$tab-scroller-overlay-opacity: $opacity4 !default;
+$tab-scroller-nav-zindex: 2 !default;
+
+$tab-top-active-item-border-radius: 0 0 0 0 !default;
+$tab-bottom-active-item-border-radius: 0 0 0 0 !default;
+$tab-left-active-item-border-radius: 0 0 0 0 !default;
+$tab-right-active-item-border-radius: 0 0 0 0 !default;
+
+$sf-tab-top-selected-box-shadow: none !default;
+$sf-tab-bottom-selected-box-shadow: none !default;
+$sf-tab-left-selected-box-shadow: none !default;
+$sf-tab-right-selected-box-shadow: none !default;

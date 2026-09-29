@@ -1,5 +1,11 @@
 import { EventFields, SchedulerProps, AgendaViewProps } from '../types/scheduler-types';
+import { ScrollToMode } from '../types/enums';
 import { Timezone } from '../services/Timezone';
+
+export const MAX_EVENTS_STACK_MONTH: number = 2;
+export const MAX_EVENTS_STACK_TIMESLOT: number = 3;
+export const MAX_EVENTS_STACK_TIMELINE: number = 5;
+export const MAX_EVENTS_STACK_ALLDAY: number = 2;
 
 /**
  * All EventModel property names in field-mapped format.
@@ -30,6 +36,7 @@ export const defaultSchedulerProps: Partial<SchedulerProps> = {
     width: 'auto',
     defaultSelectedDate: new Date(),
     defaultView: 'Week',
+    scrollToSettings: { enable: true, offset: 10, mode: ScrollToMode.Auto },
     eventSettings: {
         dataSource: [],
         fields: DEFAULT_FIELDS,
@@ -44,7 +51,7 @@ export const defaultSchedulerProps: Partial<SchedulerProps> = {
     timeScale: { enable: true, interval: 60, slotCount: 2 },
     workHours: { highlight: true, start: '09:00', end: '18:00' },
     resources: [],
-    group: { resources: [], byDate: false, byGroupID: true },
+    group: { resources: [], byDate: false, byGroupID: true, groupEdit: false },
     startHour: '00:00',
     endHour: '24:00',
     showWeekend: true,
@@ -55,6 +62,7 @@ export const defaultSchedulerProps: Partial<SchedulerProps> = {
     eventOverlap: true,
     keyboardNavigation: true,
     showQuickInfoPopup: true,
+    eventTooltip: false,
     header: true,
     rowAutoHeight: false,
     readOnly: false,

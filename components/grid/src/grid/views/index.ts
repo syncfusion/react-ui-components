@@ -19,3 +19,4 @@ export * from './PagerPanel';
 export * from './DeleteDialog';
 export * from './ContextMenuPanel';
 export * from '../views/GroupDropArea';
+export * from './ToolPanelHost';

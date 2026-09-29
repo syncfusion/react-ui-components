@@ -1,7 +1,6 @@
 import { Dispatch, SetStateAction } from 'react';
 import { ActionType, SortDirection, SortMode } from './enum';
 import { GridActionEvent } from './grid.interfaces';
-import { useSort } from '../hooks';
 
 /**
  * Defines the configuration for a sort descriptor in the Data Grid component.
@@ -134,15 +133,6 @@ export interface SortEvent extends GridActionEvent {
 }
 
 /**
- * Defines the type for the sort strategy module in the Data Grid.
- * Represents the return type of the useSort hook for managing sorting operations.
- * Used internally to encapsulate sorting functionality.
- *
- * @private
- */
-export type SortModule = ReturnType<typeof useSort>;
-
-/**
  * Defines the API for handling sorting actions in the Data Grid.
  * Provides methods and properties to manage sort operations, state, and user interactions.
  * Used internally to control sorting behavior and configuration.
@@ -183,6 +173,33 @@ export interface SortAPI {
     clearSort?(fields?: string[]): void;
 
     /**
+     * Sorts a specified column and resolves once the grid's UI has committed the new sort order.
+     * Resolves without rejecting when the sort is vetoed or is a no-op.
+     *
+     * @param {string} columnName - Defines the column name to be sorted.
+     * @param {SortDirection | string} sortDirection - Defines the direction of sorting field.
+     * @param {boolean} isMultiSort - Specifies whether the previous sorted columns are to be maintained.
+     * @returns {Promise<void>} Resolves after sorting completes.
+     */
+    sortColumnAsync?(columnName: string, sortDirection: SortDirection | string, isMultiSort?: boolean): Promise<void>;
+
+    /**
+     * Removes the sort condition for a specific column and resolves once the grid's UI has committed the change.
+     *
+     * @param {string} columnName - Defines the column name to remove sorting from.
+     * @returns {Promise<void>} Resolves after the sort is removed.
+     */
+    removeSortColumnAsync?(columnName: string): Promise<void>;
+
+    /**
+     * Clears all sorting conditions and resolves once the grid's UI has committed the unsorted state.
+     *
+     * @param {string[]} [fields] - Array of field names to clear sorts from. If omitted, clears all sorts.
+     * @returns {Promise<void>} Resolves after sorting is cleared.
+     */
+    clearSortingAsync?(fields?: string[]): Promise<void>;
+
+    /**
      * Processes grid click events to handle sorting functionality.
      * Determines whether a click on a column header should trigger a sort operation based on the target and sort settings.
      * Updates the sort state and grid UI accordingly.
@@ -220,3 +237,12 @@ export interface SortAPI {
      */
     setSortSettings: Dispatch<SetStateAction<SortSettings>>;
 }
+
+/**
+ * Defines the type for the sort strategy module in the Data Grid.
+ * Represents the return type of the useSort hook for managing sorting operations.
+ * Used internally to encapsulate sorting functionality.
+ *
+ * @private
+ */
+export type SortModule = SortAPI;

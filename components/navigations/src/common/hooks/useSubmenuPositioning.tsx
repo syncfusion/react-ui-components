@@ -1,5 +1,5 @@
 import { useLayoutEffect, useCallback, RefObject, Dispatch, SetStateAction } from 'react';
-import { isCollide, fit } from '@syncfusion/react-popups';
+import { getCollisions, fit } from '@syncfusion/react-popups';
 import { Browser } from '@syncfusion/react-base';
 import { Orientation, SubmenuType } from '../../menu/types';
 import { getBoundedHorizontalPosition, getBoundedVerticalPosition, getCollisionBoundary, getContainerPosition, getLast, isRootContainer } from '../utils';
@@ -47,7 +47,7 @@ export const useSubmenuPositionEffect: (args: UseSubmenuPositionArgs) => void = 
             anchorRect: DOMRect, isRootDropdown: boolean): number => {
             if (layoutDir !== 'rtl') {
                 if (isRootDropdown) { return pageX; }
-                const sides: string[] = isCollide(submenuElement, document.documentElement, pageX, pageY);
+                const sides: string[] = getCollisions(submenuElement, document.documentElement, pageX, pageY);
                 if (!sides.includes('right') && !sides.includes('left')) { return pageX; }
                 const spaceRight: number = window.innerWidth - anchorRect.right;
                 const spaceLeft: number = anchorRect.left;
@@ -88,7 +88,7 @@ export const useSubmenuPositionEffect: (args: UseSubmenuPositionArgs) => void = 
                 const candidateLeftPage: number = resolveEmbeddedCandidateLeft(
                     submenuElement, pagePosition.x, pagePosition.y, submenuWidth, anchorRect, isRootDropdown);
                 const fittedOffset: OffsetPosition = fit(
-                    submenuElement, null, { X: true, Y: false }, { top: pagePosition.y, left: candidateLeftPage }) as OffsetPosition;
+                    submenuElement, null, { top: pagePosition.y, left: candidateLeftPage }, { X: true, Y: false });
                 const newLeftLocal: number = toLocalPosition({ x: fittedOffset.left, y: pagePosition.y }).x;
                 if (Math.abs(newLeftLocal - nextLeftLocal) > MIN_POSITION_DELTA) {
                     nextLeftLocal = Math.round(newLeftLocal);
@@ -135,7 +135,7 @@ export const useSubmenuPositionEffect: (args: UseSubmenuPositionArgs) => void = 
                 const customContainerCollide: boolean = !isDefaultContainer && submenuWidth > 0 && boundaryWidth > 0 && (collisionLeft <
                     collisionBoundary.scrollLeft || collisionLeft + submenuWidth > collisionBoundary.scrollLeft + boundaryWidth);
 
-                const collide: string[] = isCollide(
+                const collide: string[] = getCollisions(
                     submenuElement, collisionBoundary, layoutDir === 'rtl' ? leftPage - submenuWidth : leftPage, topPage);
                 if (collide.includes('left') || collide.includes('right') || customContainerCollide) {
                     if (previousRect) {
@@ -156,7 +156,7 @@ export const useSubmenuPositionEffect: (args: UseSubmenuPositionArgs) => void = 
                 if (collide.includes('bottom')) {
                     const fitBoundary: HTMLElement | null = isDefaultContainer ? null : collisionBoundary;
                     const fitted: OffsetPosition = fit(
-                        submenuElement, fitBoundary, { X: false, Y: true }, { top: topPage, left: leftPage }) as OffsetPosition;
+                        submenuElement, fitBoundary, { top: topPage, left: leftPage }, { X: false, Y: true });
                     topPage = fitted.top;
                     top = toLocalPosition({ x: leftPage, y: topPage }).y;
                 }

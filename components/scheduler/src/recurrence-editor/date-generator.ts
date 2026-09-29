@@ -1,10 +1,8 @@
-/* eslint-disable max-len */
 import { isNullOrUndefined, IL10n, getDefaultDateObject, getValue, cldrData } from '@syncfusion/react-base';
 import { DateService, MS_PER_DAY } from '../scheduler/services/DateService';
 import { CalendarUtil, Gregorian } from '../common/calendar-util';
 import { FreqType } from './types';
 import { useRecurrenceEditorLocalization } from './locale';
-// import { Timezone } from '../schedule/timezone/timezone';
 
 /**
  * Date Generator from Recurrence Rule
@@ -260,7 +258,8 @@ function dailyType(startDate: Date, endDate: Date, data: number[], ruleObject: R
  * @returns {void}
  * @private
  */
-function weeklyType(startDate: Date, endDate: Date, data: number[], ruleObject: RecRule, startDayOfWeek: number, ctx: RecurrenceContext): void {
+function weeklyType(startDate: Date, endDate: Date, data: number[],
+                    ruleObject: RecRule, startDayOfWeek: number, ctx: RecurrenceContext): void {
     let tempDate: Date = new Date(startDate.getTime());
     if (!ruleObject.day.length) {
         ruleObject.day.push(DAYINDEX[startDate.getDay()]);
@@ -607,7 +606,8 @@ function monthlyDateTypeProcess(startDate: Date, endDate: Date, data: number[], 
  * @returns {void}
  * @private
  */
-function monthlyDateTypeProcessforMonthFreq(startDate: Date, endDate: Date, data: number[], ruleObject: RecRule, ctx: RecurrenceContext): void {
+function monthlyDateTypeProcessforMonthFreq(startDate: Date, endDate: Date, data: number[], ruleObject: RecRule,
+                                            ctx: RecurrenceContext): void {
     const ruleData: RuleData = initializeRecRuleVariables(startDate, ruleObject, ctx);
     ruleData.tempDate = ruleData.mainDate = ctx.calendarUtil.getMonthStartDate(ruleData.tempDate);
     if (((ruleObject.freq === 'MONTHLY' && ruleObject.interval === 12) || (ruleObject.freq === 'YEARLY')) &&
@@ -641,7 +641,8 @@ function monthlyDateTypeProcessforMonthFreq(startDate: Date, endDate: Date, data
  * @returns {void}
  * @private
  */
-function processDateCollectionForByMonthDay(ruleObject: RecRule, recRuleVariables: RuleData, endDate: Date, isByMonth?: boolean, ctx?: RecurrenceContext, startDate?: Date, data?: number[]): void {
+function processDateCollectionForByMonthDay(ruleObject: RecRule, recRuleVariables: RuleData, endDate: Date, isByMonth?: boolean,
+                                            ctx?: RecurrenceContext, startDate?: Date, data?: number[]): void {
     for (let index: number = 0; index < ruleObject.monthDay.length; index++) {
         recRuleVariables.date = ruleObject.monthDay[parseInt(index.toString(), 10)];
         recRuleVariables.tempDate = ctx.calendarUtil.getMonthStartDate(recRuleVariables.tempDate);
@@ -656,7 +657,8 @@ function processDateCollectionForByMonthDay(ruleObject: RecRule, recRuleVariable
             if (ruleObject.day.length === 0 || ruleObject.day.indexOf(DAYINDEX[recRuleVariables.tempDate.getDay()]) > -1) {
                 if (isByMonth && isNullOrUndefined(ruleObject.setPosition) && (recRuleVariables.expectedCount
                     && (data.length + ruleObject.recExceptionCount) < recRuleVariables.expectedCount)) {
-                    insertDateCollection(recRuleVariables.state, startDate, endDate, data, ruleObject, recRuleVariables.tempDate.getTime(), ctx);
+                    insertDateCollection(recRuleVariables.state, startDate, endDate, data, ruleObject,
+                                         recRuleVariables.tempDate.getTime(), ctx);
                 } else {
                     recRuleVariables.dateCollection.push([recRuleVariables.tempDate.getTime()]);
                 }
@@ -677,7 +679,8 @@ function processDateCollectionForByMonthDay(ruleObject: RecRule, recRuleVariable
  * @returns {number} Returnx the next valid date
  * @private
  */
-function setNextValidDate(tempDate: Date, ruleObject: RecRule, monthInit: number, beginDate: Date = null, ctx?: RecurrenceContext, interval?: number): number {
+function setNextValidDate(tempDate: Date, ruleObject: RecRule, monthInit: number, beginDate: Date = null, ctx?: RecurrenceContext,
+                          interval?: number): number {
     let monthData: number = beginDate ? beginDate.getMonth() : 0;
     const startDate: Date = ctx.calendarUtil.getMonthStartDate(tempDate);
     interval = isNullOrUndefined(interval) ? ruleObject.interval : interval;
@@ -739,7 +742,8 @@ function getMonthCollection(startDate: Date, endDate: Date, data: number[], rule
                 tempDate = ctx.calendarUtil.getMonthStartDate(tempDate);
                 tempDate = getStartDateForWeek(tempDate, expectedDays);
                 currentMonthDate.setFullYear(tempDate.getFullYear(), tempDate.getMonth(), tempDate.getDate());
-                while (ctx.calendarUtil.isSameYear(currentMonthDate, tempDate) && ctx.calendarUtil.isSameMonth(currentMonthDate, tempDate)) {
+                while (ctx.calendarUtil.isSameYear(currentMonthDate, tempDate) &&
+                    ctx.calendarUtil.isSameMonth(currentMonthDate, tempDate)) {
                     if (expectedDaysArray[expectedDaysArray.length - 1] === DAYINDEX[currentMonthDate.getDay()]) {
                         monthCollection.push([currentMonthDate.getTime()]);
                     }
@@ -821,7 +825,8 @@ function getMonthCollection(startDate: Date, endDate: Date, data: number[], rule
  * @returns {void}
  * @private
  */
-function monthlyDayTypeProcessforMonthFreq(startDate: Date, endDate: Date, data: number[], ruleObject: RecRule, ctx: RecurrenceContext): void {
+function monthlyDayTypeProcessforMonthFreq(startDate: Date, endDate: Date, data: number[], ruleObject: RecRule,
+                                           ctx: RecurrenceContext): void {
     const expectedDays: string[] = ruleObject.day;
     // When BYDAY property having more than 1 value.
     if (expectedDays.length > 1) {
@@ -956,7 +961,8 @@ function monthlyDayTypeProcess(startDate: Date, endDate: Date, data: number[], r
  * @returns {void}
  * @private
  */
-function processDateCollectionforByDayWithInteger(startDate: Date, endDate: Date, data: number[], ruleObject: RecRule, ctx: RecurrenceContext): void {
+function processDateCollectionforByDayWithInteger(startDate: Date, endDate: Date, data: number[], ruleObject: RecRule,
+                                                  ctx: RecurrenceContext): void {
     const expectedDays: string[] = ruleObject.day;
     const expectedCount: number = getDateCount(startDate, ruleObject, ctx);
     let tempDate: Date = new Date(startDate.getTime());
@@ -987,7 +993,8 @@ function processDateCollectionforByDayWithInteger(startDate: Date, endDate: Date
                     while (ctx.calendarUtil.isSameYear(currentMonthDate, tempDate)) {
                         currentMonthDate = new Date(tempDate.getTime());
                         if (ruleObject.month.length === 0 ||
-                            (ruleObject.month.length > 0 && ruleObject.month[parseInt(i.toString(), 10)] === ctx.calendarUtil.getMonth(currentMonthDate))) {
+                            (ruleObject.month.length > 0 &&
+                                ruleObject.month[parseInt(i.toString(), 10)] === ctx.calendarUtil.getMonth(currentMonthDate))) {
                             const expectedDaysArray: string[] = expectedDays[parseInt(j.toString(), 10)].match(SPLITNUMBERANDSTRING);
                             const position: number = parseInt(expectedDaysArray[0], 10);
                             currentDate = new Date(tempDate.getTime());
@@ -1084,7 +1091,8 @@ function getRecurrenceCollection(monthCollection: number[][], expectedDays: stri
  * @returns {void}
  * @private
  */
-function insertDataCollection(dateCollection: number[][], state: boolean, startDate: Date, endDate: Date, data: number[], ruleObject: RecRule, ctx: RecurrenceContext): void {
+function insertDataCollection(dateCollection: number[][], state: boolean, startDate: Date, endDate: Date, data: number[],
+                              ruleObject: RecRule, ctx: RecurrenceContext): void {
     let index: number = ((ruleObject.setPosition < 1) ?
         (dateCollection.length + ruleObject.setPosition) : ruleObject.setPosition - 1);
     if (isNullOrUndefined(ruleObject.setPosition)) {
@@ -1126,7 +1134,8 @@ function getDateCollectionforBySetPosNull(monthCollection: number[][]): number[]
  * @returns {void}
  * @private
  */
-function insertDateCollectionBasedonIndex(monthCollection: number[][], startDate: Date, endDate: Date, data: number[], ruleObject: RecRule, ctx: RecurrenceContext): void {
+function insertDateCollectionBasedonIndex(monthCollection: number[][], startDate: Date, endDate: Date, data: number[], ruleObject: RecRule,
+                                          ctx: RecurrenceContext): void {
     const expectedDays: string[] = ruleObject.day;
     let state: boolean;
     let datas: number[] = [];
@@ -1175,7 +1184,8 @@ function filterDateCollectionByIndex(monthCollection: number[][], index: number,
  * @returns {void}
  * @private
  */
-function insertDateCollection(state: boolean, startDate: Date, endDate: Date, data: number[], ruleObject: RecRule, dayData: number, ctx: RecurrenceContext): void {
+function insertDateCollection(state: boolean, startDate: Date, endDate: Date, data: number[], ruleObject: RecRule, dayData: number,
+                              ctx: RecurrenceContext): void {
     const expectedCount: number = getDateCount(startDate, ruleObject, ctx);
     const chDate: Date = new Date(dayData);
     state = validateRules(chDate, ruleObject, ctx);
@@ -1197,7 +1207,8 @@ function insertDateCollection(state: boolean, startDate: Date, endDate: Date, da
  * @returns {number} returns week number
  * @private
  */
-function weekCount(year: number, startDayOfWeek: number, monthCollection: number[][], week: number, ruleObject: RecRule, ctx: RecurrenceContext): number {
+function weekCount(year: number, startDayOfWeek: number, monthCollection: number[][], week: number, ruleObject: RecRule,
+                   ctx: RecurrenceContext): number {
     const firstDayOfWeek: number = startDayOfWeek || 0;
     const firstOfMonth: Date = new Date(year, ruleObject.month[0] - 1, 1);
     const lastOfMonth: Date = new Date(year, ruleObject.month[0], 0);
@@ -1257,7 +1268,8 @@ function insertDateCollectionBasedonBySetPos
  * @returns {void}
  * @private
  */
-function insertDatasIntoExistingCollection(monthCollection: number[][], state: boolean, startDate: Date, endDate: Date, data: number[], ruleObject: RecRule, ctx: RecurrenceContext, index?: number): void {
+function insertDatasIntoExistingCollection(monthCollection: number[][], state: boolean, startDate: Date, endDate: Date, data: number[],
+                                           ruleObject: RecRule, ctx: RecurrenceContext, index?: number): void {
     if (monthCollection.length > 0) {
         index = !isNullOrUndefined(index) ? index :
             ((ruleObject.setPosition < 1)

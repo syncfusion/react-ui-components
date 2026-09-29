@@ -120,6 +120,7 @@ export const Button: ForwardRefExoticComponent<IButtonProps & RefAttributes<IBut
             size = Size.Medium,
             isLink = false,
             onClick,
+            onMouseDown,
             children,
             ...domProps
         } = props;
@@ -145,6 +146,15 @@ export const Button: ForwardRefExoticComponent<IButtonProps & RefAttributes<IBut
             }
             onClick?.(event);
         }, [toggleable, selected, onClick]);
+
+        const handleMouseDown: MouseEventHandler<HTMLButtonElement> =
+        useCallback<MouseEventHandler<HTMLButtonElement>>(
+            (event: MouseEvent<HTMLButtonElement>): void => {
+                rippleMouseDown(event);
+                onMouseDown?.(event);
+            },
+            [rippleMouseDown, onMouseDown]
+        );
 
         useEffect(() => {
             if (selected !== undefined) {
@@ -185,7 +195,7 @@ export const Button: ForwardRefExoticComponent<IButtonProps & RefAttributes<IBut
                 type='button'
                 className={classNames}
                 onClick={handleButtonClick}
-                onMouseDown={rippleMouseDown}
+                onMouseDown={handleMouseDown}
                 disabled={disabled}
                 aria-pressed={toggleable ? isActive : undefined}
                 {...domProps}

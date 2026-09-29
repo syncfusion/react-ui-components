@@ -127,7 +127,8 @@ export function initSeries(targetSeries: SeriesProperties, axisCollection: AxisM
         fill: base.paretoOptions?.fill ? base.paretoOptions.fill : colors[indexValue % count],
         width: base.paretoOptions?.width,
         dashArray: base.paretoOptions?.dashArray,
-        marker: base.paretoOptions?.marker
+        marker: base.paretoOptions?.marker,
+        lastValueLabel: { enable: false }
     };
     if (series.marker && series.marker.visible) {
         const previousSeries: SeriesProperties = visibleSeries[visibleSeries.length - 1];

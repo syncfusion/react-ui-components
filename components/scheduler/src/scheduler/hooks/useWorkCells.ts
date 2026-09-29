@@ -1,8 +1,13 @@
 import { useMemo, JSX, ReactNode } from 'react';
+import { isNullOrUndefined } from '@syncfusion/react-base';
 import { DateService, MINUTES_PER_HOUR } from '../services/DateService';
 import { TimeScaleProps, WorkHoursProps, SchedulerCellProps } from '../types/scheduler-types';
-import { CellData } from '../types/internal-interface';
+import { CellData, TimelineSlot } from '../types/internal-interface';
 import { useResourceGroupingContext } from '../context/resource-grouping-context';
+import { useSchedulerPropsContext } from '../context/scheduler-context';
+import { SchedulerHeaderRowsType, useSchedulerHeaderRowsContext } from '../context/scheduler-header-rows-context';
+import { TimelineResourceRowMeta } from '../services/ResourceGroupingService';
+import { CSS_CLASSES } from '../common/constants';
 
 /**
  * Interface for the props accepted by useWorkCells hook
@@ -42,6 +47,21 @@ interface UseWorkCellsProps {
      * The end hour of the scheduler
      */
     endHour: string;
+
+    /**
+     * Whether it is a timeline view
+     */
+    isTimelineView?: boolean;
+
+    /**
+     * The time slots for timeline view
+     */
+    timeSlots?: TimelineSlot[];
+
+    /**
+     * Whether it is a month view
+     */
+    isMonthView?: boolean;
 }
 
 /**
@@ -98,6 +118,18 @@ export interface WorkCell {
      * Resource group index (sequential position among leaf resources)
      */
     groupIndex?: number;
+
+    /**
+     * Horizontal column span in adaptive date/slot units (last-level grain).
+     * Week/Month/Year last-track cells use this so one work cell fills the
+     * full spanned width via `--sf-scheduler-col-span`.
+     */
+    colSpan?: number;
+
+    /**
+     * End date for cells that span a range (e.g. Week/Month/Year last-track header groups).
+     */
+    endDate?: Date;
 }
 
 /**
@@ -134,29 +166,35 @@ export const useWorkCells: (props: UseWorkCellsProps) => UseWorkCellsResult = (p
         cell,
         timeScale,
         startHour,
-        endHour
+        endHour,
+        isTimelineView,
+        timeSlots,
+        isMonthView
     } = props;
 
     const { hours: startHours, minutes: startMinutes } = DateService.parseTimeString(startHour || '00:00');
     const { hours: endHours, minutes: endMinutes } = endHour === '24:00'
         ? { hours: 24, minutes: 0 } : DateService.parseTimeString(endHour || '24:00');
 
-    const { isGroupingEnabled, columnLevels } = useResourceGroupingContext();
-    const columnLastLevelData: CellData[] = isGroupingEnabled && columnLevels.length > 0
+    const { isGroupingEnabled, columnLevels, visibleResourceHeaders } = useResourceGroupingContext();
+    const { timezone } = useSchedulerPropsContext();
+    const columnLastLevelData: CellData[] = isGroupingEnabled && !isTimelineView && columnLevels.length > 0
         ? columnLevels[columnLevels.length - 1]
         : [];
 
+    const headerRowsInfo: SchedulerHeaderRowsType = useSchedulerHeaderRowsContext();
+    const headerLastLevelData: CellData[] = (isTimelineView && headerRowsInfo && headerRowsInfo.headerLastLevel.length > 0)
+        ? headerRowsInfo.headerLastLevel : [];
+    const effectiveLastLevelData: CellData[] = columnLastLevelData.length > 0
+        ? columnLastLevelData : headerLastLevelData;
     const effectiveRenderDates: Date[] = columnLastLevelData.length > 0
-        ? columnLastLevelData.map((cell: CellData) => cell.date as Date)
-        : renderDates;
+        ? columnLastLevelData.map((cell: CellData) => cell.date as Date) : renderDates;
 
     const renderCellTemplate: (date: Date) => JSX.Element | null =
-    (date: Date): JSX.Element | null => {
-        if (!cell) {
-            return null;
-        }
-        return cell({ date, type: 'workCell' }) as JSX.Element;
-    };
+        (date: Date): JSX.Element | null => {
+            if (!cell) { return null; }
+            return cell({ date, type: 'workCell' }) as JSX.Element;
+        };
 
     const workCellRows: {
         key: string;
@@ -169,7 +207,62 @@ export const useWorkCells: (props: UseWorkCellsProps) => UseWorkCellsResult = (p
             cells: WorkCell[];
         }[] = [];
 
-        if (!timeScale.enable) {
+        if (isTimelineView && timeSlots) {
+            const now: Date = DateService.getCurrentTime(timezone);
+
+            const buildCells: (groupIndex?: number) => WorkCell[] = (groupIndex?: number): WorkCell[] =>
+                effectiveLastLevelData.map((cell: CellData, colIdx: number) => {
+                    const isWeekendRow: boolean = DateService.isWeekend(cell.date, workDays);
+                    const isTodayRow: boolean = DateService.isSameDay(cell.date, now);
+                    const isWorkDayRow: boolean = DateService.isWorkDay(cell.date, workDays);
+                    const isMajor: boolean = cell.isMajorSlot;
+                    const cellKey: string = !isNullOrUndefined(groupIndex) ? `cell-${groupIndex}-${colIdx}` : `cell-${colIdx}`;
+                    const isWorkHour: boolean = DateService.isWorkHour(cell.date, workHours, workDays) ||
+                        (!isMonthView && isWorkDayRow && isNullOrUndefined(isMajor)); // IsMajor is undefined means no hour header.
+                    const className: string = [
+                        CSS_CLASSES.WORK_CELLS,
+                        !isMonthView && isMajor ? CSS_CLASSES.ALTERNATE_CELLS : '',
+                        isTodayRow ? CSS_CLASSES.TODAY : '',
+                        isWeekendRow ? CSS_CLASSES.WEEKEND : '',
+                        isWorkHour ? CSS_CLASSES.WORK_HOURS : '',
+                        isMonthView && isWorkDayRow ? CSS_CLASSES.WORK_DAYS : ''
+                    ].filter(Boolean).join(' ');
+                    const groupIndexProps: { groupIndex?: number } = !isNullOrUndefined(groupIndex) ? { groupIndex } : {};
+
+                    return {
+                        date: cell.date,
+                        className,
+                        key: cellKey,
+                        dataAttributes: {
+                            date: cell.date.getTime(),
+                            dateKey: DateService.generateDateKey(cell.date),
+                            ...groupIndexProps
+                        },
+                        isWorkHour,
+                        isToday: isTodayRow,
+                        isWeekend: isWeekendRow,
+                        isAlternate: !isMonthView && isMajor,
+                        ...groupIndexProps,
+                        colSpan: cell.colSpan ?? 1,
+                        endDate: cell.endDate
+                    };
+                });
+
+            if (visibleResourceHeaders?.length > 0) {
+                visibleResourceHeaders.forEach((row: TimelineResourceRowMeta) => {
+                    const groupIndex: number = row.groupIndex;
+                    rows.push({
+                        key: !isNullOrUndefined(groupIndex) ? `timeline-row-${groupIndex}` : 'timeline-row',
+                        cells: buildCells(groupIndex)
+                    });
+                });
+            } else {
+                rows.push({ key: 'timeline-row', cells: buildCells() });
+            }
+            return rows;
+        }
+
+        if (!timeScale?.enable) {
             // For disabled time scale, create a single row with full-day cells
             const cells: WorkCell[] = effectiveRenderDates.map((date: Date, dateIndex: number) => {
                 const cellDate: Date = new Date(date);
@@ -177,12 +270,14 @@ export const useWorkCells: (props: UseWorkCellsProps) => UseWorkCellsResult = (p
                 const isToday: boolean = DateService.isSameDay(date, new Date());
                 const isWeekend: boolean = DateService.isWeekend(date, workDays);
                 const groupIndex: number | undefined = columnLastLevelData[parseInt(dateIndex.toString(), 10)]?.groupIndex;
+                const isWorkHour: boolean = DateService.isWorkHour(cellDate, {start: '00:00', end: '24:00', highlight: true }, workDays);
 
                 const className: string = [
-                    'sf-work-cells',
-                    'sf-timescale-disabled-cell',
-                    isToday ? 'sf-today' : '',
-                    isWeekend ? 'sf-weekend' : ''
+                    CSS_CLASSES.WORK_CELLS,
+                    CSS_CLASSES.TIMESCALE_DISABLED_CELL,
+                    isToday ? CSS_CLASSES.TODAY : '',
+                    isWeekend ? CSS_CLASSES.WEEKEND : '',
+                    isWorkHour ? CSS_CLASSES.WORK_HOURS : ''
                 ].filter(Boolean).join(' ');
 
                 return {
@@ -235,11 +330,11 @@ export const useWorkCells: (props: UseWorkCellsProps) => UseWorkCellsResult = (p
                         const groupIndex: number | undefined = columnLastLevelData[parseInt(dateIndex.toString(), 10)]?.groupIndex;
 
                         const className: string = [
-                            'sf-work-cells',
-                            isAlternate ? 'sf-alternate-cells' : '',
-                            isToday ? 'sf-today' : '',
-                            isWeekend ? 'sf-weekend' : '',
-                            isWorkHour ? 'sf-work-hours' : ''
+                            CSS_CLASSES.WORK_CELLS,
+                            isAlternate ? CSS_CLASSES.ALTERNATE_CELLS : '',
+                            isToday ? CSS_CLASSES.TODAY : '',
+                            isWeekend ? CSS_CLASSES.WEEKEND : '',
+                            isWorkHour ? CSS_CLASSES.WORK_HOURS : ''
                         ].filter(Boolean).join(' ');
 
                         return {
@@ -278,7 +373,12 @@ export const useWorkCells: (props: UseWorkCellsProps) => UseWorkCellsResult = (p
         endMinutes,
         workDays,
         workHours,
-        columnLastLevelData
+        columnLastLevelData,
+        isTimelineView,
+        timeSlots,
+        isMonthView,
+        timezone,
+        visibleResourceHeaders
     ]);
 
     return {

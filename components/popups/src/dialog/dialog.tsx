@@ -1,12 +1,12 @@
 import * as React from 'react';
 import { forwardRef, useRef, useImperativeHandle, HTMLAttributes, useCallback, useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Popup, IPopup, getZindexPartial } from '../popup/popup';
+import { Popup, IPopup } from '../popup/popup';
 import { Button, Color, IButton, Variant } from '@syncfusion/react-buttons';
 import { Effect, IL10n, L10n, preRender, useProviderContext, useDraggable, IDraggable, DragEvent, useStableId } from '@syncfusion/react-base';
 import { useResize, ResizeDirections, IResize } from '../common/resize';
 import { ResizerRightIcon, CloseIcon } from '@syncfusion/react-icons';
-import { PositionAxis } from './type';
+import { getZindexPartial } from '../common/collision-handler';
 export { ResizeDirections };
 
 const DIALOG_VIEWPORT_MARGIN: number = 20;
@@ -290,13 +290,24 @@ type AnimationMapping = {
  * Use header and footer props to create a structured dialog layout:
  *
  * ```typescript
- * import { Dialog } from "@syncfusion/react-popups";
+ * import { useState } from 'react';
+ * import { Dialog } from '@syncfusion/react-popups';
  *
- * const [isOpen, setIsOpen] = useState(false);
+ * export default function App() {
+ *     const [isOpen, setIsOpen] = useState(false);
  *
- * <Dialog open={isOpen} onClose={() => setIsOpen(false)} modal={true} header="Dialog Title" footer={<><button onClick={() => setIsOpen(false)}>Close</button></>} >
- *      <p>This is the dialog content.</p>
- * </Dialog>
+ *     return (
+ *         <Dialog
+ *             open={isOpen}
+ *             onClose={() => setIsOpen(false)}
+ *             modal={true}
+ *             header="Dialog Title"
+ *             footer={<button onClick={() => setIsOpen(false)}>Close</button>}
+ *         >
+ *             <p>This is the dialog content.</p>
+ *         </Dialog>
+ *     );
+ * }
  * ```
  */
 export const Dialog: React.ForwardRefExoticComponent<DialogComponentProps & React.RefAttributes<IDialog>> =
@@ -696,14 +707,6 @@ export const Dialog: React.ForwardRefExoticComponent<DialogComponentProps & Reac
             return 'sf-dlg-center';
         }, [position, style]);
 
-        const popupPosition: PositionAxis = useMemo(() => {
-            const [X, Y] = position ? position?.split(/(?=[A-Z])/) : [];
-            if (X && Y) {
-                return { X: X, Y: Y };
-            }
-            return { X: 'Center', Y: 'Center' };
-        }, [position]);
-
         const dialogContainerClasses: string = useMemo(() => {
             return [
                 'sf-dlg-container',
@@ -769,7 +772,6 @@ export const Dialog: React.ForwardRefExoticComponent<DialogComponentProps & Reac
                         stableRef.current = el?.element as HTMLElement;
                     }}
                     open={open}
-                    position={popupPosition}
                     zIndex={zIndexPopup}
                     relateTo={target as HTMLElement}
                     onOpen={handlePopupOpen}

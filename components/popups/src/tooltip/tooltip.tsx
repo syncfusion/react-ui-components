@@ -3,9 +3,10 @@ import { TapEventArgs, Touch, ITouch, Browser, Animation as AnimationInstance, a
 import { isNullOrUndefined, getUniqueID, formatUnit } from '@syncfusion/react-base';
 import { attributes, closest, preRender, SvgIcon } from '@syncfusion/react-base';
 import { ActionOnScrollType, IPopup, Popup, PopupAnimationOptions } from '../popup/popup';
-import { OffsetPosition, calculatePosition } from '../common/position';
-import { isCollide, fit, getElementReact } from '../common/collision';
 import { createPortal } from 'react-dom';
+import { HorizontalAlign, OffsetPosition, VerticalAlign } from '../common';
+import { calculatePosition } from '../common/popup-positioning';
+import { fit, getCollisions } from '../common/collision-handler';
 
 const TOUCHEND_HIDE_DELAY: number = 1500;
 const TAP_HOLD_THRESHOLD: number = 500;
@@ -342,11 +343,15 @@ type TooltipComponentProps = TooltipProps & Omit<HTMLAttributes<HTMLDivElement>,
  * It supports various positions, animations, and customization options.
  *
  * ```typescript
- * import { Tooltip } from "@syncfusion/react-popups";
+ * import { Tooltip } from '@syncfusion/react-popups';
  *
- * <Tooltip content={<>This is a Tooltip</>}>
- *   Hover me
- * </Tooltip>
+ * export default function App() {
+ *     return (
+ *         <Tooltip content={<>This is a Tooltip</>}>
+ *             Hover me
+ *         </Tooltip>
+ *     );
+ * }
  * ```
  */
 export const Tooltip: ForwardRefExoticComponent<TooltipComponentProps & RefAttributes<ITooltip>> =
@@ -389,7 +394,6 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: Ref<ITool
     const [openTarget, setOpenTarget] = useState<HTMLElement | null>(null);
     const [isTooltipOpen, setIsTooltipOpen] = useState(false);
     const [tipClass, setTipClassState] = useState<string | null>(TIP_BOTTOM);
-    const [elePos, setElePos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
     const [eventProps, setEventProps] = useState<{ [key: string]: object }>({});
     const [arrowInnerTipStyle, setArrowInnerTipStyle] = useState({ top: '', left: '' });
     const [TooltipStyle, setTooltipStyle] = useState<HTMLAttributes<HTMLDivElement>>({style});
@@ -610,7 +614,13 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: Ref<ITool
 
     const renderPopup: (target: HTMLElement) => void  = (target: HTMLElement) => {
         const elePos: OffsetPosition = getTooltipPosition(target);
-        setElePos(elePos);
+        setTooltipStyle((prevStyle: HTMLAttributes<HTMLDivElement> | undefined) => ({
+            ...prevStyle,
+            style: {
+                ...(prevStyle?.style || {}),
+                ...{left: elePos.left, top: elePos.top}
+            }
+        }));
     };
 
     const getScalingFactor: (target: HTMLElement) => { [key: string]: number }   = (target: HTMLElement): { [key: string]: number } => {
@@ -654,10 +664,12 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: Ref<ITool
                 tooltipEle.current.element.style.zoom = (getComputedStyle(parentWithZoomStyle) as CSSStyleDeclaration).zoom;
             }
         }
-        const pos: OffsetPosition = calculatePosition(target, tooltipPosition.current.x?.toLowerCase() as string,
-                                                      tooltipPosition.current.y?.toLowerCase() as string,
-                                                      isBodyContainer.current ? undefined :
-                                                          containerElement.current?.getBoundingClientRect());
+        const pos: OffsetPosition =  calculatePosition(
+            target,
+            tooltipEle?.current?.element as HTMLElement,
+            {horizontal: tooltipPosition.current.x?.toLowerCase() as HorizontalAlign,
+                vertical: tooltipPosition.current.y?.toLowerCase() as VerticalAlign },
+            {horizontal: 'left', vertical: 'top'}, 0, 0 );
         const scalingFactors: { [key: string]: number } = getScalingFactor(target);
         const offsetPos: OffsetPosition = calculateTooltipOffset(position, scalingFactors.x, scalingFactors.y);
         const collisionPosition: Array<number> = calculateElementPosition(pos, offsetPos);
@@ -686,7 +698,13 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: Ref<ITool
     const reposition: (target: HTMLElement) => void = (target: HTMLElement) => {
         if (tooltipEle.current && tooltipEle.current.element && target) {
             const elePos: OffsetPosition = getTooltipPosition(target);
-            setElePos(elePos);
+            setTooltipStyle((prevStyle: HTMLAttributes<HTMLDivElement> | undefined) => ({
+                ...prevStyle,
+                style: {
+                    ...(prevStyle?.style || {}),
+                    ...{left: elePos.left, top: elePos.top}
+                }
+            }));
             tooltipEle.current.element.style.visibility = 'visible';
         }
     };
@@ -983,6 +1001,8 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: Ref<ITool
             }, delay);
             return;
         }
+        targetRef.current = target as HTMLElement;
+        setOpenTarget(target as HTMLElement);
         restoreElement(target as HTMLElement);
         showTooltip(target as HTMLElement, animation.open as TooltipAnimationProps, e as Event);
     };
@@ -1125,18 +1145,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: Ref<ITool
             vertical: tooltipPosition.current.y as string
         };
         const collideTarget: RefObject<HTMLElement> | null = checkCollideTarget();
-        const collideTargetElement: HTMLElement | undefined = collideTarget?.current;
-        if (container && collideTargetElement && collideTargetElement !== document.documentElement &&
-            collideTargetElement !== document.body) {
-            const collideTargetRect: DOMRect | null = getElementReact(collideTargetElement);
-            if (collideTargetRect) {
-                x += collideTargetRect.left;
-                y += collideTargetRect.top;
-            }
-        }
-        const affectedPos: string[] = isCollide(
-            tooltipEle.current?.element as HTMLElement,
-            collideTarget ? collideTarget.current : null, sticky &&  position.indexOf('Right') >= 0 ? (stickyElementRef.current as HTMLElement).offsetWidth + x : x , y );
+        const affectedPos: string[] = getCollisions(tooltipEle.current?.element as HTMLElement, collideTarget ? collideTarget.current : null, sticky &&  position.indexOf('Right') >= 0 ? (stickyElementRef.current as HTMLElement).offsetWidth + x : x , y);
         if (affectedPos.length > 0) {
             elePos.horizontal = affectedPos.indexOf('left') >= 0 ? 'Right' : affectedPos.indexOf('right') >= 0 ? 'Left' :
                 tooltipPosition.current.x as string;
@@ -1164,9 +1173,12 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: Ref<ITool
         const elePosVertical: string = elePos.vertical;
         const elePosHorizontal: string = elePos.horizontal;
         if (elePos.position !== newPos) {
-            const pos: OffsetPosition = calculatePosition(target, elePosHorizontal.toLowerCase(),
-                                                          elePosVertical.toLowerCase(), isBodyContainer.current ? undefined :
-                                                              containerElement.current?.getBoundingClientRect());
+            const pos: OffsetPosition =  calculatePosition(
+                target,
+                tooltipEle?.current?.element as HTMLElement,
+                {horizontal: elePosHorizontal?.toLowerCase() as HorizontalAlign, vertical: elePosVertical?.toLowerCase() as VerticalAlign },
+                {horizontal: 'left', vertical: 'top'},
+                0,  0 );
             adjustArrow(target, newPos, elePosHorizontal, elePosVertical);
             const scalingFactors: { [key: string]: number } = getScalingFactor(target);
             const offsetPos: OffsetPosition = calculateTooltipOffset(newPos, scalingFactors.x, scalingFactors.y);
@@ -1184,7 +1196,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: Ref<ITool
         const eleOffset: OffsetPosition = { left: elePos.left, top: elePos.top };
         const collideTarget: RefObject<HTMLElement> | null = checkCollideTarget();
         const updatedPosition: OffsetPosition = isBodyContainer.current ? fit(tooltipEle.current?.element as HTMLElement, collideTarget ?
-            collideTarget.current : null, { X: true, Y: windowCollision }, eleOffset) as OffsetPosition : eleOffset;
+            collideTarget.current : null, eleOffset, { X: true, Y: windowCollision }) as OffsetPosition : eleOffset;
         if (arrow && arrowElementRef.current != null && (newPos.indexOf('Bottom') === 0 || newPos.indexOf('Top') === 0)) {
             let arrowLeft: number = parseInt(arrowElementRef.current.style.left, 10) - (updatedPosition.left - elePos.left);
             if (arrowLeft < 0) {
@@ -1420,7 +1432,6 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: Ref<ITool
             height: formatUnit(height),
             display: 'block'
         };
-        setElePos(elePos);
         setTooltipStyle((prevStyle: HTMLAttributes<HTMLDivElement> | undefined) => ({
             ...prevStyle,
             style: {
@@ -1589,9 +1600,7 @@ forwardRef<ITooltip, TooltipProps>((props: TooltipComponentProps, ref: Ref<ITool
             role='tooltip'
             aria-hidden={false}
             animation={PopupAnimation}
-            relativeElement={openTarget}
-            targetRef={targetRef as RefObject<HTMLElement>}
-            position={{ X: elePos.left, Y: elePos.top }}
+            relateTo={openTarget ? openTarget : undefined}
             viewPortElementRef={containerElement.current ? containerElement as RefObject<HTMLElement> : undefined}
             actionOnScroll={ActionOnScrollType.None}
             width={formatUnit(width)}

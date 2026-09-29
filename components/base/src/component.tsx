@@ -1,14 +1,9 @@
-import { validateLicense, createLicenseOverlay, componentList } from './validate-lic';
+import { validateLicense } from './validate-lic';
 
 let componentCount: number = 0;
 let lastPageID: number;
 let lastHistoryLen: number = 0;
-// Declare the static variable to count the instance
-let instancecount: number = 0;
-// Declare the static variable to find if control limit exceed or not
-let isvalid: boolean = true;
-// We have added styles to inline type so here declare the static variable to detect if banner is added or not
-let isBannerAdded: boolean = false;
+export let isUnlicensedInBrowser: boolean;
 
 //Function handling for page navigation detection
 /* istanbul ignore next */
@@ -75,17 +70,6 @@ export function componentUniqueID(definedName?: string): string {
  * @returns {void}
  */
 export function preRender(moduleName: string): void  {
-    if (!isvalid && !isBannerAdded) {
-        createLicenseOverlay();
-        isBannerAdded = true;
-    }
     // Based on the considered control list we have count the instance
-    if (window && document && !validateLicense(moduleName)) {
-        if (componentList.indexOf(moduleName) !== -1) {
-            instancecount = instancecount + 1;
-            if (instancecount > 5) {
-                isvalid = false;
-            }
-        }
-    }
+    isUnlicensedInBrowser = window && !validateLicense(moduleName);
 }

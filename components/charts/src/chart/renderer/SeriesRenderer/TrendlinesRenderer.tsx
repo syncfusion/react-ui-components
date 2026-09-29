@@ -3,7 +3,8 @@ import { ChartComponentProps, ChartMarkerProps, SeriesAccessibility } from '../.
 import { SeriesProperties, Points, ChartTrendlineModel, RenderOptions, MarkerProperties, DataLabelRendererResult, SlopeInterceptProps } from '../../chart-area/chart-interfaces';
 import { defaultChartConfigs } from '../../base/default-properties';
 import * as React from 'react';
-import { seriesModules } from './SeriesRenderer';
+import { seriesModules, getGradientDefsForChart } from './SeriesRenderer';
+import { GradientDefs, GradientDefSpec } from './GradientDefs';
 import { firstToLowerCase } from '../../utils/helper';
 import { renderMarkerJSX } from './MarkerRenderer';
 import { LayoutMap } from '../../layout/LayoutContext';
@@ -86,6 +87,10 @@ export function initTrendlineSeriesCollection(series: SeriesProperties
         legendShape: trendline.legendShape,
         marker: trendline.marker,
         category: 'TrendLine',
+        gradientProps: trendline.gradientProps,
+        gradientStops: trendline.gradientStops,
+        gradientKind: trendline.gradientKind,
+        gradientIndex: trendline.gradientIndex,
         chartProps: chart,
         xMin: Infinity,
         xMax: -Infinity,
@@ -583,6 +588,11 @@ export function renderTrendlineSeriesJSX(
                                         height={clipRectHeight}
                                     />
                                 </clipPath>
+                                <GradientDefs specs={
+                                    getGradientDefsForChart(chartId).filter(
+                                        (spec: GradientDefSpec) => spec.owner === 'trendline'
+                                    )
+                                } />
                             </defs>
 
                             {/* Render each trendline path */}

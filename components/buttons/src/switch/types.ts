@@ -17,6 +17,8 @@ export interface SwitchChangeEvent {
 
 /**
  * Properties interface for the Switch component
+ *
+ * @private
  */
 export interface SwitchProps {
     /**

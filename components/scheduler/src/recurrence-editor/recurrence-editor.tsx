@@ -49,7 +49,7 @@ export const RecurrenceEditor: React.FC<RecurrenceEditorProps> = (props: Recurre
     } = useRecurrenceEditor(value, startDate, frequencies, endTypes, firstDayOfWeek);
 
     useEffect(() => {
-        initializeTelemetryFeature('RecurrenceEditor', 'schedule');
+        initializeTelemetryFeature('RecurrenceEditor', 'Scheduler');
     }, []);
 
     useEffect(() => {

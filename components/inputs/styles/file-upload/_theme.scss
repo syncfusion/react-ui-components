@@ -1,0 +1,63 @@
+@use "sass:map";
+@use 'theme-variables' as *;
+
+@include export-module('upload-theme') {
+  .sf-upload {
+    border: $upload-drop-border-width dashed $upload-border;
+    border-radius: $upload-border-radius;
+
+    .sf-file-select {
+      color: $upload-file-select-color;
+      background-color: $upload-file-select-bg;
+    }
+
+    &:hover .sf-file-select {
+      border-color: $upload-file-select-hover-border;
+    }
+
+    .sf-upload-files {
+      border-top-color: $upload-file-list-border;
+    }
+
+    .sf-file-name-text {
+      color: $upload-file-name-color;
+    }
+
+    .sf-file-size {
+      color: $upload-file-size-color;
+    }
+
+    .sf-file-status {
+      color: $upload-file-status-color;
+
+      &.sf-upload-success {
+        color: $upload-success-text-color;
+      }
+
+      &.sf-upload-fails,
+      &.sf-validation-fails {
+        color: $upload-failure-text-color;
+      }
+
+      &.sf-upload-progress {
+        color: $upload-in-progress-text-color;
+      }
+    }
+
+    .sf-chunk-info {
+      color: $upload-chunk-info-color;
+    }
+
+    .sf-progress-bar-container {
+      background-color: $upload-progress-bar-bg;
+    }
+
+    .sf-progress-bar {
+      background: $upload-progress-bar-fill-gradient;
+    }
+
+    .sf-progress-text {
+      color: $upload-progress-text-color;
+    }
+  }
+}

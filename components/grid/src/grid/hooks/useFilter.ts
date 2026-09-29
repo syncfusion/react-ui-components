@@ -1,12 +1,17 @@
 import { useCallback, RefObject, useEffect, useState, Dispatch, SetStateAction, useMemo } from 'react';
 import { FilterEvent, FilterSettings, FilterPredicates, filterModule, FilterProperties, IFilterOperator, CustomOperators } from '../types/filter.interfaces';
-import { ActionType, IValueFormatter, ScrollMode, ValueType, VirtualSettings } from '../types';
+import { ActionType, ScrollMode } from '../types/enum';
+import { VirtualSettings } from '../types/virtualization.interface';
 import { GridRef } from '../types/grid.interfaces';
 import { IColumnBase, ColumnProps } from '../types/column.interfaces';
-import { closest, extend, IL10n, isNullOrUndefined, matches} from '@syncfusion/react-base';
+import { closest, matches } from '@syncfusion/react-base/src/dom';
+import { extend, isNullOrUndefined } from '@syncfusion/react-base/src/util';
+import { IL10n } from '@syncfusion/react-base/src/l10n';
+import { getActualPropFromColl, iterateArrayOrObject, executeGridAsyncAction, dispatchGridCancelBegin } from '../utils/utils';
+import { ServiceLocator, IValueFormatter, ValueType } from '../types/interfaces';
+import { FilterBase } from '../views/FilterBar';
+import { ExcelFilter } from '../views/common/Excel-CheckBox-filter';
 import { DataManager, DataUtil } from '@syncfusion/react-data';
-import { getActualPropFromColl, iterateArrayOrObject } from '../utils';
-import { ServiceLocator } from '../types/interfaces';
 
 /**
  * CSS selectors used throughout the filter module
@@ -56,7 +61,7 @@ const FILTER_IDENTIFIERS: Record<string, string> = {
  * @param {Function} scrollMode - scroll mode setting
  * @returns {filterModule} An object containing various filter-related state and API
  */
-export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSettings,
+const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSettings,
     setGridAction?: (action: FilterEvent | Record<string, unknown>) => void,
     serviceLocator?: ServiceLocator, setCurrentPage?: Dispatch<SetStateAction<number>>, virtualSettings?: VirtualSettings,
     scrollMode?: ScrollMode) => filterModule = (gridRef?: RefObject<GridRef>,
@@ -155,8 +160,9 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
         booleanOperator: [
             { value: 'equal', text: localization?.getConstant('equal') },
             { value: 'notEqual', text: localization?.getConstant('notEqual') }
-        ]
-    }), [localization]);
+        ],
+        ...filterSettings?.operators as CustomOperators
+    }), [localization, filterSettings?.operators]);
 
     const resetVirtualCacheViewCurrentPage: () => void = () => {
         if (gridRef.current?.contentScrollRef && scrollMode === ScrollMode.Virtual && virtualSettings.enableRow &&
@@ -165,14 +171,16 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
         }
     };
 
-    // In virtual scroll mode, we skip the confirm on edit check since the user is not explicitly applying filters and it can interfere with smooth scrolling experience.
+    // In virtual scroll mode, skip the confirm on edit check only when batch edit is not active with pending unsaved changes.
     const shouldSkipConfirmOnEdit: () => boolean = (): boolean => {
-        return !!(scrollMode === ScrollMode.Virtual);
+        const allowBatchSave: boolean = gridRef.current?.editModule?.editSettings?.allowBatchSave === true;
+        const hasBatchChanges: boolean = !!gridRef.current?.editModule?.hasBatchChanges?.();
+        return !!(scrollMode === ScrollMode.Virtual && !(allowBatchSave && hasBatchChanges));
     };
 
     const checkUnsavedEditsBeforeFilter: () => Promise<boolean> = useCallback(async (): Promise<boolean> => {
         if (!shouldSkipConfirmOnEdit()) {
-            const confirmResult: boolean = await gridRef.current?.editModule?.checkUnsavedChanges?.();
+            const confirmResult: boolean = await gridRef.current?.editModule?.checkUnsavedChanges?.() ?? true;
             if (!isNullOrUndefined(confirmResult) && !confirmResult) {
                 return false;
             }
@@ -198,8 +206,13 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
             if (args.cancel) {
                 return;
             }
+            if (gridRef.current?.editModule?.editSettings?.allowUndoRedo &&
+                !await gridRef.current?.editModule?.confirmUndoRedoClear?.()) {
+                return;
+            }
             setFilterSettings((prev: FilterSettings) => ({ ...prev, columns: fColl }));
             setGridAction(args);
+            gridRef.current?.clearUndoRedoHistory?.();
         } else {
             await removeFilteredColsByField(field);
         }
@@ -282,7 +295,9 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
         const target: HTMLInputElement = event.target as HTMLInputElement;
         if (target && matches(target, FILTER_SELECTORS.FILTER_INPUT)) {
             const closeHeaderEle: Element = closest(target, `${FILTER_SELECTORS.FILTER_ROW} ${FILTER_SELECTORS.HEADER_TH}${FILTER_SELECTORS.SF_CELL}`);
-            getFilterProperties.column = gridRef.current.columns.find((col: ColumnProps) => col.uid === closeHeaderEle.getAttribute('data-mappinguid'));
+            const columnsDetails: ColumnProps[] = gridRef.current.isStackedHeader ? gridRef.current.stackedFlattedColumnProps
+                : gridRef.current.columns;
+            getFilterProperties.column = columnsDetails.find((col: ColumnProps) => col.uid === closeHeaderEle.getAttribute('data-mappinguid'));
             if (filterSettings?.mode === 'Immediate' || (event.keyCode === 13 && !(getFilterProperties.column && getFilterProperties.column.filterTemplate))) {
                 getFilterProperties.value = target.value.trim();
                 processFilter(event, target);
@@ -316,7 +331,9 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
     const grabColumnByUidFromAllCols: (uid: string, field?: string) => ColumnProps = useCallback(
         (uid: string, field?: string): ColumnProps => {
             let column: ColumnProps;
-            const gCols: ColumnProps[] = gridRef.current?.getColumns() ?? [];
+            const columnsDetails: ColumnProps[] = gridRef.current.isStackedHeader ? gridRef.current.stackedFlattedColumnProps
+                : gridRef.current.getColumns();
+            const gCols: ColumnProps[] = columnsDetails ?? [];
             for (let i: number = 0; i < gCols?.length; i++) {
                 if (uid === gCols?.[parseInt(i.toString(), 10)]?.uid || field === gCols?.[parseInt(i.toString(), 10)]?.field) {
                     column = gCols?.[parseInt(i.toString(), 10)];
@@ -369,6 +386,10 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
                         refreshFilterSettings();
                         return;
                     }
+                    if (gridRef.current?.editModule?.editSettings?.allowUndoRedo &&
+                        !await gridRef.current?.editModule?.confirmUndoRedoClear?.()) {
+                        return;
+                    }
                 }
                 let colsLength: number = cols.length;
                 while (colsLength--) {
@@ -381,6 +402,7 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
                             });
                             args.type = FILTER_ACTIONS.ACTION_COMPLETE;
                             setGridAction(args);
+                            gridRef.current?.clearUndoRedoHistory?.();
                             resetVirtualCacheViewCurrentPage();
                         }
                     }
@@ -419,7 +441,9 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
         let skipInput: string[];
         let index: number;
         getFilterProperties.caseSensitive = gridRef.current.filterSettings?.caseSensitive;
-        getFilterProperties.column = gridRef.current.getColumns().find(
+        const columnsDetails: ColumnProps[] = gridRef.current.isStackedHeader ? gridRef.current.stackedFlattedColumnProps
+            : gridRef.current.getColumns();
+        getFilterProperties.column = columnsDetails.find(
             (col: ColumnProps) => col.field === getFilterProperties.column?.field);
         switch (getFilterProperties.column.type) {
         case 'number':
@@ -570,7 +594,9 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
     ) => void  = (fieldName: string,
                   operator: string, filterValue: ValueType| ValueType[],
                   predicate: string, caseSensitive: boolean, ignoreAccent: boolean): void => {
-        getFilterProperties.column = gridRef.current.getColumns().find((col: ColumnProps) => col.field === fieldName);
+        const columnsDetails: ColumnProps[] = gridRef.current.isStackedHeader ? gridRef.current.stackedFlattedColumnProps
+            : gridRef.current.getColumns();
+        getFilterProperties.column = columnsDetails.find((col: ColumnProps) => col.field === fieldName);
         let filterCell: HTMLInputElement;
         if (gridRef.current.filterSettings?.type === FILTER_TYPES.FILTER_BAR && gridRef.current.filterSettings?.enableFilterBarOperator
             && isNullOrUndefined(getFilterProperties.column.filterTemplate)) {
@@ -676,7 +702,9 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
      * @returns {void}
      */
     const updateModel: () => void = async(): Promise<void> => {
-        const column: ColumnProps = gridRef.current.getColumns().find((col: ColumnProps) => col.field === getFilterProperties.fieldName);
+        const columnsDetails: ColumnProps[] = gridRef.current.isStackedHeader ?
+            gridRef.current.stackedFlattedColumnProps : gridRef.current.getColumns();
+        const column: ColumnProps = columnsDetails.find((col: ColumnProps) => col.field === getFilterProperties.fieldName);
         const filterCol: FilterPredicates[] = extend([], gridRef.current.filterSettings?.columns) as FilterPredicates[];
         const arrayVal: ValueType[] = Array.isArray(getFilterProperties.value) &&
             getFilterProperties.value.length ? getFilterProperties.value : [getFilterProperties.value];
@@ -741,8 +769,14 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
             }
             gridRef.current.onFilterStart?.(args);
             if (args.cancel) {
+                dispatchGridCancelBegin(gridRef, ActionType.Filtering);
                 return;
             }
+        }
+        if (getFilterProperties.contentRefresh &&
+            gridRef.current?.editModule?.editSettings?.allowUndoRedo &&
+            !await gridRef.current?.editModule?.confirmUndoRedoClear?.()) {
+            return;
         }
         gridRef.current.filterSettings.columns = filterCol;
         if (getFilterProperties.contentRefresh) {
@@ -839,7 +873,9 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
     };
 
     const getColumnByUid: (uid: string) => ColumnProps = (uid: string): ColumnProps => {
-        return iterateArrayOrObject<ColumnProps, ColumnProps>(<ColumnProps[]>gridRef.current.getColumns(), (item: ColumnProps) => {
+        const columnsDetails: ColumnProps[] = gridRef.current.isStackedHeader ? gridRef.current.stackedFlattedColumnProps
+            : gridRef.current.getColumns();
+        return iterateArrayOrObject<ColumnProps, ColumnProps>(columnsDetails, (item: ColumnProps) => {
             if (item.uid === uid) {
                 return item;
             }
@@ -875,6 +911,10 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
                     requestType: 'Refresh', name: 'onActionComplete'
                 });
             } else {
+                if (gridRef.current?.editModule?.editSettings?.allowUndoRedo &&
+                    !await gridRef.current?.editModule?.confirmUndoRedoClear?.()) {
+                    return;
+                }
                 setFilterSettings((prevSettings: FilterSettings) => {
                     return { ...prevSettings, columns: gridRef.current.filterSettings?.columns || [] };
                 });
@@ -882,6 +922,7 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
                     requestType: 'Refresh', name: 'onActionComplete'
                 });
             }
+            gridRef.current?.clearUndoRedoHistory?.();
             resetVirtualCacheViewCurrentPage();
             getFilterProperties.refresh = true;
             return;
@@ -936,6 +977,15 @@ export const useFilter: (gridRef?: RefObject<GridRef>, filterSetting?: FilterSet
         filterSettings,
         setFilterSettings,
         customOperators,
-        getFilterProperties
+        getFilterProperties,
+        FilterBase,
+        ExcelFilter,
+        filterByColumnAsync: (fieldName: string, filterOperator: string, filterValue: ValueType | ValueType[],
+                              predicate?: string, caseSensitive?: boolean, ignoreAccent?: boolean): Promise<void> =>
+            executeGridAsyncAction(gridRef, ActionType.Filtering,
+                                   () => filterByColumn(fieldName, filterOperator, filterValue, predicate, caseSensitive, ignoreAccent)),
+        clearFilteringAsync: (fields: string[]): Promise<void> =>
+            executeGridAsyncAction(gridRef, ActionType.Refresh, () => clearFilter(fields))
     };
 };
+export { useFilter as FilterModule };

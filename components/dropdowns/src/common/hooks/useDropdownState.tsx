@@ -190,8 +190,8 @@ DropdownContextType => {
     const combinedPopupSettings: PopupSettings = useMemo(() => {
         return {
             ...{
-                position: { X: 'left', Y: 'bottom' }, collision: dir === 'rtl' ?
-                    { X: CollisionType.Fit, Y: CollisionType.Flip } : { X: CollisionType.Flip, Y: CollisionType.Flip },
+                popupAlign: { horizontal: 'left', vertical: 'top' }, anchorAlign: { horizontal: 'left', vertical: 'bottom' },
+                collision: dir === 'rtl' ? { X: CollisionType.Fit, Y: CollisionType.Flip } : { X: CollisionType.Flip, Y: CollisionType.Flip },
                 autoReposition: true, width: '100%', height: '300px'
             }, ...popupSettings
         };

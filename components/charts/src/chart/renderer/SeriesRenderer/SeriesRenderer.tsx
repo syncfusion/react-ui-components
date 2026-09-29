@@ -2,6 +2,19 @@
 import { forwardRef, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ChartSeriesProps, ChartDataLabelProps, ChartMarkerProps, SeriesAccessibility, ChartErrorBarProps, ChartIndicatorProps, ChartLocationProps, ChartSeriesLabelProps, ChartLastValueLabelProps, ChartRangeColorProps, CornerRadius } from '../../base/interfaces';
 import { areDataSourcesEqual, checkTabindex, firstToLowerCase, calculateVisiblePoints, resolveRectPointFromId, isRangeColorEnabled, extractRangeColorSignature, indexFinder } from '../../utils/helper';
+import {
+    applyGradientToOptions,
+    captureIndicatorGradientSpec,
+    captureSeriesGradientSpec,
+    captureTrendlineGradientSpec,
+    getGradientId,
+    getOwnerGradientSignature,
+    GradientApplierSpec,
+    GradientApplyResult,
+    GradientTarget,
+    isStrokeGradientTarget
+} from '../../utils/gradient/gradientPipeline';
+import { GradientDefSpec, GradientDefs } from './GradientDefs';
 import ColumnSeries from './ColumnSeriesRenderer';
 import * as React from 'react';
 import { useLayout } from '../../layout/LayoutContext';
@@ -30,7 +43,7 @@ import ScatterSeriesRenderer from './ScatterSeriesRenderer';
 import BubbleSeriesRenderer from './BubbleSeriesRenderer';
 import SplineAreaSeriesRenderer from './SplineAreaSeriesRenderer';
 import { ChartSeriesType } from '../../base/enum';
-import { Chart, ChartTrendlineModel, DataLabelRendererResult, DataPoint, MarkerOptions, MarkerProperties, Points, Rect, RenderOptions, SeriesModules, SeriesProperties, TrendlineSeriesSignature, ProcessedParetoOptions } from '../../chart-area/chart-interfaces';
+import { Chart, ChartTrendlineModel, ChartIndicatorSettings, DataLabelRendererResult, DataPoint, MarkerOptions, MarkerProperties, Points, Rect, RenderOptions, SeriesModules, SeriesProperties, TrendlineSeriesSignature, ProcessedParetoOptions, MarkerOptionsList } from '../../chart-area/chart-interfaces';
 import { isEqual, useStableDataLabelProps, useStableDataSources, useStableMarkerProps, useStableSeriesLabelProps, useStableLastValueLabelProps } from '../../hooks/useDeepCompare';
 import CandleSeriesRenderer from './CandleSeriesRenderer';
 import HiloSeriesRenderer from './HiloSeriesRenderer';
@@ -112,6 +125,152 @@ const trendSeriesOptionsByChartId: { [chartId: string]: { [sourceIndex: number]:
 const indicatorsSeriesOptionsByChartId: { [chartId: string]: { [sourceIndex: number]: RenderOptions[][] } } = {};
 const trendlineMarkersOptionsByChartId: { [chartId: string]: { [sourceIndex: number]: ChartMarkerProps[] } } = {};
 const trendlineDataLabelOptionsByChartId: { [chartId: string]: { [sourceIndex: number]: DataLabelRendererResult[][] } } = {};
+
+/**
+ * Storage for chart-specific gradient `<defs>` blocks. Each entry is one
+ * spec the wrapper `<GradientDefs>` renderer will mount alongside the
+ * series/trendline/indicator group that owns it.
+ */
+export const gradientDefsByChartId: { [chartId: string]: GradientDefSpec[] } = {};
+
+/**
+ * Applies and registers a series gradient.
+ *
+ * @param {RenderOptions[] | MarkerOptionsList} options - Render options.
+ * @param {string} chartId - Chart element ID.
+ * @param {SeriesProperties} series - Series configuration.
+ * @returns {void} This function does not return a value.
+ * @private
+ */
+const applySeriesGradient: (
+    options: RenderOptions[] | MarkerOptionsList,
+    chartId: string,
+    series: SeriesProperties
+) => void = (options: RenderOptions[] | MarkerOptionsList, chartId: string, series: SeriesProperties): void => {
+    const target: GradientTarget | null =
+        mapSeriesTypeToGradientTarget(series.type as string);
+    if (!target) {
+        series.gradientFill = null;
+        series.displayGradientFill = null;
+        return;
+    }
+    const spec: GradientApplierSpec | null =
+        captureSeriesGradientSpec(series, chartId, target);
+    if (!spec) {
+        series.gradientFill = null;
+        series.displayGradientFill = null;
+        return;
+    }
+    const result: GradientApplyResult =
+        applyGradientToOptions(options, spec);
+    const defSpec: GradientDefSpec | null = result.defSpec;
+    if (defSpec) {
+        registerGradientDefs(chartId, defSpec, spec.target);
+        series.gradientFill =
+            `url(#${getGradientId(spec.chartId, spec.owner, spec.index, spec.gradientKind)})`;
+        series.displayGradientFill = isStrokeGradientTarget(spec.target)
+            ? `url(#${defSpec.id}_display)`
+            : null;
+    } else {
+        series.gradientFill = null;
+        series.displayGradientFill = null;
+    }
+};
+
+/**
+ * Caches the gradient URL for a rendered owner.
+ *
+ * @param {SeriesProperties} series - Rendered series.
+ * @param {GradientApplierSpec} spec - Gradient configuration.
+ * @returns {void} This function does not return a value.
+ * @private
+ */
+const cacheOwnerGradientFill: (
+    series: SeriesProperties,
+    spec: GradientApplierSpec
+) => void = (
+    series: SeriesProperties,
+    spec: GradientApplierSpec
+): void => {
+    series.gradientFill = `url(#${getGradientId(spec.chartId, spec.owner, spec.index, spec.gradientKind)})`;
+    series.displayGradientFill = isStrokeGradientTarget(spec.target)
+        ? `url(#${getGradientId(spec.chartId, spec.owner, spec.index, spec.gradientKind)}_display)`
+        : null;
+};
+
+/**
+ * Registers a gradient definition plus its display-side clone (when the
+ * target is a stroke target) inside the per-chart def registry.
+ *
+ * @param {string} chartId - Chart element ID.
+ * @param {GradientDefSpec} defSpec - Renderer-ready gradient spec.
+ * @param {GradientTarget} target - Series target that drives display emission.
+ * @returns {void} This function does not return a value.
+ * @private
+ */
+const registerGradientDefs: (
+    chartId: string,
+    defSpec: GradientDefSpec,
+    target: GradientTarget
+) => void = (
+    chartId: string,
+    defSpec: GradientDefSpec,
+    target: GradientTarget
+): void => {
+    gradientDefsByChartId[chartId as string] =
+        gradientDefsByChartId[chartId as string] ?? [];
+    const list: GradientDefSpec[] = gradientDefsByChartId[chartId as string];
+    const upsert: (entry: GradientDefSpec) => void =
+        (entry: GradientDefSpec): void => {
+            const i: number = list.findIndex(
+                (existing: GradientDefSpec): boolean => existing.id === entry.id);
+            if (i >= 0) {
+                list[i as number] = entry;
+            } else {
+                list.push(entry);
+            }
+        };
+    upsert(defSpec);
+    if (isStrokeGradientTarget(target)) {
+        upsert({
+            ...defSpec,
+            id: `${defSpec.id}_display`,
+            strokeEndpoints: null,
+            radialCenterPx: null
+        });
+    }
+};
+
+/**
+ * Rewrites the Area-type border path so its fill is `'transparent'` and its
+ * stroke carries the cached gradient URL. Runs after `applySeriesGradient`
+ * so `series.gradientFill` is populated.
+ *
+ * @param {RenderOptions[]} options - Render options emitted by the renderer.
+ * @param {SeriesProperties} series - Rendered Area-type series.
+ * @returns {void} This function does not return a value.
+ * @private
+ */
+const applyAreaBorderGradient: (
+    options: RenderOptions[],
+    series: SeriesProperties
+) => void = (
+    options: RenderOptions[],
+    series: SeriesProperties
+): void => {
+    if (!options || options.length < 2) {
+        return;
+    }
+    const last: RenderOptions = options[options.length - 1] as RenderOptions;
+    const idStr: string = last?.id?.toString?.() ?? '';
+    if (!idStr.includes('_Series_border_')) {
+        return;
+    }
+    last.fill = 'transparent';
+    if (series.gradientFill) {
+        last.stroke = series.gradientFill;
+    }
+};
 
 export const seriesModules: SeriesModules = {
     'lineSeriesModule': LineSeriesRenderer,
@@ -207,10 +366,30 @@ const processRenderResult: (renderResult: RenderOptions[] | {
         indicatorsSeriesOptionsByChartId[chartId as string][sourceIndex as number] ??= [];
         // Check for duplicate indicator options
         const hasIndicator: boolean = options?.length > 0 &&
-            indicatorsSeriesOptionsByChartId[chartId as string][sourceIndex as number].some((indicatorOption: RenderOptions[]) =>
-                indicatorOption?.[0]?.id === options?.[0]?.id);
+            indicatorsSeriesOptionsByChartId[chartId as string][sourceIndex as number].some(
+                (indicatorOption: RenderOptions[]) =>
+                    indicatorOption?.[0]?.id === options?.[0]?.id);
         if (!hasIndicator) {
             indicatorsSeriesOptionsByChartId[chartId as string][sourceIndex as number].push(options);
+        }
+        const indicatorSettings: ChartIndicatorSettings | undefined =
+            series.chart?.indicators?.[sourceIndex as number]
+            ?? (chart as Chart).indicators?.[sourceIndex as number];
+        if (indicatorSettings) {
+            const spec: GradientApplierSpec | null =
+                captureIndicatorGradientSpec(indicatorSettings, chartId);
+            if (spec) {
+                const result: GradientApplyResult =
+                    applyGradientToOptions(options, spec);
+                const defSpec: GradientDefSpec | null = result.defSpec;
+                if (defSpec) {
+                    registerGradientDefs(chartId, defSpec, spec.target);
+                    cacheOwnerGradientFill(series, spec);
+                }
+            } else {
+                series.gradientFill = null;
+                series.displayGradientFill = null;
+            }
         }
     }
     else if (isTrendLine) {
@@ -231,10 +410,133 @@ const processRenderResult: (renderResult: RenderOptions[] | {
         if (!hasSeries) {
             seriesOptionsByChartId[chartId as string].push(options);
         }
+        applySeriesGradient(series.type === 'Bubble' || series.type === 'Scatter' ? ((renderResult as { marker: ChartMarkerProps }).marker as MarkerProperties).markerOptionsList as MarkerOptionsList : options, chartId, series as SeriesProperties);
+        applyAreaBorderGradient(options, series as SeriesProperties);
+    }
+    if (isTrendLine && series.sourceIndex !== undefined && series.trendIndex !== undefined) {
+        const parentSeries: SeriesProperties | undefined =
+            series.chart?.visibleSeries?.[series.sourceIndex as number]
+                ?? (chart as Chart).visibleSeries?.[series.sourceIndex as number];
+        const tlSettings: ChartTrendlineModel | undefined =
+            parentSeries?.trendlines?.[series.trendIndex as number];
+        if (tlSettings) {
+            const spec: GradientApplierSpec | null =
+                captureTrendlineGradientSpec(tlSettings, chartId);
+            if (spec) {
+                const tsResult: GradientApplyResult =
+                    applyGradientToOptions(options, spec);
+                const defSpec: GradientDefSpec | null = tsResult.defSpec;
+                if (defSpec) {
+                    gradientDefsByChartId[chartId as string] =
+                        gradientDefsByChartId[chartId as string] ?? [];
+                    const list: GradientDefSpec[] = gradientDefsByChartId[chartId as string];
+                    const upsert: (entry: GradientDefSpec) => void =
+                        (entry: GradientDefSpec): void => {
+                            const i: number = list.findIndex(
+                                (existing: GradientDefSpec): boolean =>
+                                    existing.id === entry.id);
+                            if (i >= 0) {
+                                list[i as number] = entry;
+                            } else {
+                                list.push(entry);
+                            }
+                        };
+                    upsert(defSpec);
+                    if (isStrokeGradientTarget(spec.target)) {
+                        upsert({
+                            ...defSpec,
+                            id: `${defSpec.id}_display`,
+                            strokeEndpoints: null,
+                            radialCenterPx: null
+                        });
+                    }
+                    cacheOwnerGradientFill(series, spec);
+                }
+            }
+        }
     }
 
     return options;
 };
+
+/**
+ * Returns gradient definitions for a chart.
+ *
+ * @param {string} chartId - Chart element ID.
+ * @returns {GradientDefSpec[]} Queued gradient definitions.
+ * @private
+ */
+export function getGradientDefsForChart(chartId: string): GradientDefSpec[] {
+    return gradientDefsByChartId[chartId as string] || [];
+}
+
+/**
+ * Maps a chart series type to a gradient target.
+ *
+ * @param {string | undefined} seriesType - Chart series type.
+ * @returns {GradientTarget | null} Gradient target or `null`.
+ * @private
+ */
+function mapSeriesTypeToGradientTarget(
+    seriesType: string | undefined
+): GradientTarget | null {
+    if (!seriesType) { return null; }
+    switch (seriesType) {
+    case 'Line': return 'Line';
+    case 'Spline': return 'Spline';
+    case 'StepLine': return 'StepLine';
+    case 'MultiColoredLine': return 'MultiColoredLine';
+    case 'StackingLine': return 'StackingLine';
+    case 'Column': return 'Column';
+    case 'Bar': return 'Bar';
+    case 'Area': return 'Area';
+    case 'SplineArea': return 'SplineArea';
+    case 'StepArea': return 'StepArea';
+    case 'StackingColumn': return 'StackingColumn';
+    case 'StackingColumn100': return 'StackingColumn';
+    case 'StackingBar': return 'StackingBar';
+    case 'StackingBar100': return 'StackingBar';
+    case 'StackingArea': return 'StackingArea';
+    case 'StackingArea100': return 'StackingArea';
+    case 'StackingStepArea': return 'StackingStepArea';
+    case 'StackingLine100': return 'StackingLine';
+    case 'MultiColoredArea': return 'MultiColoredArea';
+    case 'RangeArea': return 'RangeArea';
+    case 'RangeColumn': return 'RangeColumn';
+    case 'RangeStepArea': return 'RangeStepArea';
+    case 'SplineRangeArea': return 'SplineRangeArea';
+    case 'Bubble': return 'Bubble';
+    case 'Scatter': return 'Scatter';
+    case 'Histogram': return 'Histogram';
+    case 'Waterfall': return 'Waterfall';
+    case 'BoxAndWhisker': return 'BoxAndWhisker';
+    case 'Pareto': return 'Pareto';
+    case 'Candle': return 'Candle';
+    case 'Hilo': return 'Hilo';
+    case 'HiloOpenClose': return 'HiloOpenClose';
+    case 'BollingerBands': return 'BollingerBands';
+    case 'MACD': return 'MACDHistogram';
+    case 'PolarLine': return 'PolarLine';
+    case 'PolarColumn': return 'PolarColumn';
+    case 'PolarArea': return 'PolarArea';
+    case 'PolarStackingArea': return 'PolarStackingArea';
+    case 'PolarStackingColumn': return 'PolarStackingColumn';
+    case 'PolarRangeColumn': return 'PolarRangeColumn';
+    case 'PolarScatter': return 'PolarScatter';
+    case 'PolarSpline': return 'PolarSpline';
+    case 'PolarSplineArea': return 'PolarSplineArea';
+    case 'RadarLine': return 'RadarLine';
+    case 'RadarColumn': return 'RadarColumn';
+    case 'RadarArea': return 'RadarArea';
+    case 'RadarStackingArea': return 'RadarStackingArea';
+    case 'RadarStackingColumn': return 'RadarStackingColumn';
+    case 'RadarRangeColumn': return 'RadarRangeColumn';
+    case 'RadarScatter': return 'RadarScatter';
+    case 'RadarSpline': return 'RadarSpline';
+    case 'RadarSplineArea': return 'RadarSplineArea';
+    default: return null;
+    }
+}
 
 /**
  * Calculates and assigns the clip rectangle for a series based on its axis properties.
@@ -500,6 +802,38 @@ export const SeriesRenderer: React.ForwardRefExoticComponent<ChartSeriesProps[] 
 
         const seriesList: ChartSeriesProps[] = Object.values(props);
         type SeriesLike = SeriesProperties | null | undefined | object;
+
+        /**
+         * Tracks dynamic gradient changes on normal chart series.
+         */
+        const seriesGradientSignature: string = seriesList
+            .map(
+                (series: ChartSeriesProps): string =>
+                    getOwnerGradientSignature(
+                        series as SeriesProperties
+                    )
+            )
+            .join('|');
+
+        /**
+         * Tracks dynamic gradient changes on all trendlines.
+         */
+        const trendlineGradientSignature: string = seriesList
+            .map(
+                (series: ChartSeriesProps): string => {
+                    const trendlines:
+                    ChartTrendlineModel[] =
+                        (series as SeriesProperties).trendlines ?? [];
+
+                    return trendlines
+                        .map(
+                            (trendline: ChartTrendlineModel): string =>
+                                getOwnerGradientSignature(trendline)
+                        )
+                        .join(',');
+                }
+            )
+            .join('|');
 
         /**
          * Determines whether a given object conforms to the `SeriesProperties` type.
@@ -774,7 +1108,7 @@ export const SeriesRenderer: React.ForwardRefExoticComponent<ChartSeriesProps[] 
                     (layoutRef.current.chart as Chart)?.visibleSeries?.forEach((series: SeriesProperties, index: number) => {
                         series.lastValueLabel = {
                             ...series.lastValueLabel,
-                            ...(seriesList[index as number] as SeriesProperties).lastValueLabel
+                            ...(seriesList[index as number] as SeriesProperties)?.lastValueLabel
                         };
                     });
                     setLastValueLabelVersion((prev: number) => prev + 1);
@@ -870,6 +1204,18 @@ export const SeriesRenderer: React.ForwardRefExoticComponent<ChartSeriesProps[] 
         const indicatorSignature: ChartIndicatorProps[] = useMemo(() => {
             return extractIndicatorSignature(chartIndicators);
         }, [chartIndicators]);
+        /**
+         * Tracks dynamic gradient changes on all technical indicators.
+         */
+        const indicatorGradientSignature: string =
+            (chartIndicators ?? [])
+                .map(
+                    (indicator: ChartIndicatorProps): string =>
+                        getOwnerGradientSignature(
+                            indicator as ChartIndicatorSettings
+                        )
+                )
+                .join('|');
 
         const { chartRangeColor } = React.useContext(ChartContext);
         const rangeColorSignature: ChartRangeColorProps[] = useMemo(() => {
@@ -885,10 +1231,25 @@ export const SeriesRenderer: React.ForwardRefExoticComponent<ChartSeriesProps[] 
                 trendSeriesOptionsByChartId[chartId as string] = {};
                 trendlineMarkersOptionsByChartId[chartId as string] = {};
                 trendlineDataLabelOptionsByChartId[chartId as string] = {};
+                gradientDefsByChartId[chartId as string] = [];
+
+                (layoutRef.current.chart as Chart)?.visibleSeries?.forEach(
+                    (series: SeriesProperties): void => {
+                        if (
+                            series.category === 'TrendLine' ||
+                            series.category === 'Indicator'
+                        ) {
+                            series.gradientFill = null;
+                            series.displayGradientFill = null;
+                        }
+                    }
+                );
+
                 triggerRemeasure();
                 setDisableAnimation?.(true);
             }
-        }, [JSON.stringify(trendlineSignature), JSON.stringify(indicatorSignature)]);
+        }, [JSON.stringify(trendlineSignature), JSON.stringify(indicatorSignature)
+            , trendlineGradientSignature, indicatorGradientSignature]);
 
         /**
          * Renders a given series based on its axis type and available points, including animations if enabled.
@@ -976,6 +1337,21 @@ export const SeriesRenderer: React.ForwardRefExoticComponent<ChartSeriesProps[] 
 
                         if (!hasIndicator) {
                             indicatorsSeriesOptionsByChartId[chartId as string][sourceIndex as number].push(options);
+                            const indicatorSettings: ChartIndicatorSettings | undefined =
+                                (layoutRef.current.chart as Chart)?.indicators?.[sourceIndex as number];
+                            if (indicatorSettings) {
+                                const iSpec: GradientApplierSpec | null =
+                                    captureIndicatorGradientSpec(indicatorSettings, chartId);
+                                if (iSpec) {
+                                    const iResult: GradientApplyResult =
+                                        applyGradientToOptions(options, iSpec);
+                                    const defSpec: GradientDefSpec | null = iResult.defSpec;
+                                    if (defSpec) {
+                                        registerGradientDefs(chartId, defSpec, iSpec.target);
+                                        cacheOwnerGradientFill(series, iSpec);
+                                    }
+                                }
+                            }
                         }
                     }
                     else if (isTrendLine) {
@@ -994,6 +1370,26 @@ export const SeriesRenderer: React.ForwardRefExoticComponent<ChartSeriesProps[] 
 
                         if (!hasTrendline) {
                             trendSeriesOptionsByChartId[chartId as string][sourceIndex as number].push(options);
+                            if (series.sourceIndex !== undefined && series.trendIndex !== undefined) {
+                                const parentSeries: SeriesProperties | undefined =
+                                    series.chart?.visibleSeries?.[series.sourceIndex as number]
+                                        ?? (chart as Chart).visibleSeries?.[series.sourceIndex as number];
+                                const tlSettings: ChartTrendlineModel | undefined =
+                                    parentSeries?.trendlines?.[series.trendIndex as number];
+                                if (tlSettings) {
+                                    const tlSpec: GradientApplierSpec | null =
+                                        captureTrendlineGradientSpec(tlSettings, chartId);
+                                    if (tlSpec) {
+                                        const tlResult: GradientApplyResult =
+                                            applyGradientToOptions(options, tlSpec);
+                                        const defSpec: GradientDefSpec | null = tlResult.defSpec;
+                                        if (defSpec) {
+                                            registerGradientDefs(chartId, defSpec, tlSpec.target);
+                                            cacheOwnerGradientFill(series, tlSpec);
+                                        }
+                                    }
+                                }
+                            }
                         }
                     } else {
                         const hasSeries: boolean = options?.length > 0 &&
@@ -1001,6 +1397,20 @@ export const SeriesRenderer: React.ForwardRefExoticComponent<ChartSeriesProps[] 
                                 seriesOption?.[0]?.id === options?.[0]?.id);
                         if (!hasSeries) {
                             seriesOptionsByChartId[chartId as string].push(options);
+                        }
+                        if (series.gradientProps) {
+                            const gradientOptions: RenderOptions[] | MarkerOptionsList =
+                                (series.type === 'Bubble' || series.type === 'Scatter') &&
+                                    marker
+                                    ? (marker as MarkerProperties).markerOptionsList as MarkerOptionsList
+                                    : options;
+
+                            applySeriesGradient(
+                                gradientOptions,
+                                chartId,
+                                series
+                            );
+                            applyAreaBorderGradient(options, series);
                         }
                     }
 
@@ -1069,14 +1479,69 @@ export const SeriesRenderer: React.ForwardRefExoticComponent<ChartSeriesProps[] 
                     indicatorsSeriesOptionsByChartId[chartId as string][sourceIndex as number] =
                         indicatorsSeriesOptionsByChartId[chartId as string][sourceIndex as number] ?? [];
                     indicatorsSeriesOptionsByChartId[chartId as string][sourceIndex as number].push(options);
+                    // Indicator stroke gradient (non-animated path). The
+                    // `sourceIndex` of an indicator series maps to its
+                    // parent indicator; look the indicator up so capture
+                    // sees the populated gradientProps/gradientStops from
+                    // the JSX pipeline. Multiple sub-series of one
+                    // indicator (MACD, Bollinger) share the same gradient
+                    // id — only push the `<defs>` spec once per chart.
+                    const indicatorSettings: ChartIndicatorSettings | undefined =
+                        (layoutRef.current.chart as Chart)?.indicators?.[sourceIndex as number];
+                    if (indicatorSettings) {
+                        const iSpec: GradientApplierSpec | null =
+                            captureIndicatorGradientSpec(indicatorSettings, chartId);
+                        if (iSpec) {
+                            const iResult: {
+                                options: RenderOptions[] | MarkerOptionsList;
+                                defSpec: GradientDefSpec | null;
+                            } = applyGradientToOptions(options, iSpec);
+                            const defSpec: GradientDefSpec | null = iResult.defSpec;
+                            if (defSpec) {
+                                registerGradientDefs(chartId, defSpec, iSpec.target);
+                                cacheOwnerGradientFill(series, iSpec);
+                            }
+                        }
+                    }
                 }
                 else if (isTrendLine) {
                     trendSeriesOptionsByChartId[chartId as string] = trendSeriesOptionsByChartId[chartId as string] ?? {};
                     trendSeriesOptionsByChartId[chartId as string][sourceIndex as number] =
                         trendSeriesOptionsByChartId[chartId as string][sourceIndex as number] ?? [];
                     trendSeriesOptionsByChartId[chartId as string][sourceIndex as number].push(options);
+                    if (series.sourceIndex !== undefined && series.trendIndex !== undefined) {
+                        const parentSeries: SeriesProperties | undefined =
+                            series.chart?.visibleSeries?.[series.sourceIndex as number]
+                            ?? (chart as Chart).visibleSeries?.[series.sourceIndex as number];
+                        const tlSettings: ChartTrendlineModel | undefined =
+                            parentSeries?.trendlines?.[series.trendIndex as number];
+                        if (tlSettings) {
+                            const tlSpec: GradientApplierSpec | null =
+                                captureTrendlineGradientSpec(tlSettings, chartId);
+                            if (tlSpec) {
+                                const tlResult: {
+                                    options: RenderOptions[] | MarkerOptionsList;
+                                    defSpec: GradientDefSpec | null;
+                                } = applyGradientToOptions(options, tlSpec);
+                                const defSpec: GradientDefSpec | null = tlResult.defSpec;
+                                if (defSpec) {
+                                    gradientDefsByChartId[chartId as string] =
+                                        gradientDefsByChartId[chartId as string] ?? [];
+                                    if (!gradientDefsByChartId[chartId as string].some(
+                                        (existing: GradientDefSpec): boolean =>
+                                            existing.id === defSpec.id)) {
+                                        gradientDefsByChartId[chartId as string].push(defSpec);
+                                    }
+                                    cacheOwnerGradientFill(series, tlSpec);
+                                }
+                            }
+                        }
+                    }
                 } else {
                     seriesOptionsByChartId[chartId as string].push(options);
+                    // Series fill / stroke gradient.
+                    applySeriesGradient(series.type === 'Bubble' || series.type === 'Scatter' ? (marker as MarkerProperties).markerOptionsList as MarkerOptionsList : options, chartId, series);
+                    applyAreaBorderGradient(options, series);
                 }
                 (chart as Chart & ChartExtensions as ChartExtensions).seriesOptions = seriesOptionsByChartId[chartId as string];
 
@@ -1109,7 +1574,8 @@ export const SeriesRenderer: React.ForwardRefExoticComponent<ChartSeriesProps[] 
                 });
                 triggerLegendShapeRender((layoutRef.current.chart as Chart).element.id);
             }
-        }, [JSON.stringify(seriesList.map((s: ChartSeriesProps) => s.legendShape)), phase]);
+        }, [JSON.stringify(seriesList.map((s: ChartSeriesProps) => s.legendShape)), phase
+            , seriesGradientSignature, trendlineGradientSignature]);
         /**
          * Effect that runs during the measuring phase to initialize series rendering.
          * Resets chart options and prepares series for rendering.
@@ -1124,7 +1590,8 @@ export const SeriesRenderer: React.ForwardRefExoticComponent<ChartSeriesProps[] 
                 trendSeriesOptionsByChartId[chartId as string] = {};
                 markersOptionsByChartId[chartId as string] = [];
                 trendlineMarkersOptionsByChartId[chartId as string] = {};
-                trendlineDataLabelOptionsByChartId[chartId as string] = {}; // ADD THIS LINE
+                trendlineDataLabelOptionsByChartId[chartId as string] = {};
+                gradientDefsByChartId[chartId as string] = [];
 
                 // Don't reset data label options - this causes them to disappear on resize
                 if (!dataLabelOptionsByChartId[chartId as string]) {
@@ -1249,6 +1716,7 @@ export const SeriesRenderer: React.ForwardRefExoticComponent<ChartSeriesProps[] 
                 trendlineMarkersOptionsByChartId[chartId as string] = {};
                 dataLabelOptionsByChartId[chartId as string] = [];
                 trendlineDataLabelOptionsByChartId[chartId as string] = {};
+                gradientDefsByChartId[chartId as string] = [];
                 (layoutRef.current.chart as Chart).dataLabelCollections = [];
                 (chart as Chart).seriesOptions = [];
                 (chart as Chart).markerOptions = [];
@@ -1323,6 +1791,9 @@ export const SeriesRenderer: React.ForwardRefExoticComponent<ChartSeriesProps[] 
                         visibleSeries.minRadius = (matchingSeries as SeriesProperties).minRadius ?? visibleSeries.minRadius;
                         visibleSeries.maxRadius = (matchingSeries as SeriesProperties).maxRadius ?? visibleSeries.maxRadius;
                         visibleSeries.cornerRadius = (matchingSeries as SeriesProperties).cornerRadius ?? visibleSeries.cornerRadius;
+                        visibleSeries.gradientProps = (matchingSeries as SeriesProperties).gradientProps;
+                        visibleSeries.gradientStops = (matchingSeries as SeriesProperties).gradientStops;
+                        visibleSeries.gradientKind = (matchingSeries as SeriesProperties).gradientKind;
                         // Render if visible
                         if (visibleSeries.visible) {
                             visibleSeries.chart = layoutRef.current.chart as Chart;
@@ -1342,7 +1813,7 @@ export const SeriesRenderer: React.ForwardRefExoticComponent<ChartSeriesProps[] 
                 }
                 setSeriesVersion((prev: number) => prev + 1);
             }
-        }, [serializedSeriesData, rangeColorSignature]);
+        }, [serializedSeriesData, rangeColorSignature, seriesGradientSignature]);
 
         useEffect(() => {
             if (internalDataUpdateRef.current) {
@@ -1355,6 +1826,7 @@ export const SeriesRenderer: React.ForwardRefExoticComponent<ChartSeriesProps[] 
                 (chart as Chart).seriesOptions = [];
                 indicatorsSeriesOptionsByChartId[chartId as string] = {};
                 trendSeriesOptionsByChartId[chartId as string] = {};
+                gradientDefsByChartId[chartId as string] = [];
                 triggerRemeasure();
                 setDisableAnimation?.(true);
             }
@@ -1385,6 +1857,7 @@ export const SeriesRenderer: React.ForwardRefExoticComponent<ChartSeriesProps[] 
                 trendlineMarkersOptionsByChartId[chartId as string] = {};
                 dataLabelOptionsByChartId[chartId as string] = [];
                 trendlineDataLabelOptionsByChartId[chartId as string] = {};
+                gradientDefsByChartId[chartId as string] = [];
                 internalDataUpdateRef.current = true;
                 (layoutRef.current.chart as Chart).dataLabelCollections = [];
                 const chartInstance: Chart = layoutRef.current.chart as Chart;
@@ -1599,6 +2072,10 @@ export const SeriesRenderer: React.ForwardRefExoticComponent<ChartSeriesProps[] 
                                                                 visibleSeries![seriesIndex as number].clipRect!.y : 0)}
                                                         />
                                                     </clipPath>
+                                                    <GradientDefs specs={
+                                                        getGradientDefsForChart((layoutRef.current.chart as Chart).element.id)
+                                                            .filter((spec: GradientDefSpec) => spec.owner === 'series' && spec.index === seriesIndex)
+                                                    } />
                                                 </defs>
 
                                                 {isCylinderSeries && ColumnSeries.renderCylinderSeries(

@@ -40,6 +40,23 @@ export interface VerticalViewProps {
     timeScale?: TimeScaleProps;
 }
 
+/** @private */
+export interface TimelineViewProps
+    extends SchedulerCommonProps,
+    VerticalViewProps,
+    CommonViewProps {
+
+    /**
+     * Limits the number of events displayed per row in timeline views.
+     * Excess events are collapsed into a "+n more" indicator to conserve space and maintain layout stability.
+     * Applicable to all timeline views: TimelineDay, TimelineWeek, TimelineWorkWeek, and TimelineMonth.
+     *
+     * @optional
+     * @default null
+     */
+    maxEventsStack?: number;
+}
+
 /**
  * Configures custom rendering of the header indent area (left section of the date header).
  * Only active when `showWeekNumber` is `true`; otherwise, this interface is not used or instantiated.
@@ -54,6 +71,66 @@ export interface HeaderIndentProps {
      * @default null
      */
     weekNumber?: number | null;
+}
+
+/**
+ * Header row options for timeline views
+ */
+export type HeaderRowOption = 'Year' | 'Month' | 'Week' | 'Date' | 'Hour';
+
+/**
+ * Context data passed to header row template functions
+ */
+export interface HeaderRowRenderProps {
+    /**
+     * The date object for this header cell
+     */
+    date: Date;
+
+    /**
+     * Formatted text (e.g., "2026", "January", "Week 15", "May 1, Tuesday")
+     */
+    text: string;
+
+    /**
+     * Start date of this header row's span (for Year/Month rows)
+     */
+    startDate?: Date;
+
+    /**
+     * End date of this header row's span (for Year/Month rows)
+     */
+    endDate?: Date;
+
+    /**
+     * The header row option type
+     */
+    option: HeaderRowOption;
+
+    /**
+     * ISO week number (only for Week option)
+     */
+    weekNumber?: number;
+
+    /**
+     * True if this date is a weekend
+     */
+    isWeekend?: boolean;
+}
+
+/**
+ * Configuration for a single header row in timeline views
+ */
+export interface HeaderRowConfig {
+    /**
+     * Which header row type to display
+     */
+    option: HeaderRowOption;
+
+    /**
+     * Optional custom template for rendering this header row
+     */
+    template?: (props: HeaderRowRenderProps) => ReactNode;
 }
 
 /** @private */
@@ -137,7 +214,7 @@ export interface SchedulerCommonProps {
      *
      * @default null
      */
-    headerIndent?: (props: HeaderIndentProps) => ReactNode;
+    headerIndent?: (props?: HeaderIndentProps) => ReactNode;
 
     /**
      * Provides a factory function for rendering a custom editor popup; defaults to the built-in editor if not specified.
@@ -163,6 +240,23 @@ export interface SchedulerCommonProps {
      * @default null
      */
     resourceHeader?: (props: SchedulerResourceHeaderProps) => ReactNode;
+
+    /**
+     * Configures header rows displayed in Timeline views.
+     * Allows multi-level hierarchical display of Year, Month, Week, Date, and Hour.
+     * Applicable only to timeline views (TimelineDay, TimelineWeek, TimelineWorkWeek, TimelineMonth).
+     *
+     * @default []
+     */
+    headerRows?: HeaderRowConfig[];
+
+    /**
+     * Configures the layout grouping of multiple resources.
+     * When provided, resources are organized in the scheduler layout based on names.
+     *
+     *  @default {}
+     */
+    group?: SchedulerGroup;
 }
 
 /**
@@ -298,14 +392,6 @@ export interface SchedulerProps extends SchedulerCommonProps, VerticalViewProps,
      * @default []
      */
     resources?: SchedulerResource[];
-
-    /**
-     * Configures the layout grouping of multiple resources.
-     * When provided, resources are organized in the scheduler layout based on names.
-     *
-     *  @default []
-     */
-    group?: SchedulerGroup;
 
     /**
      * Highlights the standard business hours (default 9 AM to 6 PM) with a distinct color in the scheduler.
@@ -528,8 +614,11 @@ export interface SchedulerProps extends SchedulerCommonProps, VerticalViewProps,
     onEditorSubmit?: (args: SchedulerEditorSubmitEvent) => void;
 
     /**
-     * Specifies the initial scroll behavior of the main content area.
-     * When set, the scheduler automatically scrolls to the defined target after the view has finished rendering.
+     * Configures how the Scheduler scrolls its main content area after the active view has finished rendering.
+     * When provided, scrolling triggers on the initial render and whenever the active view or selected date changes,
+     * targeting the position determined by `mode` (`ScrollToMode.CurrentTime`, `ScrollToMode.WorkHour`, or `ScrollToMode.Auto`).
+     *
+     * @default { enable: true, offset: 10, mode: ScrollToMode.Auto }
      */
     scrollToSettings?: SchedulerScrollToProps;
 
@@ -552,6 +641,15 @@ export interface SchedulerProps extends SchedulerCommonProps, VerticalViewProps,
      * @default timezoneData (timezone dataSource)
      */
     timezoneDataSource?: TimezoneFields[];
+
+    /**
+     * Triggered when the active resource changes in compact view mode (see `group.enableCompactView`).
+     * The handler receives a `ResourceChangeEvent` payload containing the new and previous resource data.
+     * Setting `args.cancel = true` inside the handler prevents the resource change and retains the previous selection.
+     *
+     * @event onResourceChange
+     */
+    onResourceChange?: (args: ResourceChangeEvent) => void;
 }
 
 /**
@@ -737,7 +835,7 @@ export interface MonthViewProps extends SchedulerCommonProps, CommonViewProps {
      *
      * @default null
      */
-    maxEventsPerRow?: number;
+    maxEventsStack?: number;
 }
 
 /**
@@ -768,6 +866,34 @@ export interface AgendaViewProps extends SchedulerCommonProps, CommonViewProps {
      * @default null
      */
     noEventsTemplate?: () => React.ReactNode;
+}
+
+/**
+ * Props for TimelineDayView component
+ */
+export interface TimelineDayViewProps extends VerticalViewProps, SchedulerCommonProps, CommonViewProps, TimelineViewProps {}
+
+/**
+ * Props for TimelineWeekView component
+ */
+export interface TimelineWeekViewProps extends VerticalViewProps, SchedulerCommonProps, CommonViewProps, TimelineViewProps {}
+
+/**
+ * Props for TimelineWorkWeekView component
+ */
+export interface TimelineWorkWeekViewProps extends VerticalViewProps, SchedulerCommonProps, CommonViewProps, TimelineViewProps {}
+
+/**
+ * Props for TimelineMonthView component
+ */
+export interface TimelineMonthViewProps extends SchedulerCommonProps, CommonViewProps {
+    /**
+     * Limits the number of events displayed per row in month view cells.
+     * Excess events are collapsed into a "+n more" indicator to conserve space.
+     *
+     * @default null
+     */
+    maxEventsStack?: number;
 }
 
 /**
@@ -833,6 +959,13 @@ export interface SchedulerResource {
      * @default null
      */
     cssClassField?: string;
+
+    /**
+     * Specifies the field name used to determine the initial expanded state of a resource in timeline resource grouping.
+     *
+     * @default undefined
+     */
+    expandedField?: string;
 }
 
 /** Configures grouping settings for multiple resources. */
@@ -857,6 +990,61 @@ export interface SchedulerGroup {
      * @default true
      */
     byGroupID?: boolean;
+
+    /**
+     * Allows creation and editing of linked appointments assigned to multiple resources. When set to `true`,
+     *  a single appointment object instance will be maintained in schedule dataSource that are created for
+     *  multiple resources, whereas displayed individually on UI.
+     *
+     * @default false
+     */
+    groupEdit?: boolean;
+
+    /**
+     * Enables compact view mode for resource grouping. When `true`, the scheduler displays one resource at a time
+     * with a collapsible tree-view drawer for navigation. When `false`, full multi-resource columns are shown.
+     * Compact view is opt-in: it activates only when this prop is explicitly set to `true`.
+     *
+     * @default false
+     */
+    enableCompactView?: boolean;
+
+    /**
+     * Specifies the initially selected resource in compact view mode. Accepts either a numeric resource ID
+     * (matched against the resource's `idField`) or the actual string/number value stored in the resource data.
+     * If the provided value does not match any resource, the first resource in the group is selected.
+     *
+     * @default undefined
+     */
+    selectedResource?: string | number;
+}
+
+/**
+ * Event payload fired when the active resource changes in compact view mode.
+ *
+ * @event onResourceChange
+ */
+export interface ResourceChangeEvent {
+    /**
+     * The newly selected resource data object.
+     */
+    resource: Record<string, unknown>;
+
+    /**
+     * The previously selected resource data object, or `null` if there was no previous selection.
+     */
+    previousResource: Record<string, unknown> | null;
+
+    /**
+     * The leaf-resource index (0-based) of the newly selected resource.
+     */
+    groupIndex: number;
+
+    /**
+     * Set to `true` inside the `onResourceChange` handler to cancel the
+     * resource change and keep the previously selected resource active.
+     */
+    cancel?: boolean;
 }
 
 /** * Configures event data binding and field mapping for the scheduler component.
@@ -1276,8 +1464,6 @@ export interface EventModel {
      * converts it to the user's/local timezone for display, sorting, and duration calculations.
      * Format: IANA TZ database name (e.g. 'Europe/London', 'America/Los_Angeles').
      * Example: `{ startTime: new Date('2026-05-15T09:00:00'), startTimezone: 'America/New_York' }`
-     *
-     * @default undefined
      */
     startTimezone?: string;
 
@@ -1287,8 +1473,6 @@ export interface EventModel {
      * converts it to the user's/local timezone for display, sorting, and duration calculations.
      * Format: IANA TZ database name (e.g. 'Europe/London', 'America/Los_Angeles').
      * Example: `{ endTime: new Date('2026-05-15T10:00:00'), endTimezone: 'America/New_York' }`
-     *
-     * @default undefined
      */
     endTimezone?: string;
 
@@ -2341,7 +2525,10 @@ export interface SchedulerEditorField {
 export interface SchedulerScrollToProps {
     /**
      * Specifies whether automatic scrolling should occur when the view is rendered.
-     * If omitted or set to `false`, the Scheduler does not perform any automatic scroll.
+     * By default, the Scheduler scrolls to the current time when available; otherwise, it scrolls to the work hour start
+     * Set enable to `false` to disable automatic scrolling.
+     *
+     * @default true
      */
     enable?: boolean;
 
@@ -2349,11 +2536,15 @@ export interface SchedulerScrollToProps {
      * Specifies a pixel value that is subtracted from the calculated scroll position.
      * This value represents the exact amount reduced from the final scroll target.
      * Accepts positive or negative values to fine tune the final scroll target.
+     *
+     * @default 10
      */
     offset?: number;
 
     /**
      * Specifies the scrolling strategy used to determine the target scroll position.
+     *
+     * @default ScrollToMode.Auto
      */
     mode?: ScrollToMode;
 }

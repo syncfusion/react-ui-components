@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, forwardRef, useImperativeHandle, createContext, useContext, useRef, ReactNode, type KeyboardEvent, type MouseEvent, InputHTMLAttributes, ForwardRefExoticComponent, RefAttributes, ForwardedRef, RefObject, Context, FC } from 'react';
-import { IAnimation, IL10n, L10n, preRender, SvgIcon, useProviderContext, useStableId } from '@syncfusion/react-base';
+import { useState, useEffect, useCallback, forwardRef, useImperativeHandle, createContext, useContext, useRef, ReactNode, type KeyboardEvent, type MouseEvent, InputHTMLAttributes, ForwardRefExoticComponent, RefAttributes, ForwardedRef, RefObject, Context, FC, useLayoutEffect, Dispatch, SetStateAction, MouseEventHandler, FocusEventHandler, type FocusEvent, useMemo } from 'react';
+import { IAnimation, IL10n, L10n, preRender, useProviderContext, useStableId} from '@syncfusion/react-base';
 import { AnimationOptions, Animation, Severity } from '@syncfusion/react-base';
+import { CircleCheckIcon, CircleCloseIcon, CircleInfoIcon, CloseIcon, WarningIcon } from '@syncfusion/react-icons';
 
 /**
  * Specifies animation effects that are applicable for Toast.
@@ -295,9 +296,10 @@ export interface IToast extends ToastProps{
      * Shows a new Toast.
      *
      * @param content - The content to be displayed in the Toast.
+     * @param options - Optional per-toast props that override component-level props.
      * @returns The id of the newly created Toast.
      */
-    show(content: ReactNode): string;
+    show(content: ReactNode, options?: ToastProps): string;
 
     /**
      * Hides a specific Toast or the oldest one if no id is provided.
@@ -309,6 +311,16 @@ export interface IToast extends ToastProps{
 let toastCounter: number = 0;
 
 type IToastProps = ToastProps & Omit<InputHTMLAttributes<HTMLDivElement>, keyof ToastProps>;
+
+/**
+ * Internal structure that tracks each running auto-dismiss timer so we can
+ * pause and resume it as the user hovers/focuses the Toast item.
+ */
+interface ToastTimer {
+    timeoutId: ReturnType<typeof setTimeout> | null;
+    startTime: number;
+    remainingTimeMs: number;
+}
 
 /**
  * Toast component for displaying temporary notifications to users.
@@ -366,9 +378,12 @@ export const Toast: ForwardRefExoticComponent<IToastProps & RefAttributes<IToast
      const [toasts, setToasts] = useState<Array<{ id: string; content: ReactNode }>>([]);
      const toastRef: RefObject<HTMLDivElement | null> = useRef < HTMLDivElement > (null);
      const initialOpenState: RefObject<boolean> = useRef(open);
-     const [interactionToasts, setInteractionToasts] = useState<Record<string, boolean>>({});
      const { dir } = useProviderContext();
-     const closeIcon: string = 'M10.5858 12.0001L2.58575 4.00003L3.99997 2.58582L12 10.5858L20 2.58582L21.4142 4.00003L13.4142 12.0001L21.4142 20L20 21.4142L12 13.4143L4.00003 21.4142L2.58581 20L10.5858 12.0001Z';
+     const timersRef: RefObject<Map<string, ToastTimer>> = useRef<Map<string, ToastTimer>>(new Map());
+     const toastElementsByIdRef: RefObject<Map<string, { el: RefObject<HTMLDivElement | null>; ext?: ReturnType<typeof setTimeout> }>>
+     = useRef(new Map());
+     const [pausedToasts, setPausedToasts] = useState<Set<string>>(() => new Set());
+     const [interactionToasts, setInteractionToasts] = useState<Set<string>>(() => new Set());
 
      const publicAPI: Partial<IToastProps> = {
          open,
@@ -398,84 +413,217 @@ export const Toast: ForwardRefExoticComponent<IToastProps & RefAttributes<IToast
 
      useEffect(() => {
          preRender('toast');
+         return () => {
+             timersRef.current.forEach((timer: ToastTimer) => {
+                 timer.timeoutId = clearTimeoutSafe(timer.timeoutId);
+             });
+             timersRef.current.clear();
+         };
      }, []);
 
-     const show: (content: ReactNode) => string = useCallback((content: ReactNode) => {
-         const toastId: string = `toast-${++toastCounter}`;
-         if (animation.show) {
-             const showAnimation: AnimationOptions = {...animation.show};
-             showAnimation.begin = () => {
-                 setToasts((prevToasts: Array<{ id: string; content: ReactNode }>) => {
-                     const newToast: {
-                         id: string;
-                         content: ReactNode;
-                     } = { id: toastId, content };
-                     return newestOnTop ? [newToast, ...prevToasts] : [...prevToasts, newToast];
-                 });
-             };
-             showAnimation.end = () => {
-                 onOpen?.();
-             };
-             if (Animation) {
-                 const animationInstance: IAnimation = Animation(showAnimation);
-                 if (animationInstance.animate) {
-                     animationInstance.animate(toastRef.current as HTMLElement);
-                 }
+     const registerToastRef: (id: string) => RefObject<HTMLDivElement | null> = useCallback(
+         (id: string): RefObject<HTMLDivElement | null> => {
+             const previouslyRegisteredRef: { el: RefObject<HTMLDivElement | null>; ext?: ReturnType<typeof setTimeout> } | undefined =
+             toastElementsByIdRef.current.get(id);
+             if (previouslyRegisteredRef) {
+                 return previouslyRegisteredRef.el;
              }
-         }
-         if (timeout > 0) {
-             setTimeout(() => {
-                 if (!Object.prototype.hasOwnProperty.call(interactionToasts, String(toastId))) {
-                     hide(toastId);
-                 }
-             }, timeout);
-         }
-         return toastId;
-     }, [newestOnTop, timeout, interactionToasts]);
+             const newRef: RefObject<HTMLDivElement | null> = { current: null };
+             toastElementsByIdRef.current.set(id, { el: newRef });
+             return newRef;
+         },
+         []
+     );
+
+     const clearTimeoutSafe: (timeoutId: NodeJS.Timeout | null) => null = useCallback(
+         (timeoutId: ReturnType<typeof setTimeout> | null): null => {
+             if (timeoutId) {
+                 clearTimeout(timeoutId);
+             }
+             return null;
+         }, []);
+
+     const shouldHideToast: (toastId: string) => boolean = useCallback((toastId: string): boolean =>
+         !interactionToasts.has(toastId), [interactionToasts]);
+
+     const updateToastStatus: (setter: Dispatch<SetStateAction<Set<string>>>, toastId: string, shouldAdd: boolean) => void = (
+         setter: Dispatch<SetStateAction<Set<string>>>, toastId: string, shouldAdd: boolean ): void => {
+         setter((prev: Set<string>) => {
+             const hasToast: boolean = prev.has(toastId);
+             if ((shouldAdd && hasToast) || (!shouldAdd && !hasToast)) {
+                 return prev;
+             }
+             const next: Set<string> = new Set(prev);
+             if (shouldAdd) {
+                 next.add(toastId);
+             } else {
+                 next.delete(toastId);
+             }
+             return next;
+         });
+     };
+
+     const clearToastTimer: (toastId: string) => void = useCallback((toastId: string): void => {
+         const timer: ToastTimer | undefined = timersRef.current.get(toastId);
+         if (!timer) {return; }
+         timer.timeoutId = clearTimeoutSafe(timer.timeoutId);
+         timersRef.current.delete(toastId);
+     }, [clearTimeoutSafe]);
 
      const hide: (toastId?: string) => void = useCallback((toastId?: string) => {
-         const toastElement: Element | null | undefined
-         = toastId
-             ? document.getElementById(toastId)
+         const targetEntry: { el: RefObject<HTMLDivElement | null> } | undefined = toastId
+             ? toastElementsByIdRef.current.get(toastId)
+             : undefined;
+
+         const toastElement: Element | null | undefined = toastId
+             ? targetEntry?.el.current ?? null
              : toastRef.current?.querySelector('.sf-toast');
 
-         if (!toastElement) {return; }
+         if (!toastElement) { return; }
+         const effectiveHideAnim: ToastAnimationProps | undefined = animation.hide;
+         if (!effectiveHideAnim) { return; }
 
-         if (animation.hide) {
-             const hideAnimation: AnimationOptions = { ...animation.hide };
-             hideAnimation.begin = () => {
-                 let duration: number = animation.hide?.duration ? animation.hide.duration - 30 : 0;
-                 duration = duration > 0 ? duration : 0;
-                 setTimeout(() => {
-                     setToasts((prevToasts: Array<{ id: string; content: ReactNode }>) => {
-                         if (toastId) {
-                             return prevToasts.filter((toast: { id: string; content: ReactNode }) => toast.id !== toastId);
-                         } else {
-                             return prevToasts.slice(1);
-                         }
-                     });
+         const hideAnimation: AnimationOptions = { ...effectiveHideAnim };
+         hideAnimation.begin = () => {
+             const duration: number = Math.max(0, (effectiveHideAnim.duration ?? 0) - 30);
+             setTimeout(() => {
+                 setToasts((prevToasts: Array<{ id: string; content: ReactNode; options?: ToastProps }>) => {
                      if (toastId) {
-                         setInteractionToasts((prev: Record<string, boolean>) => {
-                             const newState: {
-                                 [x: string]: boolean;
-                             } = { ...prev };
-                             delete newState[String(toastId)];
-                             return newState;
-                         });
+                         return prevToasts.filter((toast: { id: string; content: ReactNode; options?: ToastProps }) =>
+                             toast.id !== toastId);
                      }
-                 }, duration);
-             };
-             hideAnimation.end = () => {
-                 onClose?.();
-             };
-             if (Animation) {
-                 const animationInstance: IAnimation = Animation(hideAnimation);
-                 if (animationInstance.animate) {
-                     animationInstance.animate(toastElement as HTMLElement);
+                     return prevToasts.slice(1);
+                 });
+                 if (toastId) {
+                     setInteractionToasts((prev: Set<string>) => {
+                         const newState: Set<string> = new Set(prev);
+                         newState.delete(String(toastId));
+                         return newState;
+                     });
+                     clearToastTimer(toastId);
+                     updateToastStatus(setPausedToasts, toastId, false);
+                     const entry: { el: RefObject<HTMLDivElement | null>; ext?: ReturnType<typeof setTimeout> } | undefined =
+                     toastElementsByIdRef.current.get(toastId);
+                     if (entry?.ext) {
+                         clearTimeout(entry.ext);
+                         entry.ext = undefined;
+                     }
+                     toastElementsByIdRef.current.delete(toastId);
                  }
+             }, duration);
+         };
+         hideAnimation.end = () => {
+             onClose?.();
+         };
+         if (Animation) {
+             const animationInstance: IAnimation = Animation(hideAnimation);
+             if (animationInstance.animate) {
+                 animationInstance.animate(toastElement as HTMLElement);
              }
          }
-     }, [onClose]);
+     }, [onClose, animation, clearToastTimer]);
+
+     const createToastTimeout: (toastId: string, timer: ToastTimer, duration: number) => NodeJS.Timeout = useCallback(
+         (toastId: string, timer: ToastTimer, duration: number): NodeJS.Timeout => {
+             return setTimeout(() => {
+                 timer.timeoutId = null;
+                 if (shouldHideToast(toastId)) {
+                     hide(toastId);
+                 }
+             }, duration);
+         }, [shouldHideToast, hide]);
+
+     const startToastTimer: (toastId: string, duration: number) => void = useCallback(
+         (toastId: string, duration: number): void => {
+             if (duration <= 0) {return; }
+             const now: number = Date.now();
+             const existing: ToastTimer | undefined = timersRef.current.get(toastId);
+             if (existing) {
+                 existing.timeoutId = clearTimeoutSafe(existing.timeoutId);
+             }
+             const timer: ToastTimer = {
+                 timeoutId: null as ReturnType<typeof setTimeout> | null,
+                 startTime: now,
+                 remainingTimeMs: duration
+             };
+             timer.timeoutId = createToastTimeout(toastId, timer, duration);
+             timersRef.current.set(toastId, timer);
+         }, [clearTimeoutSafe, createToastTimeout]);
+
+     const pauseToastTimer: (toastId: string) => void = useCallback((toastId: string): void => {
+         const timer: ToastTimer | undefined = timersRef.current.get(toastId);
+         if (!timer || !timer.timeoutId) {return; }
+         const now: number = Date.now();
+         timer.timeoutId = clearTimeoutSafe(timer.timeoutId);
+         timer.remainingTimeMs = Math.max(0, timer.remainingTimeMs - (now - timer.startTime));
+         updateToastStatus(setPausedToasts, toastId, true);
+     }, [clearTimeoutSafe]);
+
+     const resumeToastTimer: (toastId: string) => void = useCallback(
+         (toastId: string): void => {
+             const timer: ToastTimer | undefined = timersRef.current.get(toastId);
+             if (!timer || timer.timeoutId) {
+                 updateToastStatus(setPausedToasts, toastId, false);
+                 return;
+             }
+             if (timer.remainingTimeMs > 0) {
+                 timer.startTime = Date.now();
+                 timer.timeoutId = createToastTimeout(
+                     toastId,
+                     timer,
+                     timer.remainingTimeMs
+                 );
+             }
+             updateToastStatus(setPausedToasts, toastId, false);
+         }, [createToastTimeout]);
+
+     const toastAnimationQueueRef: RefObject<Array<{ id: string; animation: ToastAnimationOptions; onOpen?: () => void }>> =
+        useRef<Array<{ id: string; animation: ToastAnimationOptions; onOpen?: () => void }>>([]);
+     useLayoutEffect(() => {
+         if (toastAnimationQueueRef.current.length === 0) { return; }
+         const pending: Array<{ id: string; animation: ToastAnimationOptions; onOpen?: () => void }> =
+         toastAnimationQueueRef.current;
+         toastAnimationQueueRef.current = [];
+         pending.forEach(({ id: toastId, animation: toastAnim, onOpen: toastOpen }: {
+             id: string; animation: ToastAnimationOptions; onOpen? : () => void
+         }) => {
+             const newEl: HTMLElement | null = toastElementsByIdRef.current.get(toastId)?.el.current ?? null;
+             if (!newEl) { toastOpen?.(); return; }
+             if (toastAnim.show) {
+                 const showAnimation: AnimationOptions = { ...toastAnim.show };
+                 showAnimation.end = () => {
+                     toastOpen?.();
+                 };
+                 if (Animation) {
+                     const animationInstance: IAnimation = Animation(showAnimation);
+                     animationInstance.animate?.(newEl);
+                 }
+             } else {
+                 toastOpen?.();
+             }
+         });
+     }, [toasts]);
+
+     const show: (content: ReactNode, options?: ToastProps) => string = useCallback(
+         (content: ReactNode, options?: ToastProps) => {
+             const toastId: string = `toast-${++toastCounter}`;
+             registerToastRef(toastId);
+             const effectiveAnimation: ToastAnimationOptions = options?.animation ?? animation;
+             const effectiveTimeout: number = options?.timeout ?? timeout;
+             const effectiveNewestOnTop: boolean = options?.newestOnTop ?? newestOnTop;
+             const effectiveOnOpen: (() => void) | undefined = options?.onOpen ?? onOpen;
+             toastAnimationQueueRef.current.push({id: toastId, animation: effectiveAnimation, onOpen: effectiveOnOpen});
+             setToasts((prevToasts: Array<{ id: string; content: ReactNode; options?: ToastProps }>) => {
+                 const newToast: { id: string; content: ReactNode; options?: ToastProps } =
+                    { id: toastId, content, options };
+                 return effectiveNewestOnTop ? [newToast, ...prevToasts] : [...prevToasts, newToast];
+             });
+
+             if (effectiveTimeout > 0) {
+                 startToastTimer(toastId, effectiveTimeout);
+             }
+             return toastId;
+         }, [newestOnTop, timeout, animation, onOpen, startToastTimer, registerToastRef]);
 
      const handleCloseKey: (e: KeyboardEvent<HTMLDivElement>, toastId: string) => void =
      useCallback((e: KeyboardEvent<HTMLDivElement>, toastId: string) => {
@@ -485,75 +633,169 @@ export const Toast: ForwardRefExoticComponent<IToastProps & RefAttributes<IToast
          }
      }, [hide]);
 
+     const mergeProps: (defaults: ToastProps, overrides?: ToastProps) => ToastProps =
+            (defaults: ToastProps, overrides?: ToastProps): ToastProps => {
+                if (!overrides) { return defaults; }
+                const cleaned: ToastProps = {};
+                (Object.keys(overrides) as Array<keyof ToastProps>).forEach((k: keyof ToastProps) => {
+                    if (overrides[k as keyof ToastProps] !== undefined) {
+                        (cleaned as Record<string, unknown>)[k as string] = overrides[k as keyof ToastProps];
+                    }
+                });
+                return { ...defaults, ...cleaned };
+            };
+
      const handleClick: (e: MouseEvent<HTMLDivElement>, toastId: string) => void =
      useCallback((e: MouseEvent<HTMLDivElement>, toastId: string) => {
          onClick?.(e);
-         setInteractionToasts((prev: Record<string, boolean>) => ({ ...prev, [toastId]: true }));
+         updateToastStatus(setInteractionToasts, toastId, true);
          if (timeout !== 0 && extendedTimeout > 0) {
-             setTimeout(() => hide(toastId), extendedTimeout);
+             const entry: { el: RefObject<HTMLDivElement | null>; ext?: ReturnType<typeof setTimeout> } | undefined =
+             toastElementsByIdRef.current.get(toastId);
+             if (entry?.ext) {
+                 clearTimeout(entry.ext);
+             }
+             const handle: ReturnType<typeof setTimeout> = setTimeout((): void => {
+                 if (entry && entry.ext === handle) {
+                     entry.ext = undefined;
+                 }
+                 hide(toastId);
+             }, extendedTimeout);
+             toastElementsByIdRef.current.set(toastId, {
+                 el: entry?.el ?? { current: null },
+                 ext: handle
+             });
          }
          if (closeButton && (e.target as HTMLElement).closest('.sf-toast-close-icon')) {
              hide(toastId);
          }
      }, [onClick, closeButton, hide]);
-     const containerPosition: string = `sf-toast-${position?.yAxis?.toLowerCase()}-${position?.xAxis?.toLowerCase()}`;
-     const progressAnimationDelayMs: number = Math.max(0, animation?.show?.duration ?? 0);
+
+     const handleMouseEnter: (toastId: string) => MouseEventHandler<HTMLDivElement> =
+    useCallback((toastId: string) => () => {
+        pauseToastTimer(toastId);
+    }, [pauseToastTimer]);
+
+     const handleMouseLeave: (toastId: string) => MouseEventHandler<HTMLDivElement> =
+    useCallback((toastId: string) => () => {
+        resumeToastTimer(toastId);
+    }, [resumeToastTimer]);
+
+     const handleFocus: (toastId: string) => FocusEventHandler<HTMLDivElement> =
+    useCallback((toastId: string) => () => {
+        pauseToastTimer(toastId);
+    }, [pauseToastTimer]);
+
+     const handleBlur: (e: FocusEvent<HTMLDivElement>, toastId: string) => void =
+     useCallback((e: FocusEvent<HTMLDivElement>, toastId: string) => {
+         const next: Node | null = e.relatedTarget as Node | null;
+         if (!next || !e.currentTarget.contains(next)) {
+             resumeToastTimer(toastId);
+         }
+     }, [resumeToastTimer]);
+
      const l10n: IL10n = L10n('toast', {
          close: 'Close'
      }, locale);
      const close: string = l10n.getConstant('close');
+     const getToastGroups: () => Record<string, { pos: PositionAxis; items: typeof toasts }> = () => {
+         const groupedToasts: Record<string, { pos: PositionAxis; items: typeof toasts }> = {};
+         toasts.forEach((toast: { id: string; content: ReactNode; options?: ToastProps }) => {
+             const positionAxis: PositionAxis = toast.options?.position ?? position;
+             const key: string = `${positionAxis?.yAxis}-${positionAxis?.xAxis}`;
+             if (!groupedToasts[key as string]) {
+                 groupedToasts[key as string] = { pos: positionAxis, items: [] };
+             }
+             groupedToasts[key as string].items.push(toast);
+         });
+         const defaultKey: string = `${position?.yAxis}-${position?.xAxis}`;
+         if (!groupedToasts[defaultKey as string]) {
+             groupedToasts[defaultKey as string] = { pos: position, items: [] };
+         }
+         return groupedToasts;
+     };
+     const groups: Record<string, { pos: PositionAxis; items: typeof toasts }> = useMemo(() => getToastGroups(), [toasts]);
+     const componentDefaults: ToastProps = {
+         severity, icon, title, closeButton, progressBar,
+         width, height, actions, timeout, progressDirection, animation
+     };
+
+     const getSeverityClass: (severity?: Severity) => string = (severity?: Severity) =>
+         (severity && severity !== 'Normal')
+             ? (severity === 'Error' ? 'sf-toast-danger' : `sf-toast-${(severity as string).toLowerCase()}`)
+             : '';
      return (
-         <div
-             ref={toastRef}
-             id={toastId}
-             className={`sf-control sf-toast sf-lib sf-toast-container ${containerPosition} ${(severity && severity !== 'Normal') ? severity === 'Error' ? 'sf-toast-danger' : `sf-toast-${severity.toLowerCase()}` : ''} ${className} ${(dir === 'rtl') ? 'sf-rtl' : ''}`}
-             style={{
-                 position: target !== 'body' ? 'absolute' : 'fixed',
-                 zIndex: target !== 'body' ? 1000000001 : 1004
-             }}
-         >
-             {toasts.map(({ id, content }: { id: string; content: ReactNode }) => (
-                 <div
-                     key={id}
-                     id={id}
-                     className={`sf-toast ${className || ''} ${(severity && severity !== 'Normal') ? severity === 'Error' ? 'sf-toast-danger' : `sf-toast-${severity.toLowerCase()}` : ''} ${icon ? 'sf-toast-header-icon' : ''}`}
-                     role="alert"
-                     style={{ width, height }}
-                     onClick={(e: MouseEvent<HTMLDivElement>) => handleClick(e, id)}
-                 >
-                     {icon && <div className={'sf-toast-icon sf-icon'}>{icon}</div>}
-                     <div className="sf-toast-message">
-                         {title && <div className="sf-toast-title">{title}</div>}
-                         <div className="sf-toast-content">{content}</div>
-                         {actions && (
-                             <div className="sf-toast-actions">
-                                 {actions}
-                             </div>
-                         )}
+         <>
+             {Object.entries(groups).map(([key, group]: [string, { pos: PositionAxis; items: typeof toasts }]) => {
+                 const containerPosition: string = `sf-toast-${group.pos?.yAxis?.toString().toLowerCase()}-${group.pos?.xAxis?.toString().toLowerCase()}`;
+
+                 return (
+                     <div
+                         key={key}
+                         ref={toastRef}
+                         id={toastId}
+                         className={`sf-control sf-toast sf-lib sf-toast-container ${containerPosition} ${getSeverityClass(severity)} ${className} ${(dir === 'rtl') ? 'sf-rtl' : ''}`}
+                         style={{
+                             position: target !== 'body' ? 'absolute' : 'fixed',
+                             zIndex: target !== 'body' ? 1000000001 : 1004
+                         }}
+                     >
+                         {
+                             group.items.map(({ id: toastid, content: toastContent, options: toastOpts }: {
+                                 id: string; content: React.ReactNode; options?: Partial<ToastProps>;
+                             }) => {
+                                 const toast: ToastProps = mergeProps(componentDefaults, toastOpts);
+                                 const progressDelay: number = Math.max(0, toast.animation?.show?.duration ?? 0);
+                                 return (
+                                     <div
+                                         key={toastid}
+                                         id={toastid}
+                                         className={`sf-toast  ${getSeverityClass(toast.severity)} ${toast.icon ? 'sf-toast-header-icon' : ''}`}
+                                         role="alert"
+                                         ref={registerToastRef(toastid)}
+                                         style={{ width: toast.width, height: toast.height }}
+                                         onClick={(e: MouseEvent<HTMLDivElement>) => handleClick(e, toastid)}
+                                         onMouseEnter={handleMouseEnter(toastid)}
+                                         onMouseLeave={handleMouseLeave(toastid)}
+                                         onFocus={handleFocus(toastid)}
+                                         onBlur={(e: FocusEvent<HTMLDivElement>) => handleBlur(e, toastid)}
+                                     >
+                                         {toast.icon && <div className={'sf-toast-icon sf-icon'}>{toast.icon}</div>}
+                                         <div className="sf-toast-message">
+                                             {toast.title && <div className="sf-toast-title">{toast.title}</div>}
+                                             <div className="sf-toast-content">{toastContent}</div>
+                                             {toast.actions && <div className="sf-toast-actions">{toast.actions}</div>}
+                                         </div>
+                                         {toast.closeButton && (
+                                             <div
+                                                 className="sf-toast-close-icon sf-icon"
+                                                 aria-label={close}
+                                                 tabIndex={0}
+                                                 onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => handleCloseKey(e, toastid)}
+                                             >
+                                                 <CloseIcon></CloseIcon>
+                                             </div>
+                                         )}
+                                         {toast.progressBar && (
+                                             <div className="sf-toast-progress">
+                                                 <div
+                                                     className={`sf-toast-progress-bar ${toast.progressDirection === 'Rtl' ? 'sf-toast-progress-rtl' : 'sf-toast-progress-ltr'}`}
+                                                     style={{
+                                                         animationDuration: `${toast.timeout}ms`,
+                                                         animationDelay: `${progressDelay}ms`
+                                                         ,
+                                                         animationPlayState: pausedToasts.has(`${toastid}`) ? 'paused' : 'running'
+                                                     }}
+                                                 />
+                                             </div>
+                                         )}
+                                     </div>
+                                 );
+                             })}
                      </div>
-                     {closeButton && (
-                         <div className="sf-toast-close-icon sf-icon"
-                             aria-label={close}
-                             tabIndex={0}
-                             onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => handleCloseKey(e, id)}
-                         >
-                             <SvgIcon d={closeIcon}></SvgIcon>
-                         </div>
-                     )}
-                     {progressBar && (
-                         <div className="sf-toast-progress">
-                             <div
-                                 className={`sf-toast-progress-bar ${progressDirection === 'Rtl' ? 'sf-toast-progress-rtl' : 'sf-toast-progress-ltr'}`}
-                                 style={{
-                                     animationDuration: `${timeout}ms`,
-                                     animationDelay: `${progressAnimationDelayMs}ms`
-                                 }}
-                             />
-                         </div>
-                     )}
-                 </div>
-             ))}
-         </div>
+                 );
+             })}
+         </>
      );
  });
 
@@ -564,22 +806,10 @@ interface ToastContextType {
 
 const ToastContext: Context<ToastContextType | null> = createContext<ToastContextType | null>(null);
 
-export let globalToastRef: IToast | null = null;
+export const globalToastRef: IToast | null = null;
 
 export const ToastProvider: FC<{ children: ReactNode }> = ({ children }: { children: ReactNode }) => {
     const toastRef: RefObject<IToast | null> = useRef<IToast>(null);
-    const [toastProps, setToastProps] = useState({});
-    const info: string = 'M12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3ZM1 12C1 5.92487 5.92487 1 12 1C18.0751 1 23 5.92487 23 12C23 18.0751 18.0751 23 12 23C5.92487 23 1 18.0751 1 12ZM13 11V17H11V11H13ZM13 9V7H11V9H13Z';
-    const success: string = 'M3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12ZM12 1C5.92487 1 1 5.92487 1 12C1 18.0751 5.92487 23 12 23C18.0751 23 23 18.0751 23 12C23 5.92487 18.0751 1 12 1ZM10.5 16.4142L17.9142 9L16.5 7.58578L10.5 13.5858L7.50003 10.5858L6.08582 12L10.5 16.4142Z';
-    const warning: string = 'M10.2691 2.99378C11.0395 1.66321 12.9605 1.6632 13.7308 2.99378L22.9964 18.9979C23.7683 20.3312 22.8062 22 21.2655 22H2.73444C1.19378 22 0.231653 20.3313 1.00358 18.9979L10.2691 2.99378ZM21.2655 20L12 3.99585L2.73444 20L21.2655 20ZM13 14V9H11V14H13ZM13 16H11V18.5H13V16Z';
-    const danger: string = 'M3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12ZM12 1C5.92487 1 1 5.92487 1 12C1 18.0751 5.92487 23 12 23C18.0751 23 23 18.0751 23 12C23 5.92487 18.0751 1 12 1ZM12 10.5858L8.50003 7.08582L7.08582 8.50003L10.5858 12L7.08582 15.5L8.50003 16.9142L12 13.4142L15.5 16.9142L16.9142 15.5L13.4142 12L16.9142 8.50003L15.5 7.08582L12 10.5858Z';
-
-    useEffect(() => {
-        ToastUtility.setGlobalToastRef(toastRef.current);
-        return () => {
-            ToastUtility.setGlobalToastRef(null);
-        };
-    }, []);
 
     const show: (content: ReactNode, options?: ToastProps) => string = (content: ReactNode, options: ToastProps = {}) => {
         const {
@@ -596,30 +826,25 @@ export const ToastProvider: FC<{ children: ReactNode }> = ({ children }: { child
 
         switch (severity) {
         case 'Success':
-            icon = <SvgIcon d={success}></SvgIcon>;
+            icon = <CircleCheckIcon></CircleCheckIcon>;
             className = 'sf-toast-success';
             break;
         case 'Warning':
-            icon = <SvgIcon d={warning}></SvgIcon>;
+            icon = <WarningIcon></WarningIcon>;
             className = 'sf-toast-warning';
             break;
         case 'Error':
-            icon = <SvgIcon d={danger}></SvgIcon>;
+            icon = <CircleCloseIcon></CircleCloseIcon>;
             className = 'sf-toast-danger';
             break;
         case 'Info':
         default:
-            icon = <SvgIcon d={info}></SvgIcon>;
+            icon = <CircleInfoIcon></CircleInfoIcon>;
             className = 'sf-toast-info';
             break;
         }
 
-        setToastProps({
-            content: (
-                <div className={className}>
-                    {content}
-                </div>
-            ),
+        const perToastOptions: ToastProps = {
             className,
             icon,
             timeout,
@@ -627,10 +852,10 @@ export const ToastProvider: FC<{ children: ReactNode }> = ({ children }: { child
             position,
             closeButton,
             title,
-            ...options
-        });
-
-        return toastRef.current ? toastRef.current.show(content) : '';
+            ...options,
+            severity
+        } as ToastProps;
+        return toastRef.current ? toastRef.current.show(content, perToastOptions) : '';
     };
 
     const hide: (toastId?: string) => void = (toastId?: string) => {
@@ -642,7 +867,7 @@ export const ToastProvider: FC<{ children: ReactNode }> = ({ children }: { child
     return (
         <ToastContext.Provider value={{ show, hide }}>
             {children}
-            <Toast ref={toastRef} {...toastProps} />
+            <Toast ref={toastRef} />
         </ToastContext.Provider>
     );
 };
@@ -660,25 +885,4 @@ export const useToast: () => ToastContextType | undefined = () => {
     return context;
 };
 
-/**
- * Utility object for managing toasts globally
- */
-export const ToastUtility: {
-    setGlobalToastRef: (ref: IToast | null) => void;
-    show: (content: ReactNode, options?: ToastProps) => string | undefined;
-    hide: (toastId?: string) => void;
-} = {
-    setGlobalToastRef: (ref: IToast | null) => {
-        globalToastRef = ref;
-    },
 
-    show: (content: ReactNode) => {
-        return globalToastRef ? globalToastRef.show(content) : '';
-    },
-
-    hide: (toastId?: string) => {
-        if (globalToastRef) {
-            globalToastRef.hide(toastId);
-        }
-    }
-};

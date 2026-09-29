@@ -159,12 +159,12 @@ export const useScheduler: (props: UseSchedulerProps) => UseSchedulerResult = (p
 
     useEffect(() => {
         if (props.timezone) {
-            initializeTelemetryFeature('Timezone', 'schedule');
+            initializeTelemetryFeature('Timezone', 'Scheduler');
         }
         const isResources: boolean = props.resources && props.resources.length > 0;
         const isResourcesGrouping: boolean = props.group && props.group.resources && props.group.resources.length > 0;
         if (isResources || isResourcesGrouping) {
-            initializeTelemetryFeature('ResourcesGrouping', 'schedule');
+            initializeTelemetryFeature('ResourcesGrouping', 'Scheduler');
         }
     }, []);
 
@@ -204,11 +204,12 @@ export const useScheduler: (props: UseSchedulerProps) => UseSchedulerResult = (p
     }, [propCurrentView, internalCurrentView, viewComponents, validatedView]);
 
     useEffect(() => {
-        if (internalCurrentView === 'Week' && viewComponents.length > 0) {
-            const weekViewExists: boolean = viewComponents.some((comp: ViewsInfo) => comp.viewType === 'Week');
-            if (!weekViewExists) {
+        if (viewComponents.length > 0) {
+            const currentViewExists: boolean = viewComponents.some(
+                (comp: ViewsInfo) => comp.name === internalCurrentView || comp.viewType === (internalCurrentView)
+            );
+            if (!currentViewExists) {
                 handleCurrentViewChange(viewComponents[0].name);
-                return;
             }
         }
     }, [internalCurrentView, viewComponents, handleCurrentViewChange]);
@@ -338,7 +339,9 @@ export const useScheduler: (props: UseSchedulerProps) => UseSchedulerResult = (p
             enableRecurrenceValidation: props.enableRecurrenceValidation,
             weekRule: props.weekRule,
             timezone: props.timezone,
-            timezoneDataSource: props.timezoneDataSource
+            timezoneDataSource: props.timezoneDataSource,
+            headerRows: props.headerRows,
+            onResourceChange: props.onResourceChange
         };
     };
 
@@ -372,9 +375,12 @@ export const useScheduler: (props: UseSchedulerProps) => UseSchedulerResult = (p
             width: rootProps.width,
             selectedDate: DateService.setValidDate(rootProps.selectedDate),
             view: rootProps.view,
+            viewType: viewComponent.viewType,
+            isTimelineView: viewComponent.viewType?.startsWith('Timeline'),
+            isMonthView: viewComponent.viewType === 'Month' || viewComponent.viewType === 'TimelineMonth',
             eventSettings: rootProps.eventSettings,
             resources: rootProps.resources,
-            group: rootProps.group,
+            group: viewProps.group ?? rootProps.group,
             workHours: rootProps.workHours,
             showTimeIndicator: rootProps.showTimeIndicator,
             rowAutoHeight: rootProps.rowAutoHeight,
@@ -382,7 +388,7 @@ export const useScheduler: (props: UseSchedulerProps) => UseSchedulerResult = (p
             readOnly: viewProps.readOnly ?? rootProps.readOnly,
             header: rootProps.header,
             showQuickInfoPopup: rootProps.showQuickInfoPopup,
-            displayDate: DateService.setValidDate(viewProps.displayDate),
+            displayDate: viewProps.displayDate ? DateService.setValidDate(viewProps.displayDate) : undefined,
             useDisplayDate: viewProps.displayDate && internalSelectedDate.getTime() === validatedSelectedDate.getTime(),
             numberOfWeeks: viewProps.numberOfWeeks,
             weekDay: viewProps.weekDay,
@@ -390,14 +396,14 @@ export const useScheduler: (props: UseSchedulerProps) => UseSchedulerResult = (p
             cellHeader: viewProps.cellHeader,
             interval: viewProps.interval ?? viewComponent.interval,
             displayName: viewProps.displayName ?? viewComponent.displayName,
-            maxEventsPerRow: viewProps.maxEventsPerRow,
+            maxEventsStack: viewProps.maxEventsStack,
             dateHeader: viewProps.dateHeader ?? rootProps.dateHeader,
             resourceHeader: viewProps.resourceHeader ?? rootProps.resourceHeader,
             headerIndent: viewProps.headerIndent ?? rootProps.headerIndent,
             cell: viewProps.cell ?? rootProps.cell,
             timeScale: viewProps.timeScale ?? rootProps.timeScale,
-            startHour: viewProps.startHour ?? rootProps.startHour,
-            endHour: viewProps.endHour ?? rootProps.endHour,
+            startHour: viewProps.startHour ?? (viewComponent.viewType === 'TimelineMonth' ? '00:00' : rootProps.startHour),
+            endHour: viewProps.endHour ?? (viewComponent.viewType === 'TimelineMonth' ? '24:00' : rootProps.endHour),
             showWeekend: viewProps.showWeekend ?? rootProps.showWeekend,
             firstDayOfWeek: DateService.setValidFirstDayOfWeek(viewProps.firstDayOfWeek, rootProps.firstDayOfWeek),
             workDays: viewProps.workDays ?? rootProps.workDays,
@@ -436,7 +442,9 @@ export const useScheduler: (props: UseSchedulerProps) => UseSchedulerResult = (p
             getAvailableViews,
             weekRule: rootProps.weekRule,
             timezone: rootProps.timezone,
-            timezoneDataSource: props.timezoneDataSource
+            timezoneDataSource: props.timezoneDataSource,
+            headerRows: rootProps.headerRows,
+            onResourceChange: rootProps.onResourceChange
         };
         if (mergedProps.startHour !== '00:00' || mergedProps.endHour !== '24:00') {
             mergedProps.startHourTuple = [Number(mergedProps.startHour?.split(':')[0]), Number(mergedProps.startHour?.split(':')[1])];

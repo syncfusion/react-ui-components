@@ -13,26 +13,24 @@ import {
 } from 'react';
 import {
     ColumnType,
-    FilterBarType,
-    FilterTemplateProps,
-    IValueFormatter,
-    ValueType
-} from '../types';
-import { MutableGridSetter } from '../types/interfaces';
+    FilterBarType
+} from '../types/enum';
+import { MutableGridSetter, IValueFormatter, ValueType } from '../types/interfaces';
 import { GridRef } from '../types/grid.interfaces';
-import { FilterPredicates } from '../types/filter.interfaces';
+import { FilterPredicates, FilterTemplateProps } from '../types/filter.interfaces';
 import { ColumnProps, IColumnBase, ColumnRef } from '../types/column.interfaces';
-import { ChangeEvent as DDLChangeEvent, DropDownList, FieldSettingsModel, PopupSettings } from '@syncfusion/react-dropdowns';
-import { useColumn } from '../hooks';
-import { NumericChangeEvent, NumericTextBox, NumericTextBoxProps, TextBox, TextBoxChangeEvent, TextBoxProps } from '@syncfusion/react-inputs';
-import { getNumberPattern, IL10n, isNullOrUndefined, LabelMode, Variant } from '@syncfusion/react-base';
-import {
-    useGridComputedProvider,
-    useGridMutableProvider
-} from '../contexts';
-import { FilterIcon } from '@syncfusion/react-icons';
-import { DatePicker, DatePickerChangeEvent, DatePickerProps } from '@syncfusion/react-calendars';
-import { getCustomDateFormat } from '../utils';
+import { ChangeEvent as DDLChangeEvent, DropDownList, FieldSettingsModel, PopupSettings } from '@syncfusion/react-dropdowns/src/drop-down-list/index';
+import { useColumn } from '../hooks/useColumn';
+import { NumericChangeEvent, NumericTextBox, NumericTextBoxProps } from '@syncfusion/react-inputs/src/numeric-textbox/index';
+import { TextBox, TextBoxChangeEvent, TextBoxProps } from '@syncfusion/react-inputs/src/textbox/index';
+import { getNumberPattern } from '@syncfusion/react-base/src/internationalization';
+import { IL10n } from '@syncfusion/react-base/src/l10n';
+import { isNullOrUndefined } from '@syncfusion/react-base/src/util';
+import { LabelMode, Variant } from '@syncfusion/react-base/src/enums';
+import { useGridComputedProvider, useGridMutableProvider } from '../contexts/GridProviders';
+import { FilterIcon } from '@syncfusion/react-icons/src/icons/filter';
+import { DatePicker, DatePickerChangeEvent, DatePickerProps } from '@syncfusion/react-calendars/src/datepicker/index';
+import { getCustomDateFormat } from '../utils/utils';
 import {
     FILTER_CSS_CLASSES,
     NULL_OPERATORS,
@@ -41,7 +39,7 @@ import {
     LABEL_MODES,
     DROPDOWN_FIELD_SETTINGS,
     DROPDOWN_POPUP_SETTINGS
-} from './FilterBarConstants';
+} from '../constants/FilterBarConstants';
 
 /**
  * FilterBase component renders a table cell (th or td) with appropriate content
@@ -97,7 +95,7 @@ const FilterBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
         const startVirtualIndex: number = scrollModule?.virtualColumnInfo.startIndex;
         const endVirtualIndex: number = scrollModule?.virtualColumnInfo.endIndex;
         const visibleColumns: ColumnProps[] = grid.getVisibleColumns?.();
-        const finalColumns: ColumnProps[] = virtualSettings.enableColumn ?
+        const finalColumns: ColumnProps[] = grid.isStackedHeader ? grid.stackedFlattedColumnProps : virtualSettings.enableColumn ?
             (visibleColumns?.length ? visibleColumns : columns)?.slice(startVirtualIndex, endVirtualIndex) : columns;
         return finalColumns?.find((col: ColumnProps) => col.field === column.field);
     }, [column, grid?.getVisibleColumns, scrollModule?.virtualColumnInfo.startIndex, scrollModule?.virtualColumnInfo.endIndex]);
@@ -106,7 +104,9 @@ const FilterBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
     let operatorVal: string = column.filter?.operator || (updateColumn?.type === 'string' ? 'startsWith' : 'equal');
     let placeholderVal: string = localization?.getConstant(operatorVal);
     const operators: { value: string; text: string }[] = useMemo(() => {
-        let operators: { value: string; text: string }[] = filterModule.customOperators[updateColumn?.type + 'Operator'];
+        const resolvedType: string = updateColumn?.type ?? column?.type ?? 'string';
+        let operators: { value: string; text: string }[] = filterModule?.customOperators?.[`${resolvedType}Operator`] ??
+            filterModule?.customOperators?.stringOperator ?? [];
         if (isFilterbarOperator && updateColumn?.filter.filterOperators?.length) {
             const filterOperators: string[] = updateColumn?.filter.filterOperators;
             operators = [];
@@ -167,11 +167,12 @@ const FilterBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
             return (op as object as { value: string }).value === (e.value as string);
         })[0]['text'] as string);
         column.filter.operator = e.value as string;
+        grid.columns.find((col: ColumnProps) => col.field === column.field).filter.operator = e.value as string;
         const value: string = e.value as string;
         const valInput: HTMLInputElement = document.getElementById(column.field + FILTER_INPUT_ID_SUFFIX) as HTMLInputElement;
         if (NULL_OPERATORS.includes(value)) {
             valInput.setAttribute('readOnly', 'true');
-            filterModule?.filterByColumn(column.field, value, null, filterModule.getFilterProperties?.predicate,
+            filterModule?.filterByColumn(column.field, value, null, filterModule?.getFilterProperties?.predicate,
                                          filterModule?.getFilterProperties?.caseSensitive,
                                          filterModule?.getFilterProperties?.ignoreAccent);
         }
@@ -191,7 +192,8 @@ const FilterBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
      * @returns {JSX.Element} The rendered editor component as JSX element
      */
     const renderFilter: () => JSX.Element = (): JSX.Element => {
-        if (props.cell?.column?.type === ColumnType.Checkbox || props.cell?.column?.type === ColumnType.SingleGroup) { return<></>; }
+        if (props.cell?.column?.type === ColumnType.Checkbox || props.cell?.column?.type === ColumnType.SingleGroup ||
+            props.cell?.column?.type === ColumnType.Pin || props.cell?.column?.type === ColumnType.RowDragAndDrop) { return<></>; }
         const id: string = column.field + FILTER_INPUT_ID_SUFFIX;
         const isDisabled: boolean = !column.allowFilter;
         const computedPlaceholder: string = isFilterbarOperator ? placeholder : '';
@@ -280,14 +282,16 @@ const FilterBase: MemoExoticComponent<(props: Partial<IColumnBase>) => JSX.Eleme
         return (
             <th
                 ref={cellRef.current.cellRef}
+                {...customAttributes}
                 role={role}
                 className={combinedClassName}
                 data-mappinguid={column.uid}
+                data-colindex={column?.customAttributes?.['data-colindex']}
             >
                 {column.filterTemplate ? (typeof column.filterTemplate === 'string' || isValidElement(column.filterTemplate) ?
                     column.filterTemplate : createElement(column.filterTemplate, fltrData))
                     : <div className={FILTER_CSS_CLASSES.FILTER_DIV_INPUT + (isFilterbarOperator ? ` ${FILTER_CSS_CLASSES.GRID_FILTERBAR}` : '') +
-                        (column?.type === ColumnType.Checkbox || column?.type === ColumnType.SingleGroup ? ` ${FILTER_CSS_CLASSES.DISABLED}` : '')}>
+                        (column?.type === ColumnType.Checkbox || column?.type === ColumnType.SingleGroup || column?.type === ColumnType.Pin ? ` ${FILTER_CSS_CLASSES.DISABLED}` : '')}>
                         {renderFilter()}
                         {isFilterbarOperator && <DropDownList
                             value={operator}

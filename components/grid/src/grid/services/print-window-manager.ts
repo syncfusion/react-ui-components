@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import { RefObject } from 'react';
-import { Provider } from '@syncfusion/react-base';
-import { Grid } from '../../index';
+import { Provider } from '@syncfusion/react-base/src/provider';
+import { Grid } from '../../grid/components/Grid';
 import { PrintResult, PrintSettings } from '../types/print.interfaces';
 import { ColumnProps } from '../types/column.interfaces';
 import { GridRef } from '../types/grid.interfaces';
@@ -121,6 +121,7 @@ async function executeNewGridStrategy<T>(
                     const root: Root = createRoot(rootElement);
 
                     const { scrollModule: _scrollModule, ...grid } = gridRef.current;
+                    void _scrollModule;
 
                     const gridElement: React.ReactElement = React.createElement(
                         Provider,

@@ -238,6 +238,47 @@ export function updateDatasource(
 }
 
 /**
+ * Builds resource fields for a group-edit drag by replacing the source resource id
+ * with the target resource id in the original event's stored resource arrays.
+ *
+ * @param {EventModel} original - The original event being dragged
+ * @param {number | undefined} sourceGroupIndex - Group index the event was dragged from
+ * @param {number | undefined} targetGroupIndex - Group index the event was dropped on
+ * @param {Function} setResourceValues - Function that resolves a group index to its resource ids; signature: (groupIndex?: number) => Record<string, any>
+ * @returns {Record<string, any>} Merged resource fields with arrays preserving unaffected resources
+ * @private
+ */
+export function buildGroupEditResourceFields(
+    original: EventModel,
+    sourceGroupIndex: number | undefined,
+    targetGroupIndex: number | undefined,
+    setResourceValues: (groupIndex?: number) => Record<string, any>
+): Record<string, any> {
+    const result: Record<string, any> = {};
+    const targetFields: Record<string, any> = setResourceValues(targetGroupIndex);
+    const sourceFields: Record<string, any> = setResourceValues(sourceGroupIndex);
+
+    Object.keys(targetFields).forEach((field: string) => {
+        const targetId: string | number = Array.isArray(targetFields[`${field}`]) ? targetFields[`${field}`][0] : targetFields[`${field}`];
+        const sourceIdRaw: string | number  = Array.isArray(sourceFields[`${field}`]) ? sourceFields[`${field}`][0] : sourceFields[`${field}`];
+        const existing: string | number | (string | number)[] | undefined = (original as Record<string, any>)[`${field}`];
+
+        if (Array.isArray(existing)) {
+            if (existing.includes(targetId)) {
+                result[`${field}`] = [...existing];
+            } else {
+                const merged: (string | number)[] = existing.filter((id: string | number) => id !== sourceIdRaw);
+                merged.push(targetId);
+                result[`${field}`] = merged;
+            }
+        } else {
+            result[`${field}`] = targetId;
+        }
+    });
+    return result;
+}
+
+/**
  * Updates the datasource with a modified event, handling recurrence rules
  * Determines parent (original or following) based on event's recurrenceID or followingId
  *

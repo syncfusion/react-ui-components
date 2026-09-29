@@ -1,4 +1,5 @@
 import { RefObject } from 'react';
+import { AlignmentPoint } from '../common/alignment-types';
 
 /**
  * PositionAxis type.
@@ -65,11 +66,18 @@ export enum CollisionType {
  */
 export interface PopupSettings {
     /**
-     * Specifies the X and Y position of the popup relative to the target element.
+     * Specifies the point on the anchor element used as the reference for popup positioning.
      *
-     * @default {X:'left', Y:'bottom'}
+     * @default { horizontal: 'left', vertical: 'top' }
      */
-    position?: PositionAxis;
+    anchorAlign?: AlignmentPoint;
+
+    /**
+     * Specifies the point on the popup that aligns with the anchor reference point.
+     *
+     * @default { horizontal: 'left', vertical: 'bottom' }
+     */
+    popupAlign?: AlignmentPoint;
 
     /**
      * Specifies the horizontal offset for positioning the popup relative to the target.

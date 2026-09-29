@@ -10,7 +10,7 @@ import { transformToPolarCoordinates } from '../../utils/polarRadarHelper';
 import { Chart, Points, Rect, RenderOptions, SeriesProperties, VisibleLabel } from '../../chart-area/chart-interfaces';
 import MarkerRenderer from '../SeriesRenderer/MarkerRenderer';
 import { calculatePolarRadarAnimation } from './PolarRadarAnimation';
-import { applyPointRenderCallback, calculateVisiblePoints, setPointColor } from '../../utils/helper';
+import { applyPointRenderCallback, setPointColor } from '../../utils/helper';
 
 
 /**
@@ -95,7 +95,9 @@ const render: (
 
     series.isRectSeries = true;
 
-    const visiblePoints: Points[] = calculateVisiblePoints(series);
+    const visiblePoints: Points[] = series.points.filter(
+        (point: Points) => point.visible
+    );
 
     if (!visiblePoints.length) {
         return [];
@@ -257,6 +259,14 @@ const render: (
         point.symbolLocations.push({
             x: centerX + outerRadius * Math.cos(markerAngle) - clipRect.x,
             y: centerY + outerRadius * Math.sin(markerAngle) - clipRect.y
+        });
+        const markerWidth: number = (series.marker && series.marker.width) ? series.marker.width : 8;
+        const markerHeight: number = (series.marker && series.marker.height) ? series.marker.height : 8;
+        point.regions.push({
+            x: point.symbolLocations[0].x - markerWidth,
+            y: point.symbolLocations[0].y - markerHeight,
+            width: 2 * markerWidth,
+            height: 2 * markerHeight
         });
     }
 

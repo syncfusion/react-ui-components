@@ -11,17 +11,10 @@ import {
     useState,
     useLayoutEffect
 } from 'react';
-import { HeaderRowsBase } from './index';
-import {
-    HeaderRowsRef,
-    HeaderTableRef,
-    IHeaderTableBase
-} from '../types';
-import {
-    useGridComputedProvider,
-    useGridMutableProvider
-} from '../contexts';
-import { parseUnit } from '../utils';
+import { HeaderRowsBase } from './HeaderRows';
+import { HeaderRowsRef, HeaderTableRef, IHeaderTableBase } from '../types/interfaces';
+import { useGridComputedProvider, useGridMutableProvider } from '../contexts/GridProviders';
+import { buildVisibleColumnGroup, parseUnit } from '../utils/utils';
 
 /**
  * HeaderTableBase component renders the table structure for grid headers
@@ -39,8 +32,9 @@ const HeaderTableBase: ForwardRefExoticComponent<Partial<IHeaderTableBase> & Ref
     memo(forwardRef<HeaderTableRef, Partial<IHeaderTableBase>>(
         (props: Partial<IHeaderTableBase>, ref: RefObject<HeaderTableRef>) => {
             // Access grid context providers
-            const { colElements: ColElements, offsetX, virtualSettings } = useGridMutableProvider();
-            const { id, scrollModule } = useGridComputedProvider();
+            const { colElements: ColElements, offsetX, virtualSettings, columnWidthInfo, leftPinnedColumns,
+                rightPinnedColumns } = useGridMutableProvider();
+            const { id, scrollModule, rowNumberSettings, dragAndDropSettings, getVisibleColumns } = useGridComputedProvider();
 
             // Refs for DOM elements and child components
             const headerTableRef: RefObject<HTMLTableElement> = useRef<HTMLTableElement>(null);
@@ -58,18 +52,26 @@ const HeaderTableBase: ForwardRefExoticComponent<Partial<IHeaderTableBase> & Ref
                 if (ColElements.length) {
                     if (!virtualSettings.enableColumn) {
                         visibleCols = ColElements;
+                        if (columnWidthInfo.current.maxTableWidth || columnWidthInfo.current.resizeTableWidth) {
+                            totalWidth.current = 0;
+                            for (let i: number = 0; i < ColElements.length; i++) {
+                                const styleWidth: number = ColElements[i as number]?.props?.style?.width;
+                                totalWidth.current += parseUnit(styleWidth);
+                            }
+                        }
                     } else {
                         const startIndex: number = scrollModule?.virtualColumnInfo?.startIndex ?? 0;
                         const endIndex: number = scrollModule?.virtualColumnInfo?.endIndex ?? ColElements.length;
-                        totalWidth.current = 0;
-                        for (let i: number = startIndex; i < endIndex; i++) {
-                            const col: JSX.Element = ColElements[i as number];
-                            visibleCols.push(col);
-
-                            // Optional: If you ever need cumulative width, you can calculate here
-                            const styleWidth: number = col?.props?.style?.width;
-                            totalWidth.current += parseUnit(styleWidth);
-                        }
+                        const nextGroup: { visibleCols: JSX.Element[]; totalWidth: number } = buildVisibleColumnGroup(
+                            ColElements,
+                            getVisibleColumns(),
+                            leftPinnedColumns,
+                            rightPinnedColumns,
+                            startIndex,
+                            endIndex
+                        );
+                        visibleCols = nextGroup.visibleCols;
+                        totalWidth.current = nextGroup.totalWidth;
                     }
                 }
 
@@ -85,10 +87,11 @@ const HeaderTableBase: ForwardRefExoticComponent<Partial<IHeaderTableBase> & Ref
                 ColElements,
                 id,
                 offsetX,
+                getVisibleColumns,
                 virtualSettings.enableColumn,
                 scrollModule?.virtualColumnInfo?.startIndex,
                 scrollModule?.virtualColumnInfo?.endIndex,
-                forceRerender, totalWidth.current
+                forceRerender, totalWidth.current, rowNumberSettings?.enabled, dragAndDropSettings?.enabled
             ]);
 
             /**
@@ -119,7 +122,12 @@ const HeaderTableBase: ForwardRefExoticComponent<Partial<IHeaderTableBase> & Ref
                 <table
                     ref={headerTableRef}
                     {...props}
+                    style={{
+                        ...props.style, ...(columnWidthInfo.current.maxTableWidth || columnWidthInfo.current.resizeTableWidth ?
+                            { width: totalWidth.current } : {})
+                    }}
                 >
+                    {/* {leftPinnedColumns?.size && <caption className="sf-hide">PinnedRows_header_table</caption>} */}
                     {colGroupContent}
                     {headerRows}
                 </table>

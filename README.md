@@ -9,8 +9,8 @@ Syncfusion React UI Components library has been built from the ground up to be l
 For additional licensing details, refer to the [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campaign=notification).
 
 ## Resources
-* [Getting Started](https://react.syncfusion.com/react-ui/overview/introduction)
-* [View Online Demos](https://react.syncfusion.com/react-ui/button)
+* [Getting Started](https://react.syncfusion.com/react-ui/overview/introduction/)
+* [View Online Demos](https://react.syncfusion.com/react-ui/button/)
 
 ## React Components Highlights
 
@@ -56,7 +56,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/charts/src/chart">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/charts/overview">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/charts/overview/">Live demo</a>
        </td>
    </tr>
 </table>
@@ -75,7 +75,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/grid/src/grid">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/data-grid/overview">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/data-grid/overview/">Live demo</a>
        </td>
    </tr>
 </table>
@@ -93,7 +93,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/scheduler/src/scheduler">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/scheduler/overview">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/scheduler/overview/">Live demo</a>
        </td>
    </tr>
 </table>
@@ -112,7 +112,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/calendars/src/calendar">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/calendar">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/calendar/">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -123,7 +123,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/calendars/src/datepicker">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/datepicker">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/datepicker/">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -134,7 +134,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/calendars/src/timepicker">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/timepicker">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/timepicker/">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -145,7 +145,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/calendars/src/datetimepicker">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/datetimepicker">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/datetimepicker/">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -156,7 +156,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/calendars/src/daterangepicker">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/daterangepicker">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/daterangepicker/">Live demo</a>
        </td>
    </tr>
 </table>
@@ -175,7 +175,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/buttons/src/button">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/button">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/button/">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -186,7 +186,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/buttons/src/chip">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/chip">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/chip/">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -197,7 +197,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/buttons/src/chip-list">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/chiplist">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/chiplist/">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -208,7 +208,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/buttons/src/floating-action-button">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/floating-action-button">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/floating-action-button/">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -219,7 +219,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/buttons/src/switch">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/switch">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/switch/">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -230,7 +230,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/buttons/src/radio-button">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/radio-button">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/radio-button/">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -244,7 +244,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/splitbuttons/src/dropdown-button">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/dropdown-button">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/dropdown-button/">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -255,7 +255,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/splitbuttons/src/split-button">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/split-button">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/split-button/">Live demo</a>
        </td>
    </tr>
 </table>
@@ -274,7 +274,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/notifications/src/toast">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/toast">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/toast/">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -285,7 +285,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/notifications/src/skeleton">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/skeleton">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/skeleton/">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -296,7 +296,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/notifications/src/message">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/message">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/message/">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -310,7 +310,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/popups/src/spinner">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/spinner">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/spinner/">Live demo</a>
        </td>
    </tr>
 </table>
@@ -329,7 +329,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/dropdowns/src/drop-down-list">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/dropdown-list">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/dropdown-list/">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -340,7 +340,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/dropdowns/src/auto-complete">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/autocomplete">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/autocomplete/">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -351,7 +351,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/dropdowns/src/combo-box">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/combobox">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/combobox/">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -362,7 +362,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/dropdowns/src/multi-select">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/multiselect">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/multiselect/">Live demo</a>
        </td>
    </tr>
 </table>
@@ -374,14 +374,14 @@ The library is designed with performance in mind, minimizing renders, optimizing
        <td>
            <b>Numeric TextBox</b>
        </td>
-        <td rowspan="4">
+        <td rowspan="5">
            <a href="https://www.npmjs.com/package/@syncfusion/react-inputs"><img src="https://ej2.syncfusion.com/github/images/npm-logo.png" alt="npm package @syncfusion/react-inputs" title="@syncfusion/react-inputs" style="height:20px;" />
        </td>
        <td>
            <a href="components/inputs/src/numeric-textbox">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/numeric-textbox">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/numeric-textbox/">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -392,7 +392,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/inputs/src/textbox">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/textbox">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/textbox/">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -403,7 +403,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/inputs/src/textarea">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/textarea">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/textarea/">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -414,7 +414,18 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/inputs/src/form-validator">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/form">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/form/">Live demo</a>
+       </td>
+   </tr>
+   <tr>
+       <td>
+           <b>File Upload</b>
+       </td>
+       <td>
+           <a href="components/inputs/src/file-upload">Source</a>
+       </td>
+       <td>
+           <a href="https://react.syncfusion.com/react-ui/file-upload/">Live demo</a>
        </td>
    </tr>
    
@@ -426,10 +437,10 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="https://www.npmjs.com/package/@syncfusion/react-buttons"><img src="https://ej2.syncfusion.com/github/images/npm-logo.png" alt="npm package @syncfusion/react-buttons" title="@syncfusion/react-buttons" style="height:20px;" />
        </td>
        <td>
-           <a href="components/buttons/src/button">Source</a>
+           <a href="components/buttons/src/check-box">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/checkbox">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/checkbox/">Live demo</a>
        </td>
    </tr>
 </table>
@@ -448,7 +459,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/popups/src/tooltip">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/tooltip">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/tooltip/">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -459,7 +470,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/popups/src/dialog">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/dialog">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/dialog/">Live demo</a>
        </td>
    </tr>
 </table>
@@ -471,14 +482,14 @@ The library is designed with performance in mind, minimizing renders, optimizing
        <td>
            <b>Context Menu</b>
        </td>
-        <td rowspan="3">
+        <td rowspan="5">
            <a href="https://www.npmjs.com/package/@syncfusion/react-navigations"><img src="https://ej2.syncfusion.com/github/images/npm-logo.png" alt="npm package @syncfusion/react-navigations" title="@syncfusion/react-navigations" style="height:20px;" />
        </td>
        <td>
            <a href="components/navigations/src/context-menu">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/context-menu">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/context-menu/">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -489,7 +500,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/navigations/src/toolbar">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/toolbar">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/toolbar/">Live demo</a>
        </td>
    </tr>
    <tr>
@@ -500,7 +511,29 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/navigations/src/menu">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/menu">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/menu/">Live demo</a>
+       </td>
+   </tr>
+   <tr>
+       <td>
+           <b>Tree View</b>
+       </td>
+       <td>
+           <a href="components/navigations/src/tree-view">Source</a>
+       </td>
+       <td>
+           <a href="https://react.syncfusion.com/react-ui/tree-view/">Live demo</a>
+       </td>
+   </tr>
+   <tr>
+       <td>
+           <b>Sidebar</b>
+       </td>
+       <td>
+           <a href="components/navigations/src/sidebar">Source</a>
+       </td>
+       <td>
+           <a href="https://react.syncfusion.com/react-ui/sidebar/">Live demo</a>
        </td>
    </tr>
 </table>
@@ -518,7 +551,7 @@ The library is designed with performance in mind, minimizing renders, optimizing
            <a href="components/lists/src/list-view">Source</a>
        </td>
        <td>
-           <a href="https://react.syncfusion.com/react-ui/list-view">Live demo</a>
+           <a href="https://react.syncfusion.com/react-ui/list-view/">Live demo</a>
        </td>
    </tr>
 </table>

@@ -9,6 +9,8 @@ import { getThemeColor } from '../utils/theme';
 import { processChartSeries } from './series-renderer/ProcessData';
 import { Chart, PieBase, SeriesProperties } from '../base/internal-interfaces';
 import { DataManager, Query } from '@syncfusion/react-data';
+import { ExportSourceContext } from '../../common/interfaces';
+import type { ExportSource, LiveSeriesLike } from '../../common/interfaces';
 
 /**
  * React functional component that renders a circular chart layout.
@@ -20,8 +22,8 @@ import { DataManager, Query } from '@syncfusion/react-data';
  */
 export const ChartRenderer: React.FC<PieChartComponentProps> = (props: PieChartComponentProps) => {
     const { layoutRef, availableSize, phase, triggerRemeasure, reportMeasured, disableAnimation, setDisableAnimation } = useLayout();
-    const { parentElement, chartSeries, chartTooltip } = useContext(ChartContext);
-
+    const { parentElement, chartSeries, chartTooltip, chartTitle } = useContext(ChartContext);
+    const exportSourceRef: React.MutableRefObject<ExportSource | undefined> = useContext(ExportSourceContext)!;
     const { locale, dir } = useProviderContext();
     useLayoutEffect(() => {
         if (phase === 'measuring') {
@@ -39,8 +41,38 @@ export const ChartRenderer: React.FC<PieChartComponentProps> = (props: PieChartC
             layoutRef.current.triggerRemeasure = triggerRemeasure;
             setDisableAnimation?.(false);
             reportMeasured('Chart');
+            // Publish the processed series and title for spreadsheet export.
+            const liveSeries: LiveSeriesLike[] =
+                layoutRef.current.visibleSeries as unknown as LiveSeriesLike[];
+            exportSourceRef.current = {
+                kind: 'piechart',
+                visibleSeries: liveSeries,
+                title: chartTitle?.text
+            };
         }
     }, [phase]);
+
+    // Sync title-only updates without replacing the processed series.
+    useEffect((): void => {
+        const previousSource: ExportSource | undefined =
+            exportSourceRef.current;
+
+        if (
+            !previousSource ||
+            previousSource.title === chartTitle?.text
+        ) {
+            return;
+        }
+
+        exportSourceRef.current = {
+            kind: previousSource.kind,
+            visibleSeries: previousSource.visibleSeries,
+            title: chartTitle?.text
+        };
+    }, [
+        chartTitle?.text,
+        exportSourceRef
+    ]);
 
     useEffect(() => {
         if (phase !== 'measuring') {
@@ -48,7 +80,7 @@ export const ChartRenderer: React.FC<PieChartComponentProps> = (props: PieChartC
         }
     }, [
         props.border?.width, props?.theme, props.margin?.left, props.margin?.right,
-        props.margin?.top, props.margin?.bottom, locale, dir, props.center
+        props.margin?.top, props.margin?.bottom, locale, dir, props.center, chartSeries[0].xField
     ]);
 
     return phase === 'rendering' && (

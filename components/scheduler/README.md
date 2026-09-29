@@ -3,12 +3,13 @@
 The **Syncfusion React Scheduler** is a flexible, configurable, and high-performance event calendar component. It is designed to be highly customizable and extensible, offering a comprehensive feature set that addresses a wide range of scheduling needs. With day, week, work week, and month views, customizable templates, robust event management (CRUD, drag-and-drop, resizing), data binding, globalization and accessibility, the Scheduler integrates seamlessly and delivers an optimal experience on both desktop and mobile devices.
 
 **Key Features**
-- **Views:** Day, Week, Work Week, and Month with per-view configuration (Week is default).
-- **Data binding:** Seamless data bining with local arrays/objects and remote APIs with custom field mappings.
+- **Views:** Day, Week, Work Week, Month, Agenda, TimelineDay, TimelineWeek, TimelineWorkWeek, and TimelineMonth with per-view configuration (Week is default).
+- **Data binding:** Seamless data binding with local arrays/objects and remote APIs with custom field mappings.
+- **Resource grouping:** Group events by any shared entity across all views, with resources rendered side-by-side in vertical views and stacked vertically in timeline and agenda views. Supports hierarchical parent–child grouping, date-specific grouping that repeats resources under each date, and scheduling a single event across multiple resources.
 - **Recurrence support:** Supports creating and managing recurring events with daily, weekly, monthly, and yearly repeat patterns, along with options to edit or delete individual occurrences or the entire series.
 - **Customization:** The key elements like events, date header, work cells, header, editor window, quick popup, event resizing, event tooltip, header indent come with the default template support which allows the flexible end-user customization to embed any kind of text, images, or styles to it.
 - **Working days and hours:** Configurable visible/working hours (highlighted) and working/non-working days.
-- **Responsiveness:** Adapts with optimal user interfaces for mobile and desktop form-factors, thus helping the user's application to scale elegantly across all the form-factors without any additional effort.
+- **Responsiveness:** Adapts with optimal user interfaces for mobile and desktop form-factors, thus helping the user's application to scale elegantly across all the form-factors without any additional effort. Supports a compact view for resource grouping that displays a single resource at a time with a collapsible drawer for seamless navigation across grouped entities.
 - **Event interactions and validation:** Built-in CRUD via dialogs and quick popups with field validation.
 - **Drag-and-drop and resizing:** Easy rescheduling and duration adjustments.
 - **Context menu integration:** Supports right-click context menu on cells and events with built-in and custom menu items for quick actions.

@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from 'react';
 import { SchedulerResource } from '../types/scheduler-types';
-import { ResourceLevel } from '../services/ResourceGroupingService';
+import { ResourceLevel, TimelineResourceRowMeta } from '../services/ResourceGroupingService';
 import { useResourceGroupingContext } from '../context/resource-grouping-context';
 import { isNullOrUndefined } from '@syncfusion/react-base';
 import { useSchedulerPropsContext } from '../context/scheduler-context';
@@ -17,28 +17,22 @@ import { useSchedulerPropsContext } from '../context/scheduler-context';
  */
 export const useSetResourceValues: () => (groupIndex?: number) => Record<string, any> =
     (): ((groupIndex?: number) => Record<string, any>) => {
-        const { leafResources } = useResourceGroupingContext();
-        const { resources } = useSchedulerPropsContext();
+        const { allLeafResources, timelineResourceHeaders } = useResourceGroupingContext();
+        const { resources, isTimelineView } = useSchedulerPropsContext();
 
         return useCallback((groupIndex?: number): Record<string, any> => {
             const resourceValues: Record<string, any> = {};
             if (!resources?.length) { return resourceValues; }
-            const assignValue: (field: string, value: string | number | (string | number)[], multiple?: boolean) => void = (
-                field: string,
-                value: string | number | (string | number)[] | undefined,
-                multiple?: boolean
-            ) => {
-                if (!isNullOrUndefined(value)) {
-                    resourceValues[`${field}`] = multiple ? [value] : value;
-                }
-            };
-            const hasGroup: boolean = typeof groupIndex === 'number' && Number.isFinite(groupIndex) && leafResources?.length > 0;
+            let hasGroup: boolean = typeof groupIndex === 'number' && groupIndex >= 0;
+            hasGroup = hasGroup && groupIndex < (isTimelineView ? timelineResourceHeaders.length : allLeafResources.length);
+            const leaf: ResourceLevel | TimelineResourceRowMeta | undefined = hasGroup
+                ? (isTimelineView ? timelineResourceHeaders[parseInt(groupIndex.toString(), 10)]
+                    : allLeafResources[parseInt(groupIndex.toString(), 10)]) : undefined;
+            const groupOrder: string[] | undefined = leaf?.groupOrder;
             resources.forEach((resource: SchedulerResource, index: number) => {
-                const { field, multiple } = resource;
+                const { field } = resource;
                 let value: string | number | (string | number)[] | undefined;
-                if (hasGroup) {
-                    const leaf: ResourceLevel = leafResources![parseInt(groupIndex.toString(), 10)];
-                    const groupOrder: string[] = leaf?.groupOrder;
+                if (hasGroup && groupOrder) {
                     value = groupOrder?.[parseInt(index.toString(), 10)];
                 }
                 else if (Array.isArray(resource.dataSource) && resource.dataSource.length > 0) {
@@ -46,10 +40,12 @@ export const useSetResourceValues: () => (groupIndex?: number) => Record<string,
                     const idField: string = resource.idField || 'id';
                     value = firstItem[`${idField}`];
                 }
-                assignValue(field, value, multiple);
+                if (!isNullOrUndefined(value) && !isNullOrUndefined(field)) {
+                    resourceValues[`${field}`] = value;
+                }
             });
             return resourceValues;
-        }, [resources, leafResources]);
+        }, [resources, allLeafResources, timelineResourceHeaders]);
     };
 
 /**

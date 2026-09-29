@@ -1,18 +1,24 @@
-import { RefObject, ComponentType, ComponentProps, Dispatch, SetStateAction } from 'react';
+import { RefObject, ComponentType, ComponentProps, Dispatch, SetStateAction, ForwardRefExoticComponent, RefAttributes, JSX, FC } from 'react';
 import { ColumnProps } from '../types/column.interfaces';
-import { useEdit } from '../hooks';
-import { IFormValidator } from '@syncfusion/react-inputs';
-import { ITextBox, TextBoxProps, FormState } from '@syncfusion/react-inputs';
-import { INumericTextBox, NumericTextBoxProps } from '@syncfusion/react-inputs';
-import { ICheckbox, CheckboxProps } from '@syncfusion/react-buttons';
-import { IDatePicker, DatePickerProps } from '@syncfusion/react-calendars';
-import { IDropDownList, DropDownListProps } from '@syncfusion/react-dropdowns';
 import { ActionType, EditType, NewRowPosition } from '../types/enum';
-import { IRow, ValueType } from './';
-import { Dialog, IDialog } from '@syncfusion/react-popups';
+import { IRow, ValueType } from './interfaces';
 import { FocusedCellInfo } from './focus.interfaces';
 import { GridRef } from './grid.interfaces';
 import { UseDataResult } from './interfaces';
+import { IDatePicker, DatePickerProps } from '@syncfusion/react-calendars/src/datepicker/index';
+import { IDropDownList, DropDownListProps } from '@syncfusion/react-dropdowns/src/drop-down-list/index';
+import { Dialog, IDialog } from '@syncfusion/react-popups/src/dialog/index';
+import { IFormValidator, FormState } from '@syncfusion/react-inputs/src/form-validator/index';
+import { ITextBox, TextBoxProps } from '@syncfusion/react-inputs/src/textbox/index';
+import { INumericTextBox, NumericTextBoxProps } from '@syncfusion/react-inputs/src/numeric-textbox/index';
+import { ICheckbox, CheckboxProps } from '@syncfusion/react-buttons/src/check-box/index';
+import { ToolbarAPI, ToolbarConfig } from './toolbar.interfaces';
+import { SelectionModel, SelectionSettings } from './selection.interfaces';
+import { UseCommandColumnResult } from './command.interfaces';
+import { VirtualSettings } from './virtualization.interface';
+import { PinningModuleResult } from './pinning.interfaces';
+import { ActiveCellEditor, StagedRowData, UseBatchEditResult } from './batch-edit.interfaces';
+import { UseUndoRedoResult } from './undoredo.interfaces';
 
 /**
  * Defines the editing interaction mode for grid records.
@@ -21,6 +27,7 @@ import { UseDataResult } from './interfaces';
  * * Popup :- Displays edit form in a modal dialog with auto-generated fields.
  * * PopupTemplate :- Displays edit form in a modal dialog using custom template.
  * * Cell :- Allows editing individual cells with field-based tracking.
+ * * Batch :- Stages multiple cell changes locally until an update operation commits them.
  * ```
  */
 export type EditMode = 'Normal' | 'Popup' | 'PopupTemplate' | 'Cell';
@@ -71,6 +78,79 @@ export interface EditSettings<T = unknown> {
     allowDelete?: boolean;
 
     /**
+     * Enables the buffered batch editing workflow for the grid.
+     *
+     * This is the supported public opt-in flag for batch save/cancel behavior and
+     * does not require using `mode: 'Batch'`.
+     *
+     * @default false
+     */
+    allowBatchSave?: boolean;
+
+    /**
+     * Controls the batch save strategy when batch editing is enabled.
+     *
+     * `buffered` keeps all staged row changes in the pending batch until the user saves,
+     * while `row-commit` keeps the existing row-by-row save flow for each staged row.
+     *
+     * @default 'buffered'
+     */
+    batchSaveMode?: 'buffered' | 'row-commit';
+
+    /**
+     * Custom label applied to the public bulk-save action when batch editing is active.
+     *
+     * @default 'Save'
+     */
+    batchSaveLabel?: string;
+
+    /**
+     * Fires before a value is staged into the pending batch.
+     * Returning `false` cancels staging for that value.
+     *
+     * @private
+     * @event onBatchEditStart
+     */
+    onBatchEditStart?: (editor: ActiveCellEditor) => boolean;
+
+    /**
+     * Fires after a field value is staged.
+     *
+     * @event onBatchEditRender
+     */
+    onBatchEditRender?: (stagedRow: StagedRowData<T>, fieldName: string) => void;
+
+    /**
+     * Fires when a row changes between clean and dirty batch state.
+     *
+     * @event onBatchStateChange
+     */
+    onBatchStateChange?: (rowKey: string | number, isDirty: boolean) => void;
+
+    /**
+     * Fires before the pending batch is committed.
+     * Returning `false` cancels the commit.
+     *
+     * @event onBatchCommitStart
+     */
+    onBatchCommitStart?: (stagedRows: StagedRowData<T>[]) => boolean;
+
+    /**
+     * Fires after the pending batch is committed successfully.
+     *
+     * @event onBatchCommitSuccess
+     */
+    onBatchCommitSuccess?: (rowsCommitted: number) => void;
+
+    /**
+     * Fires when a batch commit fails.
+     * Pending rows remain available for retry.
+     *
+     * @event onBatchCommitError
+     */
+    onBatchCommitError?: (error: Error, stagedRows: StagedRowData<T>[]) => void;
+
+    /**
      * Specifies the editing mode used within the grid.
      *
      * The editing mode defines how users interact with editable cells.
@@ -79,6 +159,7 @@ export interface EditSettings<T = unknown> {
      * - `Normal` :- Inline editing directly within grid cells.
      * - `Popup` :- Modal dialog with auto-generated form fields.
      * - `PopupTemplate` :- Modal dialog with custom template.
+     * - `Cell` :- Allows editing individual cells with field-based tracking.
      *
      * @default 'Normal'
      */
@@ -186,6 +267,41 @@ export interface EditSettings<T = unknown> {
      * @default null
      */
     popupTemplate?: ComponentType<PopupTemplateProps<T>>;
+
+    /**
+     * Enables undo and redo functionality for grid editing operations.
+     *
+     * When enabled, users can undo and redo edit, add, delete, paste, cut, autofill, and batch-save operations
+     * through toolbar buttons, keyboard shortcuts (Ctrl+Z for undo, Ctrl+Y for redo), or programmatic API calls.
+     * History is maintained up to the limit specified by `undoRedoLimit`.
+     *
+     * @default false
+     */
+    allowUndoRedo?: boolean;
+
+    /**
+     * Enables undo and redo of unsaved staged cell changes during batch editing.
+     *
+     * When enabled, individual cell edits are recorded as separate undo actions while in batch editing mode,
+     * allowing users to undo/redo staged changes before committing the batch. Each cell edit can be individually
+     * reverted or reapplied without affecting the batch save workflow.
+     * Only effective when `allowBatchSave=true` and `allowUndoRedo=true`.
+     * When `allowBatchSave=false`, this setting is ignored and only committed batch saves create undo actions.
+     *
+     * @default false
+     */
+    allowBatchUndoRedo?: boolean;
+
+    /**
+     * Maximum number of undo actions to maintain in the history stack.
+     *
+     * When the history exceeds this limit, the oldest action is automatically removed.
+     * Non-positive, non-finite, or undefined values default to 5.
+     * Valid range: 1 to any positive finite integer.
+     *
+     * @default 5
+     */
+    undoRedoLimit?: number;
 }
 
 /**
@@ -224,7 +340,7 @@ export interface EditState<T = unknown> {
     isShowAddNewRowActive: boolean; // Whether the add new row is currently active
     isShowAddNewRowDisabled: boolean; // Whether the add new row inputs should be disabled (but still visible)
     rowObject: IRow<ColumnProps<T>>;
-    editCellIndex?: { primaryKeyValue: string | number; field: string; };
+    editCellIndex?: { primaryKeyValue: string | number; field: string; rowUid?: string; };
 }
 
 /**
@@ -232,6 +348,14 @@ export interface EditState<T = unknown> {
  *
  * @private
  */
+export interface BatchState<T = unknown> {
+    isBatchEditing: boolean;
+    pendingChanges: StagedRowData<T>[];
+    hasPendingChanges: boolean;
+    dirtyFieldCount: number;
+    validationErrors: Record<string, string>;
+}
+
 export interface UseEditResult<T = unknown> {
     isEdit: boolean;
     editSettings: EditSettings<T>;
@@ -242,13 +366,17 @@ export interface UseEditResult<T = unknown> {
     showAddNewRowData: T;
     isShowAddNewRowActive: boolean;
     isShowAddNewRowDisabled: boolean;
-    editCellIndex?: { primaryKeyValue: string | number; field: string; };
-    editRecord: (rowElement?: HTMLTableRowElement) => Promise<void>;
+    editCellIndex?: { primaryKeyValue: string | number; field: string; rowUid?: string; };
+    editRecord: (rowElement?: HTMLTableRowElement, initialField?: string, initialValue?: ValueType) => Promise<void>;
     saveDataChanges: () => Promise<boolean>;
     cancelDataChanges: () => Promise<void>;
     addRecord: (data?: T | null, index?: number) => void;
     deleteRecord: (fieldName?: string, data?: T) => Promise<void>;
     updateRecord: (index: number, data: T) => void;
+    addRecordAsync: (data?: T | null, index?: number) => Promise<void>;
+    addRecordAtIndexAsync: (data?: T | null, index?: number) => Promise<void>;
+    deleteRecordAsync: (fieldName?: string, data?: T) => Promise<void>;
+    updateRecordAsync: (index: number, data: T) => Promise<void>;
     validateEditForm: () => boolean;
     validateField: (field: string) => boolean;
     updateEditData: (field: string, value: ValueType | Object | null, rowObject?: IRow<ColumnProps<T>>) => void;
@@ -257,7 +385,8 @@ export interface UseEditResult<T = unknown> {
     handleGridClick: (event: React.MouseEvent) => void;
     handleGridDoubleClick: (event: React.MouseEvent, rowElement?: HTMLTableRowElement) => void;
     checkUnsavedChanges: () => Promise<boolean>;
-    editCell: (primaryKeyValue: string | number, field: string) => void;
+    confirmUndoRedoClear?: () => Promise<boolean>;
+    editCell: (primaryKeyValue: string | number, field: string, rowUid?: string, initialValue?: ValueType) => void;
     saveCellChanges: () => Promise<boolean>;
     cancelCellChanges: () => Promise<void>;
     editFocusedCell: () => void;
@@ -267,6 +396,33 @@ export interface UseEditResult<T = unknown> {
         e: React.KeyboardEvent,
         navigateToNextCell?: (direction: 'nextCell' | 'prevCell') => void
     ) => Promise<void>;
+
+    /** Commits all staged Batch mode changes. */
+    saveBatchChanges?: () => Promise<boolean>;
+
+    /** Discards all staged Batch mode changes. */
+    cancelBatchChanges?: () => Promise<void>;
+
+    /** Returns all pending staged Batch mode rows. */
+    getBatchQueue?: () => StagedRowData<T>[];
+
+    /** Checks whether a Batch mode save should be blocked because there are unsaved pending changes. */
+    getConfirmBatch?: () => Promise<boolean>;
+
+    /** Indicates whether Batch mode contains staged changes. @private */
+    hasBatchChanges?: () => boolean;
+
+    /** Returns whether a Batch mode cell has a staged change. @private */
+    isBatchCellDirty?: (rowKey: string | number, fieldName: string) => boolean;
+
+    /** Returns whether a Batch mode row has any staged changes. @private */
+    isBatchRowDirty?: (rowKey: string | number) => boolean;
+
+    /** Exposes the batch staging module to virtualized row rendering. @private */
+    batchEditModule?: UseBatchEditResult<T>;
+
+    /** Public batch state snapshot for consumers. */
+    batchState?: BatchState<T>;
 
     // Dialog state and methods for confirmation dialogs
     isDialogOpen: boolean;
@@ -283,6 +439,24 @@ export interface UseEditResult<T = unknown> {
     escEnterIndex: RefObject<number>;
     rowObject: IRow<ColumnProps<T>>;
     popupEditFormRef: RefObject<InlineEditFormRef<T>>;
+    InlineEditForm: ForwardRefExoticComponent<InlineEditFormProps<unknown> & RefAttributes<InlineEditFormRef<unknown>>>;
+    PopupEditForm: ForwardRefExoticComponent<RefAttributes<InlineEditFormRef<Record<string, unknown>>>>;
+    CellEditForm: <T>(props: CellEditFormProps<T> & RefAttributes<CellEditFormRef>) => JSX.Element;
+    ConfirmDialog: FC<ConfirmDialogProps>;
+    DeleteDialog: FC<DeleteDialogProps>;
+    ToolbarModule: (
+        config: ToolbarConfig,
+        editModule?: editModule,
+        selectionModule?: SelectionModel,
+        currentViewData?: unknown[],
+        allowSearching?: boolean,
+        commandColumnModule?: UseCommandColumnResult,
+        selectionSettings?: SelectionSettings,
+        showColumnChooser?: boolean,
+        virtualSettings?: VirtualSettings,
+        totalRecordsCount?: number,
+        gridRef?: RefObject<GridRef>
+    ) => ToolbarAPI;
 }
 
 /**
@@ -317,12 +491,14 @@ export type HandleCellEditKeyDown = (
 export type CellEditModule = {
     /**
      * Initiates cell edit mode for a specific cell.
+     *
      * @param primaryKeyValue - The primary key value of the row containing the cell
      * @param field - The field name of the column
      */
-    editCell: (primaryKeyValue: string | number, field: string) => Promise<void>;
+    editCell: (primaryKeyValue: string | number, field: string, rowUid?: string, initialValue?: ValueType) => Promise<void>;
     /**
      * Saves changes made in cell edit mode.
+     *
      * @returns true if changes were saved successfully, false otherwise
      */
     saveCellChanges: () => Promise<boolean>;
@@ -332,6 +508,7 @@ export type CellEditModule = {
     cancelCellChanges: () => Promise<void>;
     /**
      * Updates validation errors in the edit state.
+     *
      * @param errors - Record of validation errors
      */
     updateValidationErrors: (errors: Record<string, string>) => void;
@@ -362,7 +539,11 @@ export type UseCellEditHook = <T>(
     setGridAction: Dispatch<SetStateAction<Object>>,
     editDataRef: RefObject<T>,
     getPrimaryKeyField: () => string,
-    updateEditData: (field: string, value: ValueType, rowObject?: IRow<ColumnProps<T>>) => void
+    updateEditData: (field: string, value: ValueType, rowObject?: IRow<ColumnProps<T>>) => void,
+    setResponseData?: Dispatch<SetStateAction<Object>>,
+    pinningModule?: PinningModuleResult<T>,
+    batchEditModule?: UseBatchEditResult<T>,
+    undoRedoModule?: UseUndoRedoResult
 ) => CellEditModule;
 
 /**
@@ -370,7 +551,7 @@ export type UseCellEditHook = <T>(
  *
  * @private
  */
-export type editModule<T = unknown> = ReturnType<typeof useEdit<T>>;
+export type editModule<T = unknown> = UseEditResult<T>;
 
 /**
  * Props interface for custom edit template components used in grid.
@@ -1170,6 +1351,11 @@ export interface CellEditFormProps<T = unknown> {
      * Column configuration.
      */
     column: ColumnProps<T>;
+
+    /**
+     * Zero-based data row index used for spreadsheet-style formula references.
+     */
+    rowIndex: number;
 
     /**
      * Full row data object.

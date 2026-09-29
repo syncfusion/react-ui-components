@@ -226,7 +226,15 @@ export interface ChartAxisLabelProps extends ChartFontProps {
      * @param {string} text - The current formatted text of the axis label.
      * @default null
      */
-    formatter?: (value: number, text: string) => string | boolean;
+    formatter?: (value: number, text: string) => string | boolean | HTMLElement;
+
+    /**
+     * Specifies a custom HTML template for rendering axis labels.
+     * The template supports expressions using the axis label value and text.
+     *
+     * @default ''
+     */
+    template?: string | Function;
 
     /**
      * The `border` property allows customization of the border for axis labels.
@@ -246,7 +254,7 @@ export interface ChartAxisLabelProps extends ChartFontProps {
  * @returns {string} The custom text to display for the axis label.
  * @private
  */
-export type AxisLabelContentFunction = (value: number, text: string) => string | boolean;
+export type AxisLabelContentFunction = (value: number, text: string) => string | boolean | HTMLElement;
 
 /**
  * Defines the style settings for the axis title in a chart.

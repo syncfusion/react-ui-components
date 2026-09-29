@@ -1,5 +1,7 @@
-import { ReactElement } from 'react';
+import { ForwardRefExoticComponent, ReactElement, RefAttributes } from 'react';
 import { GridActionEvent } from '../types/grid.interfaces';
+import { PagerRef } from '@syncfusion/react-pager/src/page';
+import { PageSizeMode } from './enum';
 
 /**
  * Configures pagination settings for the Data Grid component.
@@ -78,6 +80,15 @@ export interface PageSettings {
      * @default 0
      */
     estimatedTotalRecordsCount?: number;
+
+    /**
+     * Specifies the mode for counting records on a page, determining whether all records are counted or only zeroth level parent records. The available options are:
+     * * `All`: Includes all records in the count.
+     * * `Root`: Includes only zeroth level parent records.
+     *
+     * @default All
+     */
+    pageSizeMode?: PageSizeMode;
 
     /**
      * Defines a custom template for rendering the pager component.
@@ -167,3 +178,8 @@ export interface PagerArgsInfo extends PageEvent {
      */
     isPageLoading?: boolean;
 }
+
+/**
+ * @private
+ */
+export type pagerModule = { PagerPanelBase: ForwardRefExoticComponent<PageSettings & RefAttributes<PagerRef>> }

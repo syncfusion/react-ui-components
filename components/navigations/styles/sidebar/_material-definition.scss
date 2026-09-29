@@ -1,0 +1,17 @@
+@use '../../../base/styles/themes/variables' as *;
+$sidebar-bg-color: rgb($content-bg-color) !default;
+$sidebar-transition-enter: 300ms !default;
+$sidebar-transition-exit: 300ms !default;
+$sidebar-z-index: 1000 !default;
+$sidebar-backdrop-z-index: 1 !default;
+$sidebar-backdrop-opacity: 1 !default;
+$sidebar-trigger-line-height: 1 !default;
+$sidebar-close-translate: 100% !default;
+$sidebar-layout-min-width: 0 !default;
+$sidebar-layout-height: 100% !default;
+$sidebar-layout-width: 100% !default;
+$sidebar-flush-position: 0 !default;
+$sidebar-auto-position: auto !default;
+$sidebar-fill-height: 100% !default;
+$sidebar-main-flex: 1 !default;
+$sidebar-main-min-width: 0 !default;

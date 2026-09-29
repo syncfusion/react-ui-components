@@ -1,8 +1,9 @@
 import * as React from 'react';
 import { useCallback, useEffect, useState } from 'react';
-import { Dialog } from '@syncfusion/react-popups';
-import { Button, Color, Variant } from '@syncfusion/react-buttons';
-import { useGridComputedProvider, useGridMutableProvider } from '../../contexts';
+import { Dialog } from '@syncfusion/react-popups/src/dialog/index';
+import { Button } from '@syncfusion/react-buttons/src/button/button';
+import { Color, Variant } from '@syncfusion/react-base/src/enums';
+import { useGridComputedProvider, useGridMutableProvider } from '../../contexts/GridProviders';
 import { ConfirmDialogProps } from '../../types/edit.interfaces';
 
 /**

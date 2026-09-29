@@ -45,8 +45,8 @@ export default function App() {
 
 **Resources**
 
-- [Chart Demo/Docs](https://react.syncfusion.com/react-ui/charts/overview)
-- [Chart API](https://react.syncfusion.com/api/chart/overview)
+- [Chart Demo/Docs](https://react.syncfusion.com/react-ui/charts/overview/?theme=material)
+- [Chart API](https://react.syncfusion.com/api/chart/overview/)
 
 <p align="center">
 Trusted by the world's leading companies

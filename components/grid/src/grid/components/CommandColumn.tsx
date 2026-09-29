@@ -1,9 +1,18 @@
 import { JSX, memo, MemoExoticComponent, useMemo, useCallback, MouseEvent, ComponentProps, ReactElement } from 'react';
-import { CommandItemType, CommandItemProps, ICommandColumnBase, IRow, ColumnProps } from '../types';
-import { Button, Variant } from '@syncfusion/react-buttons';
-import { SaveIcon, CloseIcon, EditIcon, TrashIcon } from '@syncfusion/react-icons';
-import { useGridComputedProvider, useGridMutableProvider } from '../contexts';
-import { Color, IL10n, isNullOrUndefined, Size } from '@syncfusion/react-base';
+import { CommandItemType } from '../types/enum';
+import { CommandItemProps, ICommandColumnBase } from '../types/command.interfaces';
+import { IRow } from '../types/interfaces';
+import { ColumnProps } from '../types/column.interfaces';
+import { Button } from '@syncfusion/react-buttons/src/button/button';
+import { Variant } from '@syncfusion/react-base/src/enums';
+import { SaveIcon } from '@syncfusion/react-icons/src/icons/save';
+import { CloseIcon } from '@syncfusion/react-icons/src/icons/close';
+import { EditIcon } from '@syncfusion/react-icons/src/icons/edit';
+import { TrashIcon } from '@syncfusion/react-icons/src/icons/trash';
+import { useGridComputedProvider, useGridMutableProvider } from '../contexts/GridProviders';
+import { Color, Size } from '@syncfusion/react-base/src/enums';
+import { IL10n } from '@syncfusion/react-base/src/l10n';
+import { isNullOrUndefined } from '@syncfusion/react-base/src/util';
 
 // CSS class constants
 const CSS_COMMAND_ITEMS: string = 'sf-grid-command-items';
@@ -97,14 +106,14 @@ const CommandItem: (props: Partial<CommandItemProps>) => JSX.Element = memo((pro
         const row: HTMLTableRowElement = (args.target as HTMLElement).closest('.sf-grid-content-row');
         const uid: string = row.getAttribute('data-uid');
         if (itemType === CommandItemType.Edit) {
-            editModule.editRecord(row);
+            editModule?.editRecord(row);
         } else if (itemType === CommandItemType.Delete) {
             const rowObj: IRow<ColumnProps> = getRowObjectFromUID(uid);
-            editModule.deleteRecord(undefined, rowObj.data);
+            editModule?.deleteRecord(undefined, rowObj.data);
         } else if (itemType === CommandItemType.Update) {
-            (editModule.saveDataChanges as Function)?.(undefined, undefined, undefined, uid);
+            (editModule?.saveDataChanges as Function)?.(undefined, undefined, undefined, uid);
         } else if (itemType === CommandItemType.Cancel) {
-            (editModule.cancelDataChanges as Function)?.(undefined, uid);
+            (editModule?.cancelDataChanges as Function)?.(undefined, uid);
         }
     }, [itemType, editModule, getRowObjectFromUID]);
 

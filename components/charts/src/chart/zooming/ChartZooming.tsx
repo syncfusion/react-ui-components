@@ -22,7 +22,8 @@ export const ChartZoomSettings: React.FC<ChartZoomSettingsProps> = (props: Chart
     }), [
         props.selectionZoom, props.accessibility, props.mouseWheelZoom,
         props.pinchZoom, props.pan,
-        props.mode, props.toolbar, props.enableScrollbar
+        props.mode, props.toolbar, props.enableScrollbar,
+        props.minimumVisiblePoints
     ]);
 
     // Only update context when zoomConfig changes

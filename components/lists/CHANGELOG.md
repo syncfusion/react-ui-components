@@ -17,4 +17,4 @@ The React ListView component renders a flexible, accessible list UI that support
 - **Accessibility & RTL:** Supports provider `dir` (RTL) and includes focus/interaction-friendly structure.
 - **Disabled State:** Disable user interactions via the `disabled` prop.
 
-Explore the demo <a href="https://react.syncfusion.com/react-ui/listview" target="_blank" rel="noopener noreferrer">here</a>
+Explore the demo <a href="https://react.syncfusion.com/listview" target="_blank" rel="noopener noreferrer">here</a>

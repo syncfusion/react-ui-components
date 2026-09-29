@@ -30,19 +30,20 @@ export interface IDropDownList extends DropDownListProps {
  * import { DropDownList } from "@syncfusion/react-dropdowns";
  *
  * export default function App() {
- *   const data = [
- *     { text: "Apple", value: "apple" },
- *     { text: "Banana", value: "banana" },
- *     { text: "Cherry", value: "cherry" }
- *   ];
+ *      const data = [
+ *          { text: "Apple", value: "apple" },
+ *          { text: "Banana", value: "banana" },
+ *          { text: "Cherry", value: "cherry" }
+ *      ];
  *
- *   return (
- *     <DropDownList
- *       id="fruits"
- *       dataSource={data}
- *       fields={{ text: "text", value: "value" }}
- *       placeholder="Select a fruit" />
- *   );
+ *      return (
+ *          <DropDownList
+ *              id="fruits"
+ *              dataSource={data}
+ *              fields={{ text: "text", value: "value" }}
+ *              placeholder="Select a fruit"
+ *          />
+ *      );
  * }
  * ```
  */

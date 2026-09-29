@@ -184,7 +184,6 @@ export type ChartSeriesType =
     'RadarStackingColumn' |
     'RadarRangeColumn' |
     'StackingArea' |
-    'StackingArea100' |
     'StackingStepArea' |
     'Waterfall' |
     'MultiColoredArea' |

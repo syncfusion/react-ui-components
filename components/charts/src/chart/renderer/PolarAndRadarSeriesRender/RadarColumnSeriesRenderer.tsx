@@ -235,15 +235,23 @@ const render: (series: SeriesProperties, _isInverted: boolean) => RenderOptions[
         // Calculate symbol location at the center angle of the column, at the outer radius
         // Use finalAngle to match visual rendering position when multiple series exist
         const centerAngleRad: number = (finalAngle * Math.PI) / 180;
+        const symbolX: number = centerX + outerRadius * Math.cos(centerAngleRad) - (series.clipRect as Rect).x;
+        const symbolY: number = centerY + outerRadius * Math.sin(centerAngleRad) - (series.clipRect as Rect).y;
+
         point.symbolLocations.push({
-            x:
-                centerX +
-                outerRadius * Math.cos(centerAngleRad) -
-                (series.clipRect as Rect).x,
-            y:
-                centerY +
-                outerRadius * Math.sin(centerAngleRad) -
-                (series.clipRect as Rect).y
+            x: symbolX,
+            y: symbolY
+        });
+
+        // Set regions for tooltip interaction
+        // Use a marker-like region around the symbol location
+        const markerWidth: number = (series.marker && series.marker.width) ? series.marker.width : 8;
+        const markerHeight: number = (series.marker && series.marker.height) ? series.marker.height : 8;
+        point.regions.push({
+            x: symbolX - markerWidth / 2,
+            y: symbolY - markerHeight / 2,
+            width: markerWidth,
+            height: markerHeight
         });
     }
 

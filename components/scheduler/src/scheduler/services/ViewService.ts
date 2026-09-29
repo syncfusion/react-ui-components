@@ -2,6 +2,7 @@ import { ReactNode, Children, isValidElement, ReactElement } from 'react';
 import { View } from '../types/enums';
 import { ViewsInfo } from '../types/internal-interface';
 import { ViewSpecificProps } from '../types/scheduler-types';
+import { CSS_CLASSES } from '../common/constants';
 
 /**
  * ViewService provides methods for managing views within the Scheduler component.
@@ -38,6 +39,18 @@ export class ViewService {
                     break;
                 case 'MonthView':
                     viewType = 'Month';
+                    break;
+                case 'TimelineDayView':
+                    viewType = 'TimelineDay';
+                    break;
+                case 'TimelineWeekView':
+                    viewType = 'TimelineWeek';
+                    break;
+                case 'TimelineWorkWeekView':
+                    viewType = 'TimelineWorkWeek';
+                    break;
+                case 'TimelineMonthView':
+                    viewType = 'TimelineMonth';
                     break;
                 case 'AgendaView':
                     viewType = 'Agenda';
@@ -115,5 +128,44 @@ export class ViewService {
      */
     static isDayViewAvailable(getAvailableViews: () => ViewsInfo[] | undefined): boolean {
         return ViewService.isViewAvailable(getAvailableViews, 'Day');
+    }
+
+    /**
+     * Convenience helper to check if Agenda view is available
+     *
+     * @param {ViewsInfo[]} getAvailableViews - Function returning available views
+     * @returns {boolean} True if Agenda view exists in available views
+     */
+    static isAgendaViewAvailable(getAvailableViews: () => ViewsInfo[] | undefined): boolean {
+        return ViewService.isViewAvailable(getAvailableViews, 'Agenda');
+    }
+
+    /**
+     * Maps a timeline view type to its composed CSS class string
+     * (base `sf-timeline-view` + view-specific class). Falls back to the
+     * day view class for unknown values.
+     *
+     * @param {string} view - Active timeline view type.
+     * @returns {string} Composed CSS class string for the timeline view container.
+     */
+    static getTimelineViewClasses(view: string): string {
+        let viewSpecificClass: string;
+        switch (view) {
+        case 'TimelineDay':
+            viewSpecificClass = CSS_CLASSES.TIMELINE_DAY_VIEW;
+            break;
+        case 'TimelineWeek':
+            viewSpecificClass = CSS_CLASSES.TIMELINE_WEEK_VIEW;
+            break;
+        case 'TimelineWorkWeek':
+            viewSpecificClass = CSS_CLASSES.TIMELINE_WORKWEEK_VIEW;
+            break;
+        case 'TimelineMonth':
+            viewSpecificClass = CSS_CLASSES.TIMELINE_MONTH_VIEW;
+            break;
+        default:
+            viewSpecificClass = CSS_CLASSES.TIMELINE_DAY_VIEW;
+        }
+        return `${CSS_CLASSES.TIMELINE_VIEW} ${viewSpecificClass}`;
     }
 }

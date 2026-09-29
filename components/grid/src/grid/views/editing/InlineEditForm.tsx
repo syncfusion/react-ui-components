@@ -1,16 +1,19 @@
-import { memo, useRef, useEffect, useCallback, forwardRef, useMemo, useState, useImperativeHandle, CSSProperties, JSX, RefObject, RefAttributes, ForwardRefExoticComponent } from 'react';
-import { Form, FormField, FormState, FormValueType, IFormValidator } from '@syncfusion/react-inputs';
-import { EditCell, ValidationTooltips } from '../index';
+import { memo, useRef, useEffect, useLayoutEffect, useCallback, forwardRef, useMemo, useState, useImperativeHandle, CSSProperties, JSX, RefObject, RefAttributes, ForwardRefExoticComponent } from 'react';
+import { Form, FormField, FormState, FormValueType, IFormValidator } from '@syncfusion/react-inputs/src/form-validator/index';
+import { EditCell } from '../editing/EditCell';
+import { ValidationTooltips } from '../editing/ValidationTooltips';
 import { EditCellRef, InlineEditFormProps, InlineEditFormRef, UseEditResult } from '../../types/edit.interfaces';
-import { useGridComputedProvider, useGridMutableProvider } from '../../contexts';
-import { EditType, IValueFormatter, ValueType } from '../../types';
+import { useGridComputedProvider, useGridMutableProvider } from '../../contexts/GridProviders';
+import { EditType, ColumnPinDirection } from '../../types/enum';
+import { IValueFormatter, ValueType } from '../../types/interfaces';
 import { ColumnProps, IColumnBase } from '../../types/column.interfaces';
-import { getObject } from '../../utils';
-import { DataUtil } from '@syncfusion/react-data';
-import { IL10n, isNullOrUndefined, isUndefined } from '@syncfusion/react-base';
-import { Checkbox } from '@syncfusion/react-buttons';
+import { getObject, getLeftPinnedOffsets, getRightPinnedOffsets, getLeftPinnedBoundaryField, getRightPinnedBoundaryField, buildVisibleColumnGroup } from '../../utils/utils';
+import { IL10n } from '@syncfusion/react-base/src/l10n';
+import { isNullOrUndefined, isUndefined } from '@syncfusion/react-base/src/util';
+import { Checkbox } from '@syncfusion/react-buttons/src/check-box/check-box';
 import { CommandColumnBase } from '../../components/CommandColumn';
-import { useFormValidationRules } from '../../hooks';
+import { useFormValidationRules } from '../../hooks/useFormValidationRules';
+import { DataUtil } from '@syncfusion/react-data';
 
 // CSS class name constants to avoid hardcoded strings
 const CELL: string = 'sf-cell';
@@ -27,6 +30,10 @@ const GRID_EDIT_ROW: string = 'sf-grid-edit-row';
 const EDIT_TEMPLATE_CONTAINER: string = 'sf-edit-template-container';
 const GRID_EDIT_FORM: string = 'sf-grid-edit-form';
 const GRID_EDIT_TABLE: string = 'sf-grid-edit-table';
+const LEFT_PINNED_CELL: string = 'sf-left-pinned-cell';
+const RIGHT_PINNED_CELL: string = 'sf-right-pinned-cell';
+const LEFT_MOST_PINNED_CELL: string = 'sf-left-most-pinned-cell';
+const RIGHT_MOST_PINNED_CELL: string = 'sf-right-most-pinned-cell';
 
 /**
  * Initializes internal data for edit/add operations with default values.
@@ -143,7 +150,7 @@ const handleFieldBlurFn: <T>(column: ColumnProps<T>, value: ValueType | Record<s
             : { ...internalData };
         const editedData: T = DataUtil.setValue(column.field, value, copiedComplexData) as T;
         setInternalData({ ...editedData });
-        if (!(isAddOperation && editModule.isShowAddNewRowActive) ||
+        if (!(isAddOperation && editModule?.isShowAddNewRowActive) ||
             (isAddOperation && formState && formState.errors && Object.keys(formState.errors).length > 0)) {
             formState?.onBlur?.(column.field);
             formRef.current?.validateField?.(column.field);
@@ -194,8 +201,8 @@ export const InlineEditForm: ForwardRefExoticComponent<InlineEditFormProps<unkno
         const { rowHeight, id, getVisibleColumns, serviceLocator, editModule, contentPanelRef, contentTableRef,
             height, scrollModule, contentScrollRef } = useGridComputedProvider<T>();
         const { colElements: ColElements, cssClass, focusModule, commandColumnModule, offsetX, virtualSettings, columnOffsets,
-            totalRecordsCount } = useGridMutableProvider<T>();
-        const { commandEdit, commandEditInlineFormRef } = commandColumnModule;
+            totalRecordsCount, leftPinnedColumns, rightPinnedColumns, uiColumns } = useGridMutableProvider<T>();
+
         const formatter: IValueFormatter = serviceLocator?.getService<IValueFormatter>('valueFormatter');
         const localization: IL10n = serviceLocator?.getService<IL10n>('localization');
 
@@ -270,7 +277,7 @@ export const InlineEditForm: ForwardRefExoticComponent<InlineEditFormProps<unkno
             } else {
                 // For edit operations, skip primary key fields (they're disabled)
                 // Focus the first non-primary key editable field
-                if (editModule.focusLastField.current || last) {
+                if (editModule?.focusLastField.current || last) {
                     firstEditableColumn = [...columns].reverse().find((col: ColumnProps<T>) =>
                         (col.allowEdit !== false || col.getCommandItems) && col.visible &&
                         !col.isPrimaryKey &&
@@ -317,8 +324,8 @@ export const InlineEditForm: ForwardRefExoticComponent<InlineEditFormProps<unkno
          * This tracks the FormValidator's internal validation state properly
          */
         const [formState, setFormState] = useState<FormState | null>(validationErrors && Object.keys(validationErrors)?.length &&
-            virtualSettings.enableRow ? (commandEdit.current ?
-                { ...commandEditInlineFormRef?.current?.[rowUid as string]?.current?.formState } :
+            virtualSettings.enableRow ? (commandColumnModule?.commandEdit.current ?
+                { ...commandColumnModule?.commandEditInlineFormRef?.current?.[rowUid as string]?.current?.formState } :
                 {...editModule?.getCurrentFormState()}) : null);
         const isSubmitValidationScrollRequired: RefObject<boolean> = useRef<boolean>(false);
 
@@ -418,6 +425,15 @@ export const InlineEditForm: ForwardRefExoticComponent<InlineEditFormProps<unkno
             onCancel?.();
         }, [onCancel]);
 
+        const leftPinnedOffsets: Map<string, number> = useMemo(() =>
+            getLeftPinnedOffsets<T>(uiColumns, columns), [columns, uiColumns?.current, leftPinnedColumns]);
+        const rightPinnedOffsets: Map<string, number> = useMemo(() =>
+            getRightPinnedOffsets<T>(uiColumns, columns), [columns, uiColumns?.current, rightPinnedColumns]);
+        const leftPinnedBoundaryField: string | undefined = useMemo(() =>
+            getLeftPinnedBoundaryField(leftPinnedOffsets), [leftPinnedOffsets]);
+        const rightPinnedBoundaryField: string | undefined = useMemo(() =>
+            getRightPinnedBoundaryField(rightPinnedOffsets), [rightPinnedOffsets]);
+
         /**
          * Expose imperative methods via ref
          */
@@ -473,7 +489,7 @@ export const InlineEditForm: ForwardRefExoticComponent<InlineEditFormProps<unkno
 
                 // Detect boundary conditions for auto-save
                 if ((isTabForward && isLastField) || (isTabBackward && isFirstField)) {
-                    if (commandEdit.current) {
+                    if (commandColumnModule?.commandEdit.current) {
                         focusModule.editToRow(event);
                         return false;
                     }
@@ -511,10 +527,40 @@ export const InlineEditForm: ForwardRefExoticComponent<InlineEditFormProps<unkno
             const startVirtualIndex: number = scrollModule?.virtualColumnInfo.startIndex;
             const endVirtualIndex: number = scrollModule?.virtualColumnInfo.endIndex;
             const visibleColumns: ColumnProps[] = getVisibleColumns();
-            const finalColumns: ColumnProps[] = virtualSettings.enableColumn ?
-                (scrollModule?.virtualColumnInfo?.columns?.length && totalRecordsCount ? scrollModule?.virtualColumnInfo?.columns :
-                    (visibleColumns.length ? visibleColumns : columns).slice(startVirtualIndex, endVirtualIndex)) : columns;
-            const renderedCells: React.JSX.Element[] = finalColumns.map((column: ColumnProps<T>, index: number) => {
+            const virtualColumns: ColumnProps<T>[] = virtualSettings.enableColumn ?
+                (scrollModule?.virtualColumnInfo?.columns?.length && totalRecordsCount ?
+                    scrollModule?.virtualColumnInfo?.columns :
+                    (visibleColumns.length ? visibleColumns : columns).slice(startVirtualIndex, endVirtualIndex)) as ColumnProps<T>[] :
+                columns;
+            const allVisibleColumns: ColumnProps<T>[] = (visibleColumns.length ? visibleColumns : columns) as ColumnProps<T>[];
+            const pinnedColumns: ColumnProps<T>[] = allVisibleColumns.filter((column: ColumnProps<T>) =>
+                column.pinDirection === ColumnPinDirection.Left || column.pinDirection === ColumnPinDirection.Right);
+            const pinnedColumnKeys: Set<string> = new Set<string>(pinnedColumns.map((column: ColumnProps<T>) =>
+                column.field ?? column.headerText ?? column.uid));
+            const finalColumns: ColumnProps<T>[] = [];
+            const finalColumnKeys: Set<string> = new Set<string>();
+            const appendUniqueColumn: (column: ColumnProps<T>) => void = (column: ColumnProps<T>): void => {
+                const columnKey: string = column.field ?? column.headerText ?? column.uid;
+                if (!finalColumnKeys.has(columnKey)) {
+                    finalColumnKeys.add(columnKey);
+                    finalColumns.push(column);
+                }
+            };
+            pinnedColumns.filter((column: ColumnProps<T>) => column.pinDirection === ColumnPinDirection.Left)
+                .forEach(appendUniqueColumn);
+            virtualColumns.filter((column: ColumnProps<T>) => {
+                const columnKey: string = column.field ?? column.headerText ?? column.uid;
+                return !pinnedColumnKeys.has(columnKey);
+            }).forEach(appendUniqueColumn);
+            pinnedColumns.filter((column: ColumnProps<T>) => column.pinDirection === ColumnPinDirection.Right)
+                .forEach(appendUniqueColumn);
+            const orderedColumns: ColumnProps<T>[] = [
+                ...finalColumns.filter((c: ColumnProps<T>) => c.pinDirection === ColumnPinDirection.Left),
+                ...finalColumns.filter(
+                    (c: ColumnProps<T>) => c.pinDirection !== ColumnPinDirection.Left && c.pinDirection !== ColumnPinDirection.Right),
+                ...finalColumns.filter((c: ColumnProps<T>) => c.pinDirection === ColumnPinDirection.Right)
+            ] as ColumnProps<T>[];
+            const renderedCells: React.JSX.Element[] = orderedColumns.map((column: ColumnProps<T>, index: number) => {
                 // For add operations, primary key fields should be editable
                 // For edit operations, primary key fields should be disabled
                 // Also check column/field visiibility and the disabled prop for showAddNewRow functionality
@@ -527,16 +573,36 @@ export const InlineEditForm: ForwardRefExoticComponent<InlineEditFormProps<unkno
 
                 // Computes the CSS class for cell alignment
                 const alignClass: string = `sf-${(column.textAlign ?? 'Left').toLowerCase()}-align`;
+                const columnKey: string | undefined = column.field ?? column.headerText;
+                const isLeftPinned: boolean = !!columnKey && leftPinnedColumns?.has(columnKey);
+                const isRightPinned: boolean = !!columnKey && rightPinnedColumns?.has(columnKey);
+                const pinnedClassName: string = isLeftPinned ? ` ${LEFT_PINNED_CELL}` :
+                    (isRightPinned ? ` ${RIGHT_PINNED_CELL}` : '');
+                const pinnedEdgeClassName: string = isLeftPinned && columnKey ===
+                    leftPinnedBoundaryField ? ` ${LEFT_MOST_PINNED_CELL}` :
+                    (isRightPinned && columnKey === rightPinnedBoundaryField ?
+                        ` ${RIGHT_MOST_PINNED_CELL}` : '');
+                const editPinnedClassName: string = `${pinnedClassName}${pinnedEdgeClassName}`;
+                const pinnedCellStyle: CSSProperties = isLeftPinned ? {
+                    left: `${(leftPinnedOffsets.get(columnKey as string) ?? 0) - offsetX}px`,
+                    position: 'sticky'
+                } : (isRightPinned ? {
+                    right: `${(rightPinnedOffsets.get(columnKey as string) ?? 0) + (isNullOrUndefined(offsetX) ? 0 : offsetX -
+                        scrollModule?.leftPinnedWidth)}px`,
+                    position: 'sticky'
+                } : {});
 
                 if (column.type === 'checkbox') {
                     return (
                         <td
                             key={`edit-cell-${column.field || index}`}
-                            className={`${CELL} ${alignClass}`}
+                            className={`${CELL}${editPinnedClassName} ${alignClass}`}
+                            data-pin-field={columnKey}
+                            style={pinnedCellStyle}
                         >
                             <Checkbox
                                 className={GRID_CHECKSELECT}
-                                aria-label={localization?.getConstant('SelectRow')}
+                                aria-label={localization?.getConstant('selectRow')}
                                 disabled={true}
                             />
                         </td>
@@ -547,12 +613,14 @@ export const InlineEditForm: ForwardRefExoticComponent<InlineEditFormProps<unkno
                     return column.visible ? (
                         <td
                             key={`edit-cell-${column.field || index}`}
-                            className={`${CELL} ${GRID_EDIT_CELL} ${EDIT_DISABLED}${isAddOperation && isLastRow ? ` ${LAST_ROW}` : ''}${!isAddOperation && isLastRow ? ` ${LAST_CELL}` : ''}${commandColumn ? ` ${GRID_COMMAND_CELL}` : ''}${!!column?.displayAsCheckBox && column?.edit?.type === EditType.CheckBox ? ` ${alignClass}` : ''}`}
+                            className={`${CELL} ${GRID_EDIT_CELL}${editPinnedClassName} ${EDIT_DISABLED}${isAddOperation && isLastRow ? ` ${LAST_ROW}` : ''}${!isAddOperation && isLastRow ? ` ${LAST_CELL}` : ''}${commandColumn ? ` ${GRID_COMMAND_CELL}` : ''}${!!column?.displayAsCheckBox && column?.edit?.type === EditType.CheckBox ? ` ${alignClass}` : ''}`}
                             data-mappinguid={column.uid}
+                            data-pin-field={isLeftPinned || isRightPinned ? columnKey : undefined}
                             role='gridcell'
                             aria-colindex={index + 1}
                             aria-label={`column header ${column.headerText}`}
                             style={{
+                                ...pinnedCellStyle,
                                 textAlign: (column.textAlign?.toLowerCase() as CSSProperties['textAlign'])
                             }}
                         >
@@ -592,13 +660,15 @@ export const InlineEditForm: ForwardRefExoticComponent<InlineEditFormProps<unkno
                 return column.visible ? (
                     <td
                         key={`edit-cell-${column.field}`}
-                        className={`${CELL} ${GRID_EDIT_CELL}${isAddOperation && isLastRow ? ` ${LAST_ROW}` : ''}${!isAddOperation && isLastRow ? ` ${LAST_CELL}` : ''}${!!column?.displayAsCheckBox && column?.edit?.type === EditType.CheckBox ? ` ${alignClass}` : ''}`}
+                        className={`${CELL} ${GRID_EDIT_CELL}${editPinnedClassName}${isAddOperation && isLastRow ? ` ${LAST_ROW}` : ''}${!isAddOperation && isLastRow ? ` ${LAST_CELL}` : ''}${!!column?.displayAsCheckBox && column?.edit?.type === EditType.CheckBox ? ` ${alignClass}` : ''}`}
                         data-mappinguid={column.uid}
+                        data-pin-field={isLeftPinned || isRightPinned ? columnKey : undefined}
                         role='gridcell'
                         aria-colindex={index + 1}
                         aria-invalid={fieldError ? 'true' : 'false'}
                         aria-label={`column header ${column.headerText}`}
                         style={{
+                            ...pinnedCellStyle,
                             textAlign: (column.textAlign?.toLowerCase() as CSSProperties['textAlign'])
                         }}
                     >
@@ -646,8 +716,39 @@ export const InlineEditForm: ForwardRefExoticComponent<InlineEditFormProps<unkno
 
             return [...renderedCells, ...hiddenValidationFields];
         }, [columns, internalData, validationErrors, isAddOperation, disabled, handleFieldChange, offsetX,
-            handleFieldBlur, handleEnter, handleEscape, storeEditCellRef, formState, virtualSettings, handleCellFocus
+            handleFieldBlur, handleEnter, handleEscape, storeEditCellRef, formState, virtualSettings, handleCellFocus,
+            leftPinnedOffsets, rightPinnedOffsets, leftPinnedBoundaryField, rightPinnedBoundaryField, scrollModule?.leftPinnedWidth
         ]);
+
+        useLayoutEffect(() => {
+            const rowElement: HTMLTableRowElement | null = rowRef.current;
+            const gridElement: HTMLElement | null = rowElement?.closest('.sf-grid') as HTMLElement | null;
+            if (!rowElement || !gridElement) { return undefined; }
+            const syncPinnedCellOffsets: () => void = (): void => {
+                const virtualTable: HTMLElement | null = rowElement.closest('.sf-virtual-table') as HTMLElement | null;
+                const transform: string = virtualTable ? getComputedStyle(virtualTable).transform ?? '' : '';
+                const matrixValues: string[] = transform.match(/matrix3d\(([^)]+)\)/)?.[1]?.split(',') ??
+                    transform.match(/matrix\(([^)]+)\)/)?.[1]?.split(',') ?? [];
+                const virtualOffset: number = matrixValues.length === 16 ? Number(matrixValues[12]) :
+                    matrixValues.length === 6 ? Number(matrixValues[4]) : 0;
+                rowElement.querySelectorAll<HTMLElement>('[data-pin-field]').forEach((cell: HTMLElement) => {
+                    const field: string | null = cell.getAttribute('data-pin-field');
+                    if (!field) { return; }
+                    if (leftPinnedOffsets.has(field)) {
+                        cell.style.left = `${(leftPinnedOffsets.get(field) ?? 0) - virtualOffset}px`;
+                    } else if (rightPinnedOffsets.has(field)) {
+                        cell.style.right = `${(rightPinnedOffsets.get(field) ?? 0) + virtualOffset}px`;
+                    }
+                });
+            };
+            syncPinnedCellOffsets();
+            gridElement.addEventListener('scroll', syncPinnedCellOffsets, true);
+            gridElement.addEventListener('virtualColumnOffsetChange', syncPinnedCellOffsets);
+            return (): void => {
+                gridElement.removeEventListener('scroll', syncPinnedCellOffsets, true);
+                gridElement.removeEventListener('virtualColumnOffsetChange', syncPinnedCellOffsets);
+            };
+        }, [leftPinnedOffsets, rightPinnedOffsets]);
 
         // Render custom edit template if provided
         if (CustomTemplate) {
@@ -722,7 +823,7 @@ export const InlineEditForm: ForwardRefExoticComponent<InlineEditFormProps<unkno
                     // Boundary navigation was handled (auto-save triggered), don't continue with normal navigation
                     return;
                 }
-                if (isAddOperation && editModule.isShowAddNewRowActive && !formState?.errors) {
+                if (isAddOperation && editModule?.isShowAddNewRowActive && !formState?.errors) {
                     formState?.onBlur?.(field);
                     formRef.current.validateField(field);
                 }
@@ -794,11 +895,16 @@ export const InlineEditForm: ForwardRefExoticComponent<InlineEditFormProps<unkno
                 visibleCols = ColElements;
             } else {
                 const startIndex: number = scrollModule?.virtualColumnInfo?.startIndex ?? 0;
-                const endIndex: number = scrollModule?.virtualColumnInfo?.endIndex ?? ColElements?.length;
-                for (let i: number = startIndex; i < endIndex; i++) {
-                    const col: JSX.Element = ColElements?.[i as number];
-                    visibleCols.push(col);
-                }
+                const endIndex: number = scrollModule?.virtualColumnInfo?.endIndex ?? ColElements.length;
+                const nextGroup: { visibleCols: JSX.Element[]; totalWidth: number } = buildVisibleColumnGroup(
+                    ColElements,
+                    getVisibleColumns(),
+                    leftPinnedColumns,
+                    rightPinnedColumns,
+                    startIndex,
+                    endIndex
+                );
+                visibleCols = nextGroup.visibleCols;
             }
 
             return (

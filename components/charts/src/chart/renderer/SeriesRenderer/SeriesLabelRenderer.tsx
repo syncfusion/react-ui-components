@@ -339,15 +339,18 @@ function getZoomVisiblePoints(series: SeriesProperties): Points[] {
 function buildPathRectangles(series: SeriesProperties): Rect[] {
     const rects: Rect[] = [];
     const points: Points[] = getZoomVisiblePoints(series);
+    const clipRect: Rect | undefined = series.clipRect as Rect;
+    if (!clipRect || points.length < 2) { return rects; }
     const lineWidth: number = series.border?.width ?? series.width as number;
     const halfWidth: number = lineWidth / 2;
     for (let i: number = points.length - 1; i > 0; i--) {
-        const currentPoint: ChartLocationProps = points[i as number]?.symbolLocations?.[0] as ChartLocationProps;
-        const previousPoint: ChartLocationProps = points[i - 1]?.symbolLocations?.[0] as ChartLocationProps;
-        const currentX: number = currentPoint.x + (series.clipRect as Rect).x;
-        const currentY: number = currentPoint.y + (series.clipRect as Rect).y;
-        const previousX: number = previousPoint.x + (series.clipRect as Rect).x;
-        const previousY: number = previousPoint.y + (series.clipRect as Rect).y;
+        const currentPoint: ChartLocationProps | undefined = points[i as number]?.symbolLocations?.[0] as ChartLocationProps;
+        const previousPoint: ChartLocationProps | undefined = points[i - 1]?.symbolLocations?.[0] as ChartLocationProps;
+        if (!currentPoint || !previousPoint) { continue; }
+        const currentX: number = currentPoint.x + clipRect.x;
+        const currentY: number = currentPoint.y + clipRect.y;
+        const previousX: number = previousPoint.x + clipRect.x;
+        const previousY: number = previousPoint.y + clipRect.y;
         const rect: Rect = {
             x: Math.min(previousX, currentX) - halfWidth,
             y: Math.min(previousY, currentY) - halfWidth,

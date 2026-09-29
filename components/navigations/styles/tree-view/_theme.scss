@@ -1,0 +1,78 @@
+@use 'theme-variables' as *;
+
+@include export-module('treeview-theme') {
+  .sf-treeview {
+    background: $treeview-bg-color;
+  }
+
+  .sf-treeview-row-surface {
+    color: $treeview-item-color;
+    background: $treeview-item-bg;
+  }
+
+  .sf-treeview-item.sf-treeview-row-surface:focus-visible,
+  .sf-treeview-item:focus-visible>.sf-treeview-row-surface {
+    background: $treeview-item-focused-bg-color;
+    color: $treeview-item-focused-color;
+    box-shadow: $treeview-item-focused-box-shadow;
+    z-index: 1;
+
+    .sf-treeview-item-toggle,
+    .sf-treeview-item-icon {
+      color: $treeview-toggle-focused-active-color;
+    }
+  }
+
+  .sf-treeview-item-selected.sf-treeview-row-surface,
+  .sf-treeview-item-selected>.sf-treeview-row-surface {
+    background: $treeview-item-selected-bg;
+    color: $treeview-item-selected-color;
+
+    .sf-treeview-item-toggle,
+    .sf-treeview-item-icon {
+      color: $treeview-toggle-selected-color;
+    }
+
+  }
+
+  .sf-treeview-row-surface:hover {
+    background: $treeview-item-hover-bg;
+    color: $treeview-item-hover-color;
+
+    .sf-treeview-item-toggle,
+    .sf-treeview-item-icon {
+      color: $treeview-toggle-hover-color;
+    }
+  }
+
+  .sf-treeview-item-selected.sf-treeview-item-focused.sf-treeview-row-surface,
+  .sf-treeview-item-selected.sf-treeview-item-focused>.sf-treeview-row-surface {
+    background: $treeview-item-selected-bg;
+    color: $treeview-item-selected-color;
+
+    .sf-treeview-item-toggle,
+    .sf-treeview-item-icon {
+      color: $treeview-toggle-selected-color;
+    }
+  }
+
+  .sf-treeview-item-selected.sf-treeview-row-surface:focus-visible,
+  .sf-treeview-item-selected:focus-visible>.sf-treeview-row-surface {
+    box-shadow: $treeview-item-selected-focused-box-shadow;
+  }
+
+  .sf-treeview-row-surface:active {
+    background: $treeview-item-active-bg;
+    color: $treeview-item-active-color;
+
+    .sf-treeview-item-toggle,
+    .sf-treeview-item-icon {
+      color: $treeview-toggle-focused-active-color;
+    }
+  }
+
+  .sf-treeview-item-toggle,
+  .sf-treeview-item-icon {
+    color: $treeview-toggle-color;
+  }
+}

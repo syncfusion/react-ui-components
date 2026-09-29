@@ -1,12 +1,15 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import {
-    IToolbar
-} from '@syncfusion/react-navigations';
+import { useState, useCallback, useRef, useEffect, useMemo, RefObject } from 'react';
+import { IToolbar } from '@syncfusion/react-navigations/src/toolbar/toolbar';
 import { SelectionModel, SelectionSettings } from '../types/selection.interfaces';
 import { editModule, EditSettings } from '../types/edit.interfaces';
 import * as React from 'react';
 import { ToolbarConfig, ToolbarAPI, ToolbarClickEvent } from '../types/toolbar.interfaces';
-import { ColumnProps, IRow, UseCommandColumnResult, VirtualSettings } from '../types';
+import { VirtualSettings } from '../types/virtualization.interface';
+import { UseCommandColumnResult } from '../types/command.interfaces';
+import { ColumnProps } from '../types/column.interfaces';
+import { GridToolbar } from '../views/editing/ToolBar';
+import { IRow } from '../types/interfaces';
+import { GridRef } from '../types/grid.interfaces';
 
 /**
  * Custom hook to manage toolbar operations for the grid.
@@ -23,11 +26,13 @@ import { ColumnProps, IRow, UseCommandColumnResult, VirtualSettings } from '../t
  * @param {boolean} showColumnChooser - Enables column chooser toolbar item
  * @param {VirtualSettings} virtualSettings - Virtual scrolling configuration for lazy-loaded data
  * @param {number} totalRecordsCount - Total records across all pages for row validation
+ * @param {RefObject<GridRef>} gridRef - Reference to the grid instance for undo/redo operations
  * @returns {ToolbarAPI} API methods and state for toolbar management
  */
-export const useToolbar: (config: ToolbarConfig, editModule?: editModule, selectionModule?: SelectionModel, currentViewData?: unknown[],
+const useToolbar: (config: ToolbarConfig, editModule?: editModule, selectionModule?: SelectionModel, currentViewData?: unknown[],
     allowSearching?: boolean, commandColumnModule?: UseCommandColumnResult, selectionSettings?: SelectionSettings,
-    showColumnChooser?: boolean, virtualSettings?: VirtualSettings, totalRecordsCount?: number) => ToolbarAPI = <T = unknown>(
+    showColumnChooser?: boolean, virtualSettings?: VirtualSettings, totalRecordsCount?: number,
+    gridRef?: RefObject<GridRef>) => ToolbarAPI = <T = unknown>(
     config: ToolbarConfig,
     editModule?: editModule,
     selectionModule?: SelectionModel<T>,
@@ -37,7 +42,8 @@ export const useToolbar: (config: ToolbarConfig, editModule?: editModule, select
     selectionSettings?: SelectionSettings,
     showColumnChooser?: boolean,
     virtualSettings?: VirtualSettings,
-    totalRecordsCount?: number
+    totalRecordsCount?: number,
+    gridRef?: RefObject<GridRef<T>>
 ): ToolbarAPI => {
     const commandEdit: React.RefObject<boolean> = commandColumnModule?.commandEdit;
     const commandAddRef: React.RefObject<IRow<ColumnProps>[]> = commandColumnModule?.commandAddRef;
@@ -111,8 +117,25 @@ export const useToolbar: (config: ToolbarConfig, editModule?: editModule, select
         const gridElement: HTMLElement | null = toolbarRef.current?.element?.closest('.sf-grid') ?? null;
         const hasEditRow: boolean = gridElement?.querySelector('.sf-grid-edit-row') !== null;
         const addRow: boolean = editSettings?.showAddNewRow === true && !hasEditRow;
+        const hasBatchChanges: boolean = editSettings?.allowBatchSave === true && editMod.hasBatchChanges?.() === true;
+        const inlineEditActive: boolean = gridRef?.current?.isEdit === true && editSettings?.allowBatchSave !== true;
+        const canUndo: boolean = editSettings?.allowUndoRedo === true && !inlineEditActive &&
+            (gridRef?.current?.getUndoActionsCount?.() ?? 0) > 0;
+        const canRedo: boolean = editSettings?.allowUndoRedo === true && !inlineEditActive &&
+            (gridRef?.current?.getRedoActionsCount?.() ?? 0) > 0;
 
-        if (editSettings?.allowAdd === true) {
+        if (canUndo) {
+            enableItemsList.push(`${gridId}_undo`);
+        } else {
+            disableItemsList.push(`${gridId}_undo`);
+        }
+        if (canRedo) {
+            enableItemsList.push(`${gridId}_redo`);
+        } else {
+            disableItemsList.push(`${gridId}_redo`);
+        }
+
+        if (editSettings?.allowAdd === true && editSettings?.mode !== 'Cell') {
             enableItemsList.push(`${gridId}_add`);
         } else {
             disableItemsList.push(`${gridId}_add`);
@@ -144,7 +167,7 @@ export const useToolbar: (config: ToolbarConfig, editModule?: editModule, select
             disableItemsList.push(`${gridId}_columnchooser`);
         }
 
-        if ((editMod.isEdit === true || editSettings?.showAddNewRow === true) && (editSettings?.allowAdd === true
+        if ((editMod.isEdit === true || editSettings?.showAddNewRow === true || hasBatchChanges) && (editSettings?.allowAdd === true
             || editSettings?.allowEdit === true)) {
             if (addRow || (virtualSettings?.enableRow === true && commandEdit?.current && commandAddRef?.current?.length)) {
                 const itemsToEnable: string[] = !addRow ? [`${gridId}_search`] :
@@ -171,7 +194,12 @@ export const useToolbar: (config: ToolbarConfig, editModule?: editModule, select
                 const itemsToEnable: string[] = [`${gridId}_update`, `${gridId}_cancel`, `${gridId}_search`];
                 const itemsToDisable: string[] = commandEdit?.current
                     ? [`${gridId}_edit`, `${gridId}_delete`, `${gridId}_update`, `${gridId}_cancel`]
-                    : [`${gridId}_add`, `${gridId}_edit`, `${gridId}_delete`];
+                    : editSettings?.allowBatchSave === true
+                        ? [`${gridId}_add`]
+                        : [`${gridId}_add`, `${gridId}_delete`];
+                if (editSettings?.allowBatchSave !== true && !commandEdit?.current) {
+                    itemsToDisable.push(`${gridId}_edit`);
+                }
 
                 itemsToEnable.forEach((item: string) => {
                     if (!enableItemsList.includes(item)) {
@@ -224,7 +252,7 @@ export const useToolbar: (config: ToolbarConfig, editModule?: editModule, select
         // Apply enable/disable states
         enableItems(enableItemsList, true);
         enableItems(disableItemsList, false);
-    }, [gridId, enableItems, totalRecordsCount, selectionSettings?.persistSelection]);
+    }, [gridId, enableItems, totalRecordsCount, selectionSettings?.persistSelection, gridRef]);
 
     /**
      * Effect to apply input disabled state to add new row inputs.
@@ -249,14 +277,35 @@ export const useToolbar: (config: ToolbarConfig, editModule?: editModule, select
         });
     }, [addRowInputsDisabled]);
 
-    const handleToolbarClick: (args: ToolbarClickEvent) => void = useCallback((args: ToolbarClickEvent): void => {
+    const handleToolbarClick: (args: ToolbarClickEvent) => void = useCallback(async (args: ToolbarClickEvent): Promise<void> => {
         const editMod: editModule = editModuleRef.current;
 
-        if (!args.item || !editMod) {
+        if (!args.item) {
             return;
         }
 
         const itemId: string = args.item.id;
+        const editItemIds: string[] = [
+            `${gridId}_add`,
+            `${gridId}_edit`,
+            `${gridId}_update`,
+            `${gridId}_cancel`,
+            `${gridId}_delete`,
+            `${gridId}_undo`,
+            `${gridId}_redo`
+        ];
+
+        if (!editMod && editItemIds.includes(itemId)) {
+            return;
+        }
+
+        const isHistoryItem: boolean = itemId === `${gridId}_undo` || itemId === `${gridId}_redo`;
+        if (isHistoryItem && editMod?.editSettings?.allowUndoRedo !== true) {
+            return;
+        }
+        if (isHistoryItem && gridRef?.current?.isEdit === true && editMod?.editSettings?.allowBatchSave !== true) {
+            return;
+        }
 
         const extendedArgs: ToolbarClickEvent = {
             ...args,
@@ -268,14 +317,16 @@ export const useToolbar: (config: ToolbarConfig, editModule?: editModule, select
         if (extendedArgs.cancel) {
             return;
         }
-        const cellEdit: boolean = editMod?.editSettings?.mode === 'Cell';
+        const cellEdit: boolean = editMod?.editSettings?.mode === 'Cell' || editMod?.editSettings?.allowBatchSave === true;
+        const batchEdit: boolean = editMod?.editSettings?.allowBatchSave === true;
+        const activeCellEdit: boolean = editMod?.editSettings?.mode === 'Cell' && editMod?.isEdit === true;
         switch (itemId) {
         case `${gridId}_add`:
             editMod?.addRecord();
             break;
 
         case `${gridId}_edit`:
-            if (cellEdit) {
+            if (editMod?.editSettings?.mode === 'Cell') {
                 editMod?.editFocusedCell();
             } else {
                 editMod?.editRecord();
@@ -283,7 +334,14 @@ export const useToolbar: (config: ToolbarConfig, editModule?: editModule, select
             break;
 
         case `${gridId}_update`:
-            if (cellEdit) {
+            if (batchEdit && activeCellEdit) {
+                const isCellSaved: boolean = await editMod?.saveCellChanges?.();
+                if (isCellSaved) {
+                    await editMod?.saveBatchChanges?.();
+                }
+            } else if (batchEdit) {
+                await editMod?.saveBatchChanges?.();
+            } else if (cellEdit) {
                 editMod?.saveCellChanges();
             } else {
                 editMod?.saveDataChanges();
@@ -291,7 +349,12 @@ export const useToolbar: (config: ToolbarConfig, editModule?: editModule, select
             break;
 
         case `${gridId}_cancel`:
-            if (cellEdit) {
+            if (batchEdit && activeCellEdit) {
+                await editMod?.cancelCellChanges?.();
+                await editMod?.cancelBatchChanges?.();
+            } else if (batchEdit) {
+                await editMod?.cancelBatchChanges?.();
+            } else if (cellEdit) {
                 editMod?.cancelCellChanges();
             } else {
                 editMod?.cancelDataChanges();
@@ -303,6 +366,18 @@ export const useToolbar: (config: ToolbarConfig, editModule?: editModule, select
                 editMod?.deleteCell();
             } else {
                 editMod?.deleteRecord();
+            }
+            break;
+
+        case `${gridId}_undo`:
+            if (gridRef?.current) {
+                gridRef.current.undo?.();
+            }
+            break;
+
+        case `${gridId}_redo`:
+            if (gridRef?.current) {
+                gridRef.current.redo?.();
             }
             break;
 
@@ -335,8 +410,9 @@ export const useToolbar: (config: ToolbarConfig, editModule?: editModule, select
         isRendered,
         activeItems,
         disabledItems: disabledItemsState,
-        toolbarRef
+        toolbarRef,
+        GridToolbar
     };
 };
 
-export default useToolbar;
+export { useToolbar as ToolbarModule };

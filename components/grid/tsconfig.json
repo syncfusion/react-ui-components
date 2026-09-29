@@ -41,7 +41,8 @@
     "dist",
     "public",
     "coverage",
-    "test-report"
+    "test-report",
+    "ai-harness"
   ],
   "compileOnSave": false
 }

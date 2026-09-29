@@ -11,16 +11,27 @@ import {
     JSX,
     RefObject,
     Ref,
-    useEffect
+    useEffect,
+    useState
 } from 'react';
-import { ITooltip, Tooltip } from '@syncfusion/react-popups';
-import { SortDirection, RenderRef, ValueType, ActionType, UseDataResult, ScrollMode, RowCellInfo, CellIdentifier } from '../types';
+import { ITooltip, Tooltip } from '@syncfusion/react-popups/src/tooltip/index';
+import { SortDirection, ActionType, ScrollMode, ColumnPinDirection } from '../types/enum';
+import { RenderRef, ValueType, UseDataResult } from '../types/interfaces';
+import { RowCellInfo, CellIdentifier } from '../types/cell-selection.interfaces';
 import { GridProps, GridRef, IGridBase } from '../types/grid.interfaces';
+import { SideBar } from '../types/sidebar.interfaces';
 import { PagerArgsInfo } from '../types/page.interfaces';
-import { useGridComputedProps } from '../hooks';
-import { RenderBase, ConfirmDialog, DeleteDialog } from '../views';
+import { useGridComputedProps } from '../hooks/useGrid';
+import { RenderBase } from '../views/Render';
 import { ColumnProps } from '../types/column.interfaces';
-import { GridComputedProvider, GridMutableProvider } from '../contexts';
+import { GridComputedProvider, GridMutableProvider } from '../contexts/GridProviders';
+import { ResizeColumn } from '../types/resize.interfaces';
+import { AutoFitColumn } from '../types/auto-fit.interfaces';
+import { ChevronDownFillIcon } from '@syncfusion/react-icons/src/icons/chevron-down-fill';
+import { ChevronUpFillIcon } from '@syncfusion/react-icons/src/icons/chevron-up-fill';
+import { executeGridAsyncAction, dispatchGridCancelBegin } from '../utils/utils';
+import type { PivotModuleType, PivotViewProps } from '../../../grid';
+import { ToolPanelHost, normalizeSideBar } from '../views/ToolPanelHost';
 
 /**
  * The Syncfusion React Grid component is a feature-rich, customizable data grid for building responsive, high-performance applications.
@@ -59,7 +70,26 @@ const GridBase: <T, >(props: Partial<IGridBase<T>> & RefAttributes<GridRef<T>>) 
         const { className, id, columns } = gridAPI;
         const { styles, setCurrentViewData, setCurrentPage,
             setTotalRecordsCount, setGridAction, setInitialLoad } = gridInternal;
-        const { columnsDirective, groupModule } = gridScoped;
+        const { columnsDirective, groupModule, treeModule } = gridScoped;
+        const [isToolPanelOpen, setIsToolPanelOpen] = useState<boolean>(() => {
+            const sideBar: SideBar<T> | undefined = props.sideBar;
+            if (!sideBar || sideBar.enabled === false) {
+                return false;
+            }
+            return sideBar.openByDefault === true;
+        });
+        const handleColumnChooserOpenChange: (isOpen: boolean) => void = useCallback((isOpen: boolean): void => {
+            if (isOpen) {
+                setIsToolPanelOpen(false);
+            }
+        }, []);
+        const handleToolPanelOpenChange: (isOpen: boolean, isColumnPanel?: boolean) => void = useCallback(
+            (isOpen: boolean, isColumnPanel?: boolean): void => {
+                if (isOpen && isColumnPanel) {
+                    renderExposedRef.current?.closeColumnChooser();
+                }
+                setIsToolPanelOpen(isOpen);
+            }, []);
 
         // Initialize gridRef with all the properties
         if (gridRef.current === null) {
@@ -86,10 +116,21 @@ const GridBase: <T, >(props: Partial<IGridBase<T>> & RefAttributes<GridRef<T>>) 
                 removeFilteredColsByField: (field?: string, isClearFilterBar?: boolean) => {
                     gridScoped.filterModule?.removeFilteredColsByField?.(field, isClearFilterBar);
                 },
-
+                filterByColumnAsync: (fieldName: string, filterOperator: string,
+                                      filterValue: ValueType| number[]| string[]| Date[]| boolean[],
+                                      predicate?: string, caseSensitive?: boolean, ignoreAccent?: boolean) => {
+                    return gridScoped.filterModule?.filterByColumnAsync?.(fieldName, filterOperator, filterValue, predicate,
+                                                                          caseSensitive, ignoreAccent);
+                },
+                clearFilteringAsync: (fields: string[]) => {
+                    return gridScoped.filterModule?.clearFilteringAsync?.(fields);
+                },
                 // Search method
                 search: (searchString: string) => {
-                    gridScoped.searchModule.search(searchString);
+                    gridScoped.searchModule?.search(searchString);
+                },
+                searchAsync: (searchString: string) => {
+                    return gridScoped.searchModule?.searchAsync?.(searchString);
                 },
 
                 // Sort method
@@ -102,6 +143,15 @@ const GridBase: <T, >(props: Partial<IGridBase<T>> & RefAttributes<GridRef<T>>) 
                 clearSort: (fields?: string[]) => {
                     gridScoped.sortModule?.clearSort?.(fields);
                 },
+                sortColumnAsync: (columnName: string, sortDirection: SortDirection | string, isMultiSort?: boolean) => {
+                    return gridScoped.sortModule?.sortColumnAsync?.(columnName, sortDirection, isMultiSort);
+                },
+                removeSortColumnAsync: (columnName: string) => {
+                    return gridScoped.sortModule?.removeSortColumnAsync?.(columnName);
+                },
+                clearSortingAsync: (fields?: string[]) => {
+                    return gridScoped.sortModule?.clearSortingAsync?.(fields);
+                },
 
                 //page Method
                 goToPage: async(pageNo: number) => {
@@ -111,19 +161,23 @@ const GridBase: <T, >(props: Partial<IGridBase<T>> & RefAttributes<GridRef<T>>) 
                     args.type = 'pageChanging';
                     const confirmResult: boolean = gridAPI.virtualizationSettings?.scrollMode === ScrollMode.Virtual ||
                         gridAPI.virtualizationSettings?.scrollMode === ScrollMode.Infinite ? true :
-                        await gridScoped?.editModule?.checkUnsavedChanges?.();
+                        await gridScoped?.editModule?.checkUnsavedChanges?.() ?? true;
                     if (!confirmResult) {
                         return;
                     }
                     props.onPageChangeStart?.(args);
                     if (args.cancel) {
+                        dispatchGridCancelBegin(gridRef, ActionType.Paging);
                         return;
                     }
                     setCurrentPage(pageNo);
                     setGridAction(args);
                 },
+                goToPageAsync: (pageNo: number) => {
+                    return executeGridAsyncAction(gridRef, ActionType.Paging, () => gridRef.current.goToPage(pageNo));
+                },
                 setPagerMessage: (message: string) => {
-                    renderExposedRef.current?.pagerModule?.updateExternalMessage(message);
+                    renderExposedRef.current?.pagerRef?.updateExternalMessage(message);
                 },
                 getDataModule: () => {
                     return gridScoped.dataModule as UseDataResult;
@@ -159,6 +213,18 @@ const GridBase: <T, >(props: Partial<IGridBase<T>> & RefAttributes<GridRef<T>>) 
                 clearSelection: () => {
                     gridScoped.selectionModule.clearSelection();
                 },
+                pinRows: (rows: T[], position: 'top' | 'bottom' = 'top') => {
+                    gridScoped.pinningModule?.updatePinnedRowsState(rows, true, position);
+                },
+                unpinRows: (rows: T[]) => {
+                    gridScoped.pinningModule?.updatePinnedRowsState(rows, false);
+                },
+                pinColumn: (field: string, direction: ColumnPinDirection.Left | ColumnPinDirection.Right | string) => {
+                    gridScoped.pinningModule?.pinColumn(field, direction);
+                },
+                unpinColumn: (field: string) => {
+                    gridScoped.pinningModule?.unpinColumn(field);
+                },
 
                 // Edit methods
                 isEdit: gridScoped.editModule?.isEdit || false,
@@ -171,12 +237,35 @@ const GridBase: <T, >(props: Partial<IGridBase<T>> & RefAttributes<GridRef<T>>) 
                 cancelDataChanges: gridScoped.editModule?.cancelDataChanges,
                 addRecord: gridScoped.editModule?.addRecord,
                 deleteRecord: gridScoped.editModule?.deleteRecord,
+                addRecordAsync: gridScoped.editModule?.addRecordAsync,
+                deleteRecordAsync: gridScoped.editModule?.deleteRecordAsync,
+                updateRecordAsync: gridScoped.editModule?.updateRecordAsync,
                 setRowData: gridAPI.setRowData,
                 updateRecord: gridScoped.editModule?.updateRecord,
                 setCellValue: gridAPI.setCellValue,
+                saveBulkChanges: gridAPI.saveBulkChanges,
+                setRowDataAsync: gridAPI.setRowDataAsync,
+                setCellValueAsync: gridAPI.setCellValueAsync,
+                saveBulkChangesAsync: gridAPI.saveBulkChangesAsync,
                 validateEditForm: gridScoped.editModule?.validateEditForm,
                 validateField: gridScoped.editModule?.validateField,
                 expandedGroupCountRef: gridScoped.expandedGroupCountRef,
+                treeToggleNodeExpansion: treeModule?.toggleNodeExpansion,
+                treeNormalizedData: treeModule?.normalizedData,
+                treeExpandedKeys: treeModule?.expandedKeys,
+                resizeColumns: (columns: ResizeColumn[]) => {
+                    gridScoped.resizeModule?.resizeColumns?.(columns);
+                },
+                autoFitColumns: (columns?: AutoFitColumn[]) => {
+                    gridScoped.autoFitModule?.autoFitColumns?.(columns);
+                },
+                reorderColumnByIndex: async (fromIndex: number, toIndex: number): Promise<void> => {
+                    await gridScoped.reorderModule?.reorderColumnByIndex(fromIndex, toIndex);
+                },
+                reorderColumns: async (fieldName: string | string[], toIndex: number): Promise<void> => {
+                    await gridScoped.reorderModule?.reorderColumns(fieldName, toIndex);
+                },
+                reorderModule: gridScoped.reorderModule,
 
                 // Include all public API computed properties
                 ...gridAPI,
@@ -197,11 +286,24 @@ const GridBase: <T, >(props: Partial<IGridBase<T>> & RefAttributes<GridRef<T>>) 
                 editSettings: gridScoped.editModule?.editSettings,
                 editRowIndex: gridScoped.editModule?.editRowIndex,
                 editData: gridScoped.editModule?.editData as T | null,
-                getCurrentViewRecords: () => gridScoped?.currentViewData as T[]
+                getCurrentViewRecords: () => gridScoped?.currentViewData as T[],
+                pinRows: (rows: T[], position: 'top' | 'bottom' = 'top') => {
+                    gridScoped.pinningModule?.updatePinnedRowsState(rows, true, position);
+                },
+                unpinRows: (rows: T[]) => {
+                    gridScoped.pinningModule?.updatePinnedRowsState(rows, false);
+                },
+                pinColumn: (field: string, direction: ColumnPinDirection.Left | ColumnPinDirection.Right | string) => {
+                    gridScoped.pinningModule?.pinColumn(field, direction);
+                },
+                unpinColumn: (field: string) => {
+                    gridScoped.pinningModule?.unpinColumn(field);
+                }
             };
             gridRef.current.pageSettings.currentPage = gridScoped.currentPage;
             gridRef.current.pageSettings.totalRecordsCount = gridScoped.totalRecordsCount;
-        }, [gridScoped.currentPage, gridScoped.totalRecordsCount, gridScoped.editModule, gridScoped.uiColumns.current, groupModule]);
+        }, [gridScoped.currentPage, gridScoped.totalRecordsCount, gridScoped.editModule, gridScoped.uiColumns.current,
+            gridScoped.pinningModule]);
 
         /**
          * Memoized ref callback to attach DOM element to gridRef
@@ -224,16 +326,19 @@ const GridBase: <T, >(props: Partial<IGridBase<T>> & RefAttributes<GridRef<T>>) 
             saveDataChanges: (rowElement?: HTMLTableRowElement) => {
                 return (gridScoped.editModule?.saveDataChanges as Function)?.(
                     undefined, undefined, undefined,
-                    gridScoped.commandColumnModule.commandEdit.current ? rowElement?.getAttribute('data-uid') : undefined
+                    gridScoped.commandColumnModule?.commandEdit.current ? rowElement?.getAttribute('data-uid') : undefined
                 );
             },
             cancelDataChanges: (rowElement?: HTMLTableRowElement) => {
                 return (gridScoped.editModule?.cancelDataChanges as Function)?.(
-                    undefined, gridScoped.commandColumnModule.commandEdit.current ? rowElement?.getAttribute('data-uid') : undefined
+                    undefined, gridScoped.commandColumnModule?.commandEdit.current ? rowElement?.getAttribute('data-uid') : undefined
                 );
             },
             addRecord: gridScoped.editModule?.addRecord,
             deleteRecord: gridScoped.editModule?.deleteRecord,
+            addRecordAsync: gridScoped.editModule?.addRecordAsync,
+            deleteRecordAsync: gridScoped.editModule?.deleteRecordAsync,
+            updateRecordAsync: gridScoped.editModule?.updateRecordAsync,
             // Cell Edit Mode methods
             editCell: gridScoped.editModule?.editCell,
             saveCellChanges: gridScoped.editModule?.saveCellChanges,
@@ -241,6 +346,8 @@ const GridBase: <T, >(props: Partial<IGridBase<T>> & RefAttributes<GridRef<T>>) 
             setRowData: gridAPI.setRowData,
             updateRecord: gridScoped.editModule?.updateRecord,
             setCellValue: gridAPI.setCellValue,
+            setRowDataAsync: gridAPI.setRowDataAsync,
+            setCellValueAsync: gridAPI.setCellValueAsync,
             validateEditForm: gridScoped.editModule?.validateEditForm,
             validateField: gridScoped.editModule?.validateField,
             getCurrentViewRecords: () => gridScoped?.currentViewData as T[],
@@ -264,20 +371,67 @@ const GridBase: <T, >(props: Partial<IGridBase<T>> & RefAttributes<GridRef<T>>) 
                 return gridScoped.cellSelectionModule?.getSelectedCellsData?.();
             },
             // Grouping methods and state (ATOMIC pattern: exposed directly)
-            groupColumn: groupModule.groupColumn,
-            ungroupColumn: groupModule.ungroupColumn,
-            clearGrouping: groupModule.clearGrouping,
-            expandAll: groupModule.expandAll,
-            collapseAll: groupModule.collapseAll,
+            groupColumn: groupModule?.groupColumn,
+            ungroupColumn: groupModule?.ungroupColumn,
+            clearGrouping: groupModule?.clearGrouping,
+            expandAll: groupModule?.expandAll,
+            collapseAll: groupModule?.collapseAll,
+            groupColumnAsync: (fields: string[], isResetRequired?: boolean) =>
+                groupModule?.groupColumnAsync?.(fields, isResetRequired),
+            ungroupColumnAsync: (fields: string[]) => groupModule?.ungroupColumnAsync?.(fields),
+            clearGroupingAsync: () => groupModule?.clearGroupingAsync?.(),
             // Expose grouping state for ContentRows integration
-            isGroupExpanded: groupModule.isGroupExpanded,
-            expandedGroupCountRef: gridScoped.expandedGroupCountRef
+            isGroupExpanded: groupModule?.isGroupExpanded,
+            expandedGroupCountRef: gridScoped.expandedGroupCountRef,
+            resizeColumns: (columns: ResizeColumn[]) => {
+                gridScoped.resizeModule?.resizeColumns?.(columns);
+            },
+            autoFitColumns: (columns?: AutoFitColumn[]) => {
+                gridScoped.autoFitModule?.autoFitColumns?.(columns);
+            },
+            reorderColumnByIndex: async (fromIndex: number, toIndex: number): Promise<void> => {
+                await gridScoped.reorderModule?.reorderColumnByIndex(fromIndex, toIndex);
+            },
+            reorderColumns: async (fieldName: string | string[], toIndex: number): Promise<void> => {
+                await gridScoped.reorderModule?.reorderColumns(fieldName, toIndex);
+            },
+            reorderModule: gridScoped.reorderModule
         }), [gridRef.current, renderExposedRef.current, gridScoped, gridAPI]);
 
         // Calculate column count for accessibility
         const colCount: number = useMemo(() => {
             return Children.count(((columnsDirective).props as { children: ReactElement }).children);
         }, [columnsDirective]);
+
+        // Conditionally render resize helper only when resizing
+        const resizeHelper: JSX.Element | null = useMemo(() => {
+            if (!gridScoped.resizeModule?.resizeHelper.resizing) {
+                return null;
+            }
+            return <div className='sf-grid-resize-helper' style={{
+                height: gridScoped.resizeModule?.resizeHelper.height,
+                top: gridScoped.resizeModule?.resizeHelper.top,
+                left: gridScoped.resizeModule?.resizeHelper.left
+            }} />;
+        }, [gridScoped.resizeModule?.resizeHelper]);
+
+        const reorderHelper: JSX.Element | null = useMemo(() => {
+            if (!gridScoped.reorderModule?.reorderHelper.reordering) {
+                return null;
+            }
+            return (
+                <>
+                    <ChevronDownFillIcon className='sf-grid-reorder-helper' style={{
+                        top: gridScoped.reorderModule?.reorderHelper.top,
+                        left: gridScoped.reorderModule?.reorderHelper.left
+                    }} />
+                    <ChevronUpFillIcon className='sf-grid-reorder-helper' style={{
+                        top: gridScoped.reorderModule?.reorderHelper.bottom,
+                        left: gridScoped.reorderModule?.reorderHelper.left
+                    }} />
+                </>
+            );
+        }, [gridScoped.reorderModule?.reorderHelper]);
 
         // Conditionally render ellipsis tooltip only when needed
         const ellipsisTooltip: JSX.Element | null = useMemo(() => {
@@ -301,10 +455,12 @@ const GridBase: <T, >(props: Partial<IGridBase<T>> & RefAttributes<GridRef<T>>) 
             return (
                 <RenderBase<T>
                     ref={renderExposedRef}
+                    onColumnChooserOpenChange={handleColumnChooserOpenChange}
                     children={((columnsDirective).props as { children: ReactElement }).children}
                 />
             );
-        }, [columnsDirective]);
+        }, [columnsDirective, handleColumnChooserOpenChange]);
+        const isToolPanelEnabled: boolean = normalizeSideBar(props.sideBar).length > 0;
 
         return (
             <GridComputedProvider<T> grid={useMemo(() => ({
@@ -317,7 +473,7 @@ const GridBase: <T, >(props: Partial<IGridBase<T>> & RefAttributes<GridRef<T>>) 
                     <div
                         ref={attachGridElement}
                         id={id}
-                        className={className}
+                        className={`${className}${isToolPanelEnabled ? ' sf-tool-panel-enabled' : ''}`}
                         role='grid'
                         tabIndex={-1}
                         aria-colcount={colCount}
@@ -334,28 +490,45 @@ const GridBase: <T, >(props: Partial<IGridBase<T>> & RefAttributes<GridRef<T>>) 
                         onFocus={gridInternal.handleGridFocus}
                         onBlur={gridInternal.handleGridBlur}
                         onMouseUp={props.onMouseUp}
+                        onPointerDown={gridInternal.handleGridPointerDown}
+                        onPointerUp={gridInternal.handleGridPointerUp}
                     >
-                        {renderComponent}
+                        <ToolPanelHost
+                            sideBar={props.sideBar}
+                            modules={props.modules}
+                            rowData={gridScoped?.currentViewData as T[]}
+                            isOpen={isToolPanelOpen}
+                            onOpenChange={handleToolPanelOpenChange}
+                        />
+                        {isToolPanelEnabled ? <div className='sf-grid-main'>
+                            {renderComponent}
+                        </div> : renderComponent}
                         {ellipsisTooltip}
+                        {resizeHelper}
+                        {reorderHelper}
                         {/* Add ConfirmDialog component for inline editing confirmation dialogs */}
-                        {gridScoped.editModule && gridScoped.editModule?.isDialogOpen && (
-                            <ConfirmDialog
+                        {gridScoped.editModule && gridScoped.editModule?.isDialogOpen && (() => {
+                            const { ConfirmDialog } = gridScoped.editModule;
+                            return (<ConfirmDialog
                                 isOpen={gridScoped.editModule?.isDialogOpen}
                                 config={gridScoped.editModule?.dialogConfig}
                                 onConfirm={gridScoped.editModule?.onDialogConfirm}
                                 onCancel={gridScoped.editModule?.onDialogCancel}
-                            />
-                        )}
+                            />);
+                        })()
+                        }
                         {/* Add DeleteDialog component for selection-based delete operations */}
                         {gridScoped.editModule && gridScoped.editModule?.isDeleteDialogOpen &&
-                            gridAPI.selectionSettings?.persistSelection && (
-                            <DeleteDialog
+                            gridAPI.selectionSettings?.persistSelection && (() => {
+                            const { DeleteDialog } = gridScoped.editModule;
+                            return(<DeleteDialog
                                 isOpen={gridScoped.editModule?.isDeleteDialogOpen || false}
                                 onConfirm={gridScoped.editModule?.onSelectionDeleteConfirm}
                                 onCancel={gridScoped.editModule?.onSelectionDeleteCancel}
                                 onDialogOpen={gridAPI.onDeleteDialogOpen}
-                            />
-                        )}
+                            />);
+                        })()
+                        }
                     </div>
                 </GridMutableProvider>
             </GridComputedProvider>
@@ -374,6 +547,19 @@ const GridBase: <T, >(props: Partial<IGridBase<T>> & RefAttributes<GridRef<T>>) 
 export const Grid: <T>(props: Partial<GridProps<T>> & RefAttributes<GridRef<T>>) => ReactElement | null =
     forwardRef<GridRef, Partial<GridProps>>(
         <T, >(props: Partial<GridProps<T>>, ref: Ref<GridRef<T>>) => {
+            const pivotModule: PivotModuleType = props.modules?.PivotModule || props.modules?.GridAllModules?.PivotModule;
+            const PivotView: <T>(props: PivotViewProps<T>) => ReactElement = pivotModule?.View;
+            useEffect(() => {
+                if (props.pivotSettings?.enabled && !PivotView) {
+                    props.onPivotError?.({ code: 'InvalidSettings', message: 'Inject PivotModule to enable pivot mode.' });
+                }
+            }, [props.pivotSettings?.enabled, PivotView]);
+            if (props.pivotSettings?.enabled && !PivotView) {
+                return <div role="alert">Inject PivotModule to enable pivot mode.</div>;
+            }
+            if (PivotView && props.pivotSettings) {
+                return <PivotView<T> gridProps={props} gridRef={ref}/>;
+            }
             return (
                 <GridBase<T> ref={ref} {...props} />
             );

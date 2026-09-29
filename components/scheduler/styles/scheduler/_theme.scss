@@ -51,6 +51,12 @@
       }
     }
 
+    .sf-timeline-view {
+      .sf-day-header.sf-current-day {
+        color: $scheduler-active-font-color;
+      }
+    }
+
     .sf-all-day-appointment-section {
       &:hover,
       &:focus {
@@ -68,7 +74,7 @@
       background-color: $scheduler-bg-color;
     }
 
-    .sf-time-slots {
+    .sf-vertical-view .sf-time-slots {
       color: $scheduler-text-color;
       border-bottom: none;
 
@@ -119,14 +125,20 @@
       color: $scheduler-active-font-color;
     }
 
-    .sf-vertical-view,
+    .sf-table-wrap> :not(.sf-agenda-view),
     .sf-more-popup-wrapper {
       .sf-appointment {
-          @include appointment-color;
+        @include appointment-color;
 
-          &:focus {
-            @include appointment-focus;
-          }
+        &:focus {
+          @include appointment-focus;
+        }
+      }
+    }
+
+    .sf-more-indicator {
+      &:focus {
+        text-decoration: underline;
       }
     }
 
@@ -183,15 +195,38 @@
   }
 
   .sf-scheduler-dialog {
-    background: $scheduler-bg-color;
+    background: $scheduler-editor-bg-color;
+  
+    .sf-dlg-footer-content {
+      background: $scheduler-editor-footer-bg-color;
+    }
   }
 
   .sf-quickinfo-popup-wrapper {
     background: $scheduler-quick-popup-bg;
     box-shadow: $scheduler-popup-box-shadow-1;
 
+    .sf-quickinfo-popup-header {
+      .sf-btn.sf-popup-close {
+        color: $scheduler-popup-close-icon-color;
+        &:hover,
+        &:focus {
+          color: $scheduler-popup-close-icon-hover-color;
+          background-color: $scheduler-popup-close-icon-hover-active-bg-color;
+        }
+        &:active {
+          color: $scheduler-popup-close-icon-active-color;
+          background-color: $scheduler-popup-close-icon-hover-active-bg-color;
+        }
+      }
+    }
+
     .sf-quickinfo-popup-content {
       color: $scheduler-popup-content-color;
+    }
+
+    .sf-quickinfo-popup-footer {
+      background-color: $scheduler-popup-footer-bg-color;
     }
   }
 
@@ -217,4 +252,12 @@
       @include appointment-focus;
     }
   }
+
+    .sf-scheduler {
+      .sf-compact-header {
+        background: $scheduler-compact-header-bg-color;
+        border-bottom: 1px solid $scheduler-border-color;
+        color: $scheduler-compact-header-color;
+      }
+    }
 }

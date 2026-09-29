@@ -1,0 +1,493 @@
+@use 'theme-variables' as *;
+
+@include export-module('pivot-layout') {
+  .sf-pivot-mode-hint {
+    margin: 0;
+    padding: $pivot-spacing-16;
+    flex: 1;
+    line-height: $pivot-hint-line-height;
+  }
+  .sf-pivot-message {
+    padding: $pivot-message-padding;
+    border: $pivot-border-width solid $pivot-border-color;
+  }
+
+  .sf-pivot-row-label,
+  .sf-pivot-column-label {
+    display: inline-flex;
+    align-items: center;
+    gap: $pivot-label-gap;
+    min-width: 0;
+  }
+
+  .sf-pivot-column-label > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sf-pivot-expand {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: $pivot-expand-width;
+    height: $pivot-expand-height;
+    padding: 0;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+  }
+
+  .sf-pivot-expand svg {
+    width: $pivot-expand-icon-size;
+    height: $pivot-expand-icon-size;
+  }
+  .sf-pivot-grand-total {
+    font-weight: $pivot-font-weight-bold;
+  }
+
+  .sf-pivot-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .sf-pivot-member-filter .sf-dlg-content {
+    display: flex;
+    flex-direction: column;
+    gap: $pivot-spacing-8;
+  }
+
+  .sf-pivot-member-filter .sf-pivot-member-options {
+    display: flex;
+    flex-direction: column;
+    gap: $pivot-spacing-8;
+    max-height: $pivot-member-options-max-height;
+    overflow: auto;
+  }
+
+  .sf-pivot-member-options .sf-treeview {
+    background: transparent;
+  }
+  .sf-pivot-member-options .sf-treeview-item-content {
+    margin-inline-start: 0 !important;
+    padding-inline-start: 0;
+  }
+
+  .sf-pivot-member-options .sf-treeview-row-surface {
+    padding: $pivot-spacing-10 $pivot-member-row-padding-x;
+    box-shadow: none;
+  }
+
+  .sf-pivot-member-select-all {
+    padding-block: $pivot-spacing-8;
+    border-block-end: $pivot-border-width solid $pivot-border-color;
+  }
+
+  .sf-pivot-member-count {
+    padding-block-start: $pivot-spacing-6;
+  }
+
+  .sf-pivot-expand:focus-visible {
+    outline: $pivot-focus-width solid $pivot-accent;
+    outline-offset: $pivot-focus-offset;
+  }
+
+  .sf-pivot-workspace {
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+  }
+  .sf-pivot-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: auto;
+  }
+  .sf-pivot-workspace > .sf-pivot-panel {
+    display: flex;
+    flex: 0 0 $pivot-panel-width;
+    flex-direction: column;
+    gap: $pivot-spacing-8;
+    box-sizing: border-box;
+    width: $pivot-panel-width;
+    min-width: 0;
+    height: var(--sf-pivot-panel-height, auto);
+    max-height: var(--sf-pivot-panel-max-height, none);
+    min-height: 0;
+    padding: $pivot-spacing-8;
+    overflow: auto;
+    background: inherit;
+    border: $pivot-border-width solid $pivot-border-color;
+    font-size: $pivot-font-size;
+    line-height: $pivot-line-height;
+  }
+  .sf-pivot-panel.sf-collapsed {
+    flex-basis: $pivot-panel-collapsed-size;
+    width: $pivot-panel-collapsed-size;
+    padding-inline: $pivot-spacing-3;
+  }
+  .sf-pivot-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: $pivot-panel-header-min-height;
+    flex-shrink: 0;
+  }
+  .sf-pivot-panel .sf-pivot-action {
+    min-width: $pivot-action-size;
+    width: $pivot-action-size;
+    height: $pivot-action-size;
+    padding: 0;
+    flex-shrink: 0;
+    color: inherit;
+  }
+  .sf-pivot-panel .sf-pivot-action span {
+    font-size: $pivot-action-icon-size;
+  }
+  .sf-pivot-field-list {
+    overflow: auto;
+  }
+  .sf-pivot-available-field {
+    display: flex;
+    align-items: center;
+    gap: $pivot-available-field-gap;
+    flex: 1;
+    min-width: 0;
+  }
+  .sf-pivot-available-field .sf-treeview-item-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .sf-pivot-panel .sf-treeview-item-label {
+    font-size: $font-size-sm;
+  }
+  .sf-pivot-available-field .sf-pivot-action {
+    margin-inline-start: auto;
+  }
+  .sf-pivot-drag-handle {
+    cursor: grab;
+    color: inherit;
+    opacity: $pivot-drag-handle-opacity;
+    flex: 0 0 $pivot-drag-handle-size;
+    touch-action: none;
+    user-select: none;
+  }
+  .sf-pivot-drag-preview {
+    pointer-events: none;
+    padding: $pivot-spacing-6 $pivot-spacing-12;
+    background: $pivot-background;
+    border: $pivot-border-width solid $pivot-accent;
+    border-radius: $pivot-border-radius;
+    z-index: $pivot-drag-preview-z-index;
+    font-family: $pivot-font-family;
+    font-size: $pivot-font-size;
+  }
+  .sf-pivot-panel .sf-accordion {
+    display: contents;
+  }
+  .sf-pivot-panel .sf-accordion-trigger {
+    padding: $pivot-spacing-8 $pivot-spacing-2;
+    gap: $pivot-spacing-6;
+    font-size: $font-size-sm;
+    min-height: $pivot-panel-toolbar-min-height;
+    justify-content: flex-start;
+    text-align: start;
+  }
+  .sf-pivot-panel .sf-accordion-indicator {
+    margin-inline-start: auto;
+  }
+  .sf-pivot-panel .sf-accordion-content {
+    padding: 0;
+  }
+  .sf-pivot-axis-icon {
+    opacity: $pivot-axis-icon-opacity;
+  }
+  .sf-pivot-panel .sf-pivot-axis {
+    display: flex;
+    flex-direction: column;
+    gap: $pivot-spacing-4;
+    min-height: $pivot-axis-min-height;
+    padding: $pivot-spacing-4;
+    border: $pivot-border-width solid $pivot-border-color;
+    border-radius: $pivot-border-radius;
+  }
+  .sf-pivot-drop-hint {
+    padding: $pivot-spacing-8 $pivot-spacing-4;
+    opacity: $pivot-drop-hint-opacity;
+    font-size: $pivot-small-font-size;
+  }
+  .sf-pivot-field-chip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: $pivot-spacing-3;
+    min-width: 0;
+    border-radius: $pivot-border-radius;
+  }
+  .sf-pivot-field-chip > .sf-chip {
+    flex: 1;
+    min-width: 0;
+    max-width: calc(100% - $pivot-chip-controls-width);
+    margin: 0;
+    font-size: $pivot-font-size;
+  }
+  .sf-pivot-field-chip .sf-chip-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .sf-pivot-field-chip > .sf-pivot-aggregate {
+    flex: 1 0 100%;
+    width: 100%;
+    min-width: 0;
+    font-size: $pivot-small-font-size;
+  }
+  .sf-pivot-panel-actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: flex-end;
+    gap: $pivot-spacing-8;
+    padding: $pivot-spacing-8;
+    border-block-start: $pivot-border-width solid $pivot-border-color;
+  }
+  .sf-pivot-drop-valid {
+    outline: $pivot-border-width solid $pivot-accent;
+  }
+  .sf-pivot-drop-invalid {
+    outline: $pivot-border-width dashed currentColor;
+    cursor: not-allowed;
+  }
+  .sf-pivot-insert-before {
+    border-block-start: $pivot-focus-width solid $pivot-accent;
+  }
+  .sf-pivot-demo {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+  }
+  .sf-pivot-demo .sf-pivot-view {
+    height: 100%;
+  }
+  .sf-pivot-panel[dir='rtl'] .sf-pivot-panel-header > .sf-pivot-action {
+    transform: scaleX(-1);
+  }
+  .sf-pivot-panel[dir='rtl'] .sf-pivot-panel-header .sf-switch-wrapper {
+    direction: ltr;
+  }
+  // Compact tool-panel presentation: flat sections and one-line assignment rows.
+  .sf-pivot-workspace > .sf-pivot-panel {
+    gap: 0;
+    padding: 0;
+    background: $pivot-background;
+  }
+  .sf-pivot-panel .sf-pivot-panel-header {
+    padding: $pivot-spacing-4 $pivot-spacing-8;
+    min-height: $pivot-panel-toolbar-min-height;
+    border-block-end: $pivot-border-width solid $pivot-border-color;
+  }
+  .sf-pivot-panel .sf-pivot-search {
+    margin: $pivot-spacing-6 $pivot-spacing-8;
+    min-width: 0;
+    flex-shrink: 0;
+  }
+  // Share the remaining height equally; each region scrolls independently.
+  .sf-pivot-panel .sf-pivot-field-list,
+  .sf-pivot-panel .sf-accordion-panel {
+    flex: 1 1 0;
+    min-height: 0;
+    box-sizing: border-box;
+  }
+  .sf-pivot-panel .sf-pivot-field-list {
+    min-height: $pivot-field-list-min-height;
+    padding-inline: $pivot-spacing-8;
+    border-block-start: $pivot-border-width solid transparent;
+  }
+  // Only spacing is customized: retain native typography, icons and focus styles.
+  .sf-pivot-panel .sf-treeview-row-surface {
+    padding-block: $pivot-spacing-2;
+    padding-inline-start: $pivot-spacing-12;
+    padding-inline-end: 0;
+    box-shadow: none;
+  }
+  // Reserve the expander column even for leaves, so mixed/grouped catalogues
+  // share one checkbox column. Native checkbox and icon sizes are retained.
+  .sf-pivot-panel .sf-treeview-item > .sf-treeview-item-content {
+    display: grid;
+    grid-template-columns: $pivot-action-size auto minmax(0, 1fr);
+    align-items: center;
+    margin-inline-start: 0;
+  }
+  .sf-pivot-panel .sf-pivot-field-list .sf-treeview-item:not([aria-level='1']) > .sf-treeview-item-content {
+    margin-inline-start: calc($pivot-field-indent * min(var(--tree-level, 0), 1) +
+      $pivot-field-indent * max(var(--tree-level, 0) - 1, 0));
+  }
+  .sf-pivot-panel .sf-treeview-item-toggle {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .sf-pivot-panel .sf-treeview-item-checkbox {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .sf-pivot-panel .sf-pivot-available-field,
+  .sf-pivot-panel .sf-treeview-item-content > .sf-treeview-item-label {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .sf-pivot-panel .sf-pivot-flat-fields .sf-treeview-item-content {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .sf-pivot-panel .sf-pivot-flat-fields .sf-treeview-item-checkbox {
+    grid-column: 1;
+  }
+  .sf-pivot-panel .sf-pivot-flat-fields .sf-pivot-available-field {
+    grid-column: 2;
+  }
+  .sf-pivot-available-field > .sf-pivot-drag-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    width: $pivot-drag-handle-size;
+    line-height: 1;
+  }
+  .sf-pivot-panel .sf-pivot-available-field .sf-pivot-action {
+    opacity: 0;
+  }
+  .sf-pivot-panel .sf-pivot-available-field:hover .sf-pivot-action,
+  .sf-pivot-panel .sf-pivot-available-field:focus-within .sf-pivot-action {
+    opacity: 1;
+  }
+  .sf-pivot-panel .sf-accordion-panel {
+    min-height: $pivot-section-min-height;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 0;
+    border-block-start: $pivot-border-width solid $pivot-border-color;
+    border-radius: 0;
+  }
+  .sf-pivot-panel .sf-accordion-panel:has(.sf-accordion-trigger[aria-expanded='false']) {
+    flex: 0 0 auto;
+    min-height: 0;
+  }
+  .sf-pivot-panel .sf-accordion-header {
+    margin: 0;
+    flex-shrink: 0;
+  }
+  .sf-pivot-panel .sf-accordion-trigger {
+    min-height: $pivot-panel-header-min-height;
+    padding: $pivot-spacing-4 $pivot-spacing-8;
+    font-weight: $pivot-font-weight-medium;
+  }
+  .sf-pivot-panel .sf-accordion-content {
+    padding: $pivot-spacing-8;
+    min-height: 0;
+    overflow: auto;
+    flex: 1 1 0;
+  }
+  .sf-pivot-panel .sf-pivot-axis {
+    padding: 0;
+    gap: $pivot-spacing-4;
+    min-height: 100%;
+    border: 0;
+    border-radius: 0;
+    flex: none;
+  }
+  .sf-pivot-panel .sf-pivot-field-chip {
+    position: relative;
+    flex-wrap: nowrap;
+    gap: 0;
+    min-height: $pivot-action-size;
+    border-radius: $pivot-chip-border-radius;
+    background: $pivot-chip-background;
+  }
+  .sf-pivot-panel .sf-pivot-field-chip > .sf-pivot-drag-handle {
+    padding-inline: $pivot-spacing-5 $pivot-spacing-2;
+    flex-basis: $pivot-drag-handle-size;
+    font-size: $pivot-font-size;
+  }
+  .sf-pivot-panel .sf-pivot-field-chip > .sf-chip {
+    justify-content: flex-start;
+    flex: 1;
+    max-width: none;
+    height: $pivot-action-size;
+    min-height: $pivot-action-size;
+    padding: 0 $pivot-spacing-5;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    font-size: $pivot-font-size;
+    color: inherit;
+  }
+  .sf-pivot-panel .sf-pivot-field-chip .sf-chip-text {
+    flex: 1;
+    text-align: start;
+  }
+  .sf-pivot-panel .sf-pivot-field-chip .sf-chip-delete {
+    margin-inline-start: auto;
+    width: $pivot-chip-delete-size;
+    height: $pivot-chip-delete-size;
+  }
+  .sf-pivot-panel .sf-pivot-field-chip .sf-chip-delete svg {
+    width: $pivot-drag-handle-size;
+    height: $pivot-drag-handle-size;
+  }
+  .sf-pivot-panel .sf-pivot-field-chip > .sf-pivot-action {
+    width: $pivot-chip-action-size;
+    min-width: $pivot-chip-action-size;
+  }
+  .sf-pivot-panel .sf-pivot-field-chip > .sf-pivot-action span {
+    font-size: $pivot-chip-action-icon-size;
+  }
+  .sf-pivot-panel .sf-pivot-drop-hint {
+    padding: $pivot-spacing-6;
+    border: $pivot-border-width dashed $pivot-border-color;
+    border-radius: $pivot-border-radius;
+  }
+  @media (max-width: $pivot-mobile-breakpoint) {
+    .sf-pivot-workspace {
+      flex-direction: column;
+    }
+    .sf-pivot-main {
+      flex-basis: 0;
+      min-height: $pivot-mobile-main-min-height;
+    }
+    .sf-pivot-workspace > .sf-pivot-panel {
+      width: 100%;
+      flex: 0 1 auto;
+      max-height: var(--sf-pivot-panel-max-height, none);
+      border-inline-start: 0;
+      border-block-start: $pivot-border-width solid $pivot-border-color;
+    }
+    .sf-pivot-panel.sf-collapsed {
+      flex: 0 0 $pivot-panel-collapsed-size;
+      width: 100%;
+    }
+    .sf-pivot-panel.sf-collapsed .sf-pivot-panel-header {
+      justify-content: flex-end;
+    }
+  }
+}
+
+.sf-pivot-tooltip-content {
+  display: flex;
+  flex-direction: column;
+  gap: $pivot-tooltip-row-gap;
+  padding: $pivot-tooltip-padding;
+  line-height: $pivot-tooltip-line-height;
+  text-align: start;
+  overflow-wrap: anywhere;
+}

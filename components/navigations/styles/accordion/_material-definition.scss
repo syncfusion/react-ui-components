@@ -1,0 +1,41 @@
+@use '../../../base/styles/themes/variables' as *;
+
+$accordion-bg-color: $transparent !default;
+$accordion-text-color: rgb($content-text-color) !default;
+$accordion-border: 1px solid rgba($border-light) !default;
+$accordion-border-radius: $radius-8 !default;
+$accordion-borderless-border-radius: $radius-0 !default;
+
+$accordion-panel-border-bottom: 1px solid rgba($border-light) !default;
+$accordion-panel-last-border-bottom: 0 !default;
+
+$accordion-trigger-padding: $spacing-12 $spacing-16 !default;
+$accordion-font-size: $font-size-base !default;
+$accordion-font-weight: $font-weight-medium !default;
+$accordion-line-height: $line-height-base !default;
+$accordion-trigger-bg: $transparent !default;
+$accordion-trigger-color: rgb($content-text-color) !default;
+$accordion-trigger-focus-outline: $shadow-focus-ring1 !default;
+$accordion-trigger-focus-bg-color: $content-bg-color-focus !default;
+$accordion-trigger-hover-bg: $content-bg-color-hover !default;
+$accordion-trigger-hover-color: rgba($content-text-color-alt1) !default;
+$accordion-trigger-active-bg: $content-bg-color-pressed !default;
+$accordion-trigger-active-color: rgb($content-text-color) !default;
+$accordion-trigger-active-shadow: none !default;
+$accordion-trigger-open-bg-color: $content-bg-color-focus !default;
+$accordion-trigger-open-color: rgba($content-text-color-selected) !default;
+$accordion-trigger-disabled-bg-color: $transparent !default;
+$accordion-trigger-disabled-color: $content-text-color-disabled !default;
+
+$accordion-indicator-font-size: $font-size-xl !default;
+$accordion-indicator-color: rgba($icon-color) !default;
+$accordion-indicator-hover-color: rgba($content-text-color) !default;
+$accordion-indicator-active-color: rgba($icon-color) !default;
+$accordion-indicator-focus-color: rgba($content-text-color) !default;
+$accordion-indicator-disabled-color: $content-text-color-disabled !default;
+$accordion-indicator-open-color: rgba($content-text-color) !default;
+
+$accordion-content-padding: $spacing-16 !default;
+$accordion-content-font-weight: $font-weight-normal !default;
+$accordion-content-font-size: $font-size-base !default;
+$accordion-content-line-height: $line-height-base !default;

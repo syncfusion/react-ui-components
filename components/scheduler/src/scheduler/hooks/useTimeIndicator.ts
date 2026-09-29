@@ -22,7 +22,8 @@ export const useTimeIndicator: ({
     endHour,
     renderDates,
     onPositionUpdate,
-    timezone
+    timezone,
+    viewMode
 }: {
     showTimeIndicator: boolean;
     startHour: string;
@@ -30,6 +31,7 @@ export const useTimeIndicator: ({
     renderDates: Date[];
     onPositionUpdate?: (position: number, isWithinBounds: boolean) => void;
     timezone?: string;
+    viewMode?: string;
 }) => {
     position: number;
     currentTime: Date;
@@ -43,7 +45,8 @@ export const useTimeIndicator: ({
     endHour,
     renderDates,
     onPositionUpdate,
-    timezone
+    timezone,
+    viewMode
 }: {
     showTimeIndicator: boolean;
     startHour: string;
@@ -51,6 +54,7 @@ export const useTimeIndicator: ({
     renderDates: Date[];
     onPositionUpdate?: (position: number, isWithinBounds: boolean) => void;
     timezone?: string;
+    viewMode?: string;
 }) => {
     const [position, setPosition] = useState<number>(0);
     const [currentTime, setCurrentTime] = useState<Date>(new Date());
@@ -92,9 +96,16 @@ export const useTimeIndicator: ({
         const endTotalMinutes: number = endHourDate.getHours() === 0 && endHourDate.getMinutes() === 0 ?
             HOURS_PER_DAY * MINUTES_PER_HOUR : endHourDate.getHours() * MINUTES_PER_HOUR + endHourDate.getMinutes();
         const totalSchedulerMinutes: number = endTotalMinutes - startTotalMinutes;
-        const positionPercentage: number = (diffInMinutes / totalSchedulerMinutes) * 100;
+        let positionPercentage: number = (diffInMinutes / totalSchedulerMinutes) * 100;
+        if (viewMode === 'timeline') {
+            const currentDayIndex: number = renderDates.findIndex((date: Date) => DateService.isSameDay(date, currentTime));
+            if (currentDayIndex === -1) { return 0; }
+            const totalRangeMinutes: number = totalSchedulerMinutes * renderDates.length;
+            const positionMinutes: number = (currentDayIndex * totalSchedulerMinutes) + diffInMinutes;
+            positionPercentage = (positionMinutes / totalRangeMinutes) * 100;
+        }
         return Math.max(0, Math.min(100, positionPercentage));
-    }, [startHour, endHour, timezone]);
+    }, [startHour, endHour, timezone, viewMode, renderDates]);
 
     /**
      * Updates the position of the time indicator.

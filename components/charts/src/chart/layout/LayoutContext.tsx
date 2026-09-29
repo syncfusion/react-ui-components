@@ -2,7 +2,7 @@
 import * as React from 'react';
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ChartRenderer } from '../renderer/ChartRenderer';
-import { AxisLabelClickEvent, ChartMouseEvent, PointClickEvent, ResizeEvent, ChartSeriesProps, ChartLocationProps, ChartStripLineProps, ChartAnnotationProps, BaseSelection } from '../base/interfaces';
+import { AxisLabelClickEvent, ChartMouseEvent, PointClickEvent, ResizeEvent, ChartSeriesProps, ChartLocationProps, ChartStripLineProps, ChartAnnotationProps, BaseSelection, ChartTrendlineProps } from '../base/interfaces';
 import { ChartTitleRenderer } from '../renderer/ChartTitleRenderer';
 import { ChartSubTitleRenderer } from '../renderer/ChartSubtitleRender';
 import { ChartLegendRenderer, CustomLegendRenderer } from '../renderer/LegendRenderer/ChartLegendRenderer';
@@ -39,7 +39,10 @@ import { ChartScrollbarsRenderer } from '../renderer/Zooming/scrollbarUtils';
 import { click as triggerMultiLevelLabelClick } from '../renderer/AxesRenderer/ChartMultiLevelLabelRender';
 import { Points } from '../chart-area/chart-interfaces';
 import { CHART_TELEMETRY_KEY, setChartTelemetryFeatureList } from '../base/telemetry';
-
+import {
+    TextOption
+} from '../chart-area/chart-interfaces';
+import { renderAxisLabelTemplates } from '../renderer/AxesRenderer/AxisTypeRenderer/AxisLabelTemplateHelper';
 /**
  * Represents a mapping between layout keys and their corresponding layout state or chart instance.
  *
@@ -63,12 +66,16 @@ export const LayoutProvider: React.FC = () => {
     const [phase, setPhase] = useState<'measuring' | 'rendering'>('measuring');
     const { render, chartProps, chartTitle, chartSubTitle, chartArea, chartLegend, chartZoom,
         parentElement, rows, columns, chartSeries, chartStackLabels, axisCollection, chartSelection, chartHighlight
-        , chartTooltip, chartCrosshair, chartAnnotation } = useContext(ChartContext);
+        , chartTooltip, chartCrosshair, chartAnnotation, chartIndicators } = useContext(ChartContext);
     const measuredKeysRef: React.RefObject<Set<string>> = useRef<Set<string>>(new Set());
     const layoutRef: React.RefObject<LayoutMap> = useRef<LayoutMap>({});
     const striplineVisibility: boolean = axisCollection.some(
         (axis: AxisModel) => Array.isArray(axis.stripLines) &&
             axis.stripLines.some((stripLine: ChartStripLineProps) => stripLine?.visible === true)
+    );
+    const trendlineVisibility: boolean = chartSeries.some(
+        (series: ChartSeriesProps) => Array.isArray((series as SeriesProperties)?.trendlines) &&
+            ((series as SeriesProperties).trendlines as ChartTrendlineProps[]).length > 0
     );
     const expectedKeys: string[] = useMemo(() => {
         const keys: string[] = ['Chart', 'ChartArea', 'ChartAxis'];
@@ -122,6 +129,7 @@ export const LayoutProvider: React.FC = () => {
     const legendRef: React.RefObject<SVGGElement | null> = useRef<SVGGElement>(null);
     const trackballRef: React.RefObject<SVGGElement | null> = useRef<SVGGElement>(null);
     const [animationProgress, setAnimationProgress] = useState(0);
+    const [axisLabelTemplates, setAxisLabelTemplates] = useState<TextOption[]>([]);
 
     // Add a ref to track if mouse is currently inside the chart
     const [isMouseInside, setIsMouseInside] = useState(false);
@@ -143,6 +151,53 @@ export const LayoutProvider: React.FC = () => {
             setPhase('rendering');
         }
     }, [expectedKeys]);
+    useLayoutEffect(() => {
+        if (phase !== 'rendering') {
+            return;
+        }
+
+        const templateOptions: TextOption[] = [];
+        const chart: Chart = layoutRef.current.chart as Chart;
+
+        chart?.axisCollection?.forEach((axis: AxisModel) => {
+            axis.axislabelOptions?.forEach((option: TextOption) => {
+                if (option.isAxisLabelTemplate && option.templateHtml) {
+                    templateOptions.push({
+                        ...option,
+                        templateSize: option.templateSize
+                            ? { ...option.templateSize }
+                            : undefined
+                    });
+                }
+            });
+        });
+
+        setAxisLabelTemplates((previous: TextOption[]) => {
+            if (previous.length !== templateOptions.length) {
+                return templateOptions;
+            }
+
+            const isSame: boolean = previous.every(
+                (previousOption: TextOption, index: number) => {
+                    const currentOption: TextOption | undefined = templateOptions[index as number];
+
+                    return currentOption !== undefined &&
+                        previousOption.id === currentOption.id &&
+                        previousOption.templateHtml === currentOption.templateHtml &&
+                        previousOption.x === currentOption.x &&
+                        previousOption.y === currentOption.y &&
+                        previousOption.anchor === currentOption.anchor &&
+                        previousOption.labelRotation === currentOption.labelRotation &&
+                        previousOption.opacity === currentOption.opacity &&
+                        previousOption.templateSize?.width === currentOption.templateSize?.width &&
+                        previousOption.templateSize?.height === currentOption.templateSize?.height;
+                }
+            );
+
+            return isSame ? previous : templateOptions;
+        });
+    }, [phase, axisCollection]);
+
     const [disableAnimation, setDisableAnimation] = useState(false);
 
     useEffect(() => {
@@ -166,7 +221,9 @@ export const LayoutProvider: React.FC = () => {
             series: chartSeries.length > 0,
             stackLabels: !!chartStackLabels?.visible,
             stripLines: striplineVisibility,
-            annotation: chartAnnotation.length > 0
+            annotation: chartAnnotation.length > 0,
+            trendline: trendlineVisibility,
+            indicator: chartIndicators.length > 0
         });
     }, [phase]);
 
@@ -683,7 +740,6 @@ export const LayoutProvider: React.FC = () => {
             case 'Space':
                 if (targetId?.indexOf('_chart_legend_') > -1 || layoutRef.current.chartSelection) {
                     chart.isLegendClicked = true;
-                    (chartSeries as unknown as SeriesProperties).visible = false;
 
                     const clickEvent: MouseEvent = new MouseEvent('click', {
                         bubbles: true,
@@ -921,6 +977,9 @@ export const LayoutProvider: React.FC = () => {
      */
     const chartResize: () => boolean = () => {
         const chart: Chart = layoutRef.current.chart as Chart;
+        if (!chart) {
+            return false;
+        }
         chart.animateSeries = false;
         const arg: ResizeEvent = {
             currentSize: {
@@ -957,12 +1016,13 @@ export const LayoutProvider: React.FC = () => {
 
             chart.availableSize = {
                 height: stringToNumber(chartProps.height, measuredHeight) || measuredHeight || 450,
-                width: stringToNumber(chartProps.width, measuredWidth) || measuredWidth
+                width: (chartProps.width && chartProps.width.indexOf('%') > -1) ? measuredWidth :
+                    (stringToNumber(chartProps.width, measuredWidth) || measuredWidth)
             };
             parentElement.availableSize = arg.currentSize = chart.availableSize;
             triggerRemeasure();
             chartProps.onResize?.(arg);
-        }, 500);
+        }, 100);
 
         return false;
     };
@@ -984,6 +1044,28 @@ export const LayoutProvider: React.FC = () => {
         chartContainer.addEventListener('keydown', chartKeyDown);
         chartContainer.addEventListener('keyup', chartKeyUp);
         window.addEventListener('resize', chartResize);
+
+        // Percentage widths (e.g. '100%', '90%') are resolved from the container's
+        // clientWidth, which only updates when the container element itself is resized.
+        // A layout change that isn't accompanied by a window 'resize' event — for example,
+        // toggling a sibling panel that reflows the flex/grid layout the chart sits in —
+        // never fires the listener above, so the chart width stays stale until the window
+        // itself is resized. Observing the container directly catches those layout-only
+        // width changes too. This only runs for percentage widths; fixed/pixel widths do
+        // not depend on the container's measured size, so that scenario is left untouched.
+        let containerResizeObserver: ResizeObserver | undefined;
+        if (typeof ResizeObserver !== 'undefined' && chartProps.width && chartProps.width.indexOf('%') > -1) {
+            let previousObservedWidth: number = chartContainer.clientWidth;
+            containerResizeObserver = new ResizeObserver((entries: ResizeObserverEntry[]) => {
+                const currentObservedWidth: number = entries[0]?.contentRect?.width ?? chartContainer.clientWidth;
+                if (currentObservedWidth !== previousObservedWidth) {
+                    previousObservedWidth = currentObservedWidth;
+                    chartResize();
+                }
+            });
+            containerResizeObserver.observe(chartContainer);
+        }
+
         return () => {
             // Cleanup event listeners
             chartContainer.removeEventListener('mousemove', handleMouseMove as EventListener);
@@ -1000,6 +1082,7 @@ export const LayoutProvider: React.FC = () => {
             chartContainer.removeEventListener('keydown', chartKeyDown);
             chartContainer.removeEventListener('keyup', chartKeyUp);
             window.removeEventListener('resize', chartResize);
+            containerResizeObserver?.disconnect();
         };
     }, [parentElement, handleMouseMove]);
 
@@ -1024,6 +1107,7 @@ export const LayoutProvider: React.FC = () => {
                 id={`${parentElement?.element?.id}_Secondary_Element`}
             >
                 <NoDataTemplateRenderer />
+                {renderAxisLabelTemplates(axisLabelTemplates)}
                 {renderDataLabelTemplates(layoutRef.current.chart as Chart, dataLabelOptionsByChartId, animationProgress)}
                 {chartAnnotation.length > 0 &&
                     renderChartAnnotations(

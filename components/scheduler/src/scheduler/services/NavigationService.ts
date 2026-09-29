@@ -64,14 +64,22 @@ export class NavigationService {
 
         switch (viewType) {
         case 'Day':
+        case 'TimelineDay':
             if (showWeekend === false) {
                 return this.addWorkDays(currentDate, interval, direction, workDays);
             }
             return DateService.addDays(currentDate, direction * interval);
 
+        case 'TimelineWeek':
+        case 'TimelineWorkWeek':
+            return DateService.addDays(currentDate, direction * 7 * interval);
+
         case 'Week':
         case 'WorkWeek':
             return DateService.addDays(currentDate, direction * 7 * interval);
+
+        case 'TimelineMonth':
+            return DateService.addMonths(currentDate, direction * interval);
 
         case 'Month':
             if (displayDate || numberOfWeeks > 0) {

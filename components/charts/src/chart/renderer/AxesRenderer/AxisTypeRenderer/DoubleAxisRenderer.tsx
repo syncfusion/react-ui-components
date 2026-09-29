@@ -4,6 +4,7 @@ import { getActualDesiredIntervalsCount, getMinPointsDelta, lineBreakLabelTrim, 
 import { calculateVisibleRangeOnZooming, getMaxLabelWidth } from './AxisUtils';
 import { AxisLabelContentFunction, AxisTextStyle } from '../../../chart-axis/base';
 import { AxisModel, Chart, DoubleRangeType, SeriesProperties, ChartSizeProps, TextStyleModel } from '../../../chart-area/chart-interfaces';
+import { createAxisLabelTemplateElement, isHtmlElement, resolveAxisLabelTemplate } from './AxisLabelTemplateHelper';
 
 let isColumn: number = 0;
 let isStacking: boolean | undefined = false;
@@ -562,12 +563,29 @@ export function applyLabelContentCallback(
     value: number,
     text: string,
     axis: AxisModel
-): string | boolean {
+): string | boolean | HTMLElement {
+    const template: string | Function | undefined = axis.labelStyle?.template;
+    if (template) {
+        const templateElement: HTMLElement | null = createAxisLabelTemplateElement(template, value, text);
+        if (templateElement) {
+            return templateElement;
+        }
+    }
+
     const contentCallback: AxisLabelContentFunction = axis.labelStyle?.formatter as AxisLabelContentFunction;
     if (contentCallback && typeof contentCallback === 'function') {
         try {
-            const customProps: string | boolean = contentCallback(value, text);
-            return customProps;
+            const customProps: string | boolean | HTMLElement = contentCallback(value, text);
+            if (customProps === false || customProps === true) {
+                return customProps;
+            }
+            if (typeof customProps === 'string') {
+                return customProps.length ? customProps : text;
+            }
+            if (isHtmlElement(customProps)) {
+                return customProps;
+            }
+            return text;
         } catch (error) {
             return text;
         }
@@ -587,24 +605,44 @@ export function applyLabelContentCallback(
  */
 export function triggerLabelRender(tempInterval: number, text: string, labelStyle: AxisTextStyle, axis: AxisModel
 ): void {
-    const customText: string | boolean = applyLabelContentCallback(tempInterval, text, axis);
-    if (typeof customText !== 'boolean') {
+    const customText: string | boolean | HTMLElement = applyLabelContentCallback(tempInterval, text, axis);
+    if (customText !== false) {
+        const isTemplate: boolean = isHtmlElement(customText);
+        const templateData: {
+            html: string;
+            text: string;
+            size: ChartSizeProps;
+        } = isTemplate ? resolveAxisLabelTemplate(customText as HTMLElement, text) : {
+            html: '',
+            text: typeof customText === 'string' ? customText : text,
+            size: { width: 0, height: 0 }
+        };
+        const labelText: string = isTemplate ? templateData.text : (typeof customText === 'string' ? customText : text);
         const isLineBreakLabels: boolean = text.indexOf('<br>') !== -1;
-        const formattedText: string | string[] = (axis.labelStyle.enableTrim)
+        const formattedText: string | string[] = (axis.labelStyle.enableTrim && !isTemplate)
             ? (isLineBreakLabels
                 ? lineBreakLabelTrim(axis.labelStyle.maxLabelWidth as number,
-                                     customText as string, labelStyle, axis.chart.themeStyle.axisLabelFont)
-                : useTextTrim(axis.labelStyle.maxLabelWidth as number, customText as string,
+                                     labelText, labelStyle, axis.chart.themeStyle.axisLabelFont)
+                : useTextTrim(axis.labelStyle.maxLabelWidth as number, labelText,
                               labelStyle as TextStyleModel, axis.chart.enableRtl, axis.chart.themeStyle.axisLabelFont))
-            : customText;
+            : labelText;
         axis.visibleLabels.push({
             text: formattedText,
             value: tempInterval,
             labelStyle: labelStyle,
-            size: { width: 0, height: 0 },
-            breakLabelSize: { width: 0, height: 0 },
+            size: isTemplate ? templateData.size : { width: 0, height: 0 },
+            breakLabelSize: isTemplate ? templateData.size : { width: 0, height: 0 },
             index: 1,
-            originalText: customText as string
+            originalText: labelText,
+            templateHtml: isTemplate ? templateData.html : undefined,
+            templateText: isTemplate ? templateData.text : undefined,
+            templateSize: isTemplate ? templateData.size : undefined,
+            isAxisLabelTemplate: isTemplate,
+            template: isTemplate ? {
+                html: templateData.html,
+                text: templateData.text,
+                size: templateData.size
+            } : undefined
         });
     }
 }

@@ -755,10 +755,18 @@ export const TooltipRenderer: React.FC<ChartTooltipProps> = (props: ChartTooltip
     /**
      * Determines the color for a data point in a series.
      *
+     * If the series is painted with a gradient, the returned value is the
+     * `url(#…)` reference cached on `series.gradientFill` by the series
+     * renderer, so the tooltip marker matches the series fill exactly.
+     * Otherwise the regular point / marker / interior fallback is used.
+     *
      * @param {PointData} data - The data object containing point and series information.
-     * @returns {string} The determined color for the data point.
+     * @returns {string} The determined color or gradient URL for the data point.
      */
     function findColor(data: PointData): string {
+        if (data.series.gradientFill) {
+            return data.series.displayGradientFill || data.series.gradientFill;
+        }
         return data.point.color && data.point.color !== '#ffffff' ? data.point.color :
             data.point.interior || data.series.marker?.fill || data.series.interior;
     }

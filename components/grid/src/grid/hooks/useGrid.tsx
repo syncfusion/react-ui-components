@@ -11,75 +11,105 @@ import {
     MouseEvent,
     FocusEvent,
     Dispatch,
-    SetStateAction
+    SetStateAction,
+    Children
 } from 'react';
+import { isNullOrUndefined, formatUnit, getValue, setValue, extend } from '@syncfusion/react-base/src/util';
+import { closest, removeClass, createElement } from '@syncfusion/react-base/src/dom';
+import { Browser } from '@syncfusion/react-base/src/browser';
+import { IL10n, L10n } from '@syncfusion/react-base/src/l10n';
+import { preRender } from '@syncfusion/react-base/src/component';
+import { useProviderContext } from '@syncfusion/react-base/src/provider';
+import { SanitizeHtmlHelper } from '@syncfusion/react-base/src/sanitize-helper';
+import { initializeTelemetry } from '@syncfusion/react-base/src/telemetry';
 import {
-    Browser,
-    closest,
-    isNullOrUndefined,
-    formatUnit,
-    getValue,
-    IL10n,
-    L10n,
-    removeClass,
-    useProviderContext,
-    SanitizeHtmlHelper,
-    createElement,
-    preRender,
-    initializeTelemetry
-} from '@syncfusion/react-base';
-import { useValueFormatter, createServiceLocator } from '../services';
-import { Query, DataManager, DataResult, QueryOptions, ReturnType as DataReturnType } from '@syncfusion/react-data';
+    SCROLL_MODE_OVERRIDE_MESSAGE,
+    DISABLE_ROW_DOM_VIRTUALIZATION_MESSAGE,
+    AUTO_HEIGHT_OVERRIDE_MESSAGE,
+    INFINITE_SCROLL_LOCAL_DATA_MESSAGE,
+    AGGREGATE_INFINITE_SCROLL_MESSAGE,
+    GROUP_INFINITE_SCROLL_MESSAGE,
+    PAGER_WITH_SERVER_VIRTUAL_INFINITE_SCROLL_MESSAGE
+} from '../constants/warnings';
+import { createServiceLocator } from '../services/service-locator';
+import { useValueFormatter } from '../services/value-formatter';
 import {
     MutableGridBase,
     IValueFormatter,
     DataRequestEvent,
-    GridLine,
     IRow,
-    ClipMode,
     DataChangeRequestEvent,
     PendingState,
-    FilterPredicates,
-    ValueType,
+    ValueType
+} from '../types/interfaces';
+import {
+    GridLine,
+    ClipMode,
     SelectionMode,
-    UseCommandColumnResult,
     Theme,
     ThemeDefaults,
-    VirtualizationSettings,
-    VirtualDomType,
-    VirtualBufferSettings,
     AutoSelectMode,
     LoadingIndicatorType,
-    CellSelectionModel,
-    ContextMenuSettings,
     ActionType,
-    GroupedData, GroupSettings,
-    GroupType
-} from '../types';
+    GroupType,
+    ScrollMode,
+    GroupSummaryPosition,
+    ResizeMode,
+    AutoFitMode,
+    ColumnType,
+    PageSizeMode
+} from '../types/enum';
+import { GroupedData, GroupSettings, UseGroupResult } from '../types/grouping.interfaces';
+import { ContextMenuSettings, contextMenuModule } from '../types/context.interfaces';
+import { UseCommandColumnResult } from '../types/command.interfaces';
+import { CellSelectionModel } from '../types/cell-selection.interfaces';
 import { selectionModule, SelectionSettings } from '../types/selection.interfaces';
 import { SortDescriptor, SortSettings, SortModule } from '../types/sort.interfaces';
-import { GridRef, TextWrapSettings, RowInfo, IGrid, IGridBase, RecordDoubleClickEvent, LoadingIndicatorSettings } from '../types/grid.interfaces';
-import { filterModule, FilterSettings } from '../types/filter.interfaces';
+import { GridRef, TextWrapSettings, RowInfo, IGrid, IGridBase, RecordDoubleClickEvent, LoadingIndicatorSettings, RowNumberSettings } from '../types/grid.interfaces';
+import { filterModule, FilterSettings, FilterPredicates } from '../types/filter.interfaces';
 import { editModule, EditSettings } from '../types/edit.interfaces';
 import { ColumnProps } from '../types/column.interfaces';
-import { AggregateRowProps } from '../types/aggregate.interfaces';
+import { aggregateModule, AggregateRowProps, AggregatesComponent } from '../types/aggregate.interfaces';
 import { CellFocusEvent, FocusedCellInfo, IFocusMatrix, Matrix } from '../types/focus.interfaces';
-import { PagerArgsInfo, PageSettings } from '../types/page.interfaces';
+import { PagerArgsInfo, pagerModule, PageSettings } from '../types/page.interfaces';
 import { searchModule, SearchSettings } from '../types/search.interfaces';
 import { ToolbarAPI } from '../types/toolbar.interfaces';
 import { ServiceLocator, UseDataResult, GridResult, UseAggregateSelectionResult } from '../types/interfaces';
+import { Clipboard, ClipboardSettings } from '../types/clipboard.interfaces';
 import {
-    useAggregates, useColumns, useSelection, useSort, useSearch, useEdit, useToolbar,
-    useFocusStrategy, useFilter, useAggregateSelection, useCellSelection, useGroup,
-    UseGroupResult
-} from './index';
-import { useData } from '../models';
-import { iterateArrayOrObject, setGridTelemetryFeatureList } from '../utils';
-import { ITooltip } from '@syncfusion/react-popups';
-import { useCommandColumn } from './useCommandColumn';
-import { ScrollMode, VirtualSettings } from '../types';
+    iterateArrayOrObject,
+    setGridTelemetryFeatureList,
+    setGridModuleInjectionWarning,
+    applyColumnWidthConstraints,
+    executeGridAsyncAction,
+    dispatchGridCancelBegin,
+    clearChildGridLocalStorage
+} from '../utils/utils';
+import { ITooltip } from '@syncfusion/react-popups/src/tooltip';
+import { VirtualSettings, VirtualizationSettings, VirtualDomType, VirtualBufferSettings } from '../types/virtualization.interface';
 import { InfiniteScrollState } from '../types/infinite-scroll.interface';
 import { DetailRowTemplate, RowCollapseEvent, RowExpandEvent } from '../types/master-detail';
+import { columnChooserModule } from '../types/column-chooser.interface';
+import { useData } from '../models/useData';
+import { useAggregateSelection } from './useAggregateSelection';
+import { StagedRowData, UseBatchEditResult } from '../types/batch-edit.interfaces';
+import { useCellSelection } from './useCellSelection';
+import { useFocusStrategy } from './useFocusStrategy';
+import { useColumns } from './useRender';
+import { useSort } from './useSort';
+import { useSelection } from './useSelection';
+import { DataManager, DataUtil, Query, QueryOptions, DataResult, ReturnType as DataReturnType, AdaptorOptions, ODataAdaptor, WebApiAdaptor, CacheAdaptor, WebMethodAdaptor, UrlAdaptor } from '@syncfusion/react-data';
+import { ColumnResizeModule, ResizeSettings } from '../types/resize.interfaces';
+import { ColumnAutoFitModule } from '../types/auto-fit.interfaces';
+import { AutoFill, AutoFillSettings } from '../types/autofill.interfaces';
+import { detailGridModule } from '../types/detail-grid.interfaces';
+import { ColumnReorderModule, ReorderSettings } from '../types/reorder.interfaces';
+import { PinningModuleResult, PinningSettings } from '../types/pinning.interfaces';
+import { PinScope } from '../types/enum';
+import { useUndoRedo } from './useUndoRedo';
+import { UseUndoRedoResult } from '../types/undoredo.interfaces';
+import { ITreeDataSettings, ITreeDataResult, TreeGridRow } from '../types/treeData.interfaces';
+import { FormulaModuleResult } from '../types/formula.interfaces';
 
 /**
  * Default localization strings for the grid
@@ -96,6 +126,12 @@ const defaultLocale: Record<string, string> = {
     printButtonLabel: 'Print',
     pdfButtonLabel: 'PDF Export',
     excelButtonLabel: 'Excel Export',
+    selectRowsToEdit: 'Select rows to edit',
+    editRecordDetails: 'Edit Record Details',
+    columnsToolPanelLabel: 'Columns',
+    filtersToolPanelLabel: 'Filters',
+    editToolPanelLabel: 'Edit',
+    customToolPanelLabel: 'Custom',
     updateButtonLabel: 'Update',
     deleteButtonLabel: 'Delete',
     editRowLabel: 'Edit this row',
@@ -105,6 +141,8 @@ const defaultLocale: Record<string, string> = {
     commandActionsLabel: 'Command actions',
     searchButtonLabel: 'Search',
     unsavedChangesConfirmation: 'Unsaved changes will be lost. Are you sure you want to continue?',
+    batchSaveConfirmation: 'Are you sure you want to save changes?',
+    batchCancelConfirmation: 'Are you sure you want to cancel the changes?',
     noRecordsEditMessage: 'No records selected for edit operation',
     noRecordsDeleteMessage: 'No records selected for delete operation',
     okButtonLabel: 'OK',
@@ -118,8 +156,8 @@ const defaultLocale: Record<string, string> = {
     deleteAllSelectedRecordsFromLoadedPages: 'Delete all {0} selected records from loaded pages',
     deleteAllSelectedRecordsFromLoadedPagesDescription: 'Removes records from the current page along with {0} additional selections from loaded pages',
     deleteAllSelectedRecordsFromLoadedPagesDescriptionNoCurrentPage: 'Removes {0} record{1} from loaded pages',
-    SelectAllRows: 'Select all rows',
-    SelectRow: 'Select row',
+    selectAllRows: 'Select all rows',
+    selectRow: 'Select row',
     startsWith: 'Starts With',
     doesNotStartWith: 'Does Not Start With',
     like: 'Like',
@@ -144,29 +182,29 @@ const defaultLocale: Record<string, string> = {
     detailsOfLabel: 'Details of',
     recordFormLabel: 'Record Form',
     columnHeaderLabel: 'Column header',
-    SelectAll: 'Select All',
-    NoMatches: 'No matches found',
-    ChooseColumns: 'Choose Column',
-    NoResult: 'No matches found',
-    ClearFilter: 'Clear Filter',
-    Clear: 'Clear',
-    SortAtoZ: 'Sort A to Z',
-    SortZtoA: 'Sort Z to A',
-    SortByOldest: 'Sort by Oldest',
-    SortByNewest: 'Sort by Newest',
-    SortSmallestToLargest: 'Sort Smallest to Largest',
-    SortLargestToSmallest: 'Sort Largest to Smallest',
-    AddCurrentSelection: 'Add current selection to filter',
-    Blanks: 'Blanks',
-    OKButton: 'OK',
-    CancelButton: 'Cancel',
-    Primary: 'Default',
+    selectAll: 'Select All',
+    noMatches: 'No matches found',
+    chooseColumns: 'Choose Column',
+    noResult: 'No matches found',
+    clearFilter: 'Clear Filter',
+    clear: 'Clear',
+    sortAtoZ: 'Sort A to Z',
+    sortZtoA: 'Sort Z to A',
+    sortByOldest: 'Sort by Oldest',
+    sortByNewest: 'Sort by Newest',
+    sortSmallestToLargest: 'Sort Smallest to Largest',
+    sortLargestToSmallest: 'Sort Largest to Smallest',
+    addCurrentSelection: 'Add current selection to filter',
+    blanks: 'Blanks',
+    oKButton: 'OK',
+    cancelButton: 'Cancel',
+    primary: 'Default',
     advanced: 'Advanced',
     enterValue: 'Enter value',
     and: 'AND',
     or: 'OR',
-    FilterTrue: 'True',
-    FilterFalse: 'False',
+    filterTrue: 'True',
+    filterFalse: 'False',
     editRecordLabel: 'Edit Record',
     deleteRecordLabel: 'Delete Record',
     firstPageLabel: 'First Page',
@@ -188,12 +226,50 @@ const defaultLocale: Record<string, string> = {
     trueCountLabel: 'True Count',
     falseCountLabel: 'False Count',
     customLabel: 'Custom',
-    CheckBox: 'Check Box',
-    Expanded: 'Expanded',
-    Collapsed: 'Collapsed',
+    expandAllGroups: 'Expand all groups',
+    collapseAllGroups: 'Collapse all groups',
+    columnChooser: 'Columns',
+    pinColumnLabel: 'Pin Column',
+    pinToLeftLabel: 'Pin to Left',
+    pinToRightLabel: 'Pin to Right',
+    unpinColumnLabel: 'Unpin Column',
+    pinRowLabel: 'Pin Row',
+    unpinRowLabel: 'Unpin Row',
+    pinToTopLabel: 'Pin to Top',
+    pinToBottomLabel: 'Pin to Bottom',
+    checkBox: 'Check Box',
+    expanded: 'Expanded',
+    collapsed: 'Collapsed',
     singleColumnGroupLabel: 'Group',
+    singleColumnUnGroupLabel: 'UnGroup',
     groupDropAreaLabel: 'Group drop area',
-    groupDropAreaHintText: 'Drag a column header here to group its column'
+    groupDropAreaHintText: 'Drag a column header here to group its column',
+    groupDropAreaTitle: 'Row Groups',
+    aggregateDropAreaLabel: 'Aggregate drop area',
+    aggregateDropAreaTitle: 'Values',
+    columnChooserGroupDropAreaHintText: 'Drag here to group its column',
+    columnChooserAggregateDropAreaHintText: 'Drag here to aggregate',
+    filterLabel: 'Filter',
+    aggregateLabel: 'Aggregate',
+    chartLabel: 'Chart',
+    barChartLabel: 'Bar Chart',
+    barLabel: 'Bar',
+    stackingBarLabel: 'Stacked Bar',
+    stackingBar100Label: 'Stacked Bar 100%',
+    pieLabel: 'Pie Chart',
+    columnChartLabel: 'Column Chart',
+    columnLabel: 'Column',
+    stackingColumnLabel: 'Stacked Column',
+    stackingColumn100Label: 'Stacked Column 100%',
+    lineChartLabel: 'Line Chart',
+    lineLabel: 'Line',
+    stackingLineLabel: 'Stacked Line',
+    stackingLine100Label: 'Stacked Line 100%',
+    areaChartLabel: 'Area Chart',
+    areaLabel: 'Area',
+    stackingAreaLabel: 'Stacked Area',
+    stackingArea100Label: 'Stacked Area 100%',
+    scatterLabel: 'Scatter Chart'
 };
 
 /**
@@ -207,13 +283,16 @@ const CSS_CLASS_NAMES: Record<string, string> = {
     GRID_HOVER: 'sf-row-hover',
     MAC_SAFARI: 'sf-mac-safari',
     MIN_HEIGHT: 'sf-row-min-height',
-    HIDE_LINES: 'sf-hide-lines'
+    HIDE_LINES: 'sf-hide-lines',
+    STACKED_HEADER: 'sf-stacked-header-grid'
 };
 
 const KEY_CODES: Record<string, number> = {
     ALT_J: 74,
     ALT_W: 87,
-    ENTER: 13
+    ENTER: 13,
+    LEFT_ARROW: 37,
+    RIGHT_ARROW: 39
 };
 
 /**
@@ -289,20 +368,92 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
     const [isInitialLoad, setInitialLoad] = useState(true);
     const isInitialBeforePaint: RefObject<boolean> = useRef(true);
     const tooltipContent: RefObject<string> = useRef('');
-    const aggregates: AggregateRowProps[] = useAggregates<T>(props, gridRef);
+    const resizeHandlePointerDownTimeout: RefObject<NodeJS.Timeout | null> = useRef(null);
+    const childArray: ReactElement[] = Array.isArray(props.children)
+        ? props.children as ReactElement[]
+        : Children.toArray(props.children) as ReactElement[];
+    const directiveAggregates: ReactElement | undefined = childArray.find((child: ReactElement) => {
+        return child && !!(child.type as AggregatesComponent)?.AggregateModule;
+    });
+    const aggregateModule: aggregateModule = (props?.modules?.GridAllModules ?? props?.modules ??
+        (directiveAggregates?.type as AggregatesComponent))?.AggregateModule?.<T>(props, gridRef, directiveAggregates);
+    const aggregates: AggregateRowProps[] = useMemo(() => aggregateModule?.aggregates ?? [], [aggregateModule?.aggregates]);
 
-
-
-
+    // Update the `currentPage` state value with the `pageSettings` changes
+    useEffect(() => {
+        if (props.pageSettings?.currentPage && currentPage !== props.pageSettings?.currentPage) {
+            gridRef.current.goToPage?.(props.pageSettings?.currentPage);
+        }
+    }, [props.pageSettings]);
+    const [currentPage, setCurrentPage] = useState<number>(props.pageSettings?.currentPage || 1);
     const [currentViewData, setCurrentViewData] = useState<T[]>([]);
+
+    const [totalRecordsCount, setTotalRecordsCount] = useState<number>(props.pageSettings?.estimatedTotalRecordsCount || 0);
+    // Initialize tree data settings based on props or use default values
+
+    const isRemoteData: (props:  Partial<IGridBase<T>>) => boolean = useCallback((props:  Partial<IGridBase<T>>) => {
+        if (props.dataSource instanceof DataManager) {
+            const adaptor: AdaptorOptions = props.dataSource.adaptor;
+            return (adaptor instanceof ODataAdaptor ||
+                (adaptor instanceof WebApiAdaptor) || (adaptor instanceof WebMethodAdaptor) ||
+                (adaptor instanceof CacheAdaptor) || adaptor instanceof UrlAdaptor);
+        }
+        return false;
+    }, []);
+    const isOffline: boolean = useMemo(() => {
+        if (isRemoteData(props)) {
+            const dm: DataManager = props.dataSource as DataManager;
+            return !isNullOrUndefined(dm.ready) && props.dataSource instanceof DataManager;
+        }
+        return true && props.dataSource instanceof DataManager;
+    }, []);
+
+    const isTreeMode: boolean = useMemo(() =>
+        props.isTreeMode || false, [props.isTreeMode]);
+
+    const treeColumnIndex: number = useMemo(() =>
+        props.treeColumnIndex ?? 0, [props.treeColumnIndex]);
+
+    const treeDataChildrenField: string | undefined = useMemo(() =>
+        props.treeDataChildrenField || null, [props.treeDataChildrenField]);
+
+    const treeDataIdMapping: string | undefined = useMemo(() =>
+        props.treeDataIdMapping || null, [props.treeDataIdMapping]);
+
+    const treeDataParentIdField: string | undefined = useMemo(() =>
+        props.treeDataParentIdField || null, [props.treeDataParentIdField]);
+
+    const excludeChildrenWithFiltering: boolean = useMemo(() =>
+        props.excludeChildrenWithFiltering ?? false, [props.excludeChildrenWithFiltering]);
+
+    const isChildrenGrid: boolean = useMemo(() =>
+        props.isChildrenGrid ?? false, [props.isChildrenGrid]);
+
+    /**
+     * Construct treeDataSettings object from individual props for internal use
+     */
+    const treeDataSettings: ITreeDataSettings = useMemo(() => ({
+        enabled: isTreeMode,
+        treeColumnIndex: treeColumnIndex,
+        treeDataChildrenField: treeDataChildrenField,
+        treeDataIdMapping: treeDataIdMapping,
+        treeDataParentIdField: treeDataParentIdField,
+        excludeChildrenWithFiltering: excludeChildrenWithFiltering
+    }), [isTreeMode, treeColumnIndex, treeDataChildrenField, treeDataIdMapping, treeDataParentIdField, excludeChildrenWithFiltering]);
+
     const [pageWiseGroupResponseViewData, setPageWiseGroupResponseViewData] = useState<Map<number, GroupedData<T>[]>>(new Map());
     const [virtualCachedViewData, setVirtualCachedViewData] = useState<Map<number, T>>(new Map());
 
     const uiColumns: RefObject<ColumnProps<T>[]> = useRef([]);
     const { columns: preparedColumns, children, headerRowDepth, colElements, uiColumns: noTypeUiColumns, isCheckBoxColumn,
-        totalVirtualColumnWidth, columnOffsets, visibleColumns, isCommandEditEnabled, setColumnChooserState,
-        isAutoHeightEnabled, isSpannedColumns, singleGroupColumn, groupCaptionAggregateType } = useColumns<T>({
-        ...props }, serviceLocator, gridRef, dataState, isInitialBeforePaint, currentViewData, uiColumns.current);
+        totalVirtualColumnWidth, columnOffsets, visibleColumns, stackedHeaderColumns, stackedFlattedColumns, isStackedHeader,
+        isCommandEditEnabled, setColumnChooserState, reorderState,
+        isAutoHeightEnabled, isSpannedColumns, singleGroupColumn, groupCaptionAggregateType, visibleStackedHeaderColumns,
+        allStackedColumnProps, stackedFlattedColumnProps, stackedRowEntries, fieldOrderMap, uidOrderMap, columnMap,
+        columnUidMap, leftPinnedColumns, rightPinnedColumns, columnWidthInfo, setColumnWidthState,
+        setColumnReorderState } = useColumns<T>({
+        ...props }, serviceLocator, gridRef, dataState, isInitialBeforePaint,
+                                                currentViewData, uiColumns.current);
     useMemo(() => {
         uiColumns.current = noTypeUiColumns;
     }, [noTypeUiColumns]);
@@ -325,7 +476,8 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         enableFilterBarOperator: props.filterSettings?.enableFilterBarOperator || false,
         columns: props.filterSettings?.columns || [],
         type: props.filterSettings?.type || 'FilterBar',
-        mode: props.filterSettings?.mode ?? (props.filterSettings?.type === 'Excel' || props.filterSettings?.type === 'CheckBox' ? 'OnEnter' : 'Immediate'),
+        mode: props.filterSettings?.mode ?? (props.filterSettings?.type === 'Excel' || props.filterSettings?.type === 'CheckBox'
+            || props.filterSettings?.type === 'Menu' ? 'OnEnter' : 'Immediate'),
         loadingIndicator: props.filterSettings?.loadingIndicator || 'Shimmer',
         immediateModeDelay: props.filterSettings?.immediateModeDelay || 1500,
         ignoreAccent: props.filterSettings?.ignoreAccent || false,
@@ -349,6 +501,42 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         };
     }, [props.contextMenuSettings]);
 
+    const clipboardSettings: ClipboardSettings = useMemo(() => {
+        return {
+            enabled: true,
+            allowPaste: true,
+            allowCut: true,
+            copyWithHeaders: false,
+            allowRowCopy: false,
+            ...(props.clipboardSettings || {})
+        };
+    }, [props.clipboardSettings]);
+
+    const autoFillSettings: AutoFillSettings = useMemo(() => {
+        return {
+            enabled: props.autoFillSettings?.enabled || false,
+            allowedDirection: props.autoFillSettings?.allowedDirection || 'both',
+            preventBackwardFill: props.autoFillSettings?.preventBackwardFill || false,
+            fillOperation: props.autoFillSettings?.fillOperation,
+            excludeFromAutoFill: props.autoFillSettings?.excludeFromAutoFill || undefined
+        };
+    }, [props.autoFillSettings]);
+
+    const editSettings: EditSettings<T> = useMemo(() => {
+        return {
+            allowAdd: props?.editSettings?.allowAdd || ((props?.modules?.GridAllModules || props?.modules?.ClipboardModule ||
+                props?.modules?.AutoFillModule) && clipboardSettings?.enabled && clipboardSettings?.allowPaste) || false,
+            allowEdit: props?.editSettings?.allowEdit || ((props?.modules?.GridAllModules || props?.modules?.ClipboardModule) &&
+            clipboardSettings?.enabled && clipboardSettings?.allowPaste) || ((props?.modules?.GridAllModules ||
+                props?.modules?.AutoFillModule) && autoFillSettings?.enabled) || false,
+            allowDelete: props?.editSettings?.allowDelete || ((props?.modules?.GridAllModules || props?.modules?.ClipboardModule) &&
+            clipboardSettings?.enabled && clipboardSettings?.allowCut) || ((props?.modules?.GridAllModules ||
+                props?.modules?.AutoFillModule) && autoFillSettings?.enabled) || false,
+            ...(props?.editSettings as EditSettings<T>)
+        };
+    }, [props?.editSettings, props?.modules?.ClipboardModule, clipboardSettings?.enabled, clipboardSettings?.allowPaste,
+        clipboardSettings?.allowCut, autoFillSettings?.enabled, props?.modules?.AutoFillModule]);
+
     // Initialize group settings based on props or use default values
     const groupSettings: GroupSettings = useMemo(() => {
         return {
@@ -362,21 +550,22 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
             showDropArea: props.groupSettings?.showDropArea || false,
             // showGroupedColumn: props.groupSettings?.showGroupedColumn || false,
             // showUngroupButton: props.groupSettings?.showUngroupButton !== false,
-            autoRefreshOnEdit: props.groupSettings?.autoRefreshOnEdit || true
+            autoRefreshOnEdit: props.groupSettings?.autoRefreshOnEdit || true,
+            groupSummaryPosition: props.groupSettings?.groupSummaryPosition ?? (() => GroupSummaryPosition.Undefined)
         };
-    }, [props.groupSettings, props.groupSettings?.columns]);
+    }, [props.groupSettings, props.groupSettings?.columns, props.groupSettings?.groupSummaryPosition]);
+
+    // Unified pinning settings cover rows + columns.
+    const pinningSettings: PinningSettings = useMemo(() => ({
+        enabled: props.pinningSettings?.enabled ?? false,
+        type: props.pinningSettings?.type ?? PinScope.Row,
+        allowTopPin: props.pinningSettings?.allowTopPin ?? true,
+        allowBottomPin: props.pinningSettings?.allowBottomPin ?? true
+    }), [props.pinningSettings]);
 
     const [gridAction, setGridAction] = useState<Object>({});
 
-    // Update the `currentPage` state value with the `pageSettings` changes
-    useEffect(() => {
-        if (props.pageSettings?.currentPage && currentPage !== props.pageSettings?.currentPage) {
-            gridRef.current.goToPage?.(props.pageSettings?.currentPage);
-        }
-    }, [props.pageSettings]);
 
-    const [currentPage, setCurrentPage] = useState<number>(props.pageSettings?.currentPage || 1);
-    const [totalRecordsCount, setTotalRecordsCount] = useState<number>(props.pageSettings?.estimatedTotalRecordsCount || 0);
     const expandedGroupCountRef: RefObject<number> = useRef(0);
     const loadedPageWiseGroupExpandedCountRef: RefObject<Map<number, number>> = useRef(new Map());
     const loadedPageWiseVirtualGroupStartEndRowIndexes: RefObject<Map<number, {startIndex: number, endIndex: number}>> = useRef(new Map());
@@ -394,6 +583,17 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         props.height || 'auto', [props.height]);
     const width: string | number = useMemo(() =>
         props.width || 'auto', [props.width]);
+
+    const resizeSettings: ResizeSettings = useMemo((): ResizeSettings => {
+        return {
+            enabled: props.resizeSettings?.enabled ?? false,
+            mode: props.resizeSettings?.mode ?? ResizeMode.Auto,
+            throttle: props.resizeSettings?.throttle ?? 150,
+            resizeKeyboardStep: props.resizeSettings?.resizeKeyboardStep ?? 10,
+            ...props.resizeSettings
+        };
+    }, [props.resizeSettings]);
+
     const virtualizationSettings: VirtualizationSettings = useMemo(() => {
         const defaultViewPortBuffer: VirtualBufferSettings = {
             rows: (((isNullOrUndefined(props.virtualizationSettings?.enabled) || props.virtualizationSettings?.enabled) &&
@@ -405,33 +605,6 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
             rows: props.virtualizationSettings?.viewPortBuffer?.rows ?? defaultViewPortBuffer.rows,
             columns: props.virtualizationSettings?.viewPortBuffer?.columns ?? defaultViewPortBuffer.columns
         };
-
-        const scrollModeOverrideMessage: string = [
-            'Syncfusion Pure React Data Grid:',
-            '- Local in-memory data does not require server-side handling for Virtual (Known Count)' +
-            ' and Infinite (Unknown Count) ScrollModes.',
-            '- Detected incompatible configuration with array data source.',
-            '- Overriding scrollMode to Auto for optimal performance.',
-            '- Learn more: https://react.syncfusion.com/react-ui/data-grid/scrolling/configuration/#scroll-modes'
-        ].join('\n');
-
-        const disableRowDOMVirtualizationMessage: string = [
-            'Syncfusion Pure React Data Grid:',
-            '- Disabling DOM virtualization on server-side Virtual (Known Count) and Infinite' +
-            ' (Unknown Count) ScrollModes is not supported due to invalid configuration.',
-            '- Detected incompatible configuration with server-side performance optimization.',
-            '- Overriding virtualization type to Both for optimal performance.'
-        ].join('\n');
-
-        const autoHeightOverrideMessage: string = [
-            'Syncfusion Pure React Data Grid:',
-            '- Auto height is not compatible with row DOM virtualization.',
-            '- Detected height set to "auto" with virtualization settings.',
-            '- Use either responsive grid height (100%) with a parent container static' +
-            ' height (e.g., 90vh) or a fixed static height (e.g., 90vh) for optimal performance.',
-            '- Overriding virtualization type to Column for optimal layout handling.',
-            '- Learn more: https://react.syncfusion.com/react-ui/data-grid/scrolling/configuration/#row-virtualization'
-        ].join('\n');
 
         // const groupWithVirtualCacheOverrideMessage: string = [
         //     'Syncfusion Pure React Data Grid:',
@@ -452,20 +625,20 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
             ...((props.virtualizationSettings?.scrollMode === ScrollMode.Virtual || props.virtualizationSettings?.scrollMode ===
                 ScrollMode.Infinite) && (Array.isArray(props.dataSource)) ? (() => {
                     if (enableDevMode) {
-                        console.warn(scrollModeOverrideMessage);
+                        console.warn(SCROLL_MODE_OVERRIDE_MESSAGE);
                     }
                     return { scrollMode: ScrollMode.Auto };
                 })() : {}), // Virtual/Infinite scroll not possible/compatible with array data source, so override scrollMode to Auto.
             ...((props.virtualizationSettings?.scrollMode === ScrollMode.Virtual || props.virtualizationSettings?.scrollMode ===
                 ScrollMode.Infinite) && props.virtualizationSettings?.type === VirtualDomType.Column ? (() => {
                     if (enableDevMode) {
-                        console.warn(disableRowDOMVirtualizationMessage);
+                        console.warn(DISABLE_ROW_DOM_VIRTUALIZATION_MESSAGE);
                     }
                     return { type: VirtualDomType.Both };
                 })() : {}), // Virtual Scroll not possible/compatible without row dom virtualization.
             ...(height === 'auto' ? (() => {
                 if (enableDevMode) {
-                    console.warn(autoHeightOverrideMessage);
+                    console.warn(AUTO_HEIGHT_OVERRIDE_MESSAGE);
                 }
                 return { type: VirtualDomType.Column, ...(!props.virtualizationSettings?.preventMaxRenderedRows ?
                     { viewPortBuffer: { ...finalViewPortBuffer, rows: props.virtualizationSettings?.viewPortBuffer?.rows ?? 500 } } : {}) };
@@ -494,7 +667,7 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         };
     }, [virtualizationSettings]);
 
-    const groupModule: UseGroupResult<T> = useGroup<T>(
+    const groupModule: UseGroupResult<T> = (props?.modules?.GridAllModules ?? props?.modules)?.GroupModule?.<T>(
         gridRef,
         groupSettings,
         setGridAction,
@@ -509,8 +682,18 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         props,
         setCurrentPage,
         uiColumns,
-        setColumnChooserState
+        setColumnChooserState,
+        groupSettings?.groupSummaryPosition,
+        groupCaptionAggregateType
     );
+
+    // Validate that both tree and group modes are not enabled simultaneously
+    if (treeDataSettings.enabled && groupSettings.enabled) {
+        console.warn(
+            '[TreeGrid] Cannot enable both tree and group modes. Tree takes priority. ' +
+            'Set groupSettings.enabled = false to use tree data.'
+        );
+    }
 
     const sortSettings: SortSettings = useMemo(() => {
         const combinedSortColumn: SortDescriptor[] = [];
@@ -587,7 +770,8 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         currentPage: currentPage,
         template: props.pageSettings?.template || null,
         totalRecordsCount: totalRecordsCount,
-        estimatedTotalRecordsCount: props.pageSettings?.estimatedTotalRecordsCount || 0
+        estimatedTotalRecordsCount: props.pageSettings?.estimatedTotalRecordsCount || 0,
+        pageSizeMode: props.pageSettings?.pageSizeMode || PageSizeMode.All
     };
     const stableRest: RefObject<Partial<IGridBase<T>>> = useRef(props);
     const generatedId: string = useId().replace(/:/g, '');
@@ -599,6 +783,10 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
     const clipMode: ClipMode | string = useMemo(() => {
         return props.clipMode;
     }, [props.clipMode]);
+
+    const enableGridChart: boolean = useMemo(() => {
+        return props.enableGridChart ?? false;
+    }, [props.enableGridChart]);
 
     const gridLines: GridLine | string = useMemo(() =>
         props.gridLines || 'Default', [props.gridLines]);
@@ -616,8 +804,9 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
             type: selectionType,
             enableToggle: isCheckBoxColumn,
             headerCheckbox: true,
-            persistSelection: isCheckBoxColumn,
+            persistSelection: isCheckBoxColumn || props.dragAndDropSettings?.enabled === true,
             autoSelectMode: isCheckBoxColumn ? AutoSelectMode.Default : AutoSelectMode.Intermediate,
+            // cellSelectionType: CellSelectionType.BoxWithBorder,
             ...(props.selectionSettings || {})
         };
     }, [columns, props.selectionSettings, isCheckBoxColumn]);
@@ -636,6 +825,10 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
 
     const enableAltRow: boolean = useMemo(() =>
         props.enableAltRow ?? true, [props.enableAltRow]);
+    const rowNumberSettings: RowNumberSettings = useMemo(() => ({
+        enabled: props.rowNumberSettings?.enabled ?? false,
+        ...props.rowNumberSettings
+    }), [props.rowNumberSettings]);
     const emptyRecordTemplate: string | Function | ReactElement = useMemo(() =>
         props.emptyRecordTemplate || null, [props.emptyRecordTemplate]);
     const rowTemplate: string | Function | ReactElement = useMemo(() =>
@@ -643,12 +836,62 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
 
     const detailRowTemplate: DetailRowTemplate<T> | ReactElement | string = useMemo(() =>
         props.detailRowTemplate || null, [props.detailRowTemplate]);
+    const detailGridModule: detailGridModule = (props?.modules?.GridAllModules ?? props?.modules)?.DetailGridModule?.();
     const isMasterDetail: boolean = useMemo(() =>
-        props.isMasterDetail || false, [props.isMasterDetail]);
+        Boolean(props.isMasterDetail && detailGridModule), [props.isMasterDetail, detailGridModule]);
     const detailRowHeight: number = useMemo(() =>
         props.detailRowHeight || 300, [props.detailRowHeight]);
     const defaultExpandedRows: number[] = useMemo(() =>
         props.defaultExpandedRows || [], [props.defaultExpandedRows]);
+
+    const resizeModule: ColumnResizeModule = (props?.modules?.GridAllModules ?? props?.modules)?.ResizeModule?.(
+        gridRef,
+        resizeSettings,
+        columns,
+        props.onColumnResizeStart,
+        props.onColumnResize,
+        props.onColumnResizeEnd,
+        enableRtl,
+        uiColumns.current,
+        columnWidthInfo,
+        setColumnWidthState,
+        ellipsisTooltipRef
+    );
+
+    const autoFit: AutoFitMode = useMemo(() => {
+        return props.autoFit;
+    }, [props.autoFit]);
+
+    const autoFitModule: ColumnAutoFitModule = (props?.modules?.GridAllModules ?? props?.modules)?.AutoFitModule?.(
+        gridRef,
+        autoFit,
+        columns,
+        props.onColumnResizeStart,
+        props.onColumnResizeEnd,
+        uiColumns.current,
+        columnWidthInfo,
+        setColumnWidthState
+    );
+
+    const reorderSettings: ReorderSettings = useMemo(() => ({
+        enabled: props.reorderSettings?.enabled ?? false
+    }), [props.reorderSettings]);
+
+    const reorderModule: ColumnReorderModule<T> = (props?.modules?.GridAllModules ?? props?.modules)?.ReorderModule?.({
+        gridRef,
+        reorderSettings,
+        columns,
+        uiColumns,
+        onColumnReorderStart: props.onColumnReorderStart,
+        onColumnDrag: props.onColumnDrag,
+        onColumnReorderEnd: props.onColumnReorderEnd,
+        setColumnReorderState,
+        rtl: enableRtl,
+        reorderState,
+        isStackedHeader,
+        stackedFlattedColumnProps,
+        allStackedColumnProps
+    });
 
     const expansion: Map<number, boolean> = new Map();
     if (isMasterDetail && defaultExpandedRows.length) {
@@ -660,7 +903,16 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
     }
 
     const [expansionState, setExpansionState] = useState<Map<number, boolean>>(expansion);
-
+    const previousExpansionPage: RefObject<number> = useRef<number>(currentPage);
+    useEffect(() => {
+        if (previousExpansionPage.current !== currentPage) {
+            previousExpansionPage.current = currentPage;
+            if (isMasterDetail) {
+                setExpansionState((previousState: Map<number, boolean>) =>
+                    previousState.size ? new Map<number, boolean>() : previousState);
+            }
+        }
+    }, [currentPage, isMasterDetail]);
     const [responseData, setResponseData] = useState<Object>({});
 
     const cssClass: string = useMemo(() => {
@@ -698,6 +950,10 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
             baseClasses.push(CSS_CLASS_NAMES.GRID_HOVER);
         }
 
+        if (isStackedHeader) {
+            baseClasses.push(CSS_CLASS_NAMES.STACKED_HEADER);
+        }
+
         if (/^((?!chrome|android).)*safari/i.test(navigator.userAgent) || Browser.isSafari()) {
             baseClasses.push(CSS_CLASS_NAMES.MAC_SAFARI);
         }
@@ -713,7 +969,7 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         return baseClasses.join(' ');
     }, [enableRtl, enableHover, rowHeight, gridLines, cssClass,
         filterSettings?.enabled, selectionSettings, textWrapSettings?.enabled, textWrapSettings,
-        enableHtmlSanitizer, enableStickyHeader]);
+        enableHtmlSanitizer, enableStickyHeader, isStackedHeader]);
 
     /**
      * Compute CSS styles for the grid container
@@ -799,7 +1055,7 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
                 const ariaRowIndex: number = parseInt(row.getAttribute('aria-rowindex'), 10) - 1;
                 const rows: Element[] = Array.from(gridRef?.current.getRows() || []);
                 const index: number = cellIndex;
-                const rowsObject: Element[] = rows.filter((r: Element) => r.getAttribute('data-uid') === row.getAttribute('data-uid'));
+                const rowsObject: Element[] = rows.filter((r: Element) => r?.getAttribute('data-uid') === row?.getAttribute('data-uid'));
                 let data: T = {} as T;
                 let column: ColumnProps<T>;
                 if (Object.keys(rowsObject).length) {
@@ -847,7 +1103,7 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
      * @returns {ColumnProps} Returns the column
      */
     const getColumnByUid: (uid: string) => ColumnProps<T> = useCallback((uid: string): ColumnProps<T> => {
-        const gridCols: ColumnProps<T>[] = uiColumns.current ?? columns;
+        const gridCols: ColumnProps<T>[] = isStackedHeader ? allStackedColumnProps : uiColumns.current ?? columns;
         for (const col of gridCols) {
             if (col.uid === uid) {
                 return col;
@@ -879,20 +1135,29 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
             const selectedRow: IRow<ColumnProps<T>> = gridRef.current?.getRowsObject().filter((r: IRow<{}>) =>
                 getValue(pkName, r.data) === key)[0] as IRow<ColumnProps<T>>;
             if (selectedRow === undefined || selectedRow === null) {
+                dispatchGridCancelBegin(gridRef, 'RowDataUpdate');
                 return;
             }
+            const saveArgs: { requestType: string; action: string; data: T; previousData: T | GroupedData<T> } = {
+                requestType: 'save',
+                action: 'Edit',
+                data: data,
+                previousData: selectedRow.data
+            };
+
             const selectRowEle: Element[] = selectedRow ? [].slice.call(
                 gridRef.current?.element.querySelectorAll('[data-uid=' + selectedRow[`${rowuID}`] + ']')) : undefined;
             try {
+                const customBinding: boolean = dataOperations.dataManager && 'result' in dataOperations.dataManager;
                 if (isDataSourceChangeRequired) {
-                    await dataOperations.getData({
+                    await dataOperations.getData(customBinding ? { ...saveArgs } : {
                         requestType: 'update',
                         data: data
                     });
                 }
                 if (!isNullOrUndefined(selectedRow) && selectRowEle.length) {
-                    const rowObjectData: T = {...selectedRow.data, ...data};
-                    selectedRow.setRowObject({...selectedRow, data: rowObjectData});
+                    const rowObjectData: T = { ...selectedRow.data, ...data };
+                    selectedRow.setRowObject({ ...selectedRow, data: rowObjectData });
                 } else {
                     return; // if updated cell not inside the current view
                 }
@@ -923,11 +1188,12 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
             const selectedRow: IRow<ColumnProps<T>> = gridRef.current?.getRowsObject().filter((r: IRow<{}>) =>
                 getValue(pkName, r.data) === key)[0] as IRow<ColumnProps<T>>;
             if (selectedRow === undefined || selectedRow === null) {
+                dispatchGridCancelBegin(gridRef, 'CellValueUpdate');
                 return;
             }
             const selectRowEle: Element[] = selectedRow ? [].slice.call(
                 gridRef.current?.element.querySelectorAll('[data-uid=' + selectedRow[`${rowuID}`] + ']')) : undefined;
-            const changedRowData: T = { ...selectedRow.data, [field]: value } as T;
+            const changedRowData: T = DataUtil.setValue(field, value, { ...selectedRow.data }) as T;
             try {
                 if (isDataSourceChangeRequired) {
                     await dataOperations.getData({
@@ -950,6 +1216,116 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         }, [gridRef.current]);
 
     /**
+     * Updates one or more fields across multiple records in bulk.
+     *
+     * @param {Object} changedData - Field names and their new values to apply to all matching records.
+     * @param {Object[]} [rowData] - Optional records to update. Falls back to selected records.
+     * @param {Function} [callback] - Optional callback invoked with the result after the changes are saved.
+     *
+     * @returns {void}
+     */
+    const saveBulkChanges: (changedData: Object, rowData?: Object[], callback?: Function) => void =
+        useCallback(async(changedData: Object, rowData?: Object[], callback?: Function) => {
+            const primaryKey: string = gridRef.current?.getPrimaryKeyFieldNames()[0];
+            const records: Object[] = rowData && rowData.length ? rowData : (gridRef.current?.getSelectedRecords() as Object[]);
+            const fields: string[] = Object.keys(changedData);
+            if (!primaryKey || !fields.length || !records.length) {
+                if (!isNullOrUndefined(callback) && typeof callback === 'function') {
+                    callback(undefined);
+                }
+                return;
+            }
+            const changes: { addedRecords: T[]; deletedRecords: T[]; changedRecords: T[] } =
+                { addedRecords: [], deletedRecords: [], changedRecords: [] };
+            const original: { addedRecords: T[]; deletedRecords: T[]; changedRecords: T[] } =
+                { addedRecords: [], deletedRecords: [], changedRecords: [] };
+            for (const record of records) {
+                original.changedRecords.push(extend({}, {}, record, true) as T);
+                for (const field of fields) {
+                    if (field === primaryKey || isNullOrUndefined(gridRef.current?.getColumnByField(field))) {
+                        continue;
+                    }
+                    const cellValue: string | number | boolean | Date = getValue(field, changedData);
+                    setValue(field, cellValue, record);
+                }
+                changes.changedRecords.push(extend({}, {}, record, true) as T);
+            }
+            const dataModuleResult: UseDataResult = gridRef.current?.getDataModule() as UseDataResult;
+            const promise: Object = (dataModuleResult.dataManager as DataManager).saveChanges(
+                changes, primaryKey, undefined, undefined, original);
+            const triggerCallback: Function = (args: Object) => {
+                if (!isNullOrUndefined(callback) && typeof callback === 'function') {
+                    callback(args);
+                }
+            };
+            if (dataModuleResult.isRemote()) {
+                (promise as Promise<Object>).then((e: Object) => {
+                    triggerCallback(e);
+                }).catch((e: Object) => {
+                    triggerCallback({ error: e });
+                });
+            } else {
+                triggerCallback(promise);
+            }
+        }, [gridRef.current]);
+
+    /**
+     * Updates a full row (by primary key) and resolves once the grid's UI has committed the change.
+     * Resolves without rejecting when the row is not found or is not currently rendered (no-op).
+     *
+     * @param {string | number} key - Specifies the PrimaryKey value of dataSource.
+     * @param {T} data - To update new data for the particular row.
+     * @param {boolean} [isDataSourceChangeRequired] - Whether the underlying data source should also be updated.
+     * @returns {Promise<void>} Resolves after the row value is updated.
+     */
+    const setRowDataAsync: (key: string | number, data?: T, isDataSourceChangeRequired?: boolean) => Promise<void> =
+        useCallback((key: string | number, data?: T, isDataSourceChangeRequired?: boolean): Promise<void> =>
+            executeGridAsyncAction(gridRef, 'RowDataUpdate', () => setRowData(key, data, isDataSourceChangeRequired)),
+                    [gridRef, setRowData]);
+
+    /**
+     * Updates a single cell value (by primary key) and resolves once the grid's UI has committed the change.
+     * Resolves without rejecting when the row is not found or is not currently rendered (no-op).
+     *
+     * @param {string | number} key - Specifies the PrimaryKey value of dataSource.
+     * @param {string} field - Specifies the field name which the value should be updated for.
+     * @param {ValueType | null} value - The new value for the particular cell.
+     * @param {boolean} [isDataSourceChangeRequired] - Whether the underlying data source should also be updated.
+     * @returns {Promise<void>} Resolves after the cell value is updated.
+     */
+    const setCellValueAsync: (key: string | number, field: string, value: ValueType | null,
+        isDataSourceChangeRequired?: boolean) => Promise<void> =
+        useCallback((key: string | number, field: string, value: ValueType | null,
+                     isDataSourceChangeRequired?: boolean): Promise<void> =>
+            executeGridAsyncAction(gridRef, 'CellValueUpdate', () => setCellValue(key, field, value, isDataSourceChangeRequired)),
+                    [gridRef, setCellValue]);
+
+    /**
+     * Updates one or more fields across multiple records in bulk and resolves when the changes are saved.
+     *
+     * @param {Object} changedData - Field names and their new values to apply to all matching records.
+     * @param {Object[]} [rowData] - Optional records to update. Falls back to selected records.
+     *
+     * @returns {Promise<Object>} A promise that resolves with the save result once the operation completes.
+     */
+    const saveBulkChangesAsync: (changedData: Object, rowData?: Object[]) => Promise<Object | void> =
+        useCallback(async(changedData: Object, rowData?: Object[]): Promise<Object | void> => {
+            let saveResult: Object | void;
+            await executeGridAsyncAction(gridRef, 'BulkSave', (): Promise<void> =>
+                new Promise<void>((resolve: () => void, reject: (reason?: Object) => void) => {
+                    gridRef.current?.saveBulkChanges(changedData, rowData, (args: Object): void => {
+                        if (args && (args as { error?: Object }).error) {
+                            reject(args);
+                        } else {
+                            saveResult = args;
+                            resolve();
+                        }
+                    });
+                }));
+            return saveResult;
+        }, [gridRef.current]);
+
+    /**
      * Get the columns directive element
      */
     const columnsDirective: ReactElement = useMemo(() => {
@@ -961,13 +1337,30 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
     const contentRowCount: number = useMemo(() => currentViewData?.length || 0, [currentViewData]);
     const aggregateRowCount: number = useMemo(() => aggregates?.length || 0, [aggregates]);
 
-    const filterModule: filterModule =
-        useFilter(gridRef, filterSettings, setGridAction, serviceLocator, setCurrentPage, virtualSettings, scrollMode);
+    const filterModule: filterModule = (props?.modules?.GridAllModules ??
+        props?.modules)?.FilterModule?.(gridRef, filterSettings, setGridAction, serviceLocator, setCurrentPage, virtualSettings,
+                                        scrollMode);
 
-    const searchModule: searchModule = useSearch(gridRef, searchSettings, setGridAction, setCurrentPage, virtualSettings, scrollMode);
+    const searchModule: searchModule = (props?.modules?.GridAllModules ??
+        props?.modules)?.SearchModule?.(gridRef, searchSettings,
+                                        setGridAction, setCurrentPage, virtualSettings, scrollMode);
 
     const sortModule: SortModule = useSort(gridRef, sortSettings, setGridAction, groupModule, isInitialLoad);
 
+    // Call useTreeData hook to handle tree data normalization and expansion state
+    const treeModule: ITreeDataResult = (props?.modules?.GridAllModules ?? props?.modules)?.TreeDataModule?.(
+        gridRef,
+        setCurrentViewData as Dispatch<SetStateAction<(TreeGridRow[] | T[])>>,
+        Array.isArray(props.dataSource) ? props.dataSource as T[] : [],
+        treeDataSettings,
+        pageSettings,
+        filterModule?.filterSettings,
+        sortModule?.sortSettings,
+        searchModule?.searchSettings,
+        setTotalRecordsCount as Dispatch<SetStateAction<number>>,
+        currentPage as number,
+        isOffline
+    );
     useMemo(() => {
         const sortedColumns: SortDescriptor[] = sortModule.sortSettings.columns;
         if (sortedColumns.length) {
@@ -980,14 +1373,14 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
             }
         }
 
-        const filteredColumns: FilterPredicates[] = filterModule.filterSettings.columns;
-        if (filteredColumns.length) {
+        const filteredColumns: FilterPredicates[] = filterModule?.filterSettings.columns;
+        if (filteredColumns?.length) {
             const validColumns: FilterPredicates[] = filteredColumns.filter((filteredColumn: FilterPredicates) => {
                 const column: ColumnProps<T> = columns.find((col: ColumnProps<T>) => col.field === filteredColumn.field);
                 return column?.allowFilter;
             });
             if (filteredColumns.length !== validColumns.length) {
-                filterModule.setFilterSettings((prev: FilterSettings) => ({ ...prev, columns: validColumns }));
+                filterModule?.setFilterSettings((prev: FilterSettings) => ({ ...prev, columns: validColumns }));
             }
         }
     }, [columns]);
@@ -1040,7 +1433,8 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         }
     }, [getVisibleColumns]);
 
-    const commandColumnModule: UseCommandColumnResult<T> = useCommandColumn(isCommandEditEnabled && virtualSettings.enableColumn);
+    const commandColumnModule: UseCommandColumnResult<T> = (props?.modules?.GridAllModules ??
+        props?.modules)?.CommandColumnModule?.(isCommandEditEnabled && virtualSettings.enableColumn);
 
     // Initialize focus strategy - single source of truth for focus state
     const focusModule: ReturnType<typeof useFocusStrategy> = useFocusStrategy(
@@ -1094,11 +1488,33 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
             }
         },
         commandColumnModule,
-        groupModule.groupSettings.enabled && groupModule.groupSettings.columns?.length ? expandedGroupCountRef.current : totalRecordsCount,
+        groupModule?.groupSettings.enabled && groupModule?.groupSettings.columns?.length
+            ? expandedGroupCountRef.current
+            : totalRecordsCount,
         expansionState
     );
 
     const keyDownHandler: (e: React.KeyboardEvent | KeyboardEvent) => void = useCallback((e: React.KeyboardEvent | KeyboardEvent) => {
+        // Handle undo/redo shortcuts - only when not in edit mode
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) {
+            if (editModule?.isEdit && editSettings?.allowBatchSave !== true) {
+                return;
+            }
+            if (!e.shiftKey && editSettings?.allowUndoRedo) {
+                e.preventDefault();
+                void gridRef.current?.undo?.();
+                return;
+            }
+        }
+
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || e.key === 'Y') && editSettings?.allowUndoRedo) {
+            if (editModule?.isEdit && editSettings?.allowBatchSave !== true) {
+                return;
+            }
+            e.preventDefault();
+            void gridRef.current?.redo?.();
+            return;
+        }
         if (e.altKey) {
             if (e.keyCode === KEY_CODES.ALT_J) {
                 const currentInfo: FocusedCellInfo = focusModule?.getFocusInfo();
@@ -1122,8 +1538,15 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
                 // Prevent default browser behavior
                 e.preventDefault();
             }
+            if (e.keyCode === KEY_CODES.RIGHT_ARROW || e.keyCode === KEY_CODES.LEFT_ARROW) {
+                const target: HTMLElement = e.target as HTMLElement;
+                if (target.closest('.sf-cell') && target.querySelector('.sf-resize-handler')) {
+                    resizeModule?.onResizeHandleKeyDown(e as React.KeyboardEvent);
+                }
+            }
         }
-    }, [focusModule, gridRef.current?.currentViewData, gridRef.current?.scrollModule?.virtualColumnInfo.columns, visibleColumns]);
+    }, [focusModule, gridRef.current?.currentViewData, gridRef.current?.scrollModule?.virtualColumnInfo.columns, visibleColumns,
+        resizeModule]);
 
     const aggregateSelection: UseAggregateSelectionResult = useAggregateSelection();
 
@@ -1157,8 +1580,8 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
                 gridRef.current.contentScrollRef.scrollTop = 0;
             }
         }
-    }, [filterModule.filterSettings?.columns, filterModule.filterSettings?.columns.length, sortModule.sortSettings?.columns,
-        sortModule.sortSettings?.columns.length, searchModule.searchSettings?.value]);
+    }, [filterModule?.filterSettings?.columns, filterModule?.filterSettings?.columns.length, sortModule.sortSettings?.columns,
+        sortModule.sortSettings?.columns.length, searchModule?.searchSettings?.value]);
 
     // Initialize data operations following original Data class pattern
     // The original Data class is initialized with grid instance and service locator
@@ -1197,12 +1620,71 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         onDataChangeRequest: props.onDataChangeRequest,
         aggregateSelection,
         virtualizationSettings,
-        totalRecordsCount
+        totalRecordsCount,
+        isStackedHeader,
+        stackedFlattedColumnProps
     }), [props.dataSource, query, sortSettings?.enabled, groupSettings.enabled, filterModule?.filterSettings?.enabled, totalRecordsCount,
         pageSettings?.enabled, sortModule?.sortSettings, searchModule?.searchSettings?.enabled, uiColumns.current,
-        columns, filterModule?.filterSettings, searchModule?.searchSettings, pageSettings, currentPage, scrollMode, aggregateSelection]);
+        columns, filterModule?.filterSettings, searchModule?.searchSettings, pageSettings, currentPage, scrollMode, aggregateSelection,
+        isStackedHeader, stackedFlattedColumnProps]);
 
     const dataOperations: UseDataResult<T> = useData<T>(gridInstance, gridAction, dataState, groupCaptionAggregateType);
+    const restoreRowDataForUndo: (key: string | number, data: T, _rowIndex?: number) => Promise<void> = useCallback(async (
+        key: string | number, data: T
+    ): Promise<void> => {
+        const primaryKeyField: string = gridRef.current?.getPrimaryKeyFieldNames?.()?.[0];
+        const selectedRow: IRow<ColumnProps<T>> | undefined = gridRef.current?.getRowsObject?.()
+            ?.find((row: IRow<ColumnProps<T>>) => getValue(primaryKeyField, row.data) === key);
+        const cachedRow: T | undefined = Array.from(virtualCachedViewData.values()).find((row: T) =>
+            getValue(primaryKeyField, row) === key) as T | undefined;
+        const currentViewRow: T | undefined = currentViewData.find((row: T) =>
+            getValue(primaryKeyField, row) === key) as T | undefined;
+        const previousData: T = (selectedRow?.data ?? currentViewRow ?? cachedRow) as T;
+        const isCustomBinding: boolean = !!dataOperations.dataManager && 'result' in dataOperations.dataManager;
+        if (isCustomBinding && virtualizationSettings.scrollMode === ScrollMode.Infinite) {
+            if (gridRef.current?.scrollModule?.isDataOperationPreventVirtualCache) {
+                gridRef.current.scrollModule.isDataOperationPreventVirtualCache.current = true;
+            }
+        }
+        await dataOperations.getData(isCustomBinding ? {
+            requestType: 'save',
+            action: ActionType.Edit,
+            data,
+            previousData
+        } as { requestType: string; data: T; } : {
+            requestType: 'update',
+            data
+        });
+        if (selectedRow) {
+            selectedRow.setRowObject?.((previousRowObject: IRow<ColumnProps<T>>) => ({
+                ...previousRowObject,
+                data: { ...previousRowObject.data, ...data }
+            }));
+        }
+        setCurrentViewData((previousRows: T[]) => previousRows.map((row: T) =>
+            getValue(primaryKeyField, row) === key ? { ...row, ...data } : row));
+        if (gridRef.current?.aggregates?.length) {
+            setResponseData((previousResponse: Object) => {
+                const response: { result?: T[]; aggregates?: Object } = previousResponse as { result?: T[]; aggregates?: Object };
+                const sourceRows: T[] = Array.isArray(response.result) ? response.result : currentViewData;
+                return {
+                    ...response,
+                    aggregates: isCustomBinding ? response.aggregates : undefined,
+                    result: sourceRows.map((row: T) =>
+                        getValue(primaryKeyField, row) === key ? { ...row, ...data } : row)
+                };
+            });
+        }
+        if (virtualizationSettings.scrollMode === ScrollMode.Virtual || virtualizationSettings.scrollMode === ScrollMode.Infinite) {
+            setVirtualCachedViewData((previousData: Map<number, T>) => {
+                const updatedData: Map<number, T> = new Map<number, T>();
+                previousData.forEach((row: T, index: number) => {
+                    updatedData.set(index, getValue(primaryKeyField, row) === key ? { ...row, ...data } : row);
+                });
+                return updatedData;
+            });
+        }
+    }, [currentViewData, dataOperations, gridRef, setCurrentViewData, virtualCachedViewData, virtualizationSettings.scrollMode]);
     const dataModule: UseDataResult<T> = dataOperations;
 
     useEffect(() => {
@@ -1210,20 +1692,14 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
             // Validation: Infinite mode requires remote data source
             const isLocalData: boolean = !dataModule.isRemote() && dataSource instanceof Array;
             if (enableDevMode && isLocalData) {
-                console.warn(
-                    [
-                        'Syncfusion Pure React Data Grid:',
-                        '- ScrollMode.Infinite requires a remote data source (DataManager).',
-                        '- Local data arrays are not supported with infinite scroll mode.',
-                        '- Please use ScrollMode.Auto (default) for local data.'
-                    ].join('\n')
-                );
+                console.warn(INFINITE_SCROLL_LOCAL_DATA_MESSAGE);
             }
         }
     }, [scrollMode, dataModule]);
     const selectionModule: selectionModule<T> =
         useSelection<T>(gridRef, currentViewData, totalRecordsCount, isCheckBoxColumn, dataModule, virtualSettings, scrollMode,
-                        props.isRowSelectable, isInitialLoad, visibleColumns, groupModule, expandedGroupCountRef);
+                        props.isRowSelectable, isInitialLoad, visibleColumns, groupModule, expandedGroupCountRef,
+                        groupCaptionAggregateType);
 
     useMemo(() => {
         if (!selectionSettings.enabled) {
@@ -1239,26 +1715,122 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         selectionSettings,
         isSpannedColumns
     );
+    const isCtrlKeySelectionRef: RefObject<boolean> = useRef<boolean>(false);
 
-    const editModule: editModule<T> = useEdit<T>(
+    const pinningModule: PinningModuleResult<T> = (props.modules?.GridAllModules?.PinningModule ??
+        props.modules?.PinningModule)?.({ gridRef, setColumnChooserState, uiColumns, isInitialLoad });
+    const batchEditStagedRowsRef: RefObject<Map<string | number, StagedRowData<T>>> = useRef(new Map());
+    const batchEditModuleRef: RefObject<UseBatchEditResult<T> | undefined> = useRef<UseBatchEditResult<T> | undefined>(undefined);
+
+    // Initialize undo/redo module for action history tracking
+    const undoRedoModule: UseUndoRedoResult = useUndoRedo(
+        gridRef,
+        editSettings,
+        {
+            onUndoStart: props.onUndoStart,
+            onUndoComplete: props.onUndoComplete,
+            onRedoStart: props.onRedoStart,
+            onRedoComplete: props.onRedoComplete
+        },
+        batchEditModuleRef,
+        setCurrentViewData,
+        restoreRowDataForUndo
+    );
+
+    const editModule: editModule<T> = ((props?.modules?.GridAllModules ?? commandColumnModule)?.EditModule ??
+        props?.modules?.EditModule)?.<T>(
         gridRef,
         serviceLocator,
-        uiColumns.current ?? columns,
+        visibleColumns,
         currentViewData,
         dataModule,
         focusModule,
         selectionModule,
-        props.editSettings as EditSettings<T>,
+        editSettings,
         setGridAction,
         setCurrentPage,
         setResponseData,
         commandColumnModule,
-        virtualSettings
+        virtualSettings,
+        pinningModule,
+        batchEditStagedRowsRef,
+        undoRedoModule
     );
+    batchEditModuleRef.current = editModule?.batchEditModule;
 
+    const formulaModule: FormulaModuleResult<T> | null = ((props?.modules?.GridAllModules ?? props?.modules)?.FormulaModule)?.(
+        gridRef,
+        serviceLocator,
+        visibleColumns,
+        currentViewData,
+        dataModule,
+        {
+            ...(props.formulaSettings ?? {}),
+            enabled: props.formulaSettings?.enabled === true
+        },
+        setGridAction,
+        virtualSettings,
+        { ...props, editSettings: editModule?.editSettings ?? editSettings }
+    ) ?? null;
+
+    const autoFillModule: AutoFill | null = (props?.modules?.GridAllModules ?? props.modules)?.AutoFillModule?.({
+        gridRef,
+        currentViewData,
+        visibleColumns,
+        selectionSettings,
+        cellSelectionModule,
+        editSettings: editModule?.editSettings ?? editSettings,
+        autoFillSettings,
+        props,
+        columnMap,
+        dataOperations,
+        setCurrentViewData: setCurrentViewData,
+        fieldOrderMap,
+        selectionModule,
+        setRowData,
+        clipboardSettings,
+        setResponseData,
+        undoRedoModule,
+        isCtrlKeySelectionRef,
+        editModule,
+        serviceLocator,
+        focusModule,
+        setGridAction,
+        setCurrentPage,
+        commandColumnModule,
+        virtualSettings,
+        pinningModule,
+        batchEditStagedRowsRef
+    });
+
+    // Initialize clipboard module via the modules prop, or use the one created by autofill.
+    const clipboardModule: Clipboard | null = autoFillModule?.clipboardModule ?? (props?.modules?.GridAllModules ??
+        props?.modules)?.ClipboardModule?.({
+        gridRef,
+        currentViewData,
+        visibleColumns,
+        selectionSettings,
+        cellSelectionModule,
+        selectionModule,
+        setRowData,
+        editSettings: editModule?.editSettings ?? props.editSettings as EditSettings<T>,
+        clipboardSettings,
+        onClipboardCopy: props.onClipboardCopy,
+        onClipboardPaste: props.onClipboardPaste,
+        onClipboardCut: props.onClipboardCut,
+        setResponseData,
+        setCurrentViewData,
+        dataOperations,
+        fieldOrderMap,
+        columnMap,
+        undoRedoModule
+    });
+
+    const columnChooserModule: columnChooserModule = (props?.modules?.GridAllModules ?? props?.modules)?.ColumnChooserModule?.();
     // Initialize toolbar module if toolbar is configured
     // Pass modules directly to avoid context provider issues during initial rendering
-    const toolbarModule: ToolbarAPI | null = useToolbar(
+    const toolbarModule: ToolbarAPI | null = (props?.modules?.GridAllModules?.ToolbarModule ?? props?.modules?.ToolbarModule ??
+        editModule?.ToolbarModule ?? searchModule?.ToolbarModule ?? columnChooserModule?.ToolbarModule)?.(
         {
             toolbar: props.toolbar,
             gridId: id,
@@ -1273,8 +1845,11 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         selectionSettings,
         props.showColumnChooser,
         virtualSettings,
-        totalRecordsCount
+        totalRecordsCount,
+        gridRef
     );
+    const pagerModule: pagerModule = (props?.modules?.GridAllModules ?? props?.modules)?.PagerModule?.();
+    const contextMenuModule: contextMenuModule = (props?.modules?.GridAllModules ?? props?.modules)?.ContextMenuModule?.();
 
     /**
      * Toggle expansion state for a specific row
@@ -1286,7 +1861,7 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         setExpansionState((prevState: Map<number, boolean>) => {
             const newState: Map<number, boolean> = new Map(prevState);
             const shouldExpand: boolean = !prevState.has(rowIndex) || !prevState.get(rowIndex);
-            const expandCollapseArgs: RowExpandEvent<T> | RowCollapseEvent<T> = { rowIndex: rowIndex, data: rowData };
+            const expandCollapseArgs: RowExpandEvent<T> | RowCollapseEvent<T> = { rowIndex: rowIndex, data: rowData as T };
             if (shouldExpand) {
                 if (props.onRowExpand) {
                     props.onRowExpand(expandCollapseArgs);
@@ -1328,9 +1903,9 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         }
         props?.onClick?.(e);
         const target: HTMLElement = e.target as HTMLElement;
-        const toolbarAction: boolean = props?.toolbar?.length
+        const toolbarAction: boolean = toolbarModule && props?.toolbar?.length
             && target?.closest('.sf-toolbar')?.parentElement === gridRef.current.element;
-        const isGroupDropAreaAction: boolean = !!(groupSettings.enabled && target?.closest('.sf-group-drop-area'));
+        const isGroupDropAreaAction: boolean = !!(groupModule && groupSettings.enabled && target?.closest('.sf-group-drop-area'));
         const datePicker: boolean = target?.closest('.sf-datepicker')?.classList.contains('sf-popup-open');
         const dropDown: boolean = target?.closest('.sf-ddl')?.classList.contains('sf-popup-open');
         const checkbox: boolean = target?.tagName === 'INPUT' && (e.target as HTMLElement)?.classList.contains('sf-grid-checkselect');
@@ -1362,9 +1937,9 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         }
         if (target?.closest('.sf-grid-popup-edit')) {
             if (target.closest('.sf-grid-popup-edit-save')) {
-                editModule.saveDataChanges();
+                editModule?.saveDataChanges();
             } else if (target.closest('.sf-grid-popup-edit-cancel') || target.closest('.sf-dlg-closeicon-btn')) {
-                editModule.cancelDataChanges();
+                editModule?.cancelDataChanges();
             }
             return;
         }
@@ -1376,11 +1951,12 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
             const rowInfo: RowInfo<T> = gridRef.current?.getRowInfo(captionRow);
             if (rowInfo?.data) {
                 // Pass the entire row object (GroupedData) to toggleGroup
-                groupModule.toggleGroup(rowInfo);
+                groupModule?.toggleGroup(rowInfo);
                 e.preventDefault();
+                const colIndex: number = parseInt(target?.closest('td')?.getAttribute('data-colindex') ?? '1', 10) - 1;
                 requestAnimationFrame(() => {
                     // After toggling the group, move focus back to the caption cell to maintain focus context
-                    focusModule.navigateToCell(rowInfo.rowIndex, parseInt(target?.closest('td')?.getAttribute('data-colindex') ?? '1', 10) - 1, 'Content');
+                    focusModule.navigateToCell(rowInfo.rowIndex, colIndex, 'Content', undefined, true);
                 });
                 return;
             }
@@ -1388,11 +1964,16 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
 
         // Handle cell selection if enabled, otherwise handle row selection
         if (selectionSettings?.type === 'Cell' && cellSelectionModule) {
+            isCtrlKeySelectionRef.current = e.ctrlKey || e.metaKey;
             cellSelectionModule.handleGridClick(e);
+            requestAnimationFrame(() => {
+                autoFillModule?.showFillHandle?.();
+            });
         } else {
             // Handle row selection FIRST and IMMEDIATELY, regardless of focus state
             // This ensures row selection happens on the first click, even when coming from outside grid focus
             selectionModule.handleGridClick(e);
+            autoFillModule?.removeFillHandle?.();
         }
 
         // Set grid focus AFTER selection to avoid interference
@@ -1404,10 +1985,10 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         focusModule.handleGridClick(e);
 
         // Finally handle sorting (if applicable)
-        if (!(e.target as Element).closest('.sf-grid-filter-container')) {
+        if (!((e.target as Element).closest('.sf-grid-filter-container') || target?.closest('.sf-resize-handler'))) {
             sortModule?.handleGridClick?.(e);
         }
-    }, [focusModule, selectionModule, sortModule, groupModule, editModule, isInitialLoad, gridRef, currentViewData, props.editSettings,
+    }, [focusModule, selectionModule, sortModule, groupModule, editModule, isInitialLoad, gridRef, currentViewData, editSettings,
         groupSettings]);
 
     /**
@@ -1440,7 +2021,14 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
             data: rowInfo.data,
             column: rowInfo.column
         } as RecordDoubleClickEvent<T>);
-    }, [editModule, isInitialLoad, gridRef, currentViewData, props.editSettings]);
+        if (target?.closest('.sf-resize-handler')) {
+            if (resizeHandlePointerDownTimeout.current) {
+                clearTimeout(resizeHandlePointerDownTimeout.current);
+                resizeHandlePointerDownTimeout.current = null;
+            }
+            autoFitModule?.onResizeHandleDoubleClick(e);
+        }
+    }, [editModule, isInitialLoad, gridRef, currentViewData, editSettings, autoFitModule]);
 
     const isEllipsisTooltip: boolean = useMemo((): boolean => {
         const col: ColumnProps<T>[] = uiColumns.current ?? columns;
@@ -1559,7 +2147,8 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
     }, [tooltipContent.current, uiColumns.current]);
 
     const handleGridMouseMove: (e: MouseEvent) => void = useCallback((e: MouseEvent) => {
-        if (isChildGrid(e)) {
+        const resizeHelper: boolean = (e.target as HTMLElement)?.closest?.('.sf-grid')?.querySelector('.sf-grid-resize-helper') ? true : false;
+        if (isChildGrid(e) || resizeHelper) {
             return;
         }
         if (isEllipsisTooltip) {
@@ -1627,6 +2216,9 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         // Forward to cell selection module so drag selection can start on mousedown
         if (selectionSettings?.type === 'Cell' && cellSelectionModule) {
             cellSelectionModule.handleGridMouseDown(e);
+            requestAnimationFrame(() => {
+                autoFillModule?.showFillHandle?.();
+            });
             if (isStopPropagationPreventDefault(e)) {
                 return;
             }
@@ -1634,7 +2226,8 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
     }, [focusModule, filterModule, cellSelectionModule, selectionSettings, isStopPropagationPreventDefault]);
 
     const handleGridFocus: (e: FocusEvent) => void = useCallback((e: FocusEvent<HTMLDivElement>) => {
-        if (isChildGrid(e) || e.target.closest('.sf-excel-filter') || e.target.closest('.sf-excel-filter-dropdown') || e.target.closest('.sf-column-chooser-dialog')) {
+        if (isChildGrid(e) || e.target.closest('.sf-excel-filter') || e.target.closest('.sf-datetimepicker')
+            || e.target.closest('.sf-excel-filter-dropdown') || e.target.closest('.sf-column-chooser-dialog')) {
             return;
         }
         props?.onFocus?.(e);
@@ -1645,7 +2238,7 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         || e.target.closest('#' + id + 'EditAlert') || e.target.closest('#' + id + 'SelectionDelete') || e.target.closest('.sf-filterbar-dropdown')
         || e.target.classList.contains('sf-virtualrowscrollbar') || e.target.classList.contains('sf-virtualcolumnscrollbar') ||
             isGroupDropAreaTarget) {
-            if (isGroupDropAreaTarget && !groupModule.groupedColumns?.length && !groupDropAreaWithFocusElement) {
+            if (isGroupDropAreaTarget && !groupModule?.groupedColumns?.length && !groupDropAreaWithFocusElement) {
                 e.target?.classList.add('sf-focused');
             }
             return;
@@ -1653,8 +2246,8 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
             groupDropAreaWithFocusElement.classList.remove('sf-focused');
         }
         // Check if grid is in edit mode to prevent focus interference
-        const isGridInEditMode: boolean = (editModule?.isEdit && !commandColumnModule.commandEdit.current) || false;
-        const commandEditForm: boolean = commandColumnModule.commandEdit.current && e?.target?.closest('.sf-grid-edit-form')
+        const isGridInEditMode: boolean = (editModule?.isEdit && !commandColumnModule?.commandEdit.current) || false;
+        const commandEditForm: boolean = commandColumnModule?.commandEdit.current && e?.target?.closest('.sf-grid-edit-form')
             ? true : false;
         // If grid is in edit mode, don't interfere with edit focus management
         // This prevents the focus from jumping to header cell when edit form regains focus
@@ -1721,7 +2314,7 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
                     requestAnimationFrame(() => { // default shift tab to enter grid content or aggregate browser auto scroll behavior execution taking time allowed here, after that apply our logic to focus proper element.
                         requestAnimationFrame(() => {
                             focusModule?.debounceLastVirtualRowCellFocusHelper(contentRowCount > 0);
-                            focusModule.focus(undefined, commandColumnModule.commandEdit.current ? e : undefined);
+                            focusModule.focus(undefined, commandColumnModule?.commandEdit.current ? e : undefined);
                         });
                     });
                     return;
@@ -1762,8 +2355,8 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
             return;
         }
         // Check if grid is in edit mode to prevent focus interference
-        const isGridInEditMode: boolean = (editModule?.isEdit && !commandColumnModule.commandEdit.current) || false;
-        const commandEditForm: boolean = commandColumnModule.commandEdit.current && e?.target?.closest('.sf-grid-edit-form')
+        const isGridInEditMode: boolean = (editModule?.isEdit && !commandColumnModule?.commandEdit.current) || false;
+        const commandEditForm: boolean = commandColumnModule?.commandEdit.current && e?.target?.closest('.sf-grid-edit-form')
             ? true : false;
 
         // If grid is in edit mode, don't interfere with edit focus management
@@ -1787,18 +2380,18 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
             // 2. Focus is moving to a grid popup
             // 3. Focus is moving to a specific element that should maintain grid focus
             let isStayingInGrid: boolean | Element = (e.target && (e.target as HTMLElement).closest('#' + id + '_toolbar')) ||
-                e.target?.closest('.sf-datepicker') || e.target?.closest('.sf-grid-contextmenu') ||
-                e.target?.closest('.sf-group-drop-area') ||
+                e.target?.closest('.sf-datepicker')  || e.target?.closest('.sf-datetimepicker') || e.target?.closest('.sf-grid-contextmenu')
+                || e.target?.closest('.sf-group-drop-area') ||
                 // Focus moving to another element within the grid
                 (e.currentTarget?.contains(relatedTarget) ||
                     // Focus moving to a grid popup
-                    (relatedTarget && (relatedTarget.closest('.sf-grid-popup') || relatedTarget.closest('.sf-grid-contextmenu'))) ||
+                    (relatedTarget && (relatedTarget?.closest?.('.sf-grid-popup') || relatedTarget?.closest?.('.sf-grid-contextmenu'))) ||
                     // Focus still within the grid (using document.activeElement)
                     document.activeElement && document.activeElement.closest('.sf-grid')) as boolean;
-            isStayingInGrid = relatedTarget && relatedTarget.closest('.sf-pager') ? false : isStayingInGrid;
+            isStayingInGrid = relatedTarget && relatedTarget?.closest?.('.sf-pager') ? false : isStayingInGrid;
             const isVirtualFocusStayingInGrid: boolean = isStayingInGrid && relatedTarget &&
-                !relatedTarget.classList.contains('sf-virtualrowscrollbar') &&
-                !relatedTarget.classList.contains('sf-virtualcolumnscrollbar');
+                !relatedTarget?.classList?.contains('sf-virtualrowscrollbar') &&
+                !relatedTarget?.classList?.contains('sf-virtualcolumnscrollbar');
             if (!isVirtualFocusStayingInGrid) {
                 isStayingInGrid = isVirtualFocusStayingInGrid;
             }
@@ -1813,6 +2406,7 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
             }
         }
     }, [focusModule]);
+
 
     const handleGridKeyUp: (e: React.KeyboardEvent) => void = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
         if (isChildGrid(e)) {
@@ -1835,11 +2429,12 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         }
         props?.onKeyDown?.(e);
         const target: Element = e.target as Element;
-        if (isMasterDetail && e.altKey && (e.code === 'ArrowDown' || e.code === 'ArrowUp') && target.querySelector('.sf-detail-toggle-icon')) {
+        const expansionIcon: Element = target.closest('.sf-detail-toggle-icon') || target.querySelector('.sf-detail-toggle-icon');
+        if (isMasterDetail && (e.altKey || e.ctrlKey) && (e.code === 'ArrowDown' || e.code === 'ArrowUp') && expansionIcon) {
             const expandCell: HTMLTableCellElement = target.closest('td[role="gridcell"]') as HTMLTableCellElement;
             const rowInfo: RowInfo<T> = gridRef.current?.getRowInfo(expandCell);
-            if ((e.code === 'ArrowDown' && !(expansionState.has(rowInfo.ariaRowIndex))) ||
-                (e.code === 'ArrowUp' && (expansionState.has(rowInfo.ariaRowIndex)))) {
+            if (rowInfo && ((e.code === 'ArrowDown' && !(expansionState.has(rowInfo.ariaRowIndex))) ||
+                (e.code === 'ArrowUp' && (expansionState.has(rowInfo.ariaRowIndex))))) {
                 onExpandStateChange(rowInfo.ariaRowIndex, rowInfo.data);
             }
             return;
@@ -1861,9 +2456,9 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         if (target?.closest('.sf-grid-popup-edit')) {
             if (e.key === 'Enter' && target.closest('.sf-dlg-content')
                 && !(target.classList.contains('sf-dropdownlist') && target.getAttribute('aria-expanded') === 'true')) {
-                editModule.saveDataChanges();
+                editModule?.saveDataChanges();
             } else if (e.key === 'Escape') {
-                editModule.cancelDataChanges();
+                editModule?.cancelDataChanges();
             }
             return;
         }
@@ -1873,7 +2468,7 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         }
         const pageAction: boolean = pageSettings?.enabled && (e.target as HTMLElement)?.closest('.sf-pager')
             && (e.target as HTMLElement).closest('.sf-pager').parentElement === gridRef.current.element;
-        const toolbarAction: boolean = props?.toolbar?.length &&
+        const toolbarAction: boolean = toolbarModule && props?.toolbar?.length &&
             (e.target as HTMLElement)?.closest('.sf-toolbar')?.parentElement === gridRef.current.element;
         const isGroupDropAreaAction: boolean = !!(groupSettings.enabled && (e.target as HTMLElement)?.closest('.sf-group-drop-area'));
         const commandItemEnter: boolean = (e.target as HTMLElement)?.closest('.sf-grid-command-cell') && e.key === 'Enter';
@@ -1884,24 +2479,75 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         // This implements comprehensive keyboard actions including Insert and Delete keys
         const isMacLike: boolean = /(Mac)/i.test(navigator.platform);
 
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C' || e.key === 'H' || e.key === 'h')) {
+            if (editModule?.isEdit) {
+                return;
+            }
+            e.preventDefault();
+            if (e.shiftKey) {
+                void clipboardModule?.copyToClipboard(true);
+            }
+            else {
+                void clipboardModule?.copyToClipboard();
+            }
+            return;
+        }
+
         // Check for edit form - support both row edit form and cell edit form
         const editForm: HTMLElement | null = (e.target as HTMLElement)?.closest('.sf-grid-edit-form') ||
                                              (e.target as HTMLElement)?.closest('.sf-grid-cell-edit-form');
+
+        // Batch edit: start editing immediately on printable keys when a cell is already focused.
+        const isPrintableBatchEditKey: boolean = editModule?.editSettings?.allowBatchSave === true &&
+            !editModule?.isEdit &&
+            !editForm &&
+            !e.ctrlKey && !e.metaKey && !e.altKey &&
+            /^[A-Za-z0-9]$/.test(e.key) &&
+            !(target as HTMLElement)?.closest('input, textarea, select');
+
+        if (isPrintableBatchEditKey) {
+            const focusedCell: FocusedCellInfo = focusModule?.getFocusInfo?.();
+            if (focusedCell && !focusedCell.isHeader && !focusedCell.isAggregate) {
+                const rowObjects: IRow<ColumnProps<T>>[] = gridRef.current?.getRowsObject?.() ?? [];
+                const visibleColumns: ColumnProps<T>[] = gridRef.current?.getVisibleColumns?.() ?? [];
+                const rowObject: IRow<ColumnProps<T>> | undefined = rowObjects[focusedCell.rowIndex] as IRow<ColumnProps<T>> | undefined;
+                const column: ColumnProps<T> | undefined = visibleColumns[focusedCell.colIndex];
+                const primaryKeyField: string | undefined = getPrimaryKeyFieldNames()?.[0];
+
+                if (rowObject?.data && column?.field && !column.isPrimaryKey && column.allowEdit !== false && primaryKeyField) {
+                    const primaryKeyValue: string | number | undefined = rowObject.data[primaryKeyField as string];
+                    if (!isNullOrUndefined(primaryKeyValue)) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (editModule?.editSettings?.mode === 'Normal') {
+                            const rowElement: HTMLTableRowElement | undefined = gridRef.current?.getRowByIndex?.(
+                                focusedCell.rowIndex
+                            ) as HTMLTableRowElement | undefined;
+                            void editModule?.editRecord?.(rowElement, column.field, e.key);
+                        } else if (editModule?.editSettings?.mode === 'Cell') {
+                            void editModule?.editCell(primaryKeyValue, column.field, rowObject.uid, e.key);
+                        }
+                        return;
+                    }
+                }
+            }
+        }
+
         // Handle edit-specific keyboard events first
-        if (props.editSettings?.allowEdit || props.editSettings?.allowAdd || props.editSettings?.allowDelete) {
-            const commandEdit: boolean = commandColumnModule.commandEdit.current;
+        if (editSettings?.allowEdit || editSettings?.allowAdd || editSettings?.allowDelete) {
+            const commandEdit: boolean = commandColumnModule?.commandEdit.current;
             const row: HTMLTableRowElement = target?.closest('.sf-grid-content-row');
             const uid: string = row?.getAttribute('data-uid');
             // Insert key or Mac Cmd+Enter to add record
             if ((e.key === 'Insert' || (isMacLike && e.metaKey && e.key === 'Enter')) &&
-                props.editSettings?.allowAdd && (!editModule?.isEdit || commandEdit)) {
+                editSettings?.allowAdd && (!editModule?.isEdit || commandEdit)) {
                 e.preventDefault();
                 editModule?.addRecord?.();
                 return;
             }
 
             // Delete key to delete selected record
-            if (e.key === 'Delete' && editModule?.editSettings?.mode !== 'Cell' && props.editSettings?.allowDelete && (!editModule?.isEdit || commandEdit)) {
+            if (e.key === 'Delete' && editModule?.editSettings?.mode !== 'Cell' && editSettings?.allowDelete && (!editModule?.isEdit || commandEdit)) {
                 const target: HTMLElement = e.target as HTMLElement;
                 // Safety checks: ignore if focus is on input elements (except checkboxes)
                 const isInputFocused: boolean = target.tagName === 'INPUT' && !target.classList.contains('sf-checkselect');
@@ -1922,30 +2568,33 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
             }
 
             // Enter key to save changes (when in edit mode)
-            if (e.key === 'Enter' && editModule?.editSettings?.mode !== 'Cell' && (editModule?.isEdit || commandEdit)) {
+            if (editModule && e.key === 'Enter' && editModule?.editSettings?.mode !== 'Cell' && (editModule?.isEdit || commandEdit)) {
                 const target: HTMLElement = e.target as HTMLElement;
                 // Only handle if not in input field or specific grid context
                 if (!target.closest('.sf-unboundcelldiv') &&
                     (target.closest('.sf-grid-content-container') || target.closest('.sf-grid-header-content')) && editForm) {
                     e.preventDefault();
                     editModule.escEnterIndex.current = parseInt((e.target as HTMLElement)?.closest('td')?.getAttribute('aria-colindex'), 10) - 1;
+                    // Normal + Batch: stage row changes only; do not persist to datasource here.
                     (editModule?.saveDataChanges as Function)?.(undefined, undefined, 'Key', commandEdit ? uid : undefined);
                     return;
                 }
             }
 
             // Escape key to cancel editing
-            if (e.key === 'Escape' && editModule?.editSettings?.mode !== 'Cell' && (editModule?.isEdit || commandEdit) && editForm) {
+            if (editModule && e.key === 'Escape' && editModule?.editSettings?.mode !== 'Cell' && (editModule?.isEdit || commandEdit) && editForm) {
                 e.preventDefault();
                 editModule.escEnterIndex.current = parseInt((e.target as HTMLElement)?.closest('td')?.getAttribute('aria-colindex'), 10) - 1;
+                // Normal + Batch: close row form without persisting datasource changes.
                 (editModule?.cancelDataChanges as Function)?.('Key', commandEdit ? uid : undefined);
                 return;
             }
         }
 
-        const isGridInEditMode: boolean = editModule?.isEdit || commandColumnModule.commandEdit.current || false;
+        const isGridInEditMode: boolean = editModule?.isEdit || commandColumnModule?.commandEdit.current || false;
 
-        // Handle keyboard events in Cell Edit Mode using consolidated handler (Tab, F2, Enter, Delete, Escape)
+        // Handle keyboard events in real Cell Edit Mode only.
+        // Normal + Batch row editing must not enter the cell-edit keyboard flow.
         if (editModule?.editSettings?.mode === 'Cell' && editModule?.editSettings?.allowEdit) {
             const cellEditKeys: string[] = ['Tab', 'F2', 'Enter', 'Delete', 'Escape'];
             if (cellEditKeys.includes(e.key)) {
@@ -1960,7 +2609,7 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         }
 
         // Handle Tab key for Row edit mode (Normal/Popup/PopupTemplate)
-        if (isGridInEditMode && e.key === 'Tab' && editForm && editModule?.editSettings?.mode !== 'Cell') {
+        if (isGridInEditMode && e.key === 'Tab' && editForm && editModule?.editSettings?.mode !== 'Cell' && editModule?.editSettings?.allowBatchSave !== true) {
             // Row mode: use the standard editCellTab event for Tab navigation
             const tabEvent: CustomEvent = new CustomEvent('editCellTab', {
                 detail: {
@@ -2037,10 +2686,11 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
                 const rowInfo: RowInfo<T> = gridRef.current?.getRowInfo(captionRow);
                 if (rowInfo?.data) {
                     // Pass the entire row object (GroupedData) to toggleGroup
-                    groupModule.toggleGroup(rowInfo);
+                    groupModule?.toggleGroup(rowInfo);
+                    const colIndex: number = parseInt(target?.closest('td')?.getAttribute('data-colindex') ?? '1', 10) - 1;
                     requestAnimationFrame(() => {
                         // After toggling the group, move focus back to the caption cell to maintain focus context
-                        focusModule.navigateToCell(rowInfo.rowIndex, parseInt(target?.closest('td')?.getAttribute('data-colindex') ?? '1', 10) - 1, 'Content');
+                        focusModule.navigateToCell(rowInfo.rowIndex, colIndex, 'Content', undefined, true);
                     });
                     e.preventDefault();
                     return;
@@ -2052,9 +2702,9 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
                 gridRef.current.contentScrollRef.scrollTop = 0;
                 gridRef.current.scrollModule.virtualRowInfo.startIndex = 0;
                 if (e.code === 'ArrowDown') {
-                    groupModule.expandAll();
+                    groupModule?.expandAll();
                 } else {
-                    groupModule.collapseAll();
+                    groupModule?.collapseAll();
                 }
                 requestAnimationFrame(() => {
                     if (rowObject.indent > 1) {
@@ -2073,7 +2723,31 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         }
         // Otherwise, handle navigation normally
         focusModule.handleKeyDown(e);
-    }, [focusModule, filterModule, props.editSettings, editModule, selectionSettings, cellSelectionModule]);
+    }, [focusModule, filterModule, editSettings, editModule, selectionSettings, cellSelectionModule, clipboardModule]);
+
+    const handleGridPointerDown: (e: React.PointerEvent) => void = useCallback((e: React.PointerEvent) => {
+        const target: HTMLElement = e.target as HTMLElement;
+        if (target?.closest('.sf-resize-handler')) {
+            if (resizeHandlePointerDownTimeout.current) {
+                clearTimeout(resizeHandlePointerDownTimeout.current);
+            }
+            resizeHandlePointerDownTimeout.current = setTimeout(() => {
+                const groupingHelper: boolean = (target as HTMLElement)?.closest?.('.sf-grid')?.querySelector('.sf-groupable-header-clone') ? true : false;
+                if (groupingHelper) { return; }
+                resizeModule?.onResizeHandlePointerDown(e);
+                resizeHandlePointerDownTimeout.current = null;
+            }, 200);
+        } else if (reorderModule?.reorderSettings?.enabled && target?.closest('.sf-grid-header-row') && target?.closest('.sf-cell')) {
+            reorderModule?.onColumnPointerDown(e);
+        }
+    }, [resizeModule, reorderModule]);
+
+    const handleGridPointerUp: (e: React.PointerEvent) => void = useCallback((_e: React.PointerEvent) => {
+        if (resizeHandlePointerDownTimeout.current) {
+            clearTimeout(resizeHandlePointerDownTimeout.current);
+            resizeHandlePointerDownTimeout.current = null;
+        }
+    }, []);
 
     useEffect(() => {
         if (allowKeyboard) {
@@ -2092,51 +2766,43 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         // Set the first focusable element's tabIndex to 0
         focusModule.setFirstFocusableTabIndex();
         preRender('grid');
-        initializeTelemetry('grid');
+        initializeTelemetry('DataGrid');
         setGridTelemetryFeatureList<T>(props, { aggregates });
+        setGridModuleInjectionWarning<T>(props, { aggregates, isCommandEditEnabled });
         if (props.onGridInit) {
             props.onGridInit(); // trigger only once on initial render, once Dom element mounted.
         }
         isInitialBeforePaint.current = false;
         if (enableDevMode && isInitialLoad && scrollMode === ScrollMode.Infinite && (aggregates?.length ||
             (groupSettings?.enabled && groupSettings?.columns?.length && groupCaptionAggregateType.size))) {
-            const aggregateInfiniteScrollMessage: string = [
-                'Syncfusion Pure React Data Grid:',
-                '- Aggregates in infinite scroll mode display values only from the last' +
-                ' loaded request due to unknown total record count.',
-                '- This behavior is expected because infinite scrolling does not maintain' +
-                ' a complete dataset context.',
-                '- Consider using pagination or virtual scrolling for accurate aggregate values across the entire dataset.',
-                '- Learn more: https://react.syncfusion.com/react-ui/data-grid/scrolling/infinite-scroll/?theme=material#aggregation-and-grouping'
-            ].join('\n');
-
-            console.warn(aggregateInfiniteScrollMessage);
+            console.warn(AGGREGATE_INFINITE_SCROLL_MESSAGE);
         }
         if (enableDevMode && isInitialLoad && scrollMode === ScrollMode.Infinite && groupSettings?.enabled &&
             groupSettings?.columns?.length) {
-            const groupInfiniteScrollMessage: string = [
-                'Syncfusion Pure React Data Grid:',
-                '- Grouping in infinite scroll mode may lead to unexpected behavior due to unknown total record count.',
-                '- This is because infinite scrolling dynamically loads data without a complete dataset context, which can affect group' +
-                ' counts and expand/collapse behavior.',
-                '- Consider using pagination or virtual scrolling for more consistent grouping behavior across the entire dataset.',
-                '- Learn more: https://react.syncfusion.com/react-ui/data-grid/scrolling/infinite-scroll/?theme=material#aggregation-and-grouping'
-            ].join('\n');
-            console.warn(groupInfiniteScrollMessage);
+            console.warn(GROUP_INFINITE_SCROLL_MESSAGE);
         }
 
         if (enableDevMode && isInitialLoad && pageSettings?.enabled && (scrollMode === ScrollMode.Virtual ||
             scrollMode === ScrollMode.Infinite)) {
-            const pagerWithServerVirtualInfiniteScrollMessage: string = [
-                'Syncfusion Pure React Data Grid:',
-                '- Using pager with server-side pagination in virtual or infinite scroll mode may lead to unexpected behavior.',
-                '- This is because server-side pagination relies on explicit page navigation, while virtual/infinite scrolling' +
-                ' dynamically loads data (server-side pagination) as the user scrolls.',
-                '- Consider using either pager for server-side pagination or disabling the pager for virtual/infinite scroll scenarios.'
-            ].join('\n');
-            console.warn(pagerWithServerVirtualInfiniteScrollMessage);
+            console.warn(PAGER_WITH_SERVER_VIRTUAL_INFINITE_SCROLL_MESSAGE);
         }
         return () => {
+            const gridProperties: object = {
+                pageSettings: gridRef?.current?.pageSettings,
+                sortSettings: gridRef?.current?.sortSettings,
+                groupSettings: gridRef?.current?.groupSettings,
+                searchSettings: gridRef?.current?.searchSettings,
+                filterSettings: gridRef?.current?.filterSettings,
+                selectedRowIndexes: gridRef?.current?.selectedRowIndexes,
+                columns: gridRef.current?.columns,
+                defaultExpandedRows: gridRef.current?.defaultExpandedRows
+            };
+            if (gridRef?.current?.isChildrenGrid) {
+                window.localStorage.setItem(gridRef?.current?.id, JSON.stringify(gridProperties));
+            } else {
+                clearChildGridLocalStorage(!gridRef?.current?.isChildrenGrid &&
+                    !isNullOrUndefined(gridRef?.current?.detailCellRendererParams));
+            }
             props.onGridDestroy?.();
             window.localStorage.removeItem((gridRef?.current?.getDataModule() as {dataManager: {guidId: string}})?.dataManager?.guidId);
             isInitialBeforePaint.current = null;
@@ -2151,6 +2817,158 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
     useEffect(() => {
         stableRest.current = props;
     }, [props]); // we might use a custom comparison for props here to avoid re-render.
+
+    /**
+     * @private
+     */
+    const getGroupCaptionAggregateType: () => Map<string, string[]> = useCallback(() => {
+        return groupCaptionAggregateType;
+    }, [groupCaptionAggregateType]);
+
+    const isInitialResize: RefObject<boolean> = useRef(true);
+    const previousObservedWidth: RefObject<number> = useRef(null);
+    const disableResizeObserver: RefObject<boolean> = useRef<boolean>(false);
+    useEffect(() => {
+        isInitialResize.current = true;
+        previousObservedWidth.current = null;
+        disableResizeObserver.current = false;
+        let resizeStopTimer: number;
+        const observer: ResizeObserver = new ResizeObserver((entries: ResizeObserverEntry[]) => {
+            const observedWidth: number = entries[0]?.contentRect.width;
+            if (previousObservedWidth.current === observedWidth) {
+                return;
+            }
+            previousObservedWidth.current = observedWidth;
+            if (isInitialResize.current) {
+                isInitialResize.current = false;
+                return;
+            }
+            clearTimeout(resizeStopTimer);
+            resizeStopTimer = window.setTimeout(() => {
+                if (columnWidthInfo.current.hasDynamicWidth && !columnWidthInfo.current.resizeTableWidth) {
+                    columnWidthInfo.current.renderInitialWidth = true;
+                    setColumnWidthState({});
+                }
+            }, resizeSettings.throttle);
+        });
+        if (gridRef.current?.element) {
+            observer.observe(gridRef.current.element);
+        }
+        return () => {
+            clearTimeout(resizeStopTimer);
+            observer.disconnect();
+        };
+    }, [resizeSettings]);
+
+    const setColumnWidths: (gridRef: RefObject<GridRef>, uiColumns: ColumnProps<T>[]) => void =
+        useCallback((gridRef: RefObject<GridRef>, uiColumns: ColumnProps<T>[]): void => {
+            const contentTable: HTMLTableElement = gridRef.current.getContentTable?.();
+            const initialTableWidth: number = contentTable?.getBoundingClientRect().width;
+            const headerTable: HTMLElement = gridRef.current.getHeaderTable();
+            const proposedWidths: Map<string, number> = new Map();
+            for (let i: number = 0; i < uiColumns.length; i++) {
+                const column: ColumnProps<T> = uiColumns[i as number];
+                const div: Element = headerTable?.querySelector('[data-mappinguid="' + column.uid + '"]');
+                if (div) {
+                    const width: number = div.closest('.sf-cell').getBoundingClientRect().width;
+                    proposedWidths.set(column.uid, width);
+                }
+            }
+
+            interface WidthEntry {
+                column: ColumnProps<T>;
+                width: number;
+                frozen: boolean;
+            }
+            const entries: WidthEntry[] = [];
+            for (let i: number = 0; i < uiColumns.length; i++) {
+                const column: ColumnProps<T> = uiColumns[i as number];
+                if (proposedWidths.has(column.uid)) {
+                    const autoFitMode: AutoFitMode = column.autoFit ?? autoFit;
+                    const isAutoFit: boolean = autoFitModule && isInitialLoad && autoFitMode
+                        && !(column.type === ColumnType.Checkbox || column.type === ColumnType.Command);
+                    const entry: WidthEntry = {
+                        column: column,
+                        width: proposedWidths.get(column.uid) as number,
+                        frozen: false
+                    };
+                    if (isAutoFit) {
+                        entry.width = autoFitModule?.autoFitColumn(column, autoFitMode);
+                        entry.frozen = true;
+                    }
+                    if (!isNullOrUndefined(column.minWidth) && entry.width < column.minWidth) {
+                        entry.width = column.minWidth;
+                        entry.frozen = true;
+                    } else if (!isNullOrUndefined(column.maxWidth) && entry.width > column.maxWidth) {
+                        entry.width = column.maxWidth;
+                        entry.frozen = true;
+                    }
+                    entries.push(entry);
+                }
+            }
+
+            let active: WidthEntry[] = entries.filter((entry: WidthEntry) => !entry.frozen);
+            const entriesWidth: number = entries.reduce((sum: number, entry: WidthEntry) => sum + entry.width, 0);
+            let remainingWidth: number = initialTableWidth - entriesWidth;
+            let safetyGuard: number = entries.length + 1;
+            while (active.length && remainingWidth !== 0 && safetyGuard-- > 0) {
+                const nextActive: WidthEntry[] = [];
+                let allocatedWidth: number = 0;
+                const widthPerActiveColumn: number = remainingWidth / active.length;
+                for (let i: number = 0; i < active.length; i++) {
+                    const entry: WidthEntry = active[i as number];
+                    const previousWidth: number = entry.width;
+                    const requestedWidth: number = previousWidth + widthPerActiveColumn;
+                    const constrainedWidth: number = applyColumnWidthConstraints(entry.column, requestedWidth);
+                    entry.width = constrainedWidth;
+                    allocatedWidth += constrainedWidth - previousWidth;
+                    if (constrainedWidth === requestedWidth) {
+                        nextActive.push(entry);
+                    } else {
+                        entry.frozen = true;
+                    }
+                }
+                remainingWidth -= allocatedWidth;
+                if (nextActive.length === active.length) {
+                    break;
+                }
+                active = nextActive;
+            }
+
+            for (let i: number = 0; i < entries.length; i++) {
+                const entry: WidthEntry = entries[i as number];
+                entry.column.width = entry.width + 'px';
+            }
+        }, [autoFit, autoFitModule, isInitialLoad]);
+
+    useEffect(() => {
+        if (uiColumns.current && !columnWidthInfo.current.resizeTableWidth && (columnWidthInfo.current.hasDynamicWidth
+            || (isInitialLoad && (columnWidthInfo.current.hasAutoFitWidth || autoFit)))) {
+            if (columnWidthInfo.current.widthProcess) {
+                columnWidthInfo.current.widthProcess = false;
+            } else {
+                setColumnWidths(gridRef, uiColumns.current);
+                columnWidthInfo.current.widthProcess = true;
+                setColumnWidthState({});
+            }
+        }
+
+        const contentTable: HTMLTableElement = gridRef.current.getContentTable?.();
+        const content: Element = contentTable.closest('.sf-grid-content');
+        const headerTable: HTMLTableElement = gridRef.current.getHeaderTable?.();
+        const footerTable: HTMLTableElement = gridRef.current.getFooterTable?.();
+        const tableBorderClass: string = 'sf-grid-table-border';
+
+        if (contentTable?.getBoundingClientRect().width < content?.clientWidth) {
+            contentTable?.classList.add(tableBorderClass);
+            headerTable?.classList.add(tableBorderClass);
+            footerTable?.classList.add(tableBorderClass);
+        } else {
+            contentTable?.classList.remove(tableBorderClass);
+            headerTable?.classList.remove(tableBorderClass);
+            footerTable?.classList.remove(tableBorderClass);
+        }
+    }, [colElements, uiColumns.current]);
 
     /**
      * Private API for internal grid operations
@@ -2172,9 +2990,23 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         handleGridKeyUp,
         setCurrentPage,
         setTotalRecordsCount,
-        setGridAction
+        setGridAction,
+        handleGridPointerDown,
+        handleGridPointerUp
     }), [styles, setCurrentViewData, handleGridClick, handleGridDoubleClick, setCurrentPage, setTotalRecordsCount,
-        setGridAction, handleGridMouseDown, handleGridMouseOut, handleGridMouseOver, getEllipsisTooltipContent]);
+        setGridAction, handleGridMouseDown, handleGridMouseOut, handleGridMouseOver, getEllipsisTooltipContent,
+        handleGridPointerDown, handleGridPointerUp]);
+
+    // Ensure fill handle renders/cleans up when cell selection changes
+    const selectedCellCount: number = cellSelectionModule?.selectedCells?.size ?? 0;
+    useEffect(() => {
+        if (selectionSettings?.type === 'Cell' && selectionSettings?.enabled) {
+            autoFillModule?.showFillHandle?.();
+        } else {
+            autoFillModule?.removeFillHandle?.();
+        }
+    }, [selectedCellCount, selectionSettings?.type, selectionSettings?.enabled]);
+
 
     /**
      * Public API exposed to consumers of the grid
@@ -2186,6 +3018,13 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
     const gridAPI: IGrid<T> = useMemo(() => ({
         ...stableRest.current,
         getVisibleColumns,
+        stackedHeaderColumns,
+        stackedFlattedColumns,
+        visibleStackedHeaderColumns: visibleStackedHeaderColumns,
+        allStackedColumnProps,
+        stackedFlattedColumnProps,
+        stackedRowEntries,
+        isStackedHeader,
         getColumnByUid,
         getColumnByField,
         getData,
@@ -2194,6 +3033,15 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         getPrimaryKeyFieldNames,
         setRowData,
         setCellValue,
+        saveBulkChanges,
+        setRowDataAsync,
+        setCellValueAsync,
+        saveBulkChangesAsync,
+        copyToClipboard: clipboardModule?.copyToClipboard,
+        pasteFromClipboard: clipboardModule?.pasteFromClipboard,
+        cutToClipboard: clipboardModule?.cutToClipboard,
+        applyFill: autoFillModule?.applyFill,
+        autoFillModule,
         serviceLocator,
         className,
         dataSource: dataOperations.dataManager,
@@ -2201,21 +3049,26 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         height,
         children,
         clipMode,
+        enableGridChart,
         width,
         enableRtl,
         enableHover,
         enableDevMode,
         selectionSettings,
         gridLines,
-        filterSettings: filterModule?.filterSettings,
+        filterSettings: filterModule?.filterSettings ?? filterSettings,
+        resizeSettings: resizeModule?.resizeSettings ?? resizeSettings,
+        autoFit: autoFitModule?.autoFit ?? autoFit,
         sortSettings: sortModule?.sortSettings,
-        searchSettings: searchModule?.searchSettings,
+        searchSettings: searchModule?.searchSettings ?? searchSettings,
+        detailGridModule,
         pageSettings,
         textWrapSettings,
         enableHtmlSanitizer,
         enableStickyHeader,
         rowHeight,
         enableAltRow,
+        rowNumberSettings,
         columns,
         isSpannedColumns,
         locale,
@@ -2227,7 +3080,7 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         detailRowHeight,
         defaultExpandedRows,
         aggregates,
-        editSettings: props.editSettings,
+        editSettings,
         allowKeyboard,
         columnChooserSettings: props.columnChooserSettings,
         getRowHeight,
@@ -2236,9 +3089,21 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         loadingIndicatorSettings,
         contextMenuSettings,
         virtualizationSettings,
-        groupSettings: groupModule?.groupSettings
+        groupSettings: groupModule?.groupSettings ?? groupSettings,
+        pinningSettings,
+        undo: undoRedoModule?.undo,
+        redo: undoRedoModule?.redo,
+        getUndoActionsCount: undoRedoModule?.getUndoActionsCount,
+        getRedoActionsCount: undoRedoModule?.getRedoActionsCount,
+        clearUndoRedoHistory: undoRedoModule?.clearHistory
     } as IGrid<T>), [
         getVisibleColumns,
+        stackedHeaderColumns,
+        visibleStackedHeaderColumns,
+        allStackedColumnProps,
+        stackedFlattedColumnProps,
+        stackedRowEntries,
+        isStackedHeader,
         getColumnByUid,
         getColumnByField,
         getData,
@@ -2247,6 +3112,12 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         getPrimaryKeyFieldNames,
         setRowData,
         setCellValue,
+        saveBulkChanges,
+        setRowDataAsync,
+        setCellValueAsync,
+        saveBulkChangesAsync,
+        clipboardModule,
+        autoFillModule,
         serviceLocator,
         className,
         dataOperations.dataManager,
@@ -2254,6 +3125,7 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         height,
         children,
         clipMode,
+        enableGridChart,
         width,
         enableRtl,
         enableHover,
@@ -2261,14 +3133,18 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         selectionSettings,
         gridLines,
         filterModule?.filterSettings,
+        resizeModule?.resizeSettings,
+        autoFitModule?.autoFit,
         sortModule?.sortSettings,
         searchModule?.searchSettings,
+        detailGridModule,
         pageSettings,
         textWrapSettings,
         enableHtmlSanitizer,
         enableStickyHeader,
         rowHeight,
         enableAltRow,
+        rowNumberSettings,
         columns,
         locale,
         query,
@@ -2286,6 +3162,8 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         loadingIndicatorSettings,
         contextMenuSettings,
         groupModule?.groupSettings,
+        pinningSettings,
+        undoRedoModule,
         props
     ]);
 
@@ -2311,9 +3189,14 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         searchModule,
         filterModule,
         groupModule,
+        pinningModule,
         editModule,
+        formulaModule,
         aggregateSelection,
         toolbarModule,
+        pagerModule,
+        contextMenuModule,
+        columnChooserModule,
         currentPage,
         totalRecordsCount,
         expandedGroupCountRef,
@@ -2341,15 +3224,35 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
         setInfiniteScrollState,
         expansionState,
         singleGroupColumn,
-        groupCaptionAggregateType
+        groupCaptionAggregateType,
+        fieldOrderMap,
+        uidOrderMap,
+        columnMap,
+        columnUidMap,
+        leftPinnedColumns,
+        rightPinnedColumns,
+        resizeModule,
+        autoFitModule,
+        reorderModule,
+        columnWidthInfo,
+        setColumnWidthState,
+        disableResizeObserver,
+        aggregateModule,
+        treeModule,
+        isOffline,
+        treeDataSettings,
+        isChildrenGrid
     }), [currentViewData, virtualCachedViewData, columnsDirective, headerRowDepth, colElements, isInitialLoad, focusModule, groupModule,
         selectionModule, cellSelectionModule, getParentElement, sortModule, searchModule, filterModule, editModule, sortSettings,
         searchSettings, evaluateTooltipStatus, uiColumns.current, setVirtualCachedViewData, currentPage, totalRecordsCount, gridAction,
         isInitialBeforePaint, cssClass, responseData, setResponseData, dataModule, offsetX, offsetY, setOffsetX, setOffsetY,
         totalVirtualColumnWidth, commandColumnModule, columnOffsets, virtualSettings, scrollMode, setColumnChooserState, isCheckBoxColumn,
         aggregateSelection, infiniteScrollState, expansionState, expandedGroupCountRef, singleGroupColumn, groupCaptionAggregateType,
-        loadedPageWiseGroupExpandedCountRef, pageWiseGroupResponseViewData, setPageWiseGroupResponseViewData,
-        loadedPageWiseVirtualGroupStartEndRowIndexes
+        loadedPageWiseGroupExpandedCountRef, pageWiseGroupResponseViewData, setPageWiseGroupResponseViewData, aggregateModule,
+        loadedPageWiseVirtualGroupStartEndRowIndexes, fieldOrderMap, uidOrderMap, columnMap, columnUidMap,
+        leftPinnedColumns, rightPinnedColumns, resizeModule,
+        autoFitModule, columnWidthInfo, setColumnWidthState, pagerModule, contextMenuModule, columnChooserModule, reorderModule,
+        pinningModule, formulaModule, treeModule, isOffline, treeDataSettings, isChildrenGrid
     ]);
 
     useEffect(() => {
@@ -2357,7 +3260,8 @@ export const useGridComputedProps: <T, >(props: Partial<IGridBase<T>>, gridRef?:
             ...gridRef.current,
             ...gridAPI,
             // Ensure currentViewData is always up-to-date in gridRef
-            currentViewData: currentViewData
+            currentViewData: currentViewData,
+            getGroupCaptionAggregateType
         };
         ellipsisTooltipEvaluateInfo.destroy();
     }, [gridAPI, currentViewData, ellipsisTooltipEvaluateInfo]);

@@ -1,7 +1,6 @@
-import { CheckboxChangeEvent } from '@syncfusion/react-buttons';
-import { useSelection } from '../hooks';
+import { CheckboxChangeEvent } from '@syncfusion/react-buttons/src/check-box/check-box';
 import { ColumnProps } from './column.interfaces';
-import { AutoSelectMode, CellSelectionType, SelectionMode, SelectionType } from './enum';
+import { AutoSelectMode, CellSelectionType, GroupSelectType, SelectionMode, SelectionType } from './enum';
 import { CellFocusEvent } from './focus.interfaces';
 import { IRow } from './interfaces';
 
@@ -91,6 +90,14 @@ export interface SelectionSettings {
      * @default AutoSelectMode.Default
      */
     autoSelectMode?: AutoSelectMode | string;
+
+    /**
+     * Specifies how selection is applied to grouped or hierarchical records.
+     * Determines whether selection affects only the selected group item or includes all descendant records.
+     *
+     * @default GroupSelectType.Self
+     */
+    groupSelectType?: GroupSelectType;
 }
 
 /**
@@ -355,7 +362,7 @@ export interface SelectionModel<T = unknown> {
  *
  * @private
  */
-export type selectionModule<T = unknown> = ReturnType<typeof useSelection<T>>;
+export type selectionModule<T = unknown> = SelectionModel<T>;
 
 /**
  * Configures row selectability and checkbox visibility for a single row.

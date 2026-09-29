@@ -46,7 +46,8 @@ export const useEditorActions: (onClose: () => void) => UseEditorActionsResult =
         confirmationDialog,
         onEditorSubmit,
         enableRecurrenceValidation,
-        resources
+        resources,
+        group
     } = useSchedulerPropsContext();
     const { eventsData, eventsProcessed } = useSchedulerEventsContext();
 
@@ -245,7 +246,8 @@ export const useEditorActions: (onClose: () => void) => UseEditorActionsResult =
             eventData.guid = internalData.guid;
         }
         if (action === 'Edit' && internalData) {
-            const eventsToSave: EventModel[] = EventService.splitEventForMultipleResources(eventData, resources, eventsData);
+            const eventsToSave: EventModel[] =
+                EventService.splitEventForMultipleResources(eventData, resources, eventsData, group?.groupEdit);
             if (eventsToSave.length > 1) {
                 const originalEvent: EventModel = { ...eventsToSave[0], id: internalData.id, guid: internalData.guid };
                 schedulerRef?.current?.saveEvent?.(originalEvent);
@@ -297,7 +299,8 @@ export const useEditorActions: (onClose: () => void) => UseEditorActionsResult =
                 schedulerRef?.current?.saveEvent?.(eventData, currentAction);
             }
         } else {
-            let eventsToAdd: EventModel[] | EventModel = EventService.splitEventForMultipleResources(eventData, resources, eventsData);
+            let eventsToAdd: EventModel[] | EventModel =
+                EventService.splitEventForMultipleResources(eventData, resources, eventsData, group?.groupEdit);
             eventsToAdd = eventsToAdd.length > 1 ? eventsToAdd : eventData;
             schedulerRef?.current?.addEvent?.(eventsToAdd);
         }

@@ -24,37 +24,46 @@ export function getMaxLabelWidth(chart: Chart, axis: AxisModel): void {
     axis.angle = (axis.labelStyle.rotationAngle as number) % 360;
     axis.maxLabelSize = { width: 0, height: 0 };
     visibleLabels.forEach((label: VisibleLabel, i: number) => {
-        const isAxisLabelBreak: boolean = isBreakLabel(label.originalText);
         const labelStyle: Required<AxisTextStyle> = label.labelStyle as Required<AxisTextStyle>;
-        if (isAxisLabelBreak) {
-            label.size = getMaxRotatedTextSize([label.originalText.replace(/<br>/g, ' ')], 0, labelStyle, chart.themeStyle.axisLabelFont);
-            label.breakLabelSize = getMaxRotatedTextSize([axis.labelStyle.enableTrim ? ((label.text as string[]).join('<br>')) : label.originalText], 0,
-                                                         labelStyle, chart.themeStyle.axisLabelFont);
-        } else if (axis.labelStyle.enableWrap) {
-            const maximumLabelHeight: number = chart.chartAxislayout.initialClipRect.height / visibleLabels.length;
-            label.text = useTextWrap(
-                label.text as string,
-                axis.labelStyle.maxLabelWidth as number,
-                labelStyle,
-                chart.enableRtl,
-                chart.themeStyle.axisLabelFont,
-                false,
-                (axis.orientation === 'Vertical' ? maximumLabelHeight as number : null) as number
-            );
-            let maxTextWidth: number = 0;
-            let maxTextHeight: number = 0;
-            label.text.forEach((textLine: string) => {
-                const textSize: ChartSizeProps = measureText(textLine, labelStyle, chart.themeStyle.axisLabelFont);
-                maxTextWidth = Math.max(maxTextWidth, textSize.width);
-                maxTextHeight += textSize.height;
-            });
-            label.size.width = maxTextWidth;
-            label.size.height = maxTextHeight;
+        const isTemplateLabel: boolean = label.isAxisLabelTemplate === true && !!label.templateHtml;
+        const labelText: string = label.templateText || (Array.isArray(label.text) ? label.text.join('<br>') : label.text);
+        let isAxisLabelBreak: boolean = false;
+        if (isTemplateLabel) {
+            (label as VisibleLabel & { _templateResolvedText?: string })._templateResolvedText = labelText;
+            label.size = label.templateSize || label.size || { width: 0, height: 0 };
+            label.breakLabelSize = label.templateSize || label.breakLabelSize || label.size;
         } else {
-            if ((axis.angle === -90 || axis.angle === 90 || axis.angle === 270 || axis.angle === -270) && axis.orientation === 'Vertical') {
-                label.size = getRotatedTextSize(label.text as string, labelStyle, axis.angle, chart.themeStyle.axisLabelFont);
+            isAxisLabelBreak = isBreakLabel(label.originalText);
+            if (isAxisLabelBreak) {
+                label.size = getMaxRotatedTextSize([label.originalText.replace(/<br>/g, ' ')], 0, labelStyle, chart.themeStyle.axisLabelFont);
+                label.breakLabelSize = getMaxRotatedTextSize([axis.labelStyle.enableTrim ? ((label.text as string[]).join('<br>')) : label.originalText], 0,
+                                                             labelStyle, chart.themeStyle.axisLabelFont);
+            } else if (axis.labelStyle.enableWrap) {
+                const maximumLabelHeight: number = chart.chartAxislayout.initialClipRect.height / visibleLabels.length;
+                label.text = useTextWrap(
+                    label.text as string,
+                    axis.labelStyle.maxLabelWidth as number,
+                    labelStyle,
+                    chart.enableRtl,
+                    chart.themeStyle.axisLabelFont,
+                    false,
+                    (axis.orientation === 'Vertical' ? maximumLabelHeight as number : null) as number
+                );
+                let maxTextWidth: number = 0;
+                let maxTextHeight: number = 0;
+                label.text.forEach((textLine: string) => {
+                    const textSize: ChartSizeProps = measureText(textLine, labelStyle, chart.themeStyle.axisLabelFont);
+                    maxTextWidth = Math.max(maxTextWidth, textSize.width);
+                    maxTextHeight += textSize.height;
+                });
+                label.size.width = maxTextWidth;
+                label.size.height = maxTextHeight;
             } else {
-                label.size = measureText(label.text as string, labelStyle, chart.themeStyle.axisLabelFont);
+                if ((axis.angle === -90 || axis.angle === 90 || axis.angle === 270 || axis.angle === -270) && axis.orientation === 'Vertical') {
+                    label.size = getRotatedTextSize(label.text as string, labelStyle, axis.angle, chart.themeStyle.axisLabelFont);
+                } else {
+                    label.size = measureText(label.text as string, labelStyle, chart.themeStyle.axisLabelFont);
+                }
             }
         }
 

@@ -1,7 +1,9 @@
 import { RefObject } from 'react';
 import { GridRef } from './grid.interfaces';
 import { ColumnProps } from './column.interfaces';
-import { PdfStandardFont, PdfStringFormat, PdfTrueTypeFont } from '@syncfusion/pdf-export';
+import { PdfStandardFont } from '@syncfusion/pdf-export/src/implementation/graphics/fonts/pdf-standard-font';
+import { PdfStringFormat } from '@syncfusion/pdf-export/src/implementation/graphics/fonts/pdf-string-format';
+import { PdfTrueTypeFont } from '@syncfusion/pdf-export/src/implementation/graphics/fonts/pdf-true-type-font';
 
 /**
  * Represents an image to be rendered in a PDF cell.

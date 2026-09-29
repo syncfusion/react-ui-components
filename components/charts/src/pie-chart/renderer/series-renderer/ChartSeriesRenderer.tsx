@@ -272,7 +272,8 @@ export const ChartSeriesRenderer: React.ForwardRefExoticComponent<PieChartSeries
         }, [
             props[0]?.radius, props[0]?.groupMode, props[0]?.groupTo,
             props[0]?.innerRadius, props[0]?.emptyPointSettings?.mode,
-            props[0]?.startAngle, props[0]?.endAngle]);
+            props[0]?.startAngle, props[0]?.colorField, props[0]?.endAngle,
+            props[0]?.yField, props[0]?.tooltipField]);
 
         useEffect(() => {
             if (phase === 'rendering' && layoutRef.current?.visibleSeries?.[0]) {
@@ -291,7 +292,7 @@ export const ChartSeriesRenderer: React.ForwardRefExoticComponent<PieChartSeries
                 }
                 setElementOptions(series.elementOptions);
             }
-        }, [props[0]?.dataLabel]);
+        }, [props[0]?.dataLabel, props[0]?.yField]);
 
         useEffect(() => {
             if (phase === 'rendering' && layoutRef.current?.visibleSeries?.[0]) {
@@ -623,7 +624,7 @@ export const ChartSeriesRenderer: React.ForwardRefExoticComponent<PieChartSeries
                 if (updateRafRef.current) { cancelAnimationFrame(updateRafRef.current); updateRafRef.current = null; }
                 updateAnimRef.current = null;
             };
-        }, [props[0]?.dataSource, phase]);
+        }, [props[0]?.dataSource, phase, props[0]?.yField]);
 
         // Mouse handlers (hover border, click explode)
         useEffect(() => {

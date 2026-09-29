@@ -8,6 +8,7 @@ import { ChartMarkerShape } from '../../base/enum';
 import { MarkerElementData, MarkerShapeOptions, MarkerOptions, MarkerOptionsList, MarkerPosition, MarkerProperties, PathOptions, PointRenderingEvent, Points, Rect, SeriesProperties } from '../../chart-area/chart-interfaces';
 import { isAxisZoomed } from '../Zooming/zooming';
 import { resolveMarkerAriaLabel } from './ariaLabelHelper';
+import { getSeriesGradientUrl } from '../../utils/gradient/gradientPipeline';
 
 /**
  * Array of available marker shapes that can be used in chart series.
@@ -195,7 +196,10 @@ export const MarkerRenderer: {
 
         location.x = location.x + (marker.offset?.x as number);
         location.y = location.y - (marker.offset?.y as number);
-        const fill: string = marker.fill || ((series.marker!.filled) ? point.interior || series.interior : '#ffffff');
+        const seriesGradientUrl: string | null | undefined = getSeriesGradientUrl(series, series.chart?.element?.id);
+        const fill: string = seriesGradientUrl
+            || marker.fill
+            || ((series.marker!.filled) ? point.interior || series.interior : '#ffffff');
         let markerElementOptions: Element | undefined = undefined;
         const parentElement: Element = symbolGroup;
         border.color = borderColor || setPointColor(point, series.interior);
@@ -220,6 +224,10 @@ export const MarkerRenderer: {
         // Force marker border to use user-defined color always
         if (series.type === 'Waterfall' && series.marker?.visible) {
             argsData.border.color = series.marker.border?.color ?? argsData.border.color; // fallback
+        }
+        const userBorderColor: string | undefined = marker.border?.color as string | undefined;
+        if (seriesGradientUrl && !userBorderColor) {
+            argsData.border.color = seriesGradientUrl;
         }
         void (!series.isRectSeries && (point.color = argsData.fill));
         const markerFill: string = argsData.fill;

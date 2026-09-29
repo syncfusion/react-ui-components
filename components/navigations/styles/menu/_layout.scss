@@ -1,5 +1,5 @@
 @use 'theme-variables' as *;
-@use '../common/layout' as common;
+@use '../menu-base/layout' as base;
 
 @include export-module('menu-layout') {
 
@@ -60,11 +60,11 @@
 
     .sf-submenu-icon {
       &.sf-chevron-right {
-        @include common.sf-chevron-rotation($menu-chevron-right-angle);
+        @include base.sf-chevron-rotation($menu-chevron-right-angle);
       }
 
       &.sf-chevron-down {
-        @include common.sf-chevron-rotation($menu-chevron-down-angle);
+        @include base.sf-chevron-rotation($menu-chevron-down-angle);
       }
 
       svg {

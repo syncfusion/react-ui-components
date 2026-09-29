@@ -41,6 +41,5 @@
     "build": "gulp component-build"
   },
   "typings": "index.d.ts",
-  "dependencies": {},
   "sideEffects": false
 }

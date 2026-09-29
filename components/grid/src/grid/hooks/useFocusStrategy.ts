@@ -3,19 +3,15 @@ import {
     MouseEvent, KeyboardEvent, FocusEvent,
     useMemo
 } from 'react';
-import {
-    IRow,
-    ICell,
-    UseCommandColumnResult,
-    ScrollMode,
-    VirtualSettings,
-    GroupType
-} from '../types';
+import { IRow, ICell } from '../types/interfaces';
+import { VirtualSettings } from '../types/virtualization.interface';
+import { ScrollMode, GroupType } from '../types/enum';
+import { UseCommandColumnResult } from '../types/command.interfaces';
 import { GridRef } from '../types/grid.interfaces';
 import { ColumnProps } from '../types/column.interfaces';
-import { isNullOrUndefined } from '@syncfusion/react-base';
+import { isNullOrUndefined } from '@syncfusion/react-base/src/util';
 import { IFocusMatrix, FocusStrategyCallbacks, FocusStrategyResult, FocusedCellInfo, CellFocusEvent, Matrix, SwapInfo} from '../types/focus.interfaces';
-import { parseUnit } from '../utils';
+import { parseUnit, getAllContentRows, isRowPinningEnabled } from '../utils/utils';
 // CSS class constants
 const CSS_FOCUSED: string = 'sf-focused';
 const CSS_FOCUS: string = 'sf-focus';
@@ -194,7 +190,7 @@ export const createMatrix: () => IFocusMatrix = (): IFocusMatrix => {
 
         // Check if we're trying to navigate past the last column
         if (tmp + navigator[1] > matrix[rowIndex as number].length - 1 && validator(rowIndex, columnIndex, action)) {
-            return [rowIndex, tmp];
+            return [rowIndex, Math.min(tmp, matrix[rowIndex as number].length - 1)];
         }
 
         // Find first valid cell in the row
@@ -358,7 +354,6 @@ export const useFocusStrategy: (
     const [updateLastFirstIndexes, setUpdateLastFirstIndexes] = useState<Object>({});
     const focusByClick: boolean = useRef<boolean>(false).current;
     const lastEvent: RefObject<KeyboardEvent | MouseEvent> = useRef<KeyboardEvent | MouseEvent>(null);
-    const { commandEdit, commandEditInlineFormRef, commandAddRef, commandAddInlineFormRef } = commandColumnModule;
 
     // Ref for swap info
     const swapInfo: RefObject<SwapInfo> = useRef<SwapInfo>({
@@ -488,10 +483,10 @@ export const useFocusStrategy: (
 
     const debounceFirstVirtualRowCellFocusHelper: (currentMatrix: number[]) => void = useCallback((currentMatrix: number[]) => {
         const { scrollModule, getRowsObject, getVisibleColumns, headerScrollRef, contentScrollRef,
-            footerScrollRef } = gridRef.current;
+            footerScrollRef, visibleStackedHeaderColumns, isStackedHeader } = gridRef.current;
         const { virtualRowInfo, virtualColumnInfo } = scrollModule;
         const contentRowsObject: IRow<ColumnProps>[] = getRowsObject();
-        const visibleColumns: ColumnProps[] = getVisibleColumns();
+        const visibleColumns: ColumnProps[] = isStackedHeader ? visibleStackedHeaderColumns : getVisibleColumns();
         if (virtualSettings?.enableRow && activeMatrix.current === 'Content' &&
             contentRowsObject?.[0]?.rowIndex > 0) {
             virtualRowInfo.isFocusScrollOffsetChange = true;
@@ -519,7 +514,8 @@ export const useFocusStrategy: (
         useCallback((isCellNotRequiredToUpdate: boolean = true) => {
             const matrix: IFocusMatrix = getActiveMatrix();
             const { scrollModule, getRowsObject, getVisibleColumns, headerScrollRef, contentScrollRef,
-                footerScrollRef, virtualizationSettings, pageSettings, enableRtl, groupSettings } = gridRef.current;
+                footerScrollRef, virtualizationSettings, pageSettings, enableRtl, groupSettings, isStackedHeader,
+                stackedRowEntries, visibleStackedHeaderColumns, filterSettings } = gridRef.current;
             const { virtualRowInfo, virtualColumnInfo } = scrollModule;
             const { scrollMode } = virtualizationSettings;
             const contentRowsObject: IRow<ColumnProps>[] = getRowsObject();
@@ -527,7 +523,7 @@ export const useFocusStrategy: (
             const originalContentLastRowIndex: number = (groupSettings.enabled && groupSettings.columns?.length ? totalRecordsCount :
                 (scrollMode === ScrollMode.Virtual || scrollMode === ScrollMode.Infinite ? pageSettings?.totalRecordsCount :
                     (contentRowCount < virtualChangeDetectedPageSize ? contentRowCount : virtualChangeDetectedPageSize))) - 1;
-            const visibleColumns: ColumnProps[] = getVisibleColumns();
+            const visibleColumns: ColumnProps[] = isStackedHeader ? visibleStackedHeaderColumns : getVisibleColumns();
             if (virtualSettings?.enableRow && activeMatrix.current === 'Content' &&
                 currentVirtualContentLastRowIndex < originalContentLastRowIndex) {
                 virtualRowInfo.isFocusScrollOffsetChange = true;
@@ -539,13 +535,15 @@ export const useFocusStrategy: (
                 }
                 contentScrollRef.scrollTop = contentScrollRef?.scrollHeight;
             }
-            if (virtualSettings?.enableColumn && isCellNotRequiredToUpdate &&
-                columns[columns.length - 1 as number]?.uid !== visibleColumns?.[visibleColumns?.length - 1]?.uid) {
+            if (virtualSettings?.enableColumn && isCellNotRequiredToUpdate
+                && columns[columns.length - 1 as number]?.uid !== visibleColumns?.[visibleColumns?.length - 1]?.uid) {
                 if (!virtualRowInfo.isFocusScrollOffsetChange) {
                     virtualRowInfo.scrollFocusCurrentAriaRowIndex = matrix.rows;
                 }
                 virtualColumnInfo.isFocusScrollOffsetChange = true;
-                virtualColumnInfo.scrollFocusCurrentAriaColIndex = visibleColumns?.length - 1;
+                const stackHeaderAriaColIndex: number = stackedRowEntries?.[stackedRowEntries?.length - 1 as number]?.length - 1;
+                virtualColumnInfo.scrollFocusCurrentAriaColIndex = isStackedHeader && activeMatrix.current === 'Header' &&
+                filterSettings.enabled && filterSettings.type !== 'FilterBar' ? stackHeaderAriaColIndex : visibleColumns?.length - 1;
                 if (headerScrollRef) {
                     headerScrollRef.scrollLeft = enableRtl ?
                         -(headerScrollRef?.scrollWidth) : headerScrollRef?.scrollWidth;
@@ -579,15 +577,14 @@ export const useFocusStrategy: (
     ) => number[] = useCallback((
         action: string,
         navigator: number[] = [0, 0],
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         _isPresent?: boolean,
         e?: KeyboardEvent
     ): number[] => {
         const matrix: IFocusMatrix = getActiveMatrix();
         const { scrollModule, isSpannedColumns, isMasterDetail, contentScrollRef, enableRtl, getVisibleColumns, groupSettings,
-            contentSectionRef } = gridRef.current;
+            contentSectionRef, isStackedHeader, stackedRowEntries, filterSettings, visibleStackedHeaderColumns } = gridRef.current;
         const { virtualRowInfo, virtualColumnInfo } = scrollModule;
-        const visibleColumns: ColumnProps[] = getVisibleColumns();
+        const visibleColumns: ColumnProps[] = isStackedHeader ? visibleStackedHeaderColumns : getVisibleColumns();
         const isGroupRowsSpan: boolean = (groupSettings?.enabled && groupSettings?.columns?.length &&
             groupSettings.type === GroupType.GroupRows && !!contentSectionRef?.querySelector('.sf-grid-groupcaptionrow'));
         const isSpan: boolean = isSpannedColumns || isMasterDetail || isGroupRowsSpan;
@@ -607,12 +604,35 @@ export const useFocusStrategy: (
                 ? lastFocusableAggregateCellIndex[1]
                 : lastFocusableHeaderCellIndex[1];
 
-        const visibleHeaderColumns: ColumnProps<unknown>[] = virtualColumnInfo?.visibleHeaderColumns;
-        const firstVisibleColumnUid: string = visibleColumns?.[0]?.uid;
-        const lastVisibleColumnUid: string = visibleColumns?.[visibleColumns?.length - 1]?.uid;
-        const isFirstColumnVisible: boolean = columns[0 as number]?.uid === firstVisibleColumnUid;
+        const isStackedFilterRow: boolean = isStackedHeader && activeMatrix.current === 'Header' && rowIndex + 1 > stackedRowEntries.length
+            && filterSettings.enabled && filterSettings.type === 'FilterBar';
+        const currentTargetElement: HTMLElement | null = isStackedFilterRow ? focusedCell.current?.element :
+            focusedCell.current?.element?.querySelector('[data-mappinguid]');
+        const mappingUid: string | null = currentTargetElement?.getAttribute('data-mappinguid');
+
+        // ===== Get the last visible columns UID from the viewPort for spanning cells =====
+        const HeaderRows: NodeListOf<Element> | undefined = gridRef.current?.getHeaderTable().querySelectorAll('tr');
+        const currentHeaderRow: HTMLCollectionOf<HTMLTableCellElement> | undefined =
+            (HeaderRows?.[rowIndex as number] as HTMLTableRowElement)?.cells;
+        const currentfirstVisibleCellUid: string | null = currentHeaderRow?.[0]?.querySelector('.sf-filter-cell') ?
+            currentHeaderRow?.[0]?.getAttribute('data-mappinguid') :
+            currentHeaderRow?.[0]?.querySelector('[data-mappinguid]')?.getAttribute('data-mappinguid') ?? null;
+        const currentLastVisibleCellUid: string | null = currentHeaderRow?.[currentHeaderRow?.length - 1]?.querySelector('.sf-filter-cell') ?
+            currentHeaderRow?.[currentHeaderRow?.length - 1]?.getAttribute('data-mappinguid') :
+            currentHeaderRow?.[currentHeaderRow?.length - 1]?.querySelector('[data-mappinguid]')?.getAttribute('data-mappinguid') ?? null;
+        const visibleHeaderColumns: ColumnProps<unknown>[] | HTMLCollectionOf<HTMLTableCellElement> =
+            isStackedHeader && activeMatrix.current === 'Header' ? currentHeaderRow : virtualColumnInfo?.visibleHeaderColumns;
+        const firstVisibleColumnUid: string = isStackedHeader && activeMatrix.current === 'Header' ? stackedRowEntries[rowIndex as number]
+            ? stackedRowEntries[rowIndex as number][0].uid : virtualColumnInfo?.visibleStackedHeaderColumns?.[0].uid :
+            visibleColumns?.[0]?.uid;
+        const lastVisibleColumnUid: string = isStackedHeader && activeMatrix.current === 'Header' && stackedRowEntries[rowIndex as number]
+            ? stackedRowEntries[rowIndex as number][stackedRowEntries[rowIndex as number].length - 1]?.uid
+            : visibleColumns?.[visibleColumns?.length - 1]?.uid;
+        const isFirstColumnVisible: boolean = isStackedHeader && activeMatrix.current === 'Header' ? currentfirstVisibleCellUid === firstVisibleColumnUid
+            : columns[0 as number]?.uid === firstVisibleColumnUid;
         const isVirtualColumnOffsetChangeAllowed: boolean = !isNextCommandItem(e) && virtualSettings?.enableColumn;
-        const isLastColumnNotVisible: boolean = columns[columns.length - 1 as number]?.uid !== lastVisibleColumnUid;
+        const isLastColumnNotVisible: boolean = isStackedHeader && activeMatrix.current === 'Header' ? currentLastVisibleCellUid !== lastVisibleColumnUid
+            : columns[columns.length - 1 as number]?.uid !== lastVisibleColumnUid;
         const isVirtualColumnScrollDestination: boolean = isVirtualColumnOffsetChangeAllowed && isLastColumnNotVisible;
         const scrollEndPosition: number = enableRtl ? -(contentScrollRef?.scrollWidth) : contentScrollRef?.scrollWidth;
 
@@ -630,11 +650,13 @@ export const useFocusStrategy: (
         } else if (action === 'ctrlEnd') {
             debounceLastVirtualRowCellFocusHelper();
             // Last cell of last row
+            const lastCellIndex: number = matrix?.matrix?.[lastFocusableHeaderCellIndex[0]]?.length - 1;
+            const lastFocusableHeaderColIndex: number = Math.min(lastFocusableHeaderCellIndex[1], lastCellIndex);
             switch (activeMatrix.current) {
             case 'Content': return lastFocusableContentCellIndex;
             case 'Aggregate': return lastFocusableAggregateCellIndex;
             case 'Header':
-            default: return lastFocusableHeaderCellIndex;
+            default: return [lastFocusableHeaderCellIndex[0], lastFocusableHeaderColIndex];
             }
         } else if (action === 'home') {
             // First cell of current row
@@ -652,37 +674,45 @@ export const useFocusStrategy: (
             if (virtualSettings?.enableColumn && scrollModule && isLastColumnNotVisible) {
                 virtualColumnInfo.isFocusScrollOffsetChange = true;
                 virtualRowInfo.scrollFocusCurrentAriaRowIndex = rowIndex;
-                virtualColumnInfo.scrollFocusCurrentAriaColIndex = visibleColumns?.length - 1;
+                virtualColumnInfo.scrollFocusCurrentAriaColIndex = activeMatrix.current === 'Header' && isStackedHeader ?
+                    stackedRowEntries[rowIndex as number] ? stackedRowEntries[rowIndex as number].length - 1 :
+                        virtualColumnInfo.visibleStackedHeaderColumns.length - 1 : visibleColumns?.length - 1;
                 contentScrollRef.scrollLeft = scrollEndPosition;
             }
-            return [rowIndex, lastColIndex];
+            return [rowIndex, Math.min(lastColIndex, matrix?.matrix?.[rowIndex as number]?.length - 1)];
         }
 
         // For spanning columns: use span matrix; for non-spanning: use predefined indexes
-        const isAtEndOfRow: boolean = (isSpan && (virtualSettings?.enableColumn || isMasterDetail))
+        const isAtEndOfRow: boolean = ((isSpan || (activeMatrix.current === 'Header' && isStackedHeader))
+            && (virtualSettings?.enableColumn || isMasterDetail))
             ? matrix.current[1] >= matrix?.matrix?.[rowIndex as number]?.length - 1
             : cellIndex >= currentLastFocusableCellIndex;
 
-        const isAtStartOfRow: boolean = isSpan && (virtualSettings?.enableColumn || isMasterDetail)
+        const isAtStartOfRow: boolean = (isSpan || (activeMatrix.current === 'Header' && isStackedHeader))
+            && (virtualSettings?.enableColumn || isMasterDetail)
             ? matrix.current[1] <= 0
             : cellIndex <= currentFirstFocusableCellIndex;
 
         // ===== Get the last visible columns UID from the viewPort for spanning cells =====
-        const contentRows: NodeListOf<Element> | undefined = gridRef.current?.getContentTable()?.querySelectorAll('tr.sf-grid-content-row:not(.sf-grid-add-row)');
+        const contentRows: HTMLTableRowElement[] = getAllContentRows(gridRef, 'tr.sf-grid-content-row:not(.sf-grid-add-row)');
         const currentRow: HTMLTableRowElement | undefined = contentRows?.[rowIndex as number] as HTMLTableRowElement;
         const currentCells: HTMLTableCellElement | undefined = currentRow?.cells?.[cellIndex as number];
 
-        let isLastColumnsUid: string | undefined = columns?.[cellIndex as number]?.uid;
+        let isLastColumnsUid: string | undefined = activeMatrix.current === 'Header' && isStackedHeader
+            ? mappingUid : columns?.[cellIndex as number]?.uid;
         if (isSpan && isAtEndOfRow) {
-            isLastColumnsUid = activeMatrix.current === 'Header' ? visibleHeaderColumns?.[cellIndex as number]?.uid : gridRef.current?.getRowInfo?.(currentCells)?.column?.uid;
+            isLastColumnsUid = activeMatrix.current === 'Header'
+                ? (visibleHeaderColumns?.[cellIndex as number] as ColumnProps)?.uid
+                : gridRef.current?.getRowInfo?.(currentCells)?.column?.uid;
         }
         const isLastColumnsUidVisible: boolean = isLastColumnsUid === lastVisibleColumnUid;
         const isLastColumnsUidFirstVisible: boolean = isLastColumnsUid === firstVisibleColumnUid;
-        const isLastActualColumn: boolean = cellIndex === columns.length - 1;
+        const isLastActualColumn: boolean = isStackedHeader && activeMatrix.current === 'Header' ? cellIndex === currentHeaderRow.length - 1
+            : cellIndex === columns.length - 1;
 
         // For tab/shift+tab navigation at boundaries
         if (action === 'tab' && isAtEndOfRow) {
-            if (rowIndex < matrix.rows) {
+            if (rowIndex < matrix.rows || isStackedFilterRow) {
                 // Get first column index for next row
                 const firstColIndex: number = currentFirstFocusableCellIndex;
 
@@ -693,26 +723,39 @@ export const useFocusStrategy: (
                         virtualRowInfo.scrollFocusCurrentAriaRowIndex = rowIndex + 1;
                         virtualColumnInfo.scrollFocusCurrentAriaColIndex = 0;
                         contentScrollRef.scrollLeft = 0;
+                        if (isStackedHeader && activeMatrix.current === 'Header' && rowIndex + 1 > stackedRowEntries.length) {
+                            const nextCell: number[] = [rowIndex, cellIndex];
+                            matrix.select(nextCell[0], nextCell[1]);
+                            return nextCell;
+                        }
                     } else if (isLastActualColumn && !isLastColumnsUidVisible) {
                         // prevent swap
                         virtualColumnInfo.isFocusScrollOffsetChange = true;
                         virtualColumnInfo.scrollFocusCurrentAriaColIndex = matrix.current[1] + 1;
                         contentScrollRef.scrollLeft = contentScrollRef.scrollLeft + parseFloat(visibleColumns?.[visibleColumns?.length - 1]?.width + '') + 1;
+                        if (isStackedHeader && activeMatrix.current === 'Header') {
+                            const nextCell: number[] = [rowIndex, matrix.current[1] + 1];
+                            matrix.select(nextCell[0], nextCell[1]);
+                            return nextCell;
+                        }
                     } else {
                         const nextCell: number[] = [matrix.current[0], matrix.current[1] + 1];
                         matrix.select(nextCell[0], nextCell[1]);
                         return nextCell;
                     }
-                } else if (!isSpan && isVirtualColumnScrollDestination && isLastActualColumn && !isLastColumnsUidVisible) {
+                } else if (!(isSpan || isStackedHeader) && isVirtualColumnScrollDestination && isLastActualColumn
+                && !isLastColumnsUidVisible) {
                     // Handle virtual column scrolling for NON-SPANNING columns
                     // prevent swap
                     virtualColumnInfo.isFocusScrollOffsetChange = true;
                     virtualColumnInfo.scrollFocusCurrentAriaColIndex = matrix.current[1] + 1;
                     contentScrollRef.scrollLeft = contentScrollRef.scrollLeft + parseFloat(visibleColumns?.[visibleColumns?.length - 1]?.width + '') + 1;
                 }
-                const nextCell: number[] = [rowIndex + 1, firstColIndex];
-                matrix.select(nextCell[0], nextCell[1]);
-                return nextCell;
+                if (rowIndex + 1 < matrix.matrix.length) {
+                    const nextCell: number[] = [rowIndex + 1, firstColIndex];
+                    matrix.select(nextCell[0], nextCell[1]);
+                    return nextCell;
+                }
             } else if (isVirtualColumnOffsetChangeAllowed && !isFirstColumnVisible) {
                 // swap purpose maintain virtual col index
                 if (scrollModule && isLastColumnsUidVisible) {
@@ -725,28 +768,34 @@ export const useFocusStrategy: (
                 virtualColumnInfo.isFocusScrollOffsetChange = true;
                 virtualColumnInfo.scrollFocusCurrentAriaColIndex = matrix.current[1] + 1;
                 contentScrollRef.scrollLeft = contentScrollRef.scrollLeft + parseFloat(visibleColumns?.[visibleColumns?.length - 1]?.width as number + '') + 1;
+                if (isStackedHeader && activeMatrix.current === 'Header' && rowIndex + 1 > stackedRowEntries.length - 1) {
+                    const nextCell: number[] = [rowIndex, matrix.current[1] + 1];
+                    matrix.select(nextCell[0], nextCell[1]);
+                    return nextCell;
+                }
             }
         } else if (action === 'shiftTab' && isAtStartOfRow) {
             // At the beginning of a row, move to the last cell of the previous row
             if (rowIndex > 0) {
                 // Get last column index (different logic for spanning vs non-spanning)
-                const lastColIndex: number = activeMatrix.current === 'Content' && isSpan
+                const lastColIndex: number = (activeMatrix.current === 'Content' && isSpan) || (isStackedHeader && activeMatrix.current === 'Header')
                     ? matrix?.matrix?.[rowIndex - 1]?.length - 1 : currentLastFocusableCellIndex;
                 // Virtual column handling with spanning: need to scroll to last column first to render them in DOM
-                if (isVirtualColumnScrollDestination && isSpan && visibleHeaderColumns.length
+                const stackHeaderAriaColIndex: number = stackedRowEntries?.[rowIndex - 1]?.length - 1;
+                if (isVirtualColumnScrollDestination && (isSpan || isStackedHeader) && visibleHeaderColumns.length
                     !== visibleColumns.length) {
                     // For spanning: scroll to end to render last columns for previous row
                     virtualRowInfo.isFocusScrollOffsetChange = true;
                     virtualRowInfo.scrollFocusCurrentAriaRowIndex = rowIndex - 1;
                     virtualColumnInfo.isFocusScrollOffsetChange = true;
-                    virtualColumnInfo.scrollFocusCurrentAriaColIndex = visibleColumns?.length - 1;
+                    virtualColumnInfo.scrollFocusCurrentAriaColIndex = isStackedHeader && activeMatrix.current === 'Header' ? stackHeaderAriaColIndex : visibleColumns?.length - 1;
                     contentScrollRef.scrollLeft = scrollEndPosition;
-                } else if (isVirtualColumnScrollDestination && !isSpan) {
+                } else if (isVirtualColumnScrollDestination && !(isSpan || isStackedHeader)) {
                     // For non-spanning: check if at first visible column, then move left or to previous row
                     if (scrollModule && isLastColumnsUidFirstVisible) {
                         virtualColumnInfo.isFocusScrollOffsetChange = true;
                         virtualRowInfo.scrollFocusCurrentAriaRowIndex = rowIndex - 1;
-                        virtualColumnInfo.scrollFocusCurrentAriaColIndex = visibleColumns?.length - 1;
+                        virtualColumnInfo.scrollFocusCurrentAriaColIndex = isStackedHeader && activeMatrix.current === 'Header' ? stackHeaderAriaColIndex : visibleColumns?.length - 1;
                         contentScrollRef.scrollLeft = scrollEndPosition;
                     } else {
                         // At first visible column but not first actual column - move to previous column in same row
@@ -760,10 +809,13 @@ export const useFocusStrategy: (
                 return prevCell;
             } else if (isVirtualColumnScrollDestination) {
                 // Handle edge case: at first row, maintain virtual column index
+                const isStackedFilterBar: boolean = isStackedHeader && filterSettings.enabled && filterSettings.type === 'FilterBar';
+                const isStackedHeaderLastRowCell: boolean = activeMatrix.current === 'Content' && isStackedHeader && visibleHeaderColumns.length !== visibleColumns.length && rowIndex === 0 && cellIndex === 0;
                 if (scrollModule && ((isLastColumnsUidFirstVisible && visibleHeaderColumns.length !== visibleColumns.length) ||
-                    (activeMatrix.current === 'Content' && virtualColumnInfo?.columns[0]?.uid === 'empty-cell-uid'))) {
+                    (activeMatrix.current === 'Content' && virtualColumnInfo?.columns[0]?.uid === 'empty-cell-uid')) || isStackedHeaderLastRowCell) {
                     virtualColumnInfo.isFocusScrollOffsetChange = true;
-                    virtualColumnInfo.scrollFocusCurrentAriaColIndex = visibleColumns.length - 1;
+                    virtualColumnInfo.scrollFocusCurrentAriaColIndex = isStackedHeaderLastRowCell && !isStackedFilterBar ?
+                        stackedRowEntries?.[stackedRowEntries?.length - 1].length - 1 : visibleColumns.length - 1;
                     contentScrollRef.scrollLeft = scrollEndPosition;
                 }
             }
@@ -874,11 +926,24 @@ export const useFocusStrategy: (
         current = commandItem ? matrix.current : current;
         if (!current) { return true; }
 
-        const { getRowsObject, pageSettings, scrollModule, virtualizationSettings, getVisibleColumns, groupSettings } = gridRef.current;
+        const {
+            getRowsObject,
+            pageSettings,
+            scrollModule,
+            virtualizationSettings,
+            getVisibleColumns,
+            groupSettings,
+            stackedRowEntries,
+            isStackedHeader,
+            stackedFlattedColumnProps
+        } = gridRef.current;
         const { scrollMode } = virtualizationSettings;
         const { totalRecordsCount } = pageSettings;
         const contentRowsObject: IRow<ColumnProps>[] = getRowsObject?.();
-        const visibleColumns: ColumnProps[] = getVisibleColumns?.();
+
+        const visibleColumns: ColumnProps[] = isStackedHeader && activeMatrix.current === 'Header' ?
+            stackedRowEntries[current[0] as number] ? stackedRowEntries[current[0] as number] :
+                scrollModule?.virtualColumnInfo?.visibleStackedHeaderColumns : getVisibleColumns?.();
         if (groupSettings.type === GroupType.GroupRows && (action === 'downArrow' || action === 'upArrow') &&
             contentRowsObject?.[current[0]]?.isCaptionRow) {
             current[1] = Math.max(0, Math.min(current[1] + navigators[1], matrix.matrix[current[0] as number].length - 1));
@@ -889,11 +954,15 @@ export const useFocusStrategy: (
                     totalRecordsCount : (scrollMode === ScrollMode.Virtual || scrollMode === ScrollMode.Infinite ? totalRecordsCount :
                         (contentRowCount < virtualChangeDetectedPageSize ? contentRowCount : virtualChangeDetectedPageSize))) - 1) ||
                 ((activeMatrix.current === 'Content' || activeMatrix.current === 'Header') && !contentRowsObject.length));
-        const isVirtualContentRowLeftOrRight: boolean = !virtualSettings.enableColumn || (activeMatrix.current === 'Content' &&
-            scrollModule?.virtualColumnInfo?.columns[0]?.uid === 'empty-cell-uid') ||
-            scrollModule?.virtualColumnInfo?.isFocusScrollOffsetChange || (visibleColumns[0]?.uid === columns[0]?.uid &&
-                visibleColumns[visibleColumns.length - 1]?.uid === columns[columns.length - 1]?.uid ||
-            scrollModule?.virtualColumnInfo?.visibleHeaderColumns?.length === visibleColumns?.length);
+        const isVirtualContentRowLeftOrRight: boolean = !virtualSettings.enableColumn
+            || (activeMatrix.current === 'Content'
+                && scrollModule?.virtualColumnInfo?.columns[0]?.uid === 'empty-cell-uid')
+            || scrollModule?.virtualColumnInfo?.isFocusScrollOffsetChange
+            || (visibleColumns[0]?.uid === columns[0]?.uid
+                && visibleColumns[visibleColumns.length - 1]?.uid === columns[columns.length - 1]?.uid
+                || scrollModule?.virtualColumnInfo?.visibleHeaderColumns?.length === visibleColumns?.length)
+            || (isStackedHeader && activeMatrix.current === 'Header'
+                && stackedFlattedColumnProps.length === columns.length);
 
         // Check if we're at the boundary of the current matrix
         const isAtHeaderBottom: boolean = activeMatrix.current === 'Header' &&
@@ -1056,27 +1125,57 @@ export const useFocusStrategy: (
                     gridRef.current?.footerScrollRef : gridRef.current?.contentScrollRef);
                 const element: HTMLElement | null =
                     (firstFocusableElement ?? newInfo.elementToFocus)?.
-                        closest?.('.sf-grid-content-row td.sf-cell, .sf-grid-header-row th.sf-cell, .sf-grid-summary-row td.sf-cell');
+                        closest?.('.sf-grid-content-row td.sf-cell, .sf-grid-header-row th.sf-cell, .sf-grid-summary-row td.sf-cell, .sf-filter-row th.sf-cell');
 
                 if (container && element && !gridRef.current?.cellSelectionModule?.isDragging) {
                     const containerRect: DOMRect = container.getBoundingClientRect();
                     const elementRect: DOMRect = element.getBoundingClientRect();
+                    const isRegularContentCell: boolean = activeMatrix.current === 'Content' &&
+                        !element.closest('.sf-pinned-table');
+
+                    if (isRegularContentCell && isRowPinningEnabled(gridRef.current?.pinningSettings)) {
+                        const contentPanelRect: DOMRect | undefined = gridRef.current?.contentPanelRef?.getBoundingClientRect?.();
+                        const pinnedTopHeight: number = gridRef.current?.pinnedTopTableRef?.totalRenderedRowHeight?.current ??
+                            gridRef.current?.getPinnedTopTable?.()?.getBoundingClientRect().height ?? 0;
+                        const pinnedBottomHeight: number = gridRef.current?.pinnedBottomTableRef?.totalRenderedRowHeight?.current ??
+                            gridRef.current?.getPinnedBottomTable?.()?.getBoundingClientRect().height ?? 0;
+                        const viewportTop: number = Math.max(containerRect.top, (contentPanelRect?.top ?? containerRect.top) +
+                            pinnedTopHeight);
+                        const viewportBottom: number = Math.min(containerRect.bottom, (contentPanelRect?.bottom ?? containerRect.bottom) -
+                            pinnedBottomHeight);
+
+                        if (elementRect.top < viewportTop) {
+                            container.scrollTop += elementRect.top - viewportTop;
+                        } else if (elementRect.bottom > viewportBottom) {
+                            container.scrollTop += elementRect.bottom - viewportBottom;
+                        }
+                    }
 
                     const detectVirtualColumnOffsetChange: () => void = () => {
                         gridRef.current?.element?.removeEventListener('virtualColumnOffsetChange', detectVirtualColumnOffsetChange);
                         if (!gridRef.current.scrollModule.virtualRowInfo.isFocusScrollOffsetChange &&
-                            !gridRef.current.scrollModule.virtualColumnInfo.isFocusScrollOffsetChange) {
+                            !gridRef.current.scrollModule.virtualColumnInfo.isFocusScrollOffsetChange && !(newInfo.isHeader === true)) {
                             gridRef.current.scrollModule.virtualRowInfo.isFocusScrollOffsetChange = true;
                             gridRef.current.scrollModule.virtualRowInfo.scrollFocusCurrentAriaRowIndex = newInfo.rowIndex;
                         }
                     };
                     // Scroll left if element is partially hidden on the left
-                    if (e && !isNullOrUndefined(e?.type)) {
+                    const mappingUid: string | null = newInfo.elementToFocus?.querySelector('.sf-grid-header-cell')?.
+                        getAttribute('data-mappinguid') ?? newInfo.elementToFocus.getAttribute('data-mappinguid');
+                    gridRef.current.scrollModule.virtualColumnInfo.prevStackedFocusCell.isHiddenCellFocus = false;
+                    if ((e && !isNullOrUndefined(e?.type)) || (gridRef.current.isStackedHeader &&
+                        (gridRef.current.scrollModule.virtualColumnInfo.prevStackedFocusCell?.mappingUid === mappingUid
+                            && gridRef.current.scrollModule.virtualColumnInfo.prevStackedFocusCell?.width !== element.offsetWidth))) {
                         if (elementRect.left < containerRect.left) {
                             if (virtualSettings.enableColumn) {
                                 gridRef.current?.element?.addEventListener('virtualColumnOffsetChange', detectVirtualColumnOffsetChange);
                                 const nextScrollLeft: number = (gridRef.current?.scrollModule?.virtualColumnInfo?.offsetX ?? 0) +
                                     element.offsetLeft;
+                                gridRef.current.scrollModule.virtualColumnInfo.prevStackedFocusCell = {
+                                    mappingUid: mappingUid,
+                                    width: element.offsetWidth,
+                                    isHiddenCellFocus : true
+                                };
                                 if (nextScrollLeft < container.scrollLeft) {
                                     container.scrollLeft = nextScrollLeft;
                                 }
@@ -1093,6 +1192,11 @@ export const useFocusStrategy: (
                                 gridRef.current?.element?.addEventListener('virtualColumnOffsetChange', detectVirtualColumnOffsetChange);
                                 const nextScrollLeft: number = (gridRef.current?.scrollModule?.virtualColumnInfo?.offsetX ?? 0) +
                                     element.offsetLeft + element.offsetWidth - container.clientWidth;
+                                gridRef.current.scrollModule.virtualColumnInfo.prevStackedFocusCell = {
+                                    mappingUid: mappingUid,
+                                    width: element.offsetWidth,
+                                    isHiddenCellFocus : true
+                                };
                                 if (nextScrollLeft > container.scrollLeft) {
                                     container.scrollLeft = nextScrollLeft;
                                 }
@@ -1132,7 +1236,8 @@ export const useFocusStrategy: (
                 columnIndex: newInfo.colIndex,
                 virtualAriaRowIndex: newInfo.virtualAriaRowIndex,
                 virtualAriaColIndex: newInfo.virtualAriaColIndex,
-                column: gridRef.current.getVisibleColumns()[newInfo.colIndex],
+                column:  gridRef.current?.isStackedHeader ? gridRef.current?.visibleStackedHeaderColumns[newInfo.colIndex] :
+                    gridRef.current.getVisibleColumns()[newInfo.colIndex],
                 data: rowObject?.data,
                 event: e
             };
@@ -1173,23 +1278,25 @@ export const useFocusStrategy: (
             }
 
             const matrix: IFocusMatrix = getActiveMatrix();
-            let rows: HTMLCollectionOf<HTMLTableRowElement>;
+            let rows: HTMLCollectionOf<HTMLTableRowElement> | HTMLTableRowElement[];
             if (isHeader) {
                 rows = gridRef.current?.getHeaderTable()?.rows;
             } else if (isAggregate) {
                 rows = gridRef.current?.getFooterRows();
             } else {
-                const contentTable: HTMLTableElement = gridRef.current?.getContentTable();
-                const contentRows: HTMLCollectionOf<HTMLTableRowElement> | NodeListOf<HTMLTableRowElement> = gridRef.current?.isEdit &&
-                        gridRef.current?.editModule?.isShowAddNewRowActive ?
-                    contentTable?.querySelectorAll?.('tr.sf-grid-content-row:not(.sf-grid-add-row)') : contentTable?.rows;
-                rows = contentRows as HTMLCollectionOf<HTMLTableRowElement>;
+                const contentRows: HTMLTableRowElement[] = gridRef.current?.isEdit &&
+                        gridRef.current?.editModule?.isShowAddNewRowActive ? getAllContentRows(gridRef, 'tr.sf-grid-content-row:not(.sf-grid-add-row)') : getAllContentRows(gridRef);
+                rows = contentRows;
             }
 
             if (!rows) { return false; }
 
-            const rowIndex: number = Array.from(rows).indexOf(rowElement);
-            const cellIndex: number = Array.from(rowElement.cells).indexOf(cellElement);
+            const rowIndex: number = Array.from(rows instanceof HTMLTableElement ? rows.rows : rows).indexOf(rowElement);
+            const cellColumnIndex: string | null = cellElement.getAttribute('aria-colindex') ?? cellElement.getAttribute('data-colindex');
+            let cellIndex: number = cellColumnIndex ? parseUnit(cellColumnIndex) - 1 : -1;
+            if (cellIndex < 0) {
+                cellIndex = Array.from(rowElement.cells).indexOf(cellElement);
+            }
 
             if (rowIndex < 0 || cellIndex < 0) { return false; }
 
@@ -1270,17 +1377,21 @@ export const useFocusStrategy: (
 
         const isContent: boolean = activeMatrix.current === 'Content';
         const isAggregate: boolean = activeMatrix.current === 'Aggregate';
-        let table: HTMLTableElement | undefined;
+        let table: HTMLTableElement | HTMLTableRowElement[] | undefined;
         if (isContent) {
-            table = gridRef.current?.getContentTable?.();
+            table = getAllContentRows(gridRef);
         } else if (isAggregate) {
             table = gridRef.current?.getFooterTable?.();
         } else {
             table = gridRef.current?.getHeaderTable?.();
         }
-        const rows: HTMLCollectionOf<HTMLTableRowElement> | NodeListOf<HTMLTableRowElement> = gridRef.current?.isEdit &&
-            gridRef.current?.editModule?.isShowAddNewRowActive ? table?.querySelectorAll?.('tr.sf-grid-content-row:not(.sf-grid-add-row)') :
-            table?.rows;
+
+        const rows: HTMLCollectionOf<HTMLTableRowElement> | NodeListOf<HTMLTableRowElement> | HTMLTableRowElement[] =
+            gridRef.current?.isEdit && gridRef.current?.editModule?.isShowAddNewRowActive ? table instanceof HTMLTableElement
+                ? table.querySelectorAll('tr.sf-grid-content-row:not(.sf-grid-add-row)')
+                : (table).filter((row: HTMLTableRowElement) => row.matches('tr.sf-grid-content-row:not(.sf-grid-add-row)'))
+                : table instanceof HTMLTableElement ? table.rows : table;
+
         if (!table || !rows || rowIndex >= rows.length) {
             return info;
         }
@@ -1325,10 +1436,10 @@ export const useFocusStrategy: (
         const [rowIndex, cellIndex]: number[] = matrix.current;
 
         // Get the table based on active matrix
-        let table: HTMLTableElement | null;
+        let table: HTMLTableElement | HTMLTableRowElement[] | null;
         switch (activeMatrix.current) {
         case 'Content':
-            table = gridRef.current?.getContentTable?.();
+            table = getAllContentRows(gridRef);
             break;
         case 'Aggregate':
             table = gridRef.current?.getFooterTable?.();
@@ -1348,33 +1459,42 @@ export const useFocusStrategy: (
             outline: true
         };
 
-        const rows: HTMLCollectionOf<HTMLTableRowElement> | NodeListOf<HTMLTableRowElement> = gridRef.current?.isEdit &&
-            gridRef.current?.editModule?.isShowAddNewRowActive ? table?.querySelectorAll?.('tr.sf-grid-content-row:not(.sf-grid-add-row)') :
-            table?.rows;
-        if (table && rows.length > rowIndex && rows[rowIndex as number]
-            && (rows[rowIndex as number].classList.contains('sf-grid-edit-row') || rows[rowIndex as number].classList.contains('sf-grid-add-row'))
-            && (!isNullOrUndefined(e?.key) || !isNullOrUndefined(focus))) {
+        const rows: HTMLCollectionOf<HTMLTableRowElement> | NodeListOf<HTMLTableRowElement> | HTMLTableRowElement[] =
+            gridRef.current?.isEdit && gridRef.current?.editModule?.isShowAddNewRowActive ? table instanceof HTMLTableElement
+                ? table.querySelectorAll('tr.sf-grid-content-row:not(.sf-grid-add-row)')
+                : (table).filter((row: HTMLTableRowElement) => row.matches('tr.sf-grid-content-row:not(.sf-grid-add-row)'))
+                : table instanceof HTMLTableElement ? table.rows : table;
+        const contentRow: HTMLTableRowElement | undefined = (isRowPinningEnabled(gridRef.current?.pinningSettings) &&
+            activeMatrix.current === 'Content') ? Array.from(rows).find((row: HTMLTableRowElement) =>
+                parseUnit(row.getAttribute('data-rowindex')) === rowIndex + 1) : rows?.[rowIndex as number];
+        if (table && rows.length > rowIndex && rows[rowIndex as number] && contentRow && (contentRow?.classList.contains('sf-grid-edit-row')
+            || contentRow?.classList.contains('sf-grid-add-row')) && (!isNullOrUndefined(e?.key) || !isNullOrUndefined(focus))) {
             removeFocusTabIndex();
             if (!isNullOrUndefined(focus)) { return; }
-            const uid: string = rows[rowIndex as number].getAttribute('data-uid');
+            const uid: string = contentRow?.getAttribute('data-uid');
             const isShiftTab: boolean = e.key === 'Tab' && e.shiftKey;
-            if (rows[rowIndex as number].classList.contains('sf-grid-add-row')) {
-                (commandEdit.current ? commandAddInlineFormRef.current[`${uid}`] : gridRef.current.addInlineRowFormRef).current.focusFirstField(isShiftTab, true);
-            } else {
-                (commandEdit.current ? commandEditInlineFormRef.current[`${uid}`] : gridRef.current.editInlineRowFormRef).current.focusFirstField(isShiftTab);
+            if (commandColumnModule) {
+                const { commandEdit, commandEditInlineFormRef, commandAddInlineFormRef } = commandColumnModule;
+                if (contentRow?.classList.contains('sf-grid-add-row')) {
+                    (commandEdit.current ? commandAddInlineFormRef.current[`${uid}`] :
+                        gridRef.current.addInlineRowFormRef).current.focusFirstField(isShiftTab, true);
+                } else {
+                    (commandEdit.current ? commandEditInlineFormRef.current[`${uid}`] :
+                        gridRef.current.editInlineRowFormRef).current.focusFirstField(isShiftTab);
+                }
             }
             return;
         }
-        const rowCells: HTMLCollectionOf<HTMLTableCellElement> = rows?.[rowIndex as number]?.cells;
+        const rowCells: HTMLCollectionOf<HTMLTableCellElement> = contentRow?.cells;
         const isOutOfBounds: boolean = cellIndex >= rowCells?.length;
 
         // Find the element in the DOM
-        if (table && rows.length > rowIndex && rows?.[rowIndex as number] && (rowCells.length > cellIndex
+        if (table && contentRow && (rowCells.length > cellIndex
                 || ((gridRef.current?.isSpannedColumns || gridRef.current.isMasterDetail) && isOutOfBounds))) {
             info.element = (gridRef.current?.isSpannedColumns || gridRef.current.isMasterDetail) && isOutOfBounds ?
                 rowCells?.[rowCells.length - 1] : rowCells?.[cellIndex as number] as HTMLElement;
             info.elementToFocus = info.element;
-            info.virtualAriaRowIndex = parseUnit(rows?.[rowIndex as number]?.getAttribute('aria-rowindex'));
+            info.virtualAriaRowIndex = parseUnit(contentRow?.getAttribute('aria-rowindex'));
             info.virtualAriaColIndex = parseUnit(info.element?.getAttribute('aria-colindex'));
 
             const isInMaskVirtualLoadingCell: boolean | Element = info.element?.querySelector('.sf-cell .sf-skeleton');
@@ -1397,7 +1517,7 @@ export const useFocusStrategy: (
      * @private
      */
     const editToRow: (e: KeyboardEvent) => void = useCallback((e: KeyboardEvent): void => {
-        const rows: HTMLTableRowElement[] = [...gridRef.current?.getContentTable().rows];
+        const rows: HTMLTableRowElement[] = [...getAllContentRows(gridRef)];
         const index: number = rows.indexOf((e.target as HTMLElement).closest('.sf-grid-content-row'));
         const nextIndex: number = index + 1;
         const previousIndex: number = index - 1;
@@ -1462,6 +1582,11 @@ export const useFocusStrategy: (
         const isInFilterBar: boolean | Element = activeElement?.closest('.sf-filter-row .sf-cell');
         if ((!event.shiftKey && event.key === 'Tab') && (event.target as HTMLElement)?.closest?.('.sf-grid-filterbar') && (event.target as HTMLElement)?.classList.contains('sf-input') &&
             !(event.target as HTMLElement)?.classList.contains('sf-filterbar-dropdown')) {
+            return;
+        }
+
+        if ((event.target as HTMLElement).closest('.sf-cell') && (event.target as HTMLElement).querySelector('.sf-resize-handler') && event.altKey
+            && (event.keyCode === 39 || event.keyCode === 37)) {
             return;
         }
 
@@ -1540,7 +1665,7 @@ export const useFocusStrategy: (
         if (result === false) {
             // Handle boundary navigation
             if (swapInfo.current.swap) {
-                const { scrollModule, getVisibleColumns } = gridRef.current;
+                const { scrollModule, getVisibleColumns, isStackedHeader, filterSettings } = gridRef.current;
                 const { virtualRowInfo, virtualColumnInfo } = scrollModule;
                 // Determine target matrix from swap info
                 const targetMatrix: Matrix = swapInfo.current.toMatrix || 'Content';
@@ -1559,8 +1684,10 @@ export const useFocusStrategy: (
                             // When moving up to header or shift+tab to header, go to the last cell in the header
                             const lastHeaderRow: number = matrix.matrix?.length - 1;
                             const lastHeaderCol: number = action === 'upArrow' && (contentRowCount > 0 || aggregateRowCount > 0) ?
-                                focusedCell.current.colIndex :
-                                (action === 'upArrow' ? firstFocusableHeaderCellIndex[1] : lastFocusableHeaderCellIndex[1]);
+                                Math.min(focusedCell.current.colIndex, matrix.matrix?.[lastHeaderRow as number]?.length - 1) :
+                                (action === 'upArrow' ? firstFocusableHeaderCellIndex[1] :
+                                    isStackedHeader && filterSettings.type === 'FilterBar' ? lastFocusableHeaderCellIndex[1] :
+                                        Math.min(lastFocusableHeaderCellIndex[1], matrix.matrix?.[lastHeaderRow as number]?.length - 1));
                             matrix.select(lastHeaderRow, lastHeaderCol);
                             matrix.current = [lastHeaderRow, lastHeaderCol];
                         }
@@ -1652,12 +1779,16 @@ export const useFocusStrategy: (
         const length: number = headerMatrix.current.matrix.length;
         if (gridRef.current.filterSettings?.enabled && gridRef.current.filterSettings?.type === 'FilterBar') {
             headerMatrix.current.rows = ++headerMatrix.current.rows;
-            const cells: ICell<ColumnProps>[] = rows[0]?.cells;
+            const visibleStackedHeaderColumns: ColumnProps[] = gridRef.current?.scrollModule.virtualColumnInfo.visibleStackedHeaderColumns;
+            const cells: ICell<ColumnProps>[] | ColumnProps[] = gridRef.current.isStackedHeader ? visibleStackedHeaderColumns :
+                rows[0]?.cells;
             let incrementNumber: number = 0;
             for (let i: number = 0; i < cells?.length; i++) {
                 headerMatrix.current.set(
                     length, incrementNumber,
-                    cells[parseInt(i.toString(), 10)].visible && cells[parseInt(i.toString(), 10)].column.allowFilter !== false);
+                    cells[parseInt(i.toString(), 10)].visible && gridRef.current.isStackedHeader ?
+                        (cells as ColumnProps[])[parseInt(i.toString(), 10)]?.allowFilter !== false :
+                        (cells as ICell<ColumnProps>[])[parseInt(i.toString(), 10)]?.column.allowFilter !== false);
                 incrementNumber++;
             }
         }
@@ -1676,9 +1807,13 @@ export const useFocusStrategy: (
             const previousContentColumns: number = contentMatrix.current.columns;
             const previousContentRows: number = contentMatrix.current.rows;
             let rows: IRow<ColumnProps>[] = gridRef.current.getRowsObject();
-            const commandAdd: boolean = commandEdit.current && commandAddRef.current.length ? true : false;
-            if (commandAdd) {
-                rows = gridRef.current.editSettings.newRowPosition === 'Top' ? [...commandAddRef.current, ...rows] : [...rows, ...commandAddRef.current];
+            if (commandColumnModule) {
+                const { commandEdit, commandAddRef } = commandColumnModule;
+                const commandAdd: boolean = commandEdit.current && commandAddRef.current.length ? true : false;
+                if (commandAdd) {
+                    rows = gridRef.current.editSettings.newRowPosition === 'Top' ? [...commandAddRef.current, ...rows] :
+                        [...rows, ...commandAddRef.current];
+                }
             }
 
             contentMatrix.current.rows = (rows?.length ?? contentRowCount) - 1;
@@ -1749,9 +1884,9 @@ export const useFocusStrategy: (
         else {
             const updateCurrentMatrix: (matrix: IFocusMatrix, rowGroup: 'tbody' | 'thead' | 'tfoot') => void =
                 (matrix: IFocusMatrix, rowGroup: 'tbody' | 'thead' | 'tfoot'): void => {
-                    const currentFocusedCellElement: HTMLTableCellElement = document.activeElement.closest(`${rowGroup +
-                        (rowGroup === 'thead' ? ' th' : ' td')}`) ??
-                        gridRef.current.element.querySelector('.sf-cell.sf-focused[tabindex="0"]') as HTMLTableCellElement;
+                    const currentFocusedCellElement: HTMLTableCellElement = document.activeElement?.closest(
+                        `${rowGroup}${rowGroup === 'thead' ? ' th' : ' td'}`
+                    ) ?? gridRef.current.element?.querySelector('.sf-cell.sf-focused[tabindex="0"], .sf-cell.sf-focus[tabindex="0"]') as HTMLTableCellElement;
                     let currentFocusedRowElement: HTMLTableRowElement;
                     if (virtualSettings?.enableRow) {
                         currentFocusedRowElement = currentFocusedCellElement?.closest?.(rowGroup + ' tr');
@@ -1759,7 +1894,10 @@ export const useFocusStrategy: (
                     let firstValidCell: number[];
                     if (currentFocusedRowElement || currentFocusedCellElement?.closest(rowGroup)) {
                         const currentFocusedRowIndex: number = !currentFocusedRowElement ? -1 :
-                            Array.from(currentFocusedRowElement.parentElement.children).indexOf(currentFocusedRowElement);
+                            (isRowPinningEnabled(gridRef.current?.pinningSettings) && rowGroup === 'tbody' &&
+                            currentFocusedRowElement.hasAttribute('data-rowindex')) ?
+                                parseUnit(currentFocusedRowElement.getAttribute('data-rowindex')) - 1 :
+                                Array.from(currentFocusedRowElement.parentElement.children).indexOf(currentFocusedRowElement);
                         const currentMatrix: [number, number] = [!currentFocusedRowElement ? matrix?.current[0] : currentFocusedRowIndex,
                             virtualSettings?.enableColumn ?
                                 (isNaN(parseFloat(currentFocusedCellElement?.getAttribute('data-colindex')) - 1) ?
@@ -1792,13 +1930,16 @@ export const useFocusStrategy: (
                 gridRef.current.scrollModule.virtualRowInfo.isFocusScrollOffsetChange = false;
                 const visibleColumns: ColumnProps[] = gridRef.current?.getVisibleColumns?.();
                 if (activeMatrix.current === 'Header') {
-                    const colIndex: number = gridRef.current.scrollModule.virtualColumnInfo.scrollFocusCurrentAriaColIndex ===
-                        visibleColumns.length - 1 ? headerMatrix.current.columns :
-                        (!isNaN(gridRef.current.scrollModule.virtualColumnInfo.scrollFocusCurrentAriaColIndex) ?
-                            gridRef.current.scrollModule.virtualColumnInfo.scrollFocusCurrentAriaColIndex :
-                            headerMatrix.current.current[1]);
                     const rowIndex: number = isNaN(gridRef.current.scrollModule.virtualRowInfo.scrollFocusCurrentAriaRowIndex) ?
                         focusedCell.current.rowIndex : gridRef.current.scrollModule.virtualRowInfo.scrollFocusCurrentAriaRowIndex;
+                    const colIndex: number = gridRef.current.scrollModule.virtualColumnInfo.scrollFocusCurrentAriaColIndex ===
+                        (gridRef.current.isStackedHeader && gridRef.current.stackedRowEntries?.[rowIndex as number] ?
+                            gridRef.current.stackedRowEntries?.[rowIndex as number]?.length - 1
+                            : visibleColumns.length - 1) ? gridRef.current.isStackedHeader ?
+                            headerMatrix.current.matrix[rowIndex as number].length - 1 : headerMatrix.current.columns
+                        : (!isNaN(gridRef.current.scrollModule.virtualColumnInfo.scrollFocusCurrentAriaColIndex) ?
+                            gridRef.current.scrollModule.virtualColumnInfo.scrollFocusCurrentAriaColIndex :
+                            headerMatrix.current.current[1]);
                     requestAnimationFrame(() => {
                         navigateToCell(rowIndex, colIndex, 'Header');
                         headerMatrix.current.current = [rowIndex, colIndex];
@@ -1851,9 +1992,9 @@ export const useFocusStrategy: (
                 }
             }
         }
-    }, [headerRowCount, contentRowCount, aggregateRowCount, columns?.length, columns, commandAddRef.current.length, updateLastFirstIndexes,
-        gridRef.current?.scrollModule?.virtualRowInfo?.startIndex, gridRef.current?.scrollModule?.virtualColumnInfo?.startIndex,
-        totalRecordsCount, expansionState]);
+    }, [headerRowCount, contentRowCount, aggregateRowCount, columns?.length, columns, commandColumnModule?.commandAddRef.current.length,
+        updateLastFirstIndexes, gridRef.current?.scrollModule?.virtualRowInfo?.startIndex,
+        gridRef.current?.scrollModule?.virtualColumnInfo?.startIndex, totalRecordsCount, expansionState]);
     useEffect(() => {
         if (isGridFocused && focusedCell.current.rowIndex === -1 && focusedCell.current.colIndex === -1 &&
                 activeMatrix.current === 'Content') {
@@ -1980,7 +2121,7 @@ export const useFocusStrategy: (
      */
     const setLastContentCellTabIndex: () => void = useCallback(() => {
         // Clear any existing tabIndex=0 in content or aggregate cells
-        const currentFocusableContentCell: HTMLElement | null = gridRef.current.getContentTable()?.querySelector('[tabindex="0"]:not(.sf-grid-edit-form *)');
+        const currentFocusableContentCell: HTMLElement | null = getAllContentRows(gridRef)?.filter((row: HTMLTableRowElement) => row.querySelector('[tabindex="0"]:not(.sf-grid-edit-form *)'))[0];
         if (currentFocusableContentCell && !gridRef.current.isEdit) {
             (currentFocusableContentCell as HTMLElement).tabIndex = -1;
             currentFocusableContentCell.classList.remove(CSS_FOCUSED, CSS_FOCUS);
@@ -2026,8 +2167,8 @@ export const useFocusStrategy: (
         }
 
         // Fallback to content if aggregate is not available
-        const contentTable: HTMLTableElement | null = gridRef.current.getContentTable();
-        if (contentTable && contentTable.rows.length > 0 && gridRef.current.allowKeyboard) {
+        const contentTable: HTMLTableRowElement[] | null = getAllContentRows(gridRef);
+        if (contentTable && contentTable.length > 0 && gridRef.current.allowKeyboard) {
             const spanContentMatrix: number[][] = contentMatrix.current.matrix;
             const lastFocusableActiveCellIndex: number[] = (gridRef.current?.isSpannedColumns || gridRef.current.isMasterDetail) ?
                 [spanContentMatrix?.length - 1, spanContentMatrix[lastFocusableContentCellIndex[0]].length - 1] :
@@ -2037,11 +2178,11 @@ export const useFocusStrategy: (
                 const [rowIndex, colIndex] = lastFocusableActiveCellIndex;
 
                 // Ensure the indices are valid
-                if (rowIndex >= 0 && rowIndex < contentTable.rows.length &&
-                    colIndex >= 0 && contentTable.rows[rowIndex as number] &&
-                    colIndex < contentTable.rows[rowIndex as number].cells.length) {
+                if (rowIndex >= 0 && rowIndex < contentTable.length &&
+                    colIndex >= 0 && contentTable[rowIndex as number] &&
+                    colIndex < contentTable[rowIndex as number].cells.length) {
 
-                    const cell: HTMLTableCellElement = contentTable.rows[rowIndex as number].cells[colIndex as number];
+                    const cell: HTMLTableCellElement = contentTable[rowIndex as number].cells[colIndex as number];
 
                     if (cell && !cell.classList.contains('sf-display-none')) {
                         // Set tabIndex to 0 for last content cell
@@ -2074,7 +2215,7 @@ export const useFocusStrategy: (
     const setGridFocus: (focused: boolean) => void = useCallback((focused: boolean): void => {
         if (!gridRef.current?.allowKeyboard) { return; }
         // Check if grid is in edit mode before changing focus
-        const isGridInEditMode: boolean = (gridRef.current?.isEdit && !commandEdit.current) || false;
+        const isGridInEditMode: boolean = (gridRef.current?.isEdit && !commandColumnModule?.commandEdit.current) || false;
 
         // Update the grid focus state
         setIsGridFocused(focused);
@@ -2124,8 +2265,10 @@ export const useFocusStrategy: (
      * @param {(Matrix)} [matrixType] - Matrix type for the cell
      * @returns {void}
      */
-    const navigateToCell: (rowIndex: number, colIndex: number, matrixType?: Matrix, virtualFocusDebounceTimer?: NodeJS.Timeout) => void =
-        useCallback((rowIndex: number, colIndex: number, matrixType: Matrix = 'Content', virtualFocusDebounceTimer?: NodeJS.Timeout) => {
+    const navigateToCell: (rowIndex: number, colIndex: number, matrixType?: Matrix, virtualFocusDebounceTimer?: NodeJS.Timeout,
+        preventColIndexUpdate?: boolean) => void =
+        useCallback((rowIndex: number, colIndex: number, matrixType: Matrix = 'Content', virtualFocusDebounceTimer?: NodeJS.Timeout,
+                     preventColIndexUpdate?: boolean) => {
             if (!gridRef.current?.allowKeyboard) { return; }
             // Set the active matrix
             setActiveMatrix(matrixType);
@@ -2148,12 +2291,15 @@ export const useFocusStrategy: (
                 if (beforeArgs.cancel) { return; }
 
                 // Update the matrix selection
+                if (!preventColIndexUpdate) {
+                    colIndex = Math.min(colIndex, matrix?.matrix?.[rowIndex as number]?.length - 1);
+                }
                 matrix.select(rowIndex, colIndex);
                 // Create a new array to ensure the reference changes
                 matrix.current = [rowIndex, colIndex];
 
                 // Get the table based on matrix type
-                let table: HTMLTableElement | undefined;
+                let table: HTMLTableElement | HTMLTableRowElement[] | undefined;
                 switch (matrixType) {
                 case 'Header':
                     table = gridRef.current?.getHeaderTable?.();
@@ -2163,13 +2309,15 @@ export const useFocusStrategy: (
                     break;
                 case 'Content':
                 default:
-                    table = gridRef.current?.getContentTable?.();
+                    table = getAllContentRows(gridRef);
                     break;
                 }
-                const rows: HTMLCollectionOf<HTMLTableRowElement> | NodeListOf<HTMLTableRowElement> = ((gridRef.current?.isEdit &&
-                    gridRef.current?.editModule?.isShowAddNewRowActive) || (matrixType === 'Content' && commandEdit?.current)) ? table?.querySelectorAll?.('tr.sf-grid-content-row:not(.sf-grid-add-row)') :
-                    table?.rows;
-                if (table && rows.length > rowIndex) {
+                const rows: HTMLCollectionOf<HTMLTableRowElement> | NodeListOf<HTMLTableRowElement> | HTMLTableRowElement[] =
+                    ((gridRef.current?.isEdit && gridRef.current?.editModule?.isShowAddNewRowActive) || (matrixType === 'Content' && commandColumnModule?.commandEdit?.current))
+                        ? table instanceof HTMLTableElement ? table.querySelectorAll('tr.sf-grid-content-row:not(.sf-grid-add-row)')
+                            : (table).filter((row: HTMLTableRowElement) => row.matches('tr.sf-grid-content-row:not(.sf-grid-add-row)'))
+                        : table instanceof HTMLTableElement ? table.rows : table;
+                if (rows && rows.length > rowIndex) {
                     const rowForm: HTMLTableRowElement = rows[rowIndex as number].querySelector('form table tr');
                     const row: HTMLTableRowElement = rowForm ?? rows[rowIndex as number];
                     if (row && row.cells.length > colIndex) {
@@ -2353,6 +2501,7 @@ export const useFocusStrategy: (
         navigateToNextCell,
         navigateToFirstCell,
         navigateToLastCell,
+        debounceFirstVirtualRowCellFocusHelper,
         debounceLastVirtualRowCellFocusHelper,
 
         // Utility methods

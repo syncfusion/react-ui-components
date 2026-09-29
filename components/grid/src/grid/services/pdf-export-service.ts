@@ -5,6 +5,11 @@ import { UseDataResult } from '../types/interfaces';
 import { GridRef } from '../types/grid.interfaces';
 import { GroupedData } from '../types/grouping.interfaces';
 import { getGroupLayoutFlattedData, isGroupedData } from '../utils/utils';
+import {
+    buildPdfMaxRowsWarningMessage,
+    PDF_EXPORT_CANCELLED_MESSAGE,
+    PDF_EXPORT_FAILED_MESSAGE
+} from '../constants/warnings';
 
 // PDF Export Constants
 const PDF_RANGE_ALL: PdfExportRange = 'All';
@@ -14,7 +19,7 @@ const PDF_DEFAULT_FILENAME: string = 'Grid.pdf';
 const PDF_DEFAULT_ORIENTATION: 'Portrait' | 'Landscape' = 'Portrait';
 const PDF_DEFAULT_PAGE_SIZE: string = 'A4';
 const PDF_DEFAULT_THEME: string = 'Material';
-const PDF_EXPORT_CANCELLED_ERROR: string = 'PDF export operation cancelled by onBeforePdfExport hook.';
+const PDF_EXPORT_CANCELLED_ERROR: string = PDF_EXPORT_CANCELLED_MESSAGE;
 
 /**
  * Validates data size against PDF export warning threshold.
@@ -27,9 +32,8 @@ const PDF_EXPORT_CANCELLED_ERROR: string = 'PDF export operation cancelled by on
  */
 function validateMaxRowsThreshold<T>(config: PdfExportSettings<T>, dataLength: number, enableDevMode: boolean): void {
     if (config.maxRowsWarningThreshold && dataLength > config.maxRowsWarningThreshold) {
-        const message: string = `PDF Export service: Data size (${dataLength} rows) exceeds warning threshold (${config.maxRowsWarningThreshold} rows).`;
         if (enableDevMode) {
-            console.warn(message);
+            console.warn(buildPdfMaxRowsWarningMessage(dataLength, config.maxRowsWarningThreshold));
             return;
         }
     }
@@ -179,6 +183,8 @@ export async function pdfExportService<T>(
             const flattenResult: { currentViewData: Array<GroupedData<T> | T> } = getGroupLayoutFlattedData(
                 dataSource as GroupedData<T>[],
                 () => true,
+                options?.gridRef?.current?.groupSettings?.groupSummaryPosition,
+                options?.gridRef?.current?.getGroupCaptionAggregateType?.(),
                 options.gridRef.current?.groupSettings || {},
                 new Set(),
                 ''
@@ -211,7 +217,7 @@ export async function pdfExportService<T>(
         // Trigger after export callback with error
         const errorObj: Error = error instanceof Error ? error : new Error(String(error));
         if (enableDevMode) {
-            console.warn('PDF export failed:', errorObj);
+            console.warn(PDF_EXPORT_FAILED_MESSAGE, errorObj);
         }
 
         config.onAfterPdfExport?.({

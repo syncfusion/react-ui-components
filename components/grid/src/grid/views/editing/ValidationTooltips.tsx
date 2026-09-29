@@ -1,12 +1,12 @@
-import { FormState } from '@syncfusion/react-inputs';
+import { FormState } from '@syncfusion/react-inputs/src/form-validator/index';
 import { EditCellRef, ValidationTooltipsProps } from '../../types/edit.interfaces';
 import { RefObject, useEffect, useState, Fragment, memo, useCallback, JSX, NamedExoticComponent } from 'react';
-import { Tooltip } from '@syncfusion/react-popups';
-import { useGridComputedProvider, useGridMutableProvider } from '../../contexts';
+import { Tooltip } from '@syncfusion/react-popups/src/tooltip/index';
+import { useGridComputedProvider, useGridMutableProvider } from '../../contexts/GridProviders';
 import { GridRef } from '../../types/grid.interfaces';
 import { MutableGridSetter } from '../../types/interfaces';
-import { formatUnit } from '@syncfusion/react-base';
-import { parseUnit } from '../../utils';
+import { formatUnit } from '@syncfusion/react-base/src/util';
+import { parseUnit } from '../../utils/utils';
 
 // Selector constants to avoid hardcoded strings
 const ADD_NEW_ROW_CLASS: string = '.sf-grid-edit-row';
@@ -44,7 +44,7 @@ const ValidationTooltipsComponent: React.FC<ValidationTooltipsProps> = ({ formSt
 }) => {
     const grid: Partial<GridRef> & Partial<MutableGridSetter> = useGridComputedProvider();
     const { editModule, commandColumnModule, offsetX, virtualSettings } = useGridMutableProvider();
-    const { commandEdit } = commandColumnModule;
+
     const [tooltipTargets, setTooltipTargets] = useState<Record<string, React.RefObject<HTMLElement>>>({});
     const [activeTooltips, setActiveTooltips] = useState<Set<string>>(new Set());
 
@@ -71,13 +71,13 @@ const ValidationTooltipsComponent: React.FC<ValidationTooltipsProps> = ({ formSt
                     `${ADD_NEW_ROW_CLASS} [id="${EDIT_INPUT_ID_PREFIX}${field}"]`
                 ) as HTMLElement;
             } else {
-                const queryTarget: HTMLDivElement = editModule.editSettings.mode === 'Popup' ? rowRef?.current : grid.element;
+                const queryTarget: HTMLDivElement = editModule?.editSettings.mode === 'Popup' ? rowRef?.current : grid.element;
                 inputElement = queryTarget?.querySelector(
                     `[id="${EDIT_INPUT_ID_PREFIX}${field}"]`
                 ) as HTMLElement;
             }
 
-            if (commandEdit?.current && rowRef?.current) {
+            if (commandColumnModule?.commandEdit?.current && rowRef?.current) {
                 const uid: string | null = rowRef.current.getAttribute(ROW_UID_ATTR);
                 inputElement = rowRef.current.querySelector(
                     `[id="${uid}-${EDIT_INPUT_ID_PREFIX}${field}"]`
@@ -130,7 +130,7 @@ const ValidationTooltipsComponent: React.FC<ValidationTooltipsProps> = ({ formSt
 
             const width: string = formatUnit(targetRef.current?.getBoundingClientRect?.()?.width -
                 (parseUnit(getComputedStyle(targetRef.current)?.paddingRight) * 2));
-            const popup: boolean = editModule.editSettings.mode === 'Popup';
+            const popup: boolean = editModule?.editSettings.mode === 'Popup';
             if (!popup) {
                 containerRef.container.current = grid.contentScrollRef;
             }

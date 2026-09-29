@@ -1,12 +1,16 @@
-import { useCallback, useRef, useState, useEffect, useMemo, JSX, RefObject, memo, forwardRef, useImperativeHandle, RefAttributes } from 'react';
-import { Form, FormField, IFormValidator, FormState, FormValueType } from '@syncfusion/react-inputs';
-import { ValueType, EditCellRef, IValueFormatter, EditType, CellEditFormProps, CellEditFormRef } from '../../types';
+import { useCallback, useRef, useState, useEffect, useMemo, JSX, RefObject, memo, forwardRef, useImperativeHandle, RefAttributes, CSSProperties } from 'react';
+import { Form, FormField, IFormValidator, FormState, FormValueType } from '@syncfusion/react-inputs/src/form-validator/index';
+import { ValueType, IValueFormatter } from '../../types/interfaces';
+import { ColumnProps } from '../../types/column.interfaces';
+import { EditType } from '../../types/enum';
+import { EditCellRef, CellEditFormProps, CellEditFormRef } from '../../types/edit.interfaces';
 import { EditCell } from './EditCell';
 import { ValidationTooltips } from './ValidationTooltips';
-import { useGridComputedProvider } from '../../contexts';
+import { useGridComputedProvider, useGridMutableProvider } from '../../contexts/GridProviders';
 import { handleFieldChangeFn, handleFieldBlurFn } from './InlineEditForm';
 import { useFormValidationRules } from '../../hooks/useFormValidationRules';
-import { getObject } from '../../utils/utils';
+import { FormulaEditor } from './FormulaEditor';
+import { getObject, getLeftPinnedOffsets, getRightPinnedOffsets, getLeftPinnedBoundaryField, getRightPinnedBoundaryField } from '../../utils/utils';
 
 // Constants for CSS classes and service keys
 const CSS_CLASS_PREFIX: string = 'sf-';
@@ -14,6 +18,10 @@ const CSS_ALIGN_SUFFIX: string = '-align';
 const GRID_EDIT_CELL_CLASS: string = 'sf-grid-edit-cell sf-cell-editing';
 const GRID_CELL_FORM_CLASS: string = 'sf-grid-cell-edit-form';
 const VALUE_FORMATTER_SERVICE_KEY: string = 'valueFormatter';
+const LEFT_PINNED_CELL: string = 'sf-left-pinned-cell';
+const RIGHT_PINNED_CELL: string = 'sf-right-pinned-cell';
+const LEFT_MOST_PINNED_CELL: string = 'sf-left-most-pinned-cell';
+const RIGHT_MOST_PINNED_CELL: string = 'sf-right-most-pinned-cell';
 
 
 /**
@@ -31,6 +39,7 @@ export const CellEditForm: <T>(props: CellEditFormProps<T> & RefAttributes<CellE
             field,
             value,
             column,
+            rowIndex,
             rowData,
             onFieldChange,
             validationErrors,
@@ -40,7 +49,8 @@ export const CellEditForm: <T>(props: CellEditFormProps<T> & RefAttributes<CellE
             const editCellRef: RefObject<EditCellRef> = useRef<EditCellRef>(null);
             const editCellRefs: RefObject<{ [key: string]: EditCellRef; }> = useRef<{ [key: string]: EditCellRef }>({});
             const tdRef: RefObject<HTMLTableCellElement> = useRef<HTMLTableCellElement>(null);
-            const { serviceLocator } = useGridComputedProvider<T>();
+            const { serviceLocator, getVisibleColumns, editSettings } = useGridComputedProvider<T>();
+            const { formulaModule, offsetX, uiColumns } = useGridMutableProvider<T>();
             const formatter: IValueFormatter = serviceLocator?.getService<IValueFormatter>(VALUE_FORMATTER_SERVICE_KEY);
 
             // Initialize internal data state with single field
@@ -136,11 +146,31 @@ export const CellEditForm: <T>(props: CellEditFormProps<T> & RefAttributes<CellE
 
             // Memoizes the CSS class for cell alignment to prevent unnecessary recomputation
             const alignClass: string = useMemo((): string => `${CSS_CLASS_PREFIX}${(column.textAlign).toLowerCase()}${CSS_ALIGN_SUFFIX}`, [column.textAlign]);
+            const leftPinnedOffsets: Map<string, number> = useMemo(() =>
+                getLeftPinnedOffsets<T>(uiColumns as RefObject<ColumnProps<T>[]>, [column]), [column, uiColumns?.current]);
+            const rightPinnedOffsets: Map<string, number> = useMemo(() =>
+                getRightPinnedOffsets<T>(uiColumns as RefObject<ColumnProps<T>[]>, [column]), [column, uiColumns?.current]);
+            const columnKey: string = column.field ?? column.headerText;
+            const isLeftPinned: boolean = leftPinnedOffsets.has(columnKey);
+            const isRightPinned: boolean = rightPinnedOffsets.has(columnKey);
+            const leftPinnedBoundaryField: string | undefined = getLeftPinnedBoundaryField(leftPinnedOffsets);
+            const rightPinnedBoundaryField: string | undefined = getRightPinnedBoundaryField(rightPinnedOffsets);
+            const pinnedClassName: string = isLeftPinned ? ` ${LEFT_PINNED_CELL}` :
+                (isRightPinned ? ` ${RIGHT_PINNED_CELL}` : '');
+            const pinnedEdgeClassName: string = isLeftPinned && columnKey === leftPinnedBoundaryField ?
+                ` ${LEFT_MOST_PINNED_CELL}` :
+                (isRightPinned && columnKey === rightPinnedBoundaryField ? ` ${RIGHT_MOST_PINNED_CELL}` : '');
+            const pinnedCellStyle: CSSProperties = isLeftPinned ? {
+                left: `${(leftPinnedOffsets.get(columnKey) ?? 0) - offsetX}px`
+            } : (isRightPinned ? {
+                right: `${rightPinnedOffsets.get(columnKey) ?? 0}px`
+            } : {});
 
             return (
                 <td
                     ref={tdRef}
-                    className={GRID_EDIT_CELL_CLASS + (!!column?.displayAsCheckBox && column?.edit?.type === EditType.CheckBox ? ` ${alignClass}` : '')}
+                    className={`${GRID_EDIT_CELL_CLASS}${pinnedClassName}${pinnedEdgeClassName}${!!column?.displayAsCheckBox && column?.edit?.type === EditType.CheckBox ? ` ${alignClass}` : ''}`}
+                    style={pinnedCellStyle}
                     role="gridcell"
                     aria-invalid={!!error}
                     data-testid={`cell-edit-${String(field)}`}
@@ -158,18 +188,29 @@ export const CellEditForm: <T>(props: CellEditFormProps<T> & RefAttributes<CellE
                         role="form"
                     >
                         <FormField name={field}>
-                            <EditCell
-                                ref={editCellRef}
-                                column={column}
-                                value={getObject(column.field, formState?.values) ?? formState?.values?.[column.field]}
-                                data={rowData}
-                                error={error}
-                                onChange={handleChange}
-                                onBlur={handleBlur}
-                                onFocus={handleFocus}
-                                autoFocus={true}
-                                formState={formState || undefined}
-                            />
+                            {editSettings?.mode === 'Cell' && formulaModule && column.allowFormula ? (
+                                <FormulaEditor
+                                    value={String(getObject(column.field, formState?.values) ?? formState?.values?.[column.field] ?? '')}
+                                    columns={getVisibleColumns?.() ?? [column]}
+                                    formulaModule={formulaModule}
+                                    rowIndex={rowIndex}
+                                    onChange={(newValue: string) => handleChange(newValue)}
+                                    onBlur={(newValue: string) => handleBlur(newValue)}
+                                />
+                            ) : (
+                                <EditCell
+                                    ref={editCellRef}
+                                    column={column}
+                                    value={getObject(column.field, formState?.values) ?? formState?.values?.[column.field]}
+                                    data={rowData}
+                                    error={error}
+                                    onChange={handleChange}
+                                    onBlur={handleBlur}
+                                    onFocus={handleFocus}
+                                    autoFocus={true}
+                                    formState={formState || undefined}
+                                />
+                            )}
                         </FormField>
                     </Form>
                     {formState && Object.keys(formState.errors).length > 0 && (

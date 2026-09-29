@@ -22,6 +22,10 @@ export const DEFAULT_LOCALE_STRINGS: Record<string, string> = {
     week: 'Week',
     workweek: 'Work week',
     month: 'Month',
+    timelineday: 'Timeline Day',
+    timelineweek: 'Timeline Week',
+    timelineworkweek: 'Timeline Work week',
+    timelinemonth: 'Timeline Month',
     agenda: 'Agenda',
     more: 'more',
     expandAllDaySection: 'Expand all-day section',
@@ -71,7 +75,10 @@ export const DEFAULT_LOCALE_STRINGS: Record<string, string> = {
     no: 'No',
     followingEvents: 'Following Events',
     eventsFor: 'Events for',
-    noEvents: 'No events'
+    noEvents: 'No events',
+    openResourceList: 'Open resource list',
+    closeResourceList: 'Close resource list',
+    resources: 'Resources'
 };
 
 /**

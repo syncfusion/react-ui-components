@@ -13,23 +13,14 @@ import {
     Dispatch,
     SetStateAction
 } from 'react';
-import {
-    HeaderRowsRef,
-    IHeaderRowsBase,
-    RowRef,
-    IRow,
-    ICell,
-    RenderType,
-    RowType,
-    WrapMode
-} from '../types';
-import { ColumnProps } from '../types/column.interfaces';
-import {
-    useGridMutableProvider,
-    useGridComputedProvider } from '../contexts';
-import { RowBase } from '../components';
-import { ColumnsChildren } from '../types/interfaces';
-import { isNullOrUndefined } from '@syncfusion/react-base';
+import { HeaderRowsRef, IHeaderRowsBase, RowRef, VirtualColumnInfo } from '../types/interfaces';
+import { IRow, ICell, ColumnsChildren } from '../types/interfaces';
+import { RenderType, RowType, WrapMode } from '../types/enum';
+import { ColumnProps, FlattenedColumn } from '../types/column.interfaces';
+import { useGridMutableProvider, useGridComputedProvider } from '../contexts/GridProviders';
+import { RowBase } from '../components/Row';
+import { isNullOrUndefined } from '@syncfusion/react-base/src/util';
+import { computeStackedHeaderMatrix } from '../hooks/useSpanning';
 
 // CSS class constants following enterprise naming convention
 const CSS_COLUMN_HEADER: string = 'sf-grid-header-row';
@@ -50,8 +41,9 @@ const HeaderRowsBase: (props: Partial<IHeaderRowsBase> & RefAttributes<HeaderRow
     memo(forwardRef<HeaderRowsRef, Partial<IHeaderRowsBase>>(
         <T, >(props: Partial<IHeaderRowsBase>, ref: RefObject<HeaderRowsRef>) => {
             const { columnsDirective, headerRowDepth, offsetX } = useGridMutableProvider<T>();
-            const { filterSettings, rowClass } = useGridComputedProvider<T>();
-            const { rowHeight, textWrapSettings } = useGridComputedProvider<T>();
+            const { filterSettings, rowClass, stackedHeaderColumns, stackedFlattedColumns, stackedFlattedColumnProps,
+                isStackedHeader,  scrollModule } = useGridComputedProvider<T>();
+            const { rowHeight, textWrapSettings, virtualizationSettings } = useGridComputedProvider<T>();
 
             // Refs for DOM elements and child components
             const headerSectionRef: RefObject<HTMLTableSectionElement> = useRef<HTMLTableSectionElement>(null);
@@ -113,15 +105,62 @@ const HeaderRowsBase: (props: Partial<IHeaderRowsBase> & RefAttributes<HeaderRow
             }, [storeRowRef]);
 
             /**
+             * Memoized callback to compute and apply stacked header matrix to rows and rowOptions
+             *
+             * @param {JSX.Element[]} rows - Array of rendered row elements
+             * @param {IRow<ColumnProps>[]} rowOptions - Array of row option objects
+             */
+            const applyStackedHeaderMatrix: (
+                rows: JSX.Element[],
+                rowOptions: IRow<ColumnProps<T>>[],
+                leafColumns: FlattenedColumn<T>[],
+                stackedHeaderColumns: FlattenedColumn<T>[]
+            ) => void = useCallback(
+                (
+                    rows: JSX.Element[],
+                    rowOptions: IRow<ColumnProps<T>>[],
+                    leafColumns: FlattenedColumn<T>[],
+                    stackedHeaderColumns: FlattenedColumn<T>[]
+                ) => {
+                    const stackedHeaderMatrix: ICell<ColumnProps<T>>[][] = computeStackedHeaderMatrix(
+                        headerRowDepth, leafColumns, stackedHeaderColumns) as ICell<ColumnProps<T>>[][];
+                    for (let idx: number = 0, spanEnd: number = rows.length; idx < spanEnd; idx++) {
+                        if (idx >= 0 && idx < stackedHeaderMatrix.length && stackedHeaderMatrix[parseInt(idx.toString(), 10)]
+                            && rows[parseInt(idx.toString(), 10)].props.row) {
+                            const cells: ICell<ColumnProps<T>>[] = stackedHeaderMatrix[parseInt(idx.toString(), 10)];
+                            // Update the row prop directly to ensure the Row component receives the latest spanCells
+                            rows[parseInt(idx.toString(), 10)].props.row.stackedHeaderCells = cells;
+                            if (rowOptions[parseInt(idx.toString(), 10)]) {
+                                rowOptions[parseInt(idx.toString(), 10)].stackedHeaderCells = cells;
+                            }
+                        }
+                    }
+                }, [headerRowDepth]);
+
+            /**
              * Memoized header row content to prevent unnecessary re-renders
              */
             const headerRowContent: JSX.Element[] | null = useMemo(() => {
                 const rows: JSX.Element[] = [];
                 const rowOptions: IRow<ColumnProps<T>>[] = [];
                 // Generate header rows based on headerRowDepth
+                const { flattedData, visibleFlattedElements } = (stackedHeaderColumns ?? []).reduce(
+                    (acc: { flattedData: FlattenedColumn<T>[]; visibleFlattedElements: ColumnProps[]; },
+                     column: FlattenedColumn<T>) => {
+                        const isVisibleColumn: boolean = column.leafCount === 1 && column.element?.props?.field &&
+                        column.element?.props?.visible !== false;
+                        if (isVisibleColumn) {
+                            acc.flattedData.push(column);
+                            acc.visibleFlattedElements.push(column.element.props);
+                        }
+                        return acc;
+                    },
+                    { flattedData: [] as FlattenedColumn<T>[], visibleFlattedElements: [] as ColumnProps[] });
                 for (let rowIndex: number = 0; rowIndex < headerRowDepth; rowIndex++) {
                     const options: IRow<ColumnProps<T>> = {};
                     options.rowIndex = rowIndex;
+                    options.flattedData = flattedData;
+                    options.flattedColumns = stackedFlattedColumns;
                     const rowId: string = `grid-header-row-${rowIndex}-${Math.random().toString(36).substr(2, 5)}`;
                     // Store the options object for getRowsObject
                     rowOptions.push({ ...options });
@@ -134,6 +173,7 @@ const HeaderRowsBase: (props: Partial<IHeaderRowsBase> & RefAttributes<HeaderRow
                             row={options}
                             key={rowId}
                             rowType={RenderType.Header}
+                            aria-rowindex={options.rowIndex + 1}
                             className={`${CSS_COLUMN_HEADER} ${textWrapSettings?.enabled && textWrapSettings?.wrapMode === WrapMode.Header ? 'sf-wrap' : ''}`.trim()
                                 + (rowCustomClass.length ? `${' ' + rowCustomClass}` : '')}
                             style={{ height : `${rowHeight}px`}}
@@ -147,6 +187,7 @@ const HeaderRowsBase: (props: Partial<IHeaderRowsBase> & RefAttributes<HeaderRow
                                 role='row'
                                 key={rowId + '-filterbar'}
                                 rowType={RenderType.Filter}
+                                aria-rowindex={options.rowIndex + 1 + 1}
                                 className={`${CSS_FILTER_HEADER}`}
                             >
                                 {(columnsDirective.props as ColumnsChildren).children}
@@ -155,10 +196,27 @@ const HeaderRowsBase: (props: Partial<IHeaderRowsBase> & RefAttributes<HeaderRow
                     }
                 }
 
+                if (isStackedHeader && stackedHeaderColumns?.length) {
+                    // Apply span matrix only when columnsArray or data structure changes
+                    let leafColumns: FlattenedColumn<T>[] = flattedData;
+                    if (virtualizationSettings.enabled) {
+                        const virtualColumnInfo: VirtualColumnInfo | undefined = scrollModule?.virtualColumnInfo;
+                        if (virtualColumnInfo) {
+                            leafColumns = flattedData.slice(virtualColumnInfo.startIndex, virtualColumnInfo.endIndex);
+                            virtualColumnInfo.visibleStackedHeaderColumns =
+                                visibleFlattedElements.slice(virtualColumnInfo.startIndex, virtualColumnInfo.endIndex) as ColumnProps[];
+                        }
+                    }
+                    applyStackedHeaderMatrix(rows, rowOptions, leafColumns, stackedHeaderColumns);
+                }
+
                 // Store the row options in the ref for access via getRowsObject
                 rowsObjectRef.current = rowOptions;
                 return rows;
-            }, [columnsDirective, textWrapSettings?.enabled, textWrapSettings, rowHeight, filterSettings?.enabled, rowClass]);
+            }, [columnsDirective, headerRowDepth, applyStackedHeaderMatrix, textWrapSettings?.enabled,
+                textWrapSettings, rowHeight, filterSettings?.enabled,
+                rowClass, stackedHeaderColumns, stackedFlattedColumnProps, stackedFlattedColumns, isStackedHeader,
+                scrollModule?.virtualColumnInfo?.startIndex && isStackedHeader, isStackedHeader && offsetX]);
 
             return (
                 <thead

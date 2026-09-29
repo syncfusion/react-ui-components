@@ -1,15 +1,28 @@
-import { Button, Color, Variant } from '@syncfusion/react-buttons';
-import { Toolbar, ToolbarItem, ToolbarSpacer } from '@syncfusion/react-navigations';
+import { Button } from '@syncfusion/react-buttons/src/button/button';
+import { Color, Variant } from '@syncfusion/react-base/src/enums';
+import { Toolbar, ToolbarItem, ToolbarSpacer } from '@syncfusion/react-navigations/src/toolbar/index';
 import { JSX, RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ToolbarAPI, ToolbarClickEvent, ToolbarItemProps, ToolbarConfig } from '../../types/toolbar.interfaces';
-import { MutableGridBase } from '../../types';
+import { MutableGridBase } from '../../types/interfaces';
 import { SelectionModel } from '../../types/selection.interfaces';
 import { editModule } from '../../types/edit.interfaces';
 import { searchModule } from '../../types/search.interfaces';
-import { useGridComputedProvider, useGridMutableProvider } from '../../contexts';
-import { IL10n, Position } from '@syncfusion/react-base';
-import { ChevronDownFillIcon, CloseIcon, EditIcon, PlusIcon, SaveIcon, SearchIcon, TrashIcon, PrintIcon, ExportPdfIcon, ExportExcelIcon } from '@syncfusion/react-icons';
-import { InputBase, renderClearButton, renderFloatLabelElement } from '@syncfusion/react-inputs';
+import { useGridComputedProvider, useGridMutableProvider } from '../../contexts/GridProviders';
+import { IL10n } from '@syncfusion/react-base/src/l10n';
+import { Position } from '@syncfusion/react-base/src/enums';
+import { ChevronDownFillIcon } from '@syncfusion/react-icons/src/icons/chevron-down-fill';
+import { CloseIcon } from '@syncfusion/react-icons/src/icons/close';
+import { EditIcon } from '@syncfusion/react-icons/src/icons/edit';
+import { PlusIcon } from '@syncfusion/react-icons/src/icons/plus';
+import { SaveIcon } from '@syncfusion/react-icons/src/icons/save';
+import { SearchIcon } from '@syncfusion/react-icons/src/icons/search';
+import { TrashIcon } from '@syncfusion/react-icons/src/icons/trash';
+import { PrintIcon } from '@syncfusion/react-icons/src/icons/print';
+import { ExportPdfIcon } from '@syncfusion/react-icons/src/icons/export-pdf';
+import { ExportExcelIcon } from '@syncfusion/react-icons/src/icons/export-excel';
+import { UndoIcon } from '@syncfusion/react-icons/src/icons/undo';
+import { RedoIcon } from '@syncfusion/react-icons/src/icons/redo';
+import { InputBase, renderClearButton, renderFloatLabelElement } from '@syncfusion/react-inputs/src/common/inputbase';
 
 // Constants for CSS classes to avoid hardcoding
 const INPUT_GROUP: string = 'sf-input-group';
@@ -55,13 +68,13 @@ const SearchInputWrapper: React.FC<{
     allowKeyboard?: boolean;
     disabled?: boolean;
 }): JSX.Element => {
-    const [searchValue, setSearchValue] = useState<string>(disabled ? '' : searchModule.searchSettings?.value || '');
+    const [searchValue, setSearchValue] = useState<string>(disabled ? '' : searchModule?.searchSettings?.value || '');
     const [isFocused, setIsFocused] = useState<boolean>(false);
     const searchInputRef: RefObject<HTMLInputElement> = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        setSearchValue(searchModule.searchSettings?.value);
-    }, [searchModule.searchSettings?.value]);
+        setSearchValue(searchModule?.searchSettings?.value);
+    }, [searchModule?.searchSettings?.value]);
 
     const clearInput: () => void = useCallback((e?: React.MouseEvent) => {
         // Prevent default and stop propagation if event is provided
@@ -71,7 +84,7 @@ const SearchInputWrapper: React.FC<{
         }
 
         setSearchValue('');
-        searchModule.search('');
+        searchModule?.search('');
 
         // Ensure input gets focus but after a short delay to let events settle
         setTimeout(() => {
@@ -296,15 +309,19 @@ export const GridToolbar: React.FC<ToolbarConfig> = ({
                         disabled: disabledItems.has(`${gridId}_edit`)
                     };
                     break;
-                case 'Update':
+                case 'Update': {
+                    const updateLabel: string = editSettings?.allowBatchSave === true
+                        ? (editSettings?.batchSaveLabel ?? 'Save')
+                        : (localization?.getConstant('updateButtonLabel') ?? 'Update');
                     itemConfig = {
                         id: `${gridId}_update`,
-                        title: localization?.getConstant('updateButtonLabel'),
-                        text: localization?.getConstant('updateButtonLabel'),
+                        title: updateLabel,
+                        text: updateLabel,
                         icon: <SaveIcon key={`${gridId}_updateicon`}/>,
                         disabled: disabledItems.has(`${gridId}_update`)
                     };
                     break;
+                }
                 case 'Delete':
                     itemConfig = {
                         id: `${gridId}_delete`,
@@ -321,6 +338,24 @@ export const GridToolbar: React.FC<ToolbarConfig> = ({
                         text: localization?.getConstant('cancelButtonLabel'),
                         icon: <CloseIcon key={`${gridId}_cancelicon`}/>,
                         disabled: disabledItems.has(`${gridId}_cancel`)
+                    };
+                    break;
+                case 'Undo':
+                    itemConfig = {
+                        id: `${gridId}_undo`,
+                        title: 'Undo',
+                        text: 'Undo',
+                        icon: <UndoIcon key={`${gridId}_undoicon`}/>,
+                        disabled: disabledItems.has(`${gridId}_undo`)
+                    };
+                    break;
+                case 'Redo':
+                    itemConfig = {
+                        id: `${gridId}_redo`,
+                        title: 'Redo',
+                        text: 'Redo',
+                        icon: <RedoIcon key={`${gridId}_redoicon`}/>,
+                        disabled: disabledItems.has(`${gridId}_redo`)
                     };
                     break;
                 case 'Print':
@@ -480,6 +515,16 @@ export const GridToolbar: React.FC<ToolbarConfig> = ({
         }
     }, [handleButtonClick]);
 
+    const handleToolbarMouseDown: (args: React.MouseEvent<HTMLDivElement, MouseEvent>) => void = useCallback((
+        args: React.MouseEvent<HTMLDivElement, MouseEvent>
+    ): void => {
+        const buttonSelector: string = `.${TOOLBAR_ITEM} button`;
+        const buttonElement: HTMLElement | null = (args.target as HTMLElement)?.closest(buttonSelector);
+        if (buttonElement?.id === `${gridId}_undo` || buttonElement?.id === `${gridId}_redo`) {
+            args.preventDefault();
+        }
+    }, [gridId]);
+
     return (
         <Toolbar
             key={gridId + '_toolbar'}
@@ -487,6 +532,7 @@ export const GridToolbar: React.FC<ToolbarConfig> = ({
             ref={toolbarAPI.toolbarRef}
             className={className}
             aria-label="Grid Toolbar"
+            onMouseDown={handleToolbarMouseDown}
             onClick={handleToolbarClick}
         >
             {renderToolbarItems}

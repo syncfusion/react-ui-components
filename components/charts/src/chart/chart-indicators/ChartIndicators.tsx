@@ -2,9 +2,11 @@ import * as React from 'react';
 import { useContext, useEffect } from 'react';
 import { ChartContext } from '../layout/ChartProvider';
 import { defaultChartConfigs } from '../base/default-properties';
-import { ChartIndicatorProps } from '../base/interfaces';
+import { ChartIndicatorProps, ChartLinearGradientProps, ChartRadialGradientProps } from '../base/interfaces';
 import { ChartProviderChildProps, ChartIndicatorSettings } from '../chart-area/chart-interfaces';
 import { Animation, ConnectorProps } from '../../common';
+import { extractGradientChildren, extractStops, buildParsedGradient } from '../utils/gradient/gradientParsing';
+import { buildGradientSignature } from '../utils/gradient/gradientPipeline';
 
 /**
  * Declarative child used to declare a single technical indicator in JSX.
@@ -40,6 +42,30 @@ export const ChartIndicatorCollection: React.FC<IndicatorCollectionProps> = (
 ): null => {
     const chartContext: ChartProviderChildProps = useContext(ChartContext) as ChartProviderChildProps;
 
+    /**
+     * Tracks changes to the gradient type, coordinates, and color stops
+     * nested inside each chart indicator.
+     *
+     * @private
+     */
+    const indicatorGradientSignature: string = React.Children.toArray(children)
+        .map((child: React.ReactNode): string => {
+            if (
+                !React.isValidElement(child) ||
+                child.type !== ChartIndicator
+            ) {
+                return 'none';
+            }
+
+            const indicatorProps: ChartIndicatorProps =
+                child.props as ChartIndicatorProps;
+
+            return buildGradientSignature(
+                indicatorProps.children
+            );
+        })
+        .join('|');
+
     const mergedChildren: ChartIndicatorSettings[] = React.useMemo((): ChartIndicatorSettings[] => {
         const childNodes: React.ReactElement[] = React.Children.toArray(children) as React.ReactElement[];
 
@@ -49,7 +75,7 @@ export const ChartIndicatorCollection: React.FC<IndicatorCollectionProps> = (
 
         return indicatorElements.map((el: React.ReactElement<ChartIndicatorProps>): ChartIndicatorSettings => {
             const defaultIndicatorConfig: ChartIndicatorSettings
-            = defaultChartConfigs.ChartIndicators as ChartIndicatorSettings;
+                = defaultChartConfigs.ChartIndicators as ChartIndicatorSettings;
             const indicatorProps: ChartIndicatorProps = el.props as ChartIndicatorProps;
 
             const mergedIndicator: ChartIndicatorSettings = {
@@ -79,9 +105,34 @@ export const ChartIndicatorCollection: React.FC<IndicatorCollectionProps> = (
                     , ...indicatorProps.animation } as Animation;
             }
 
+            const childEl: React.ReactElement<ChartIndicatorProps> = el;
+            const gradProps: ChartLinearGradientProps | ChartRadialGradientProps | null =
+                extractGradientChildren(
+                    (childEl.props as { children?: React.ReactNode }).children
+                );
+
+            if (gradProps) {
+                const parsed: ReturnType<typeof buildParsedGradient> =
+                    buildParsedGradient(gradProps, extractStops(gradProps.children));
+
+                if (parsed && parsed.stops && parsed.kind) {
+                    mergedIndicator.gradientProps = gradProps;
+                    mergedIndicator.gradientStops = parsed.stops;
+                    mergedIndicator.gradientKind = parsed.kind;
+                } else {
+                    mergedIndicator.gradientProps = undefined;
+                    mergedIndicator.gradientStops = undefined;
+                    mergedIndicator.gradientKind = undefined;
+                }
+            } else {
+                mergedIndicator.gradientProps = undefined;
+                mergedIndicator.gradientStops = undefined;
+                mergedIndicator.gradientKind = undefined;
+            }
+
             return mergedIndicator;
         });
-    }, [children]);
+    }, [children, indicatorGradientSignature]);
 
     useEffect((): void => {
         chartContext?.setChartIndicator?.(mergedChildren);

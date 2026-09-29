@@ -1,12 +1,14 @@
-import { getDateFormat, getDateParser, getNumberFormat, getNumberParser, isNullOrUndefined } from '@syncfusion/react-base';
-import { NumberFormatOptions, DateFormatOptions } from '@syncfusion/react-base';
+import { getDateFormat, getDateParser, getNumberFormat, getNumberParser } from '@syncfusion/react-base/src/internationalization';
+import { isNullOrUndefined } from '@syncfusion/react-base/src/util';
+import { NumberFormatOptions, DateFormatOptions } from '@syncfusion/react-base/src/internationalization';
 import { useMemo } from 'react';
-import { IValueFormatter } from '../types';
+import { IValueFormatter } from '../types/interfaces';
 
 // Value formatter constants
 const FORMAT_TYPE_DATE_TIME: string = 'dateTime';
 const FORMAT_TYPE_DATETIME: string = 'datetime';
 const FORMAT_TYPE_DATE: string = 'date';
+const FORMAT_TYPE_DATEONLY: string = 'dateonly';
 const FORMAT_TYPE_TIME: string = 'time';
 const FORMAT_TYPE_NUMBER: string = 'number';
 const FORMAT_ERROR_MESSAGE: string = 'Error creating format function:';
@@ -55,9 +57,8 @@ export const useValueFormatter: (cultureName?: string) => IValueFormatter = (cul
         },
         fromView: (value: string, format: Function, type?: string): string | number | Date => {
             try {
-                if ((type === FORMAT_TYPE_DATE || type === FORMAT_TYPE_DATETIME || type === FORMAT_TYPE_NUMBER) &&
-                    (!isNullOrUndefined(format)) &&
-                    (!isNullOrUndefined(value))) {
+                if ((type === FORMAT_TYPE_DATE || type === FORMAT_TYPE_DATETIME || type === FORMAT_TYPE_NUMBER ||
+                    type === FORMAT_TYPE_DATEONLY) && (!isNullOrUndefined(format)) && (!isNullOrUndefined(value))) {
                     return format(value);
                 } else {
                     return value;

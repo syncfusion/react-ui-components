@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useProviderContext, formatDate } from '@syncfusion/react-base';
 import { TimeSlotProps } from '../types/scheduler-types';
-import { DateService, MINUTES_PER_HOUR } from '../services/DateService';
+import { DateService } from '../services/DateService';
 import { useSchedulerPropsContext } from '../context/scheduler-context';
 import { TimeSlot } from '../types/internal-interface';
 
@@ -61,58 +61,26 @@ export const useTimeCells: (props: UseTimeCellsProps) => UseTimeCellsResult = (p
     } = useSchedulerPropsContext();
 
     const { locale } = useProviderContext();
-    const { hours: startHours, minutes: startMinutes } = DateService.parseTimeString(startHour);
-    const { hours: endHours, minutes: endMinutes } = DateService.parseTimeString(endHour);
 
     const [hiddenSlotIndex, setHiddenSlotIndex] = useState<number | null>(null);
     const [totalSlots, setTotalSlots] = useState<number>(0);
 
     const timeSlots: TimeSlot[] = useMemo(() => {
-        const slots: TimeSlot[] = [];
-        const startTimeInMinutes: number = startHours * MINUTES_PER_HOUR + startMinutes;
-        const endTimeInMinutes: number = endHours * MINUTES_PER_HOUR + endMinutes;
-        let intervalStartTime: number = startTimeInMinutes;
+        const { interval, slotCount } = timeScale;
+        const metadata: TimeSlot[] = DateService.getSlotMetadata(startHour, endHour, interval, slotCount);
 
-        while (intervalStartTime < endTimeInMinutes) {
-            for (let slotIndex: number = 0; slotIndex < timeScale.slotCount; slotIndex++) {
-                const slotTimeInMinutes: number = intervalStartTime + (slotIndex * (timeScale.interval / timeScale.slotCount));
-                if (slotTimeInMinutes >= endTimeInMinutes) {
-                    break;
-                }
-
-                const currentHourValue: number = Math.floor(slotTimeInMinutes / MINUTES_PER_HOUR);
-                const currentMinuteValue: number = Math.floor(slotTimeInMinutes % MINUTES_PER_HOUR);
-                const date: Date = new Date();
-                date.setHours(currentHourValue, currentMinuteValue, 0, 0);
-
-                const isMajorSlot: boolean = slotIndex === 0;
-                const isLastSlotOfInterval: boolean = slotIndex === timeScale.slotCount - 1;
-                const nextSlotTimeInMinutes: number = slotTimeInMinutes + (timeScale.interval / timeScale.slotCount);
-                const isLastSlotBeforeEnd: boolean = nextSlotTimeInMinutes >= endTimeInMinutes;
-                const templateProps: TimeSlotProps = { date, type: isMajorSlot ? 'majorSlot' : 'minorSlot' };
-
-                slots.push({
-                    key: `${currentHourValue}-${currentMinuteValue}`,
-                    date,
-                    isMajorSlot,
-                    isLastSlotOfInterval,
-                    isLastSlotBeforeEnd,
-                    label: formatDate(date, {
-                        type: 'time',
-                        skeleton: 'h',
-                        format: timeFormat,
-                        locale: locale
-                    }),
-                    templateProps,
-                    index: slots.length
-                });
-            }
-            intervalStartTime += timeScale.interval;
-        }
+        const slots: TimeSlot[] = metadata.map((item: TimeSlot) => {
+            const { date, isMajorSlot, isLastSlotOfInterval, isLastSlotBeforeEnd, index } = item;
+            const templateProps: TimeSlotProps = { date, type: isMajorSlot ? 'majorSlot' : 'minorSlot' };
+            return {
+                key: `${item.hour}-${item.minute}`, date, isMajorSlot, isLastSlotOfInterval, isLastSlotBeforeEnd,
+                label: formatDate(date, { type: 'time', skeleton: 'h', format: timeFormat, locale: locale }), templateProps, index
+            };
+        });
 
         setTotalSlots(slots.length);
         return slots;
-    }, [startHours, startMinutes, endHours, endMinutes, timeFormat, timeScale, locale]);
+    }, [startHour, endHour, timeFormat, timeScale, locale]);
 
     // Update hidden slot when current time position changes
     useEffect(() => {
