@@ -1,6 +1,6 @@
 # Syncfusion React UI Components Library
 
-Syncfusion React UI Components library has been built from the ground up to be lightweight, responsive, modular and touch friendly. It offers 30+ UI components that every applications will ever need.
+Syncfusion React UI Components library has been built from the ground up to be lightweight, responsive, modular and touch friendly. It offers 35+ UI components that every applications will ever need.
 
 > This is a commercial product requiring a paid license for possession or use. Syncfusion's licensed software, including this library, is governed by the terms and conditions of Syncfusion's [EULA](https://www.syncfusion.com/eula/es/). To acquire a license for [React UI Components](https://www.syncfusion.com/react-components), you can [purchase one](https://www.syncfusion.com/sales/products) or [start a free 30-day trial](https://www.syncfusion.com/account/manage-trials/start-trials).
 

@@ -163,8 +163,8 @@ export class TelemetryOptions {
     // Initializes a new instance of the <see cref="TelemetryOptions"/> class.
     constructor() {
         this.enabled = true;
-        this.connectionString = 'SW5zdHJ1bWVudGF0aW9uS2V5PWQ0ODg0NjhiLTEyNzYtNGJhNS04NGY0LTE3ZmZjNzMzNjQ1ZTtJbmdlc3Rpb25FbmRwb2ludD1odHRwczovL2Vhc3R1cy04LmluLmFwcGxpY2F0aW9uaW5zaWdodHMuYXp1cmUuY29tLzs=';
-        this.endpoint = 'https://dc.services.visualstudio.com';
+        this.connectionString = '';
+        this.endpoint = '';
         this.sdkName = 'ESUISDK';
         this.sdkVersion = SDK_VERSION;
         this.framework = this.getFrameWork();
