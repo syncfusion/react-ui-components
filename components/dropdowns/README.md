@@ -1,6 +1,6 @@
-# React Dropdown Components
+# Syncfusion React Dropdown Components
 
-The Syncfusion React Dropdowns package is a feature-rich UI collection for dynamic dropdown interactions in React apps.
+The Syncfusion React Dropdowns package is a high-performance UI library delivering dropdown components for React applications. It features an enterprise-ready `Dropdown List`, `Autocomplete`, `ComboBox`, and `MultiSelect` built on a unified core for seamless data-binding, filtering, and UI templating. Optimized with built-in virtualization, it guarantees fluid rendering for massive datasets in single-value and multi-value selection forms.
 
 ## Setup
 
@@ -10,36 +10,41 @@ To install `dropdowns` and its dependent packages, use the following command,
 npm install @syncfusion/react-dropdowns
 ```
 
+Apply a theme by installing the corresponding theme package and importing its styles, for example with the [Material theme](https://www.npmjs.com/package/@syncfusion/react-material-theme):
+
+```sh
+npm install @syncfusion/react-material-theme
+```
+
+```css
+/* App.css */
+@import '../node_modules/@syncfusion/react-material-theme/styles/drop-down-list/index.css';
+```
+> Note: For other themes, use the corresponding `index.css` files from their respective style folders.
+
 ## React Dropdown List
 
-The Dropdown List component provides a user-friendly interface for selecting a single option from a list of predefined values. It supports rich customization, filtering, and templating features, making it ideal for forms, data filtering, and guided user selections.
+The React `Dropdown List` component lets users select a single option from a predefined list. It is commonly used for choosing categories, filtering data, or guiding users through a sequence of options.
 
-**Key features**
+### Key Features
 
-- **Primitive Data Binding:** Bind the Dropdown List to simple arrays of strings or numbers for straightforward use cases without complex data structures.
+- **[Primitive Data Binding:](https://react.syncfusion.com/react-ui/dropdown-list/#primitive-data-binding)** Bind the component to an array of strings or numbers by mapping the `dataSource` and `fields` properties, or to server-side data through the `DataManager` using the `query` property.
 
-- **Grouping:** Organize Dropdown List items into logical categories using the groupBy property, improving navigation and discoverability in large datasets.
+- **[Grouping:](https://react.syncfusion.com/react-ui/dropdown-list/#grouping)** Arrange related options into logical categories using the `groupBy` mapping in the `fields` property. `groupTemplate` customizes the appearance of the group headers.
 
-- **Filtering:** Enable the filterable property to allow users to search and narrow down options dynamically, with real-time updates to the list as they type.
+- **[Filtering:](https://react.syncfusion.com/react-ui/dropdown-list/#filtering)** Enable the `filterable` property to narrow the list as the user types. Control responsiveness with `debounceDelay`, the match strategy with `filterType` (`StartsWith`, `Contains`, `EndsWith`), and international matching with `ignoreCase` and `ignoreAccent`.
 
-- **Grouping with Filtering:** Combine grouping and filtering to enhance usability, especially when dealing with extensive or categorized data.
+- **[Virtualization:](https://react.syncfusion.com/react-ui/dropdown-list/#virtualization)** Render only visible rows for very large datasets through the `virtualization` property, which exposes `itemSize`, `pageSize`, `overscanCount`, `showSkeleton`, and `scrollMode` (`FetchViewPort` or `FetchAll`) for tuning rendering and remote fetch behavior.
 
-- **Templates:** Customize the Dropdown List appearance using various template options:
+- **[Cascading Dropdowns:](https://react.syncfusion.com/react-ui/dropdown-list/#cascading-dropdowns)** Compose the component so that the selection in one `Dropdown List` determines the `dataSource` of subsequent lists, for dependent pickers such as country, region, and city.
 
-  - **Item Template:** Use itemTemplate to style individual items or display additional information.
-  - **Header Template:** Add custom content at the top of the Dropdown List using headerTemplate.
-  - **Footer Template:** Include extra information or actions at the bottom using footerTemplate.
-  - **Value Template:** Style the selected value using valueTemplate for a personalized display.
+- **[Templates:](https://react.syncfusion.com/react-ui/dropdown-list/#custom-rendering)** Customize each part of the rendered output with `itemTemplate`, `groupTemplate`, `headerTemplate`, `footerTemplate`, `valueTemplate`, and `noRecordsTemplate`.
 
-- **Label Mode:** Control how labels or placeholders appear with the labelMode property. Available modes include Never, Always, and Auto.
+- **[Appearance and State:](https://react.syncfusion.com/react-ui/dropdown-list/#appearance)** Choose a visual `variant` (`Standard`, `Outlined`, `Filled`) and a `size`, control the floating label with `labelMode`, and manage state in controlled (`value` and `onChange`) or uncontrolled (`defaultValue`) mode. Use `disabled`, `readOnly`, and per-item `disabled` mapping to control interactivity, `clearButton` to reset the selection, and `prefix`/`suffix` to add adornments.
 
-- **Sorting:** Control item order using the sortOrder property.
+- **[Disabled Items:](https://react.syncfusion.com/react-ui/dropdown-list/#disabled-items)** Mark specific options as non-selectable by mapping a boolean property (such as `disabled`) to the `disabled` field in the `fields` configuration, keeping them visible while preventing selection.
 
-- **Popup Customization:** Configure popupSettings (width, height, zIndex, position, offset, collision).
-
-- **Clear Button:** Show a clear icon to reset selection via clearButton.
-
-- **Sizes and Variants:** Adjust UI with size (Small, Medium, Large) and variant (Standard, Outlined, Filled).
+- **[Forms and Validation:](https://react.syncfusion.com/react-ui/dropdown-list/#forms-support)** Integrate the component into forms with built-in validation using the `valid`, `validationMessage`, and `validityStyles` properties to control error state, messaging, and styling.
 
 **Usage**
 
@@ -64,29 +69,38 @@ export default function App() {
 }
 ```
 
+**Resources**
+
+- [Dropdown List Demo/Docs](https://react.syncfusion.com/react-ui/dropdown-list/)
+- [Dropdown List API](https://react.syncfusion.com/api/dropdown-list/overview/)
+
 ## React Autocomplete
 
-The Autocomplete component enables users to type and search for a single option from a predefined list, with automatic suggestions displayed as they type. It combines input functionality with filtering to provide a fast and intuitive selection experience.
+The React `Autocomplete` component is a text input that displays matching suggestions as the user types, combining free-form entry with guided selection.
 
-**Key features**
+### Key Features
 
-- **Controlled and Uncontrolled Usage:** Manage state with value/defaultValue properties for flexible integration patterns.
+- **[Autofill](https://react.syncfusion.com/react-ui/autocomplete/#autofill):** Enable the `autofill` property to complete the input with the first matching suggestion, highlighting the suggested portion so the user can accept it with `Enter` or continue typing.
 
-- **Autofill:** Automatically completes the input field with the first matching suggestion while highlighting the auto-filled portion, allowing users to press Enter or Tab to accept.
+- **[Auto Highlight](https://react.syncfusion.com/react-ui/autocomplete/#auto-highlight):** Enable `autoHighlight` to emphasize the portion of each suggestion that matches the current search text.
 
-- **Auto Highlight:** Highlights matched search text within each suggestion, making it easier to identify relevant matches.
+- **[Minimum Characters](https://react.syncfusion.com/react-ui/autocomplete/#minimum-length) and Maximum Suggestions:** Use `minLength` to require a threshold of characters before suggestions appear, and `maxSuggestions` to cap the number of rows displayed for large datasets.
 
-- **Minimum Characters:** Use minLength to require a minimum number of characters before suggestions are displayed, reducing unnecessary filtering on short inputs.
+- **[Custom Values](https://react.syncfusion.com/react-ui/autocomplete/#custom-value):** Enable `customValue` to let users commit free-form text that is not present in the `dataSource` by pressing `Enter`.
 
-- **Maximum Suggestions:** Control the maximum number of suggestions displayed using maxSuggestions to improve performance and UX with large datasets.
+- **[Grouping](https://react.syncfusion.com/react-ui/autocomplete/#grouping) and Filtering:** Organize suggestions with the `groupBy` mapping, and tune filtering with `filterType`, `debounceDelay`, `ignoreCase`, and `ignoreAccent`.
 
-- **Custom Values:** Enable customValue to allow users to commit free-form text values not present in the data source by pressing Enter.
+- **[Virtualization](https://react.syncfusion.com/react-ui/autocomplete/#virtualization):** Use the `virtualization` property to render only visible rows and handle remote paging through `scrollMode` (`FetchViewPort` or `FetchAll`).
 
-- **Templates:** Customize appearance with itemTemplate, headerTemplate, footerTemplate, groupTemplate, and valueTemplate.
+- **[Templates:](https://react.syncfusion.com/react-ui/autocomplete/#custom-rendering)** Customize rendering with `itemTemplate`, `groupTemplate`, `headerTemplate`, `footerTemplate`, `valueTemplate`, and `noRecordsTemplate`.
 
-- **Local and Remote Data:** Bind to local arrays or remote data sources through the dataSource property.
+- **[Appearance:](https://react.syncfusion.com/react-ui/autocomplete/#appearance)** Adjust the look with `size` and `variant` (`Standard`, `Outlined`, `Filled`), control the floating label with `labelMode`, and add adornments through `prefix` and `suffix`.
 
-- **Customizable Appearance:** Adjust size and variant properties for different UI contexts.
+- **[State and Guidance:](https://react.syncfusion.com/react-ui/autocomplete/#helper-text)** Support controlled (`value` and `onChange`) and uncontrolled (`defaultValue`) usage, reset the field with `clearButton`, and display contextual messages below the input with `helperText`.
+
+- **[Resizable Popup:](https://react.syncfusion.com/react-ui/autocomplete/#resizable-popup)** Enable the `resizable` property to let users drag the corner of the popup to resize it, and handle updates through the `onResize` event.
+
+- **[Forms and Validation:](https://react.syncfusion.com/react-ui/autocomplete/#forms-support)** Integrate the component into forms with built-in validation using the `valid`, `validationMessage`, and `validityStyles` properties to control error state, messaging, and styling.
 
 **Usage**
 
@@ -114,31 +128,34 @@ export default function App() {
 }
 ```
 
+**Resources**
+
+- [Autocomplete Demo/Docs](https://react.syncfusion.com/react-ui/autocomplete/)
+- [Autocomplete API](https://react.syncfusion.com/api/auto-complete/overview/)
+
 ## React ComboBox
 
-The ComboBox component combines an input field with a dropdown list, allowing users to either type a value or select from predefined options. It's ideal for scenarios where users need both the flexibility of free-form input and the convenience of predefined choices.
+The React `ComboBox` component combines an editable input with a list of suggestions, allowing users to type a value or select a predefined option.
 
-**Key features**
+### Key Features
 
-- **Controlled and Uncontrolled Usage:** Support for both value/defaultValue state management patterns for flexible component integration.
+- **[Autofill](https://react.syncfusion.com/react-ui/combobox/#autofill):** Enable the `autofill` property to complete the input with the first matching suggestion, with the completed portion highlighted.
 
-- **Autofill Support:** Automatically complete input with the first matching suggestion, with visual highlighting of the completed portion.
+- **[Auto Highlight](https://react.syncfusion.com/react-ui/combobox/#auto-highlight):** Enable `autoHighlight` to display highlighted matching text within each suggestion based on the current input.
 
-- **Auto Highlight:** Display highlighted text within suggestions to emphasize matching characters based on user input.
+- **[Custom Values](https://react.syncfusion.com/react-ui/combobox/#custom-value):** Enable `customValue` to let users enter and commit text values that are not in the data source by pressing `Enter`.
 
-- **Custom Values:** Allow users to enter and commit custom text values not in the data source by pressing Enter, enabling flexible data entry.
+- **[Filtering](https://react.syncfusion.com/react-ui/combobox/#filtering):** Control search capabilities with the `filterable` property, and tune responsiveness and match behavior with `debounceDelay`, `filterType`, `ignoreCase`, and `ignoreAccent`.
 
-- **Filtering:** Enable or disable filtering with the filterable property to control search capabilities.
+- **[Grouping](https://react.syncfusion.com/react-ui/combobox/#grouping) and Virtualization:** Organize options with the `groupBy` mapping, and use the `virtualization` property with `scrollMode` to handle large or remote data.
 
-- **Configurable Dropdown Icon:** Show or hide the dropdown arrow using the dropdownIcon property for different UI preferences.
+- **[Cascading ComboBoxes](https://react.syncfusion.com/react-ui/combobox/#cascading-comboboxes):** Link multiple `ComboBox` instances so that a selection in one list drives the `dataSource` of the next.
 
-- **Clear Button:** Include a clearButton to reset the selected value and input field.
+- **Icon, State, and Appearance:** Toggle the dropdown arrow with `dropdownIcon`, reset the field with `clearButton`, manage state with `value`/`onChange` or `defaultValue`, and adapt the look with `size`, `variant`, `labelMode`, `prefix`, and `suffix`. Add contextual guidance with `helperText` and customize rendering with the item, group, header, footer, value, and no-records templates.
 
-- **Templates:** Customize rendering with itemTemplate, headerTemplate, footerTemplate, groupTemplate, and valueTemplate options.
+- **[Resizable Popup:](https://react.syncfusion.com/react-ui/combobox/#resizable-popup)** Enable the `resizable` property to let users drag the corner of the popup to resize it, and handle updates through the `onResize` event.
 
-- **Data Binding:** Support for both primitive and complex object data sources with field mapping.
-
-- **Responsive Design:** Adjust size and variant for various screen sizes and design contexts.
+- **[Forms and Validation:](https://react.syncfusion.com/react-ui/combobox/#forms-support)** Integrate the component into forms with built-in validation using the `valid`, `validationMessage`, and `validityStyles` properties to control error state, messaging, and styling.
 
 **Usage**
 
@@ -165,38 +182,37 @@ export default function App() {
 }
 ```
 
+**Resources**
+
+- [ComboBox Demo/Docs](https://react.syncfusion.com/react-ui/combobox/)
+- [ComboBox API](https://react.syncfusion.com/api/combo-box/overview/)
+
 ## React MultiSelect
 
-The MultiSelect component enables users to select multiple options from a list, with support for advanced features like checkboxes, custom selection limits, and flexible display modes including chip and delimiter modes. It's perfect for scenarios requiring bulk selection with fine-grained control.
+The React `MultiSelect` component lets users select multiple options from a list, with support for checkboxes, selection limits, and chip or delimiter display modes.
 
-**Key features**
+### Key Features
 
-- **Multiple Selection:** Allow users to select multiple items from the data source simultaneously.
+- **[Display Modes](https://react.syncfusion.com/react-ui/multiselect/#mode):** Control how selections appear in the input with the `mode` property (`Box` for removable chips, `Delimiter` for `delimiterChar`-separated text, and `Auto` for chips on focus and text on blur).
 
-- **Controlled and Uncontrolled Usage:** Support for both value/defaultValue patterns for flexible state management.
+- **[Checkbox and Select All](https://react.syncfusion.com/react-ui/multiselect/#checkbox):** Enable `checkbox` for explicit multi-selection, add bulk actions with `showSelectAll`, `selectAllText`, and `unSelectAllText`, and use `enableGroupedCheckBox` to select an entire group at once.
 
-- **Checkbox Support:** Display checkboxes next to each item for explicit multi-selection feedback with the checkbox property.
 
-- **Selection Limits:** Restrict the number of selectable items using maximumSelectionLength to enforce business rules.
+- **[Selection Limits and Hiding](https://react.syncfusion.com/react-ui/multiselect/#maximum-selection-length):** Restrict the number of selectable items with `maximumSelectionLength`, and remove picked items from the suggestion list with `hideSelectedItem`.
 
-- **Display Modes:** Choose between Auto, Box, and Delimiter display modes using the mode property to customize how selected items appear:
-  - **Box Mode:** Display selected items as styled chips.
-  - **Delimiter Mode:** Show selected items separated by a custom delimiter character.
-  - **Auto Mode:** Automatically choose the best display mode based on focus.
+- **[Close on Select](https://react.syncfusion.com/react-ui/multiselect/#close-on-select):** Set `closeOnSelect` to false to keep the popup open for continuous multi-selection.
 
-- **Custom Chip Templates:** Customize the appearance of selected item chips using chipTemplate for styling.
+- **[Custom Values](https://react.syncfusion.com/react-ui/multiselect/#custom-value) and Add Tag on Blur:** Enable `customValue` to commit free-form entries with `Enter`, and set `addTagOnBlur` to add the typed text as a new chip when the field loses focus.
 
-- **Hide Selected Items:** Use hideSelectedItem to remove selected items from the dropdown.
+- **[Virtualization](https://react.syncfusion.com/react-ui/multiselect/#virtualization):** Use the `virtualization` property with `scrollMode` (`FetchViewPort` or `FetchAll`) to render large or remote data efficiently.
 
-- **Close on Select:** Control dropdown closure behavior with closeOnSelect to automatically close the dropdown immediately after an item is selected or keep it open for continuous multi-selection workflow.
+- **[Templates:](https://react.syncfusion.com/react-ui/multiselect/#custom-rendering)** Customize chips and rendering with `chipTemplate`, `valueTemplate`, `itemTemplate`, `groupTemplate`, `headerTemplate`, `footerTemplate`, and `noRecordsTemplate`.
 
-- **Select All Functionality:** Enable select/unselect all items with showSelectAll and customize text using selectAllText and unSelectAllText.
+- **[Appearance:](https://react.syncfusion.com/react-ui/multiselect/#appearance)** Adapt the look with `size`, `variant`, `labelMode`, `prefix`, and `suffix`, and display contextual messages below the input with `helperText`.
 
-- **Add Tag on Blur:** Allow users to commit typed values as new selections when leaving the input field using addTagOnBlur.
+- **[Resizable Popup:](https://react.syncfusion.com/react-ui/multiselect/#resizable-popup)** Enable the `resizable` property to let users drag the corner of the popup to resize it, and handle updates through the `onResize` event.
 
-- **Flexible Templates:** Support for itemTemplate, headerTemplate, footerTemplate, groupTemplate, and valueTemplate for complete customization.
-
-- **Data Source Options:** Bind to local arrays or remote data sources with field mapping.
+- **[Forms and Validation:](https://react.syncfusion.com/react-ui/multiselect/#forms-support)** Integrate the component into forms with built-in validation using the `valid`, `validationMessage`, and `validityStyles` properties to control error state, messaging, and styling.
 
 **Usage**
 
@@ -226,10 +242,15 @@ export default function App() {
 }
 ```
 
+**Resources**
+
+- [MultiSelect Demo/Docs](https://react.syncfusion.com/react-ui/multiselect/)
+- [MultiSelect API](https://react.syncfusion.com/api/multi-select/overview/)
+
 <p align="center">
 Trusted by the world's leading companies
   <a href="https://www.syncfusion.com/">
-    <img src="https://raw.githubusercontent.com/SyncfusionExamples/nuget-img/master/syncfusion/syncfusion-trusted-companies.webp" alt="Syncfusion logo">
+    <img src="https://raw.githubusercontent.com/SyncfusionExamples/nuget-img/master/syncfusion/syncfusion-trusted-companies.webp" alt="Company logo">
   </a>
 </p>
 
@@ -241,6 +262,7 @@ Product support is available through following mediums.
 * Live chat
 
 ## Changelog
+
 Check the changelog [here](https://github.com/syncfusion/react-ui-components/blob/master/components/dropdowns/CHANGELOG.md). Get minor improvements and bug fixes every week to stay up to date with frequent updates.
 
 ## License and copyright

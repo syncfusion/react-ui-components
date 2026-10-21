@@ -1,90 +1,115 @@
 # Syncfusion React Button Components
 
-The Syncfusion React Buttons package provides a feature-rich collection of UI components, including Button, CheckBox, RadioButton, Switch, Chip, ChipList, and Floating Action Button, for building modern, interactive React applications.
+The Syncfusion React Buttons package provides a collection of button-based UI components for building modern, interactive React applications. It includes the Button, Checkbox, Chip, ChipList, Radio Button, Floating Action Button, and Switch components, each supporting consistent color, size, and icon APIs plus controlled and uncontrolled usage patterns.
 
 ## Setup
-
-To install `buttons` and its dependent packages, use the following command,
 
 ```sh
 npm install @syncfusion/react-buttons
 ```
 
+Apply a theme by installing the corresponding theme package and importing its styles, for example with the [Material theme](https://www.npmjs.com/package/@syncfusion/react-material-theme):
+
+```sh
+npm install @syncfusion/react-material-theme
+```
+
+```css
+/* App.css */
+@import '../node_modules/@syncfusion/react-material-theme/styles/button/index.css';
+```
+> Note: For other components, use their corresponding index.css files from their respective style folders
+
 ## React Button
 
-The Button component is designed to create highly customizable and interactive button elements with a variety of styling and functional options. It allows for tailored interactions through different configurations such as size, color, icon positioning, and toggle capability.
+The Button component creates styled, interactive buttons with configurable variants, colors, icons, and toggle behavior.
 
-**Key features**
+### Key Features
 
-- **Color Variants:** Style buttons with distinct color options like 'warning', 'success', 'danger', and 'info' to fit your application's theme.
+- **[Variants](https://react.syncfusion.com/react-ui/button/#variants):** Render buttons with distinct styles using the `variant` property and the `Variant` enum: `Standard`, `Outlined`, and `Filled`. Set `isLink={true}` to render the button as an underlined hyperlink-style action.
 
-- **Icon Support:**  Integrate SVG icons within buttons for enhanced visual cues. Configure the icon's position to be left, right, top, or bottom relative to button text.
+- **[Button Sizes](https://react.syncfusion.com/react-ui/button/#button-sizes):** Adjust the button dimensions with the `size` property and the `Size` enum, which supports `Small`, `Medium`, and `Large` presets for consistent sizing across interfaces.
 
-- **Toggle Functionality:** Use the button as a toggle to maintain and represent states within your application, enabling buttons to switch between active and inactive states upon user interaction.
+- **[Color](https://react.syncfusion.com/react-ui/button/#color):** Apply distinct color styles with the `color` property and the `Color` enum, including `Primary`, `Secondary`, `Warning`, `Success`, `Error`, and `Info` to match your application theme.
 
-- **Size Options:** Adjust button dimensions with size variants such as 'small', 'medium' and 'bigger', allowing for flexibility in different UI contexts.
+- **[Icon and Label](https://react.syncfusion.com/react-ui/button/#icon-and-label):** Integrate SVG or class-based icons with the `icon` property and position them relative to the label with `iconPosition`, which accepts `Left`, `Right`, `Top`, or `Bottom` via the `Position` enum.
 
-- **Variant Styles:** Choose from various button styles like 'outlind', 'filled', and 'flat' to seamlessly integrate with your design language.
+- **[Toggle Button](https://react.syncfusion.com/react-ui/button/#toggle-button):** Enable on/off behavior with `toggleable={true}` so the button switches between active and inactive states on each click, and set the initial state with the `selected` property.
 
-- **Selection Management:** Include prop configurations to set initial states, making it simple to handle selection states, especially useful for toggle buttons.
+- **[Customization](https://react.syncfusion.com/react-ui/button/#customization):** Override the default appearance with `className` or inline styles for dynamic theming, hover effects, and complex styled buttons with image backgrounds.
 
 **Usage**
 
 ```tsx
-import { Button } from '@syncfusion/react-buttons';
+import { Button, Color, Variant } from '@syncfusion/react-buttons';
+import { SaveIcon } from '@syncfusion/react-icons';
 
 export default function App() {
   return (
-    <Button>Default Button</Button>     
+    <Button color={Color.Success} variant={Variant.Outlined} icon={<SaveIcon />}>
+      Save
+    </Button>
   );
-};
-```
-
-**Resources**
-
-- [Button Demo/Docs](https://react.syncfusion.com/react-ui/button)
-- [Button API](https://react.syncfusion.com/api/button/overview)
-
-## React Checkbox
-
-The Checkbox component offers a flexible and user-friendly way to allow users to make binary selections. It supports various states and configurations to accommodate different use cases in applications.
-
-**Key features**
-
-- **Selection States:** The Checkbox component can be configured to be in checked, unchecked, or indeterminate states. This provides a visual cue for users to understand the current selection state.
-
-- **Label Support:** Display informative text alongside the checkbox to clearly convey its purpose to users. The label can be positioned either before or after the checkbox element based on UI preferences.
-
-- **Label Positioning:** Configure the label placement with the `labelPlacement` prop, choosing whether the label appears before or after the Checkbox.
-
-**Usage**
-
-```tsx
-import { Checkbox } from '@syncfusion/react-buttons';
-
-export default function App() {
-    return (
-      <Checkbox label='Checkbox' defaultChecked/>
-    );
 }
 ```
 
 **Resources**
 
-- [Checkbox Demo/Docs](https://react.syncfusion.com/react-ui/checkbox)
-- [Checkbox API](https://react.syncfusion.com/api/checkbox/overview)
+- [Button Demo/Docs](https://react.syncfusion.com/react-ui/button/)
+- [Button API](https://react.syncfusion.com/api/button/overview/)
+
+## React Checkbox
+
+The Checkbox component provides a binary selection control with customizable labels, colors, states, and form validation support.
+
+### Key Features
+
+- **[States](https://react.syncfusion.com/react-ui/checkbox/#types):** Render checked, unchecked, disabled, readonly, and invalid states. Manage state with `checked` for controlled usage and `defaultChecked` for uncontrolled usage, and set `disabled={true}` to make the checkbox inactive.
+
+- **[Indeterminate State](https://react.syncfusion.com/react-ui/checkbox/#intermediate):** Set `indeterminate={true}` to present a mixed state that is neither checked nor unchecked, useful for parent-child relationships where the parent reflects its children's selections.
+
+- **[Size](https://react.syncfusion.com/react-ui/checkbox/#size):** Customize checkbox dimensions with the `size` property and the `Size` enum, which supports `Small`, `Medium`, and `Large` presets for different UI contexts.
+
+- **[Label and Placement](https://react.syncfusion.com/react-ui/checkbox/#label):** Display descriptive text with the `label` property and control its position relative to the checkbox with `labelPlacement`, which accepts values from the `Position` enum.
+
+- **[Customization](https://react.syncfusion.com/react-ui/checkbox/#customization):** Style the checkbox with the `color` property from the `Color` enum, and replace the default appearance with custom icons via `icon`, `checkedIcon`, and `indeterminateIcon`.
+
+- **[Form Validation](https://react.syncfusion.com/react-ui/checkbox/#form-validation):** Validate user input before submission with the `required`, `valid`, and `validationMessage` properties, with visual invalid states controlled by `validityStyles`.
+
+**Usage**
+
+```tsx
+import { Checkbox, Size } from '@syncfusion/react-buttons';
+
+export default function App() {
+  return (
+    <Checkbox label='Subscribe' defaultChecked size={Size.Small} />
+  );
+}
+```
+
+**Resources**
+
+- [Checkbox Demo/Docs](https://react.syncfusion.com/react-ui/checkbox/)
+- [Checkbox API](https://react.syncfusion.com/api/checkbox/overview/)
 
 ## React Chip
 
-The Chip component represents information in a compact form, such as entity attribute, text, or action. It provides a versatile way to display content in a contained, interactive element.
+The Chip component displays discrete information, attributes, or actions in a compact, interactive element supporting icons, avatars, and removal.
 
-**Key features**
+### Key Features
 
-- **Variants:** Display chips with different visual styles using either 'filled' or 'outlined' variants to match your design requirements.
+- **[Removable Chip](https://react.syncfusion.com/react-ui/chip/#removable-chip):** Set `removable={true}` to show a delete icon and implement an `onDelete` handler to remove the chip, ideal for interfaces where users add and remove items dynamically.
 
-- **Colors:** Customize the appearance with predefined color options including primary, info, danger, success, and warning.
+- **[Disabled Chip](https://react.syncfusion.com/react-ui/chip/#disabled-chip):** Set `disabled={true}` to render non-interactive content that remains visible but cannot be selected, useful for showing unavailable options while maintaining context.
 
-- **Icons and Avatars:** Enhance visual representation with leading icons, trailing icons, or avatars to provide additional context.
+- **[Size](https://react.syncfusion.com/react-ui/chip/#size):** Customize chip dimensions with the `size` property and the `Size` enum, which supports `Small`, `Medium`, and `Large` presets.
+
+- **[Colors](https://react.syncfusion.com/react-ui/chip/#colors):** Apply predefined theme colors with the `color` property and the `ChipColor` type, which includes `Primary`, `Info`, `Error`, `Success`, and `Warning`.
+
+- **[Variants](https://react.syncfusion.com/react-ui/chip/#customization):** Style chips with the `variant` property and the `ChipVariant` type, supporting `Filled` for solid backgrounds and `Outlined` for colored borders with transparent centers.
+
+- **[Avatars and Icons](https://react.syncfusion.com/react-ui/chip/#avatar-and-icons):** Enhance chips with the `avatar`, `leadingIcon`, and `trailingIcon` properties, or use image URLs with `leadingIconUrl` and `trailingIconUrl`. Replace the default indicators with `selectIcon` and `removeIcon`.
 
 **Usage**
 
@@ -92,150 +117,176 @@ The Chip component represents information in a compact form, such as entity attr
 import { Chip } from '@syncfusion/react-buttons';
 
 export default function App() {
-    return (
-      <Chip>Anne</Chip>
-    );
+  return (
+    <Chip variant="Filled" color="Success" removable>
+      Anne
+    </Chip>
+  );
 }
 ```
 
 **Resources**
 
-- [Chip Demo/Docs](https://react.syncfusion.com/react-ui/chip)
-- [Chip API](https://react.syncfusion.com/api/chip/overview)
+- [Chip Demo/Docs](https://react.syncfusion.com/react-ui/chip/)
+- [Chip API](https://react.syncfusion.com/api/chip/overview/)
 
 ## React ChipList
 
-The ChipList component displays a collection of chips that can be used to represent multiple items in a compact form. It provides a flexible way to manage and interact with a group of chip elements.
+The ChipList component manages a collection of Chip elements with consistent styling, selection modes, and controlled or uncontrolled behavior.
 
-**Key features**
+### Key Features
 
-- **Selection Modes:** Supports three selection types - 'single', 'multiple', and 'none' to control how users can select chips.
+- **[Single Selection](https://react.syncfusion.com/react-ui/chiplist/#single-selection):** Set `selection="Single"` to allow exactly one chip to be active at a time, ideal for mutually exclusive choices such as filter categories or view modes.
 
-- **Data Binding:** Easily populate the ChipList with an array of strings, numbers, or custom chip configurations.
+- **[Multiple Selection](https://react.syncfusion.com/react-ui/chiplist/#multiple-selection):** Set `selection="Multiple"` to let users select several chips simultaneously, with `selectedChips` preselecting chips by index and `onSelect` reporting changes through the `ChipListSelectEvent` type.
 
-- **Customizable Chips:** Each chip can be individually styled with avatars, leading icons, trailing icons, and different variants.
+- **[Removable Chips](https://react.syncfusion.com/react-ui/chiplist/#removable-chips):** Set `removable={true}` to add a delete icon to each chip, with `onDelete` reporting the remaining chip collection through the `ChipListDeleteEvent` type.
 
-- **Removable Chips:** Configure chips to be removable with built-in delete event handling.
+- **[Size](https://react.syncfusion.com/react-ui/chiplist/#size):** Customize chip dimensions across the list with the `size` property and the `Size` enum, which supports `Small`, `Medium`, and `Large` presets.
 
-- **Controlled & Uncontrolled Modes:** Supports both controlled and uncontrolled component patterns for selection and deletion.
+- **[Data Binding and Customization](https://react.syncfusion.com/react-ui/chiplist/#customization):** Bind an array of strings or `ChipItemProps` objects to the `chips` property, and style individual chips with `className`, `selectIcon`, or `removeIcon` overrides per item.
+
+- **[Controlled Mode](https://react.syncfusion.com/react-ui/chiplist/#controlled-mode):** Manage selection through React state by combining `selectedChips` with `onSelect`, or control the chip collection itself by binding `chips` to state and handling `onDelete`.
 
 **Usage**
 
 ```tsx
-import { ChipList } from "@syncfusion/react-buttons";
+import { ChipList } from '@syncfusion/react-buttons';
 
 export default function App() {
-    return (
-      <ChipList chips={['Apple', 'Banana', 'Cherry']} selection='Multiple' removable={true} />
-    );
+  return (
+    <ChipList
+      chips={['Apple', 'Banana', 'Cherry']}
+      selection="Multiple"
+      removable={true}
+    />
+  );
 }
 ```
 
 **Resources**
 
-- [ChipList Demo/Docs](https://react.syncfusion.com/react-ui/chipList)
-- [ChipList API](https://react.syncfusion.com/api/chipList/overview)
+- [ChipList Demo/Docs](https://react.syncfusion.com/react-ui/chiplist/)
+- [ChipList API](https://react.syncfusion.com/api/chiplist/overview/)
 
 ## React Floating Action Button
 
-The Floating Action Button (FAB) component provides a prominent primary action within an application interface, positioned for high visibility and customizable with various styling options.
+The Floating Action Button (FAB) component provides a prominent primary action within an interface, positioned with high visibility and customizable icons and colors.
 
-**Key features**
+### Key Features
 
-- **Color Variants:** Customizable color options such as 'warning', 'success', 'danger', and 'info' are available to help the FAB blend seamlessly with your application's color scheme.
+- **[Color](https://react.syncfusion.com/react-ui/floating-action-button/#color):** Apply distinct color styles with the `color` property and the `Color` enum, including `Primary`, `Warning`, `Success`, `Error`, and `Info`.
 
-- **Icon Customization:** Integrate SVG icons within buttons for enhanced visual appeal. Control icon placement relative to text with configurable options for positioning.
+- **[Icon and Text](https://react.syncfusion.com/react-ui/floating-action-button/#icon-and-text):** Customize the FAB with an SVG `icon` and label text, and position the icon relative to the text with `iconPosition`, which accepts `Left`, `Right`, `Top`, or `Bottom` via the `Position` enum.
 
-- **Visibility Control:** Easily manage the visibility of the FAB using the `isVisible` prop, deciding if it should be displayed based on application logic.
+- **[Size](https://react.syncfusion.com/react-ui/floating-action-button/#size):** Resize the FAB with the `size` property and the `Size` enum, which supports `Small`, `Medium`, and `Large` presets for different layout contexts.
 
-- **Positioning:** The FAB can be positioned flexibly with options like top-left, top-right, bottom-left, and bottom-right to fit different design requirements.
+- **[Position](https://react.syncfusion.com/react-ui/floating-action-button/#position):** Place the FAB anywhere within its target using the `position` property and the `FabPosition` enum, which provides nine anchors from `TopLeft` through `BottomRight`.
 
-- **Size Options:** Modify the size of the FAB with options for 'small', 'medium' and 'bigger', accommodating different interface contexts.
+- **[Disabled](https://react.syncfusion.com/react-ui/floating-action-button/#disabled):** Set `disabled={true}` to signal temporary unavailability; the FAB remains visible but cannot change its state.
 
-- **Toggle Functionality:** Activate toggle behavior for the FAB to allow it to switch states on each user interaction, which can be useful for certain UI scenarios.
+- **Toggle and Visibility:** Enable toggle behavior with `toggleable={true}` to switch the FAB between active and inactive states on each click, and control display with `visible`, which defaults to `true`.
 
 **Usage**
 
 ```tsx
-import { Fab, Color, FabPosition } from "@syncfusion/react-buttons";
+import { Fab, Color, FabPosition } from '@syncfusion/react-buttons';
+import { SaveIcon } from '@syncfusion/react-icons';
 
 export default function App() {
-    return (
-      <Fab color={Color.Success} position={FabPosition.BottomLeft}>FAB</Fab>
-    );
+  return (
+    <Fab color={Color.Success} position={FabPosition.BottomRight} icon={<SaveIcon />}>
+      Save
+    </Fab>
+  );
 }
 ```
 
 **Resources**
 
-- [Floating Action Button Demo/Docs](https://react.syncfusion.com/react-ui/floating-action-button)
-- [Floating Action Button API](https://react.syncfusion.com/api/floating-action-button/overview)
+- [Floating Action Button Demo/Docs](https://react.syncfusion.com/react-ui/floating-action-button/)
+- [Floating Action Button API](https://react.syncfusion.com/api/floating-action-button/overview/)
 
-## React RadioButton
+## React Radio Button
 
-The RadioButton component enables users to select a single option from a group, offering a clear circular interface for making selections. It is a simple and efficient way to present mutually exclusive choices to users.
+The Radio Button component lets users select a single option from a group of mutually exclusive choices, commonly used in forms and surveys.
 
-**Key features**
+### Key Features
 
-- **Selection State:** Easily configure the RadioButton to be in a checked or unchecked state, indicating selected or unselected options within a group.
+- **[Label and Placement](https://react.syncfusion.com/react-ui/radio-button/#label-placement):** Describe each option with the `label` property and position it relative to the radio button with `labelPlacement`, which supports `Before`, `After`, and `Bottom` via the `LabelPlacement` type.
 
-- **Label Customization:** The RadioButton can be accompanied by a text label to describe its function, which helps users understand the purpose of the radio selection.
+- **[Size](https://react.syncfusion.com/react-ui/radio-button/#size):** Customize the radio button dimensions with the `size` property and the `Size` enum, which supports `Small`, `Medium`, and `Large` presets.
 
-- **Label Positioning:** Flexibly position the label relative to the RadioButton with options available for placing it before or after the button, enhancing UI layout consistency.
+- **[Disabled State](https://react.syncfusion.com/react-ui/radio-button/#disabled):** Set `disabled={true}` to render an inactive radio button. Group buttons with the `name` prop and manage state with `checked` or `defaultChecked`.
 
-- **Form Integration:** The value attribute of the RadioButton can be included as part of form data submitted to the server, facilitating efficient data processing.
+- **[Customization](https://react.syncfusion.com/react-ui/radio-button/#customization):** Modify the appearance with the `color` property from the `Color` enum, including `Primary`, `Success`, `Info`, `Warning`, and `Error`.
+
+- **[Form Validation](https://react.syncfusion.com/react-ui/radio-button/#form-validation):** Include the `value` attribute in form data submitted to the server, and validate grouped selections before submission to ensure complete input.
 
 **Usage**
 
 ```tsx
-import { RadioButton } from "@syncfusion/react-buttons";
+import { RadioButton } from '@syncfusion/react-buttons';
 
 export default function App() {
-    return (
-      <RadioButton checked={true} label="Choose this option" name="choices" />
-    );
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <RadioButton name="theme" value="light" defaultChecked label="Light Mode" />
+      <RadioButton name="theme" value="dark" label="Dark Mode" />
+      <RadioButton name="theme" value="system" label="System Default" />
+    </div>
+  );
 }
 ```
 
 **Resources**
 
-- [RadioButton Demo/Docs](https://react.syncfusion.com/react-ui/radio-button)
-- [RadioButton API](https://react.syncfusion.com/api/radio-button/overview)
+- [Radio Button Demo/Docs](https://react.syncfusion.com/react-ui/radio-button/)
+- [Radio Button API](https://react.syncfusion.com/api/radio-button/overview/)
 
 ## React Switch
 
-The Switch component offers a flexible and user-friendly way to allow users to toggle between two states. It supports various configurations and customization options to accommodate different use cases in applications.
+The Switch component is a binary toggle control that lets users switch between ON and OFF states with customizable icons, labels, and colors.
 
-**Key features**
+### Key Features
 
-- **Toggle Functionality:** The Switch component allows users to toggle between ON and OFF states, providing immediate visual feedback through the handle animation and track color changes.
+- **[Switch States](https://react.syncfusion.com/react-ui/switch/#switch-states):** Present ON, OFF, disabled, and readonly states. Manage state with `checked` for controlled usage and `defaultChecked` for uncontrolled usage.
 
-- **Color Variants:** Customize the appearance with predefined color options including `Primary`, `Secondary`, `Warning`, `Success`, `Error`, and `Info` to match your application's design language.
+- **[Size](https://react.syncfusion.com/react-ui/switch/#size):** Customize the track and handle dimensions with the `size` property and the `Size` enum, which supports `Small`, `Medium`, and `Large` presets.
 
-- **Size Options:** Choose from multiple size presets (`Small`, `Medium`, `Large`) to accommodate different UI contexts and maintain visual consistency across your application.
+- **[Label and Placement](https://react.syncfusion.com/react-ui/switch/#label-placement):** Display descriptive text with the `label` property and place it on the left, right, top, or bottom of the track with `labelPlacement`, which uses the `Position` enum.
 
-- **Label Support:** Display informative text alongside the switch to clearly convey its purpose. Configure label placement with the `labelPlacement` prop for left, right, top, or bottom positioning.
+- **[Color](https://react.syncfusion.com/react-ui/switch/#color):** Style the ON-state track and handle with the `color` property and the `Color` enum, including `Primary`, `Secondary`, `Warning`, `Success`, `Error`, and `Info`.
 
-- **Icon Customization:** Add custom icons or visual indicators inside the handle for checked and unchecked states, or display labels directly on the track for enhanced visual cues.
+- **[Track Label](https://react.syncfusion.com/react-ui/switch/#track-label):** Render custom text or icons inside the track for each state using the `onTrackLabel` and `offTrackLabel` properties, which accept any React node.
 
-- **Controlled & Uncontrolled Modes:** Supports both controlled and uncontrolled component patterns, allowing flexible state management depending on your application's requirements.
+- **[Handler Icon](https://react.syncfusion.com/react-ui/switch/#handler-icon):** Customize the handle for each state with `checkedIcon` when the switch is ON and `uncheckedIcon` when it is OFF.
+
+- **[Form Validation](https://react.syncfusion.com/react-ui/switch/#form-validation):** Submit the switch's form value through the `value` property when checked, and handle state toggles through the `onChange` event with the `SwitchChangeEvent` type.
 
 **Usage**
 
 ```tsx
-import { Switch } from "@syncfusion/react-buttons";
+import { Switch, Color, Size } from '@syncfusion/react-buttons';
 
 export default function App() {
-    return (
-      <Switch checked={true} label="Dark mode" />
-    );
+  return (
+    <Switch label="Dark mode" defaultChecked color={Color.Success} size={Size.Medium} />
+  );
 }
 ```
 
 **Resources**
 
-- [Switch Demo/Docs](https://react.syncfusion.com/react-ui/switch)
-- [Switch API](https://react.syncfusion.com/api/switch/overview)
+- [Switch Demo/Docs](https://react.syncfusion.com/react-ui/switch/)
+- [Switch API](https://react.syncfusion.com/api/switch/overview/)
+
+<p align="center">
+Trusted by the world's leading companies
+  <a href="https://www.syncfusion.com/">
+    <img src="https://raw.githubusercontent.com/SyncfusionExamples/nuget-img/master/syncfusion/syncfusion-trusted-companies.webp" alt="Company logo">
+  </a>
+</p>
 
 ## Support
 
@@ -245,6 +296,7 @@ Product support is available through following mediums.
 * Live chat
 
 ## Changelog
+
 Check the changelog [here](https://github.com/syncfusion/react-ui-components/blob/master/components/buttons/CHANGELOG.md). Get minor improvements and bug fixes every week to stay up to date with frequent updates.
 
 ## License and copyright

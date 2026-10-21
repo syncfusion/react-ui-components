@@ -1,6 +1,22 @@
-# React Lists Components
+# Syncfusion React Lists Components
 
-The Syncfusion React Lists package provides a feature-rich ListView component for dynamic list interactions in React apps.
+The Syncfusion React Lists package provides the `ListView` component for rendering data-driven lists in React apps. It supports flexible data binding, grouping, sorting, custom templates, and windowed virtualization for large datasets, built from the ground up with React functional components and hooks.
+
+### Key Features
+
+- **[Data Binding:](https://react.syncfusion.com/react-ui/listview/#remote-data-binding)** Bind list data from a local array of objects, an array of primitives (auto-mapped to `text` and `id`), or a remote `DataManager` instance passed to `dataSource` for dynamic list population.
+
+- **[Grouping:](https://react.syncfusion.com/react-ui/listview/#grouped-list)** Categorize items by assigning the grouping source key to the `fields.groupBy` field, so records under each value collapse beneath a generated group header.
+
+- **[Sorting:](https://react.syncfusion.com/react-ui/listview/#sorted-list)** Control item (and group-header) order with `sortOrder` using `SortOrder.Ascending`, `SortOrder.Descending`, or `SortOrder.None`, and name the sort key via `fields.sortBy`.
+
+- **[Virtualization:](https://react.syncfusion.com/react-ui/listview/#virtualization)**
+Enable windowed rendering with the `virtualization` object: set the fixed `itemSize` and `pageSize`, tune `overscanCount` for smooth scrolling, supply `totalCount`, and toggle `showSkeleton` for placeholders during fetch.
+
+- **[Templates:](https://react.syncfusion.com/react-ui/listview/#customization)** Render custom content with `itemTemplate` for each row, `groupTemplate` for group headers, and `headerTemplate` / `footerTemplate` for content above and below the list.
+
+- **[Data and Scroll Events:](https://react.syncfusion.com/react-ui/listview/#custom-scrolling)** React to the data lifecycle with `onDataRequest` (args expose `data` and `query`) and `onDataLoad` (args expose the resolved `data`), plus `onScroll` passing `startIndex` and `count`.
+
 
 ## Setup
 
@@ -9,58 +25,47 @@ To install `lists` and its dependent packages, use the following command,
 ```sh
 npm install @syncfusion/react-lists
 ```
+Apply a theme by installing the corresponding theme package and importing its styles, for example with the [Material theme](https://www.npmjs.com/package/@syncfusion/react-material-theme):
 
-## React ListView
+```sh
+npm install @syncfusion/react-material-theme
+```
 
-The React ListView component is designed to display a list of items with rich functionality and customization options. It provides a flexible and interactive way to present data in a list format with support for grouping, templates, and virtualization.
-
-**Key features**
-
-- **Data Binding:** Seamlessly bind data from various sources including arrays, JSON objects, and remote data through DataManager for dynamic list population.
-
-- **Query:** Use DataManager Query to fetch specific data from dataSource using where and select keywords for advanced filtering and data retrieval.
-
-- **Sorting:** Sort list items in ascending, descending, or preserve original sequence with SortOrder options. Sorting applies to both items and group headers when grouping is enabled.
-
-- **Customization:** Create highly personalized list items using custom templates including:
-  - **Header Template:** Custom content rendered at the top of the list
-  - **Item Template:** Personalized rendering for each list item
-  - **Group Template:** Custom rendering for group header sections
-  - **Footer Template:** Custom content rendered at the bottom of the list
-
-- **Field Mapping:** Configure flexible field mapping to match your data structure. Default fields include id, text, url, disabled, icon, visible, tooltip, htmlAttributes, imageUrl, and groupBy properties.
-
-- **Virtualization:** Enhance performance with virtual scrolling for large datasets, rendering only visible items to maintain optimal application speed.
-
-- **Disabled State:** Disable user interactions with the ListView, preventing clicks and key presses from triggering actions.
+```css
+/* App.css */
+@import '../node_modules/@syncfusion/react-material-theme/styles/list-view/index.css';
+```
 
 **Usage**
 
 ```tsx
 import { ListView } from '@syncfusion/react-lists';
-    
+
 export default function App() {
-  const listDatas: { [key: string]: string }[] = [
-    { id: '1', text: 'Artwork' }, 
-    { id: '2', text: 'Abstract' }, 
-    { id: '3', text: 'Modern Painting' }, 
-    { id: '4', text: 'Ceramics' }, 
-    { id: '5', text: 'Animation Art' }, 
-    { id: '6', text: 'Oil Painting' }
+  const listData: { [key: string]: string }[] = [
+    { id: '1', text: 'Artwork' },
+    { id: '2', text: 'Abstract' },
+    { id: '3', text: 'Modern Painting' },
+    { id: '4', text: 'Ceramics' }
   ];
 
   return (
     <div className="component-section">
-      <ListView dataSource={listDatas} fields={{ id: 'id', text: 'text' }}></ListView>
+      <ListView dataSource={listData} fields={{ id: 'id', text: 'text' }} />
     </div>
   );
 }
 ```
 
+**Resources**
+
+- [ListView Demo/Docs](https://react.syncfusion.com/react-ui/listview/)
+- [ListView API](https://react.syncfusion.com/api/listview/overview/)
+
 <p align="center">
 Trusted by the world's leading companies
   <a href="https://www.syncfusion.com/">
-    <img src="https://raw.githubusercontent.com/SyncfusionExamples/nuget-img/master/syncfusion/syncfusion-trusted-companies.webp" alt="Syncfusion logo">
+    <img src="https://raw.githubusercontent.com/SyncfusionExamples/nuget-img/master/syncfusion/syncfusion-trusted-companies.webp" alt="Company logo">
   </a>
 </p>
 
@@ -72,6 +77,7 @@ Product support is available through following mediums.
 * Live chat
 
 ## Changelog
+
 Check the changelog [here](https://github.com/syncfusion/react-ui-components/blob/master/components/lists/CHANGELOG.md). Get minor improvements and bug fixes every week to stay up to date with frequent updates.
 
 ## License and copyright

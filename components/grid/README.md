@@ -1,38 +1,38 @@
 # Syncfusion React Data Grid Component
 
-The **Syncfusion React Data Grid** is a high-performance, feature-rich component designed for building scalable, responsive, and data-intensive web applications. Engineered to meet the requirements of enterprise-grade solutions, it provides a robust architecture that supports dynamic data handling, seamless integration with modern react frameworks, and a highly customizable interface.
+The **Syncfusion React Data Grid** is a high-performance, feature-rich component designed for building scalable, responsive, and data-intensive web applications. Engineered to meet the requirements of enterprise-grade solutions, it provides a robust architecture that supports dynamic data handling, seamless integration with modern React frameworks, and a highly customizable interface.
 
-Ideal for react applications requiring structured data presentation, real-time interaction, and flexible configuration, the grid supports essential functionalities such as sorting, filtering, paging, and editing. Extensibility is achieved through custom templates and a comprehensive API surface, enabling integration with complex business logic and external systems.
+Ideal for React applications requiring structured data presentation, real-time interaction, and flexible configuration, the grid supports essential functionalities such as sorting, filtering, paging, and editing. Extensibility is achieved through custom templates and a comprehensive API surface, enabling integration with complex business logic and external systems.
 
 **Key Features**
 
-- **[Sorting](https://react.syncfusion.com/react-ui/data-grid/sorting):**
+- **[Sorting](https://react.syncfusion.com/react-ui/data-grid/sorting/):**
   Enables column-based sorting with support for single and multi-column configurations. Sorting operations are optimized for performance and consistency, allowing structured data to be organized efficiently across large datasets.
 
-- **[Filtering](https://react.syncfusion.com/react-ui/data-grid/filtering/configuration):**
+- **[Filtering](https://react.syncfusion.com/react-ui/data-grid/filtering/configuration/):**
   Provides a built-in filter bar with customizable filter types per column. Supports text, number, date, and dropdown filters, enabling precise data segmentation and contextual filtering based on business logic.
 
-- **[Editing](https://react.syncfusion.com/react-ui/data-grid/editing/configuration):**
+- **[Editing](https://react.syncfusion.com/react-ui/data-grid/editing/configuration/):**
   Facilitates inline CRUD operations including add, edit, and delete actions. Editing is integrated with toolbar controls and supports validation, making it suitable for transactional data entry and real-time updates.
 
-- **[Toolbar](https://react.syncfusion.com/react-ui/data-grid/editing/configuration#adding-a-toolbar-for-editing):**
+- **[Toolbar](https://react.syncfusion.com/react-ui/data-grid/editing/configuration#adding-a-toolbar-for-editing/):**
   Offers a configurable toolbar with built-in actions such as Add, Edit, Delete, and Search. Toolbar elements can be extended or replaced with custom components to align with specific operational workflows.
 
-- **[Searching](https://react.syncfusion.com/react-ui/data-grid/searching):**
+- **[Searching](https://react.syncfusion.com/react-ui/data-grid/searching/):**
   Includes a responsive search box within the toolbar for quick data lookup. Supports keyword-based filtering across multiple columns, improving accessibility to relevant records in large datasets.
 
-- **[Paging](https://react.syncfusion.com/react-ui/data-grid/paging):**
+- **[Paging](https://react.syncfusion.com/react-ui/data-grid/paging/):**
   Manages large volumes of data using built-in pagination. Supports both client-side and server-side paging strategies to ensure scalable performance and efficient data navigation in distributed environments.
 
-- **[Grouping](https://react.syncfusion.com/react-ui/data-grid/grouping/configuration):** Organizes data into hierarchical groups for better analysis.
+- **[Grouping](https://react.syncfusion.com/react-ui/data-grid/grouping/configuration/):** Organizes data into hierarchical groups for better analysis.
 
-- **[Stacked Headers](https://react.syncfusion.com/react-ui/data-grid/columns/configuration#stacked-headers):** Organizes related columns under multiple levels of headers for clearer data presentation and improved column structure.
+- **[Stacked Headers](https://react.syncfusion.com/react-ui/data-grid/columns/configuration#stacked-headers/):** Organizes related columns under multiple header levels for clearer data presentation.
 
-- **[Clipboard](https://react.syncfusion.com/react-ui/data-grid/clipboard):** Supports copying and pasting cell and row selections through the Grid clipboard API for efficient data transfer and editing.
+- **[Clipboard & Autofill](https://react.syncfusion.com/react-ui/data-grid/clipboard/):** Copy and paste cell or row selections, and autofill values to speed up data entry.
 
-- **[Row & Column Spanning](https://react.syncfusion.com/react-ui/data-grid/row/row-spanning):** Supports merging cells across rows and columns for advanced layouts.
+- **[Row & Column Spanning](https://react.syncfusion.com/react-ui/data-grid/row/row-spanning/):** Supports merging cells across rows and columns for advanced layouts.
 
-- **[Master-Detail](https://react.syncfusion.com/react-ui/data-grid/master-detail/detail-grid):** Displays hierarchical data using expandable detail rows.
+- **[Master-Detail & Nested Grids](https://react.syncfusion.com/react-ui/data-grid/master-detail/detail-grid/):** Displays related records in expandable detail rows with nested grids.
 
 - **[DOM Virtualization & Virtual Scrolling](https://react.syncfusion.com/react-ui/data-grid/scrolling/virtual-scroll/):**
   Enables efficient rendering of large datasets with improved performance and responsiveness through intelligent DOM virtualization and virtual scrolling techniques.
@@ -43,36 +43,56 @@ Ideal for react applications requiring structured data presentation, real-time i
 - **[Excel Mode & CheckBox Filtering](https://react.syncfusion.com/react-ui/data-grid/filtering/checkbox-filtering/):**
   Provides advanced filtering options with intuitive, checkbox-based selection for precise data segmentation. Includes Excel-mode filtering for enhanced user experience.
 
-- **[PDF Export](https://react.syncfusion.com/react-ui/data-grid/pdf-export):** Exports Grid data to PDF while preserving layout and styling.
+- **[Export](https://react.syncfusion.com/react-ui/data-grid/pdf-export/):** Exports Grid data to PDF or Excel, including multiple grids in one operation. See the [multiple-grid export demo](https://react.syncfusion.com/react-ui/data-grid/excel-export/#export-multiple-grids).
 
-- **[Print](https://react.syncfusion.com/react-ui/data-grid/print):** Supports direct printing of Grid content with structured formatting.
+- **[Print](https://react.syncfusion.com/react-ui/data-grid/print/):** Supports direct printing of Grid content with structured formatting.
 
 - **[Checkbox Selection](https://react.syncfusion.com/react-ui/data-grid/selection/checkbox-selection/):**
   Supports multi-row selection, allowing users to select multiple rows efficiently using checkboxes integrated within the grid interface.
 
-- **[Column Chooser](https://react.syncfusion.com/react-ui/data-grid/columns/column-chooser/):** Allows users to dynamically show or hide columns.
+- **[Column Chooser](https://react.syncfusion.com/react-ui/data-grid/columns/column-chooser/):** Shows or hides columns dynamically, with an immediate mode that applies visibility changes as selections change.
 
-- **[Context Menu](https://react.syncfusion.com/react-ui/data-grid/context-menu):** Provides customizable right-click actions for enhanced interaction.
+- **[Column Resizing](https://react.syncfusion.com/react-ui/data-grid/columns/column-resizing/):** Adjust column widths to fit grid content and layout needs.
 
-- **[Customization](https://react.syncfusion.com/react-ui/data-grid/columns/cell-customization):**
+- **[Column Reordering](https://react.syncfusion.com/react-ui/data-grid/columns/column-reorder/):** Reorder columns using drag and drop.
+
+- **[Row Reordering](https://react.syncfusion.com/react-ui/data-grid/row/row-drag-and-drop/):** Reorder rows using drag and drop.
+
+- **[Column Pinning](https://react.syncfusion.com/react-ui/data-grid/columns/column-pinning/):** Keep important columns visible while scrolling horizontally.
+
+- **[Row Pinning](https://react.syncfusion.com/react-ui/data-grid/row/row-pinning/):** Keep important rows visible while scrolling vertically.
+
+- **[Row Numbers](https://react.syncfusion.com/react-ui/data-grid/row/row-numbers/):** Display row numbers alongside grid data.
+
+- **[Context Menu](https://react.syncfusion.com/react-ui/data-grid/context-menu/):** Provides customizable right-click actions for enhanced interaction.
+
+- **[Formula Cells](https://react.syncfusion.com/react-ui/data-grid/formulas/overview/):** Calculate values directly in grid cells.
+
+- **[Customization](https://react.syncfusion.com/react-ui/data-grid/columns/cell-customization/):**
   Allows custom cell rendering, conditional styling, and layout adjustments. Enables integration with design systems and branding guidelines, supporting tailored visual experiences and functional enhancements.
 
-- **[Template Extensibility](https://react.syncfusion.com/react-ui/data-grid/columns/templates):**
+- **[Template Extensibility](https://react.syncfusion.com/react-ui/data-grid/columns/templates/):**
   Supports column and row templates for embedding custom components, applying conditional formatting, and creating rich, interactive visual layouts. Template logic can be used to integrate charts, buttons, or nested views within grid cells.
 
-- **[Aggregates](https://react.syncfusion.com/react-ui/data-grid/aggregates):**
+- **[Tree Grid](https://react.syncfusion.com/react-ui/data-grid/tree-data/overview/):** Display hierarchical data with expandable and collapsible rows.
+
+- **[Pivot View](https://react.syncfusion.com/react-ui/data-grid/pivot/overview/):** Summarize and analyze grid data in a pivot layout.
+
+- **[Sidebar Tool Panel](https://react.syncfusion.com/react-ui/data-grid/tool-panel/overview/):** Provides sidebar tools for managing columns, filters, and editing.
+
+- **[Aggregates](https://react.syncfusion.com/react-ui/data-grid/aggregates/):**
   Displays summary values such as totals, averages, minimums, and maximums using built-in aggregate functions. Aggregation logic can be customized to support analytical dashboards and reporting interfaces.
 
 - **[Interactivity](https://react.syncfusion.com/react-ui/data-grid/accessibility#keyboard-shortcuts):**
   Supports clickable headers, row & cell selection, and keyboard navigation. Enhances engagement through responsive UI behavior and intuitive controls, suitable for complex data exploration scenarios.
 
-- **[Accessibility](https://react.syncfusion.com/react-ui/data-grid/accessibility):**
+- **[Accessibility](https://react.syncfusion.com/react-ui/data-grid/accessibility/):**
   Compliant with WCAG 2.1 standards, ensuring compatibility with screen readers, keyboard navigation, and assistive technologies. Designed to meet accessibility requirements for public sector and regulated environments.
 
-- **[Globalization](https://react.syncfusion.com/react-ui/data-grid/globalization):**
+- **[Globalization](https://react.syncfusion.com/react-ui/data-grid/globalization/):**
   Adapts dates, numbers, currencies, and text formats for international audiences. Includes built-in support for localization and internationalization (i18n), enabling deployment across multilingual and multicultural platforms.
 
-- **[Robust API](https://react.syncfusion.com/api/data-grid/overview):**
+- **[Robust API](https://react.syncfusion.com/api/data-grid/overview/):**
   Provides a comprehensive and extensible API for programmatic control over grid behavior, data updates, and event handling. Supports integration with external systems, custom business logic, and advanced workflow automation.
 
 **Setup**
@@ -105,8 +125,8 @@ export default function App() {
 
 **Resources**
 
-- [Data Grid Demo/Docs](https://react.syncfusion.com/react-ui/data-grid/overview)
-- [Data Grid API](https://react.syncfusion.com/api/data-grid/overview)
+- [Data Grid Demo/Docs](https://react.syncfusion.com/react-ui/data-grid/overview/)
+- [Data Grid API](https://react.syncfusion.com/api/data-grid/overview/)
 
 <p align="center">
 Trusted by the world's leading companies
@@ -117,7 +137,7 @@ Trusted by the world's leading companies
 
 ## Support
 
-Product support is available through following mediums.
+Product support is available through the following mediums.
 
 * [Support ticket](https://support.syncfusion.com/support/tickets/create) - Guaranteed Response in 24 hours | Unlimited tickets | Holiday support
 * Live chat
