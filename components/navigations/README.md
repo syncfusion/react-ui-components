@@ -1,160 +1,172 @@
-# React Navigation Components
+# Syncfusion React Navigation Components
 
-The Syncfusion React Navigation package provides a feature-rich collection of UI components. Includes a tree view, context menu, toolbar, sidebar, and menu components for building modern, interactive React applications.
+The Syncfusion React Navigations package provides a collection of UI components for building modern, interactive React applications. It includes the `Toolbar`, `ContextMenu`, `Menu`, `TreeView`, `Sidebar`, and `Accordion` components for organizing commands, rendering hierarchical data, managing navigation drawers, and building collapsible content sections.
 
 ## Setup
-
-To install `navigations` and its dependent packages, use the following command,
 
 ```sh
 npm install @syncfusion/react-navigations
 ```
+Apply a theme by installing the corresponding theme package and importing its styles, for example with the [Material theme](https://www.npmjs.com/package/@syncfusion/react-material-theme):
+
+```sh
+npm install @syncfusion/react-material-theme
+```
+
+```css
+/* App.css */
+@import '../node_modules/@syncfusion/react-material-theme/styles/context-menu/index.css';
+```
+> Note: For other components, use their corresponding index.css files from their respective style folders
 
 ## React Context Menu
 
-The ContextMenu component displays a menu with options when triggered by a right-click or custom event. It provides a powerful way to offer context-specific actions with support for nested submenus, icons, and various customization options.
+The `ContextMenu` component displays a popup menu of context-specific actions when a target element is right-clicked or long-pressed.
 
-**Key features**
+### Key Features
 
-  - **Nested Submenus:** Create hierarchical menu structures with unlimited nesting levels, allowing for organization of related commands and options.
-  - **Icon Support:** Enhance visual recognition by adding icons to menu items using CSS classes or React components (SVG).
-  - **Animation Effects:** Choose from various animation effects like FadeIn, SlideDown, and ZoomIn to control how the menu appears.
-  - **Keyboard Navigation:** Comprehensive keyboard support for accessibility, including arrow keys for navigation, Enter for selection, and Escape to close menus.
-  - **Custom Positioning:** Control the exact position of the context menu using offset coordinates or automatic positioning relative to the target element.
-  - **Template Customization:** Create fully customized menu item displays using React components as templates for advanced UI requirements.
-  - **Separator Items:** Visual grouping of related menu items using separator lines.
+- **[Target Binding](https://react.syncfusion.com/react-ui/context-menu/#getting-started):** Associate the menu with a specific element through the `targetRef` prop, which determines where the pointer-triggered menu opens and displays, with options composed from `MenuItem` children.
+
+- **[Custom Icons and Composition](https://react.syncfusion.com/react-ui/context-menu/#custom-icons):** Build rich, nested items to unlimited depth by composing `MenuItemIcon`, `MenuItemLabel`, `MenuSeparator`, and `MenuItemLink` inside `MenuItem` for icons, custom content, dividers, and link navigation.
+
+- **[Animation Effects](https://react.syncfusion.com/react-ui/context-menu/#animation-effects):** Control how the menu appears with the `animation` property, supporting `FadeIn`, `ZoomIn`, and `SlideDown`, each with configurable `duration` and `easing`.
+
+- **[Scrollable Menu](https://react.syncfusion.com/react-ui/context-menu/#scrollable-menu):** Render large, data-heavy menus efficiently through a recursive item loop, constrained with `className` and CSS to scroll when content exceeds the default 500px height.
+
+- **[Action Menu and Controlled Visibility](https://react.syncfusion.com/react-ui/context-menu/#action-menu):** Process user selections with the `onSelect` callback and drive menu visibility directly through the controlled `open` and `onClose` pattern.
+
+- **[Keyboard Navigation](https://react.syncfusion.com/react-ui/context-menu/#keyboard-interaction):** Follows the WAI-ARIA menubar pattern, with arrow keys to move focus, `Enter`/`Space` to select, `Right`/`Left` arrows to open and close submenus, and `Esc` to dismiss.
 
 **Usage**
 
 ```tsx
+import { useRef } from "react";
 import { ContextMenu, MenuItem, MenuItemLabel } from "@syncfusion/react-navigations";
 
 export default function App() {
   const targetRef = useRef<HTMLButtonElement>(null);
   return (
-    <div >
-       <button ref={targetRef}> Right Click Me </button>
-        <ContextMenu targetRef={targetRef as React.RefObject<HTMLElement>}>
-           <MenuItem>
-             <MenuItemLabel>Cut</MenuItemLabel>
-           </MenuItem>
-           <MenuItem>
-             <MenuItemLabel>Copy</MenuItemLabel>
-           </MenuItem>
-           <MenuItem>
-             <MenuItemLabel>Rename</MenuItemLabel>
-           </MenuItem>
-       </ContextMenu>
-    </div>    
+    <div>
+      <button ref={targetRef}>Right click me</button>
+      <ContextMenu targetRef={targetRef as React.RefObject<HTMLElement>}>
+        <MenuItem><MenuItemLabel>Cut</MenuItemLabel></MenuItem>
+        <MenuItem><MenuItemLabel>Copy</MenuItemLabel></MenuItem>
+        <MenuItem><MenuItemLabel>Rename</MenuItemLabel></MenuItem>
+      </ContextMenu>
+    </div>
   );
-};
+}
 ```
 
 **Resources**
 
-- [Context Menu Demo/Docs](https://react.syncfusion.com/react-ui/context-menu)
-- [Context Menu API](https://react.syncfusion.com/api/context-menu/overview)
+- [Context Menu Demo/Docs](https://react.syncfusion.com/react-ui/context-menu/)
+- [Context Menu API](https://react.syncfusion.com/api/context-menu/overview/)
 
 ## React Menu
 
-The Menu component is a layout navigation menu with support for hierarchical menu items. It provides powerful control over menu interactions, customization options, and displays context-specific actions with nested submenus.
+The `Menu` component renders a hierarchical navigation menu for commands and application navigation, in horizontal or vertical layouts.
 
-**Key features**
+### Key Features
 
-  - **Hierarchical Structure:** Create nested menus with unlimited nesting levels, allowing for organization of related menu items and commands.
-  - **Flexible Orientation:** Configure the menu in either horizontal or vertical layout to fit different UI design requirements and navigation patterns.
-  - **Icon Support:** Enhance visual recognition by adding icons to menu items using CSS classes or React components (SVG).
-  - **Submenu Rendering Modes:** Choose between inline and portal rendering modes:
-    - **Inline**: Submenu is rendered inline within the parent menu item
-    - **Portal**: Submenu is rendered in the document body for advanced positioning control
-  - **Interaction Modes:** Support for both hover-based and click-based submenu opening with customizable hover delay.
-  - **Animation Effects:** Choose from various animation effects like FadeIn, SlideDown, ZoomIn, and None to control how the menu appears.
-  - **Keyboard Navigation:** Comprehensive keyboard support for accessibility, including arrow keys for navigation, Enter for selection, and Escape to close menus.
+- **[Hierarchical Structure](https://react.syncfusion.com/react-ui/menu/#nested-menu):** Create nested submenus of unlimited depth by placing `MenuItem` components inside another `MenuItem` for file explorers, document menus, and application command groups.
+
+- **[Flexible Orientation](https://react.syncfusion.com/react-ui/menu/#navigation-menu):** Render as a horizontal navigation menubar or an application-level vertical menu by setting the `orientation` property to `Horizontal` or `Vertical`.
+
+- **[URL Navigation](https://react.syncfusion.com/react-ui/menu/#url-navigation):** Enable items to open internal routes or external pages through the `MenuItemLink` component, which wraps a menu item as a navigational link.
+
+- **[Custom Item Content](https://react.syncfusion.com/react-ui/menu/#menu-item-types):** Compose rich item layouts inside `MenuItem` using `MenuItemIcon` and `MenuItemLabel`, and apply separators, disabled states, and custom classes per item.
+
+- **[Hover Delay and Click Opening](https://react.syncfusion.com/react-ui/menu/#hover-delay):** Prevent accidental activation in dense menus with the `hoverDelay` property, or switch to touch-friendly click-to-open behavior with `itemOnClick`.
+
+- **[Animation Effects](https://react.syncfusion.com/react-ui/menu/#animation-effects):** Provide visual feedback when submenus appear through the `animation` property, supporting `None`, `FadeIn`, `ZoomIn`, and `SlideDown` with configurable duration and easing.
+
+- **[Keyboard Navigation](https://react.syncfusion.com/react-ui/menu/#keyboard-interaction):** Follows the WAI-ARIA menubar pattern, with `Enter`/`Space` to select or open, arrow keys to move between items and into submenus, `Home`/`End` for first and last, and `Esc` to close.
 
 **Usage**
 
 ```tsx
-import { Menu, MenuItem, MenuItemLabel, MenuItemIcon, Orientation } from "@syncfusion/react-navigations";
+import { Menu, MenuItem, MenuItemIcon, MenuItemLabel } from "@syncfusion/react-navigations";
+import { CutIcon } from "@syncfusion/react-icons";
 
 export default function App() {
   return (
-    <Menu orientation={Orientation.Horizontal}>
+    <Menu>
       <MenuItem>
+        <MenuItemIcon><CutIcon /></MenuItemIcon>
         <MenuItemLabel>File</MenuItemLabel>
-        <MenuItem>
-          <MenuItemLabel>New</MenuItemLabel>
-        </MenuItem>
-        <MenuItem>
-          <MenuItemLabel>Open</MenuItemLabel>
-        </MenuItem>
+        <MenuItem><MenuItemLabel>New</MenuItemLabel></MenuItem>
+        <MenuItem><MenuItemLabel>Open</MenuItemLabel></MenuItem>
       </MenuItem>
-      <MenuItem>
-        <MenuItemLabel>Edit</MenuItemLabel>
-      </MenuItem>
+      <MenuItem><MenuItemLabel>Edit</MenuItemLabel></MenuItem>
     </Menu>
   );
-};
+}
 ```
 
 **Resources**
 
-- [Menu Demo/Docs](https://react.syncfusion.com/react-ui/menu)
-- [Menu API](https://react.syncfusion.com/api/menu/overview)
+- [Menu Demo/Docs](https://react.syncfusion.com/react-ui/menu/)
+- [Menu API](https://react.syncfusion.com/api/menu/overview/)
 
 ## React Toolbar
 
-The Toolbar component helps users efficiently organize and access frequently used actions through a compact and customizable interface. It offers multiple overflow handling modes to accommodate different UI requirements and screen sizes.
+The `Toolbar` component arranges buttons, inputs, and custom elements in a compact horizontal or vertical layout for quick access to frequently used actions.
 
-**Key features**
+### Key Features
 
-  - **Multiple Overflow Modes:** Choose from four different handling strategies when toolbar items exceed the available space:
-    - **Scrollable**: Maintains overflow items with scrolling
-    - **Popup**: Moves overflow items to a popup menu accessed via an expand button
-    - **MultiRow**: Wraps overflow items to additional rows within the toolbar
-    - **Extended**: Hides overflow items in a secondary row accessible through an expand button
-  - **Orientation Options:** Configure the toolbar in either horizontal or vertical layout to fit different UI design requirements.
-  - **Keyboard Navigation:** Comprehensive keyboard accessibility with arrow key navigation, Home/End for first/last item access, and Tab for focus management.
-  - **Scroll Step Customization:** Configure the scrolling distance in pixels for the Scrollable overflow mode.
-  - **Flexible Item Layout:** Supports toolbar items, separators, and spacers for organized grouping of actions.
+- **[Organizational Components](https://react.syncfusion.com/react-ui/toolbar/#tools):** Compose the toolbar from `ToolbarItem`, which wraps individual elements, `ToolbarSeparator` to divide related groups with a dividing line, and `ToolbarSpacer` to add expandable empty space that pushes items to opposite edges.
+
+- **[Multiple Overflow Modes](https://react.syncfusion.com/react-ui/toolbar/#multirow-mode):** Handle items that exceed the available width through the `overflowMode` property, with `Scrollable` for navigation-button scrolling, `MultiRow` to wrap into additional rows, `Popup` to move overflow items behind an expand button, and `Extended` to open a full-width secondary row.
+
+- **[Scroll Step Customization](https://react.syncfusion.com/react-ui/toolbar/#scrollable-mode):** In `Scrollable` mode, the `scrollStep` property defines the scrolling distance in pixels applied when the user navigates items using the navigation buttons.
+
+- **[Orientation](https://react.syncfusion.com/react-ui/toolbar/#orientation):** Render in `Horizontal` (default) or `Vertical` layout by setting the `orientation` property, which changes the arrangement from left-to-right to top-to-bottom for side panels and tool groups.
+
+- **[Keyboard Navigation](https://react.syncfusion.com/react-ui/toolbar/#keyboard-interaction):** Follows the WAI-ARIA toolbar pattern with arrow-key focus movement, `Home`/`End` for first and last items, `Enter` to open the overflow popup in `Popup` and `Extended` modes, and `Esc` to close it.
 
 **Usage**
 
 ```tsx
 import { Toolbar, ToolbarItem, ToolbarSeparator, ToolbarSpacer, OverflowMode } from "@syncfusion/react-navigations";
+import { Button, Variant, Color } from "@syncfusion/react-buttons";
 
 export default function App() {
   return (
-    <Toolbar overflowMode={OverflowMode.Popup}>
-      <ToolbarItem><Button>Cut</Button></ToolbarItem>
-      <ToolbarItem><Button>Copy</Button></ToolbarItem>
+    <Toolbar aria-label="Formatting tools" overflowMode={OverflowMode.Popup}>
+      <ToolbarItem><Button variant={Variant.Standard}>Cut</Button></ToolbarItem>
+      <ToolbarItem><Button variant={Variant.Standard}>Copy</Button></ToolbarItem>
+      <ToolbarItem><Button variant={Variant.Standard}>Paste</Button></ToolbarItem>
       <ToolbarSeparator />
-      <ToolbarItem><Button>Paste</Button></ToolbarItem>
       <ToolbarSpacer />
-      <ToolbarItem><Button>Help</Button></ToolbarItem>
-   </Toolbar>    
+      <ToolbarItem><Button variant={Variant.Filled} color={Color.Primary}>Help</Button></ToolbarItem>
+    </Toolbar>
   );
-};
+}
 ```
 
 **Resources**
 
-- [Toolbar Demo/Docs](https://react.syncfusion.com/react-ui/toolbar)
-- [Toolbar API](https://react.syncfusion.com/api/toolbar/overview)
+- [Toolbar Demo/Docs](https://react.syncfusion.com/react-ui/toolbar/)
+- [Toolbar API](https://react.syncfusion.com/api/toolbar/overview/)
 
 ## React Sidebar
 
-The Sidebar component renders a collapsible drawer for navigation and custom content. It supports flexible positioning, multiple interaction modes, and a composite layout API that coordinates the drawer, main content, and toggle trigger.
+The `Sidebar` component renders a collapsible drawer for navigation and custom content, anchorable to either edge of the page and composable with a coordinated layout.
 
-**Key features**
+### Key Features
 
-  - **Positioning:** Anchor the sidebar to either the `Left` or `Right` edge of the viewport to fit different navigation patterns.
-  - **Interaction Modes:** Choose between `Over` (floats above content) and `Push` (shifts main content) modes to control how the sidebar coexists with surrounding content.
-  - **Backdrop Overlay:** Render an optional backdrop when the sidebar is open to focus attention and intercept outside interactions.
-  - **Configurable Transitions:** Customize the enter and exit transition durations independently for smooth, polished animations.
-  - **Dockable State:** Collapse the sidebar into a compact docked state that remains visible, configurable via a `dockableWidth` value.
-  - **Responsive Media Queries:** Drive the sidebar's open/closed state automatically based on a media query for adaptive layouts.
-  - **Composite Layout API:** Pair the sidebar with `SidebarLayout`, `SidebarMain`, and `SidebarTrigger` components to coordinate drawer, content area, and toggle button.
-  - **Outside Click Handling:** Automatically close the sidebar when clicking outside, configurable via `closeOnDocumentClick`.
+- **[Positioning and Interaction Modes](https://react.syncfusion.com/react-ui/sidebar/#sidebar-configuration):** Anchor the sidebar to the `Left` or `Right` side of the page with the `position` property, and control how the drawer coexists with surrounding content using the `mode` property, where `Push` shifts the main content and `Over` displays the sidebar above it.
+
+- **[Controlled and Uncontrolled Modes](https://react.syncfusion.com/react-ui/sidebar/#controlled-and-uncontrolled-modes):** Own the open state with the `open` property and `onOpenChange` callback in controlled mode, or set the initial state with `defaultOpen` and let the component manage transitions internally.
+
+- **[Backdrop and Outside Click Handling](https://react.syncfusion.com/react-ui/sidebar/#uncontrolled-mode):** Render a translucent overlay with the `backdrop` property to focus attention, and close the drawer on outside clicks with the `closeOnDocumentClick` property.
+
+- **[Dockable State](https://react.syncfusion.com/react-ui/sidebar/#dockable-sidebar):** Keep a compact navigation rail visible when collapsed with the `dockable` property, whose width is set by `dockableWidth`, preserving access to navigation icons.
+
+- **[Multiple Sidebars](https://react.syncfusion.com/react-ui/sidebar/#multiple-sidebars):** Render more than one `Sidebar` in a single layout to provide primary navigation alongside contextual, settings, or additional information panels.
+
+- **[Composite Layout API](https://react.syncfusion.com/react-ui/sidebar/#adding-the-sidebar-component):** Pair the sidebar with `SidebarLayout` and `SidebarMain` to coordinate the drawer, the primary content, and a `SidebarTrigger` toggle button within the page structure.
 
 **Usage**
 
@@ -163,55 +175,55 @@ import { useState } from "react";
 import { Sidebar, SidebarLayout, SidebarMain, SidebarTrigger } from "@syncfusion/react-navigations";
 
 export default function App() {
-    const [open, setOpen] = useState(false);
-
-    return (
-        <SidebarLayout>
-            <Sidebar
-                open={open}
-                onChange={(e) => setOpen(e.open)}
-            >
-                <nav>
-                    <ul>
-                        <li>Dashboard</li>
-                        <li>Projects</li>
-                        <li>Settings</li>
-                    </ul>
-                </nav>
-            </Sidebar>
-
-            <SidebarMain>
-                <SidebarTrigger aria-label="Toggle navigation">
-                    ☰
-                </SidebarTrigger>
-
-                <div>Dashboard Content</div>
-            </SidebarMain>
-        </SidebarLayout>
-    );
-};
+  const [open, setOpen] = useState(false);
+  return (
+    <SidebarLayout>
+      <Sidebar open={open} onOpenChange={(e) => setOpen(e.open)} style={{ width: 250 }}>
+        <nav>
+          <ul>
+            <li>Dashboard</li>
+            <li>Projects</li>
+            <li>Settings</li>
+          </ul>
+        </nav>
+      </Sidebar>
+      <SidebarMain>
+        <SidebarTrigger aria-label="Toggle navigation">☰</SidebarTrigger>
+        <div>Dashboard content</div>
+      </SidebarMain>
+    </SidebarLayout>
+  );
+}
 ```
 
 **Resources**
 
-- [Sidebar Demo/Docs](https://react.syncfusion.com/react-ui/sidebar)
-- [Sidebar API](https://react.syncfusion.com/api/sidebar/overview)
-
+- [Sidebar Demo/Docs](https://react.syncfusion.com/react-ui/sidebar/)
+- [Sidebar API](https://react.syncfusion.com/api/sidebar/overview/)
 
 ## React TreeView
 
-The TreeView component renders structured node collections as an expandable, navigable list. It supports both local arrays and remote `DataManager` data sources, controlled and uncontrolled expansion and selection, multiple selection modes, tri-state checkboxes, inline label editing, and rich keyboard interaction for accessibility.
+The `TreeView` component renders hierarchical data as an expandable, navigable tree, supporting flat and nested sources with configurable selection, expansion, and inline editing.
 
-**Key features**
+### Key Features
 
-  - **Hierarchical Data Binding:** Render nested trees from a `children` field, a self-referential `parentId` field, or a remote `DataManager` with a `Query` and lazy-loaded children.
-  - **Custom Field Mapping:** Map any `datasource` property names to the TreeView fields (`id`, `label`, `children`, `parentId`, `disabled`, `icon`, `hasChildren`, `tooltip`, `navigateUrl`, and more) using the `fields` prop.
-  - **Selection Modes:** Choose between `None`, `Single`, `Multiple`, or `Checkbox` selection. Checkbox mode supports tri-state checkboxes with optional cascading to descendants and disabled-children participation via `autoCheck` and `checkDisabledChildren`.
-  - **Expansion Control:** Expand on `Click`, `DoubleClick`, or `None`, and drive the expanded set through `expandedIds` (controlled) or `defaultExpandedIds` (uncontrolled).
-  - **Inline Editing:** Enable `editable` to let users rename nodes in place. The `onNodeEdit` callback receives the old and new label and can return `false` to reject the change. A `TreeViewEditInput` slot is provided for full editor customization.
-  - **Sorting and Empty State:** Sort siblings with `sortOrder` and render a custom `TreeViewEmptyState` when the resolved list is empty.
-  - **Row Templates:** Replace the default row rendering with a `TreeViewNodes` render-prop child, or compose individual parts using `TreeViewItemIcon`, `TreeViewItemLabel`, `TreeViewItemToggle`, and `TreeViewItemCheckbox`.
-  - **Keyboard Navigation:** Comprehensive keyboard support for accessibility, including arrow keys to move focus, Home/End for first/last, Enter/Space to select, and F2 to begin editing.
+- **[Hierarchical Data Binding](https://react.syncfusion.com/react-ui/tree-view/#hierarchical-data-binding):** Bind to nested data by mapping the `fields` property to `id`, `label`, `children`, and `parentId`, so the tree renders nodes from a `children` field or a self-referential `parentId` field.
+
+- **[Remote Data and Lazy Loading](https://react.syncfusion.com/react-ui/tree-view/#remote-data):** Load a flat record list from a remote `DataManager` through the `data` property, and defer child fetching until a row is expanded using the `fields.hasChildren` mapping.
+
+- **[Selection Modes](https://react.syncfusion.com/react-ui/tree-view/#selection):** Choose how rows respond to interaction with the `selectionMode` property, supporting `Single`, `Multiple`, `Checkbox`, and `None` to match the workflow.
+
+- **[Tri-State Checkboxes](https://react.syncfusion.com/react-ui/tree-view/#checkbox):** In `Checkbox` mode, cascade the check state to descendants and update parent states with `autoCheck`, and toggle the checkbox on row click with `checkOnClick` for faster bulk selection.
+
+- **[Controlled and Uncontrolled Expansion](https://react.syncfusion.com/react-ui/tree-view/#controlled-vs-uncontrolled):** Own the expanded set with `expandedIds` and `onExpandedChange` in controlled mode, or seed the initial state with `defaultExpandedIds` and let the component manage later changes internally.
+
+- **[Expansion Trigger](https://react.syncfusion.com/react-ui/tree-view/#expansion):** Set the user action that toggles a row through the `expandOn` property, accepting `Click`, `DoubleClick`, or `None`, and make the whole row the interaction surface with `fullRowSelect`.
+
+- **[Sorting and Editing](https://react.syncfusion.com/react-ui/tree-view/#editing):** Sort siblings at every level with `sortOrder`, and enable inline renaming with `editable`, where `onNodeEdit` validates the change and a `TreeViewEditInput` slot customizes the editor.
+
+- **[Row Templates](https://react.syncfusion.com/react-ui/tree-view/#custom-rendering):** Replace default rendering with the `TreeViewNodes` render-prop, or compose `TreeViewItemLabel`, `TreeViewItemIcon`, `TreeViewItemToggle`, and `TreeViewItemCheckbox` to match a design system; rows can also carry a link target and tooltip through `fields`.
+
+- **[Keyboard Navigation](https://react.syncfusion.com/react-ui/tree-view/#keyboard-interaction):** Follows the WAI-ARIA tree pattern, with arrow keys to move and expand, `Home`/`End` for first and last, `Enter`/`Space` to activate, `Esc` to cancel editing, and `F2` to open the inline editor.
 
 **Usage**
 
@@ -221,28 +233,72 @@ import { TreeView } from "@syncfusion/react-navigations";
 interface Node { id: string; label: string; parentId?: string | null; }
 
 export default function App() {
-    const data: Node[] = [
-        { id: '1', label: 'Documents' },
-        { id: '2', label: 'Reports', parentId: '1' },
-        { id: '3', label: 'Invoices', parentId: '1' },
-        { id: '4', label: 'Downloads' },
-        { id: '5', label: 'Pictures' }
-    ];
-    return (
-        <TreeView data={data} defaultExpandedIds={['1']} />
-    );
+  const data: Node[] = [
+    { id: "1", label: "Documents" },
+    { id: "2", label: "Reports", parentId: "1" },
+    { id: "3", label: "Invoices", parentId: "1" },
+    { id: "4", label: "Downloads" },
+    { id: "5", label: "Pictures" }
+  ];
+  return <TreeView data={data} defaultExpandedIds={["1"]} />;
 }
 ```
 
 **Resources**
 
-- [TreeView Demo/Docs](https://react.syncfusion.com/react-ui/tree-view)
-- [TreeView API](https://react.syncfusion.com/api/tree-view/overview)
+- [Tree View Demo/Docs](https://react.syncfusion.com/react-ui/tree-view/)
+- [Tree View API](https://react.syncfusion.com/api/tree-view/overview/)
+
+## React Accordion
+
+The `Accordion` component renders a vertically stacked list of collapsible panels, each pairing a header with a content region, with single or multi-open behavior and controlled and uncontrolled value support.
+
+### Key Features
+
+- **[Composite Parts](https://react.syncfusion.com/react-ui/accordion/#getting-started):** Compose each section from `AccordionPanel`, `AccordionHeader`, `AccordionTrigger`, `AccordionIndicator`, and `AccordionContent` to control the structure, clickable surface, state icon, and body of every panel.
+
+- **[Single and Multi-Open Modes](https://react.syncfusion.com/react-ui/accordion/#multiple-open):** Toggle the `multiple` property to allow several panels open at once, or keep the classic single-open behavior where opening one section closes the others.
+
+- **[Controlled and Uncontrolled Values](https://react.syncfusion.com/react-ui/accordion/#controlled):** Own the active set with the `value` and `onChange` callback for controlled state, or seed the initial open panels with `defaultValue` and let the component manage later changes internally.
+
+- **[Focus-Open Behavior](https://react.syncfusion.com/react-ui/accordion/#multiple-open):** Enable `openOnFocus` so a panel expands automatically when its header receives keyboard focus, without requiring an additional activation step.
+
+- **Panel Mount Strategies:** Choose how panel content is mounted through the `renderMode` property, with `Active` (default) keeping only expanded panels in the tree, `Retained` mounting on first expansion, and `All` mounting every panel on initial render.
+
+- **[Disabled Panels and Borderless Layout](https://react.syncfusion.com/react-ui/accordion/#disabled-item):** Mark individual sections as non-interactive through the `disabled` prop on `AccordionPanel`, and remove the dividers with `borderless` for a flush, edge-to-edge layout.
+
+- **[Keyboard Navigation](https://react.syncfusion.com/react-ui/accordion/#keyboard-interaction):** Follows the WAI-ARIA accordion pattern with `ArrowUp`/`ArrowDown` to move between headers, `Home`/`End` for first and last, and `Enter`/`Space` to expand or collapse the focused panel.
+
+**Usage**
+
+```tsx
+import { Accordion, AccordionPanel, AccordionHeader, AccordionTrigger, AccordionIndicator, AccordionContent } from "@syncfusion/react-navigations";
+
+export default function App() {
+  return (
+    <Accordion defaultValue={["service"]}>
+      <AccordionPanel value="service">
+        <AccordionHeader>
+          <AccordionTrigger>What is this service about? <AccordionIndicator /></AccordionTrigger>
+        </AccordionHeader>
+        <AccordionContent>
+          Service details…
+        </AccordionContent>
+      </AccordionPanel>
+    </Accordion>
+  );
+}
+```
+
+**Resources**
+
+- [Accordion Demo/Docs](https://react.syncfusion.com/react-ui/accordion/)
+- [Accordion API](https://react.syncfusion.com/api/accordion/overview/)
 
 <p align="center">
 Trusted by the world's leading companies
   <a href="https://www.syncfusion.com/">
-    <img src="https://raw.githubusercontent.com/SyncfusionExamples/nuget-img/master/syncfusion/syncfusion-trusted-companies.webp" alt="Syncfusion logo">
+    <img src="https://raw.githubusercontent.com/SyncfusionExamples/nuget-img/master/syncfusion/syncfusion-trusted-companies.webp" alt="Company logo">
   </a>
 </p>
 

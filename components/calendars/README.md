@@ -1,30 +1,45 @@
 # Syncfusion React Calendars Components
- 
-The Syncfusion React Calendar components for managing date and time with features like date formatting, inline editing, multiple (range) selection, range restriction, month and year selection, strict mode, and globalization.
+
+The Syncfusion® React Calendar components provide an integrated suite for managing date and time. The package includes `Calendar`, `DatePicker`, `TimePicker`, `DateTimePicker`, and `DateRangePicker`, supporting date and time formatting, controlled and uncontrolled selection, range restriction, month and year views, strict-mode validation, masked input, and form integration.
 
 ## Setup
-
-To install `calendars` and its dependent packages, use the following command,
 
 ```sh
 npm install @syncfusion/react-calendars
 ```
+Apply a theme by installing the corresponding theme package and importing its styles, for example with the [Material theme](https://www.npmjs.com/package/@syncfusion/react-material-theme):
+
+```sh
+npm install @syncfusion/react-material-theme
+```
+
+```css
+/* App.css */
+@import '../node_modules/@syncfusion/react-material-theme/styles/calendar/index.css';
+```
+> Note: For other components, use their corresponding index.css files from their respective style folders
 
 ## React Calendar
- 
-The Calendar component provides a versatile and interactive date selection interface with support for multiple views, customizations, and selection modes. It is designed to handle a wide range of scheduling and planning use cases.
- 
-**Key features**
- 
-- **View Modes:** Switch between month, year, and decade views using the start and depth properties to control the initial view and navigation depth.
- 
-- **Date Range Control:**  Restrict selectable dates using minDate and maxDate to ensure users can only choose valid dates within a defined range.
- 
-- **Custom Cell Templates:** Use the cellTemplate property to customize the appearance of specific dates, including disabling dates to prevent selection.
- 
-- **Week Number Display:** Enable the weekNumber property to show week numbers alongside calendar dates for better context in scheduling.
- 
-- **Multi-Date Selection:** Activate the multiSelect property to allow users to select multiple non-consecutive dates, ideal for marking events or selecting custom date ranges.
+
+The `Calendar` component renders an interactive month, year, and decade interface for selecting dates with custom cell rendering, range restrictions, and multiple orientation and view modes.
+
+### Key Features
+
+- **[Views](https://react.syncfusion.com/react-ui/calendar/#views):** Switch between Month, Year, and Decade views using `start` and `depth` with the `CalendarView` enum to set the initial view and the deepest navigation level.
+
+- **[Date Range Restriction](https://react.syncfusion.com/react-ui/calendar/#date-range):** Constrain selectable dates with `minDate` and `maxDate`, and disable all past or future dates independently using `disablePastDays` and `disableFutureDays`.
+
+- **[Multi Selection](https://react.syncfusion.com/react-ui/calendar/#multi-selection):** Enable `multiSelect` to let users choose several non-consecutive dates at once, storing them in a `Date[]` value.
+
+- **[Custom Cell Rendering](https://react.syncfusion.com/react-ui/calendar/#disabled-dates):** Apply `cellTemplate` with `CalendarCellProps` to style, highlight, or disable individual dates, such as marking holidays.
+
+- **[Toolbar and Orientation](https://react.syncfusion.com/react-ui/calendar/#toolbar):** Toggle the selected-date header with `showToolBar` and lay out months side by side or stacked through `orientation` using `Orientation.Horizontal` and `Orientation.Vertical`.
+
+- **[Week Numbers and Formatting](https://react.syncfusion.com/react-ui/calendar/#week-numbers):** Display ISO week numbers with `weekNumber`, and format the weekday header via `weekDaysFormat` using the `WeekDaysFormats` enum.
+
+- **[Islamic Calendar](https://react.syncfusion.com/react-ui/calendar/#islamic-calendar):** Switch from Gregorian to the Hijri calendar through `calendarType`, with automatic date conversion and localized month and day names.
+
+- **[Controlled and Uncontrolled Mode](https://react.syncfusion.com/react-ui/calendar/#controlled-vs-uncontrolled):** Drive the selection with `value` in controlled mode, or initialize internal state with `defaultValue`; `onChange` and `onViewChange` report updates.
 
 **Usage**
 
@@ -33,24 +48,41 @@ import { Calendar } from '@syncfusion/react-calendars';
 
 export default function App() {
   return (
-    <Calendar/>
+    <Calendar
+      value={new Date(2026, 9, 7)}
+      minDate={new Date(2025, 0, 1)}
+      maxDate={new Date(2027, 11, 31)}
+      showToolBar
+      onChange={(e) => console.log(e.value)}
+    />
   );
 }
 ```
- 
+
+**Resources**
+
+- [Calendar Demo/Docs](https://react.syncfusion.com/react-ui/calendar/)
+- [Calendar API](https://react.syncfusion.com/api/Calendar/overview/)
+
 ## React DatePicker
- 
-The DatePicker component offers a streamlined and customizable interface for selecting dates, supporting various formats, view modes, and styling options. It is ideal for forms, scheduling tools, and any application requiring precise date input.
- 
-**Key features**
- 
-- **Custom Date Formats:** Display and receive date values in formats that suit your application using the format property, which supports standard date format patterns.
- 
-- **Read-Only Mode:** Prevent user edits while displaying a selected date by enabling the readOnly property—useful for forms or scenarios where the date is system-generated.
- 
-- **View Modes:** Navigate through Month, Year, and Decade views to provide flexible date selection experiences.
- 
-- **Custom Cell Templates:** Highlight important dates, events, or special occasions using the cellTemplate property to apply custom styling, icons, or indicators.
+
+The `DatePicker` component combines an editable input with an integrated calendar popup for selecting a single date, offering input formatting, masking, validation, and configurable popup display.
+
+### Key Features
+
+- **[Date Formatting](https://react.syncfusion.com/react-ui/datepicker/#format):** Display and parse values with `format` (e.g., `MM/dd/yyyy`, `yyyy-MM-dd`), and accept multiple typed patterns through the `inputFormats` array.
+
+- **[Dialog Mode](https://react.syncfusion.com/react-ui/datepicker/#dialog-mode):** Present the picker as an anchored `Inline` popup, a centered `Dialog` overlay, or `Auto` (desktop inline, mobile dialog) using the `pickerVariant` prop and the `PopupSettings` type for positioning.
+
+- **[Segment-Based Masked Input](https://react.syncfusion.com/react-ui/datepicker/#mask-support):** Enable `inputMask` for segment-guided entry keyed to the current format, and customize per-segment characters with `maskPlaceholder`.
+
+- **Strict Mode Validation:** Turn on `strictMode` to prevent and auto-correct typed values that fall outside the supported format and the configured date range.
+
+- **[Views](https://react.syncfusion.com/react-ui/datepicker/#views):** Navigate Month, Year, and Decade views using `start` and `depth`, tracking the active view through the `onViewChange` `ViewChangeEvent`.
+
+- **[Appearance and Adornments](https://react.syncfusion.com/react-ui/datepicker/#appearance):** Choose among `Standard`, `Outlined`, and `Filled` variants with `variant`, float the label via `labelMode`, and add contextual hints with `helperText`.
+
+- **[Islamic Calendar](https://react.syncfusion.com/react-ui/datepicker/#islamic-calendar):** Enable the Hijri calendar with `calendarType` so dates are displayed and selected using Islamic month and day names.
 
 **Usage**
 
@@ -59,28 +91,40 @@ import { DatePicker } from '@syncfusion/react-calendars';
 
 export default function App() {
   return (
-    <DatePicker/>
+    <DatePicker
+      value={new Date(2026, 9, 7)}
+      format="dd-MMM-yyyy"
+      minDate={new Date(2026, 0, 1)}
+      maxDate={new Date(2027, 11, 31)}
+      helperText="Select your appointment date."
+      onChange={(e) => console.log(e.value)}
+    />
   );
 }
 ```
 
+**Resources**
+
+- [DatePicker Demo/Docs](https://react.syncfusion.com/react-ui/datepicker/)
+- [DatePicker API](https://react.syncfusion.com/api/DatePicker/overview/)
+
 ## React TimePicker
 
-The TimePicker component provides an intuitive way to select times with flexible formatting, validation, min/max constraints, and keyboard navigation. It supports inline or dialog (centered) popups, mobile-friendly full-screen mode, and customizable list item templates.
+The `TimePicker` component provides a time input with a list-based selector, supporting flexible formats, range and step constraints, strict validation, and inline, dialog, or full-screen popups.
 
-**Key features**
+### Key Features
 
-- **Time formats:** Display and parse times using the format property (for example, 'h:mm a', 'HH:mm').
+- **[Time Formats](https://react.syncfusion.com/react-ui/timepicker/#format):** Render and parse times with `format` using patterns such as `h:mm a`, `HH:mm`, or `HH:mm:ss`.
 
-- **Range restriction:** Limit selectable times with the minTime and maxTime properties.
+- **[Range Restriction](https://react.syncfusion.com/react-ui/timepicker/#time-range):** Bound selectable times with `minTime` and `maxTime`, and set the interval between list items in minutes with `step`.
 
-- **Step intervals:** Control the time list interval via step (in minutes).
+- **Strict Mode:** Enable `strictMode` to block invalid input and snap the closest value within the configured time range.
 
-- **Strict mode:** Enable strictMode to allow only valid times and automatically correct invalid input to the closest valid time within the configured range.
+- **[Popup Variants](https://react.syncfusion.com/react-ui/timepicker/#dialog-mode):** Display the list as an anchored `Inline` popup, a centered `Dialog`, `Auto`, or a mobile full-screen panel with `fullScreenMode`.
 
-- **Inline or centered popup:** Choose Inline (anchored) or Popup (centered dialog overlay). Auto adapts to device by default.
+- **[Custom List Items](https://react.syncfusion.com/react-ui/timepicker/#customization):** Apply `itemTemplate` to render each time entry with custom content or styling.
 
-- **Templates:** Customize list items with itemTemplate for special styling or content.
+- **[Helper Text and Adornments](https://react.syncfusion.com/react-ui/timepicker/#helper-text):** Surface guidance with `helperText`, and place icons or labels at the input edges using `prefix` and `suffix`.
 
 **Usage**
 
@@ -89,32 +133,42 @@ import { TimePicker } from '@syncfusion/react-calendars';
 
 export default function App() {
   return (
-    <TimePicker/>
+    <TimePicker
+      value={new Date(2026, 9, 7, 18, 30)}
+      format="h:mm a"
+      minTime={new Date(2026, 9, 7, 9, 0)}
+      maxTime={new Date(2026, 9, 7, 18, 0)}
+      step={30}
+      onChange={(e) => console.log(e.value)}
+    />
   );
 }
 ```
 
+**Resources**
+
+- [TimePicker Demo/Docs](https://react.syncfusion.com/react-ui/timepicker/)
+- [TimePicker API](https://react.syncfusion.com/api/Timepicker/overview/)
+
 ## React DateTimePicker
 
-The DateTimePicker component provides an integrated interface for selecting both date and time values. It combines a calendar for date selection with a time picker, supporting various formats, view modes, and validation options. Ideal for scheduling applications, appointment booking, and any use case requiring precise date-time input.
+The `DateTimePicker` component merges a calendar and a time list into a single input for selecting a precise date-time value, with combined formatting, step control, and configurable popup display.
 
-**Key features**
+### Key Features
 
-- **Combined Date and Time Selection:** Select date and time in a single component with tab-based panel switching between date and time pickers.
+- **[Combined Date and Time Selection](https://react.syncfusion.com/react-ui/datetimepicker/):** Tab between the calendar and time list inside a single popup to set both the date and the time in one control.
 
-- **Custom Date-Time Formats:** Display and parse date-time values using the format property with combined date and time format tokens (e.g., 'MM/dd/yyyy h:mm a').
+- **[Date-Time Formatting](https://react.syncfusion.com/react-ui/datetimepicker/#formats):** Display and parse combined values with `format` (e.g., `MM/dd/yyyy h:mm a`), and accept extra input patterns through `inputFormats`.
 
-- **View Modes:** Navigate through Month, Year, and Decade views for flexible date selection, with multiple input format support via inputFormats.
+- **Range and Step Constraints:** Bound the selection with `minDate`, `maxDate`, `minTime`, and `maxTime`, and set the time-list interval in minutes with `step`.
 
-- **Range Constraints:** Set selectable date ranges using minDate and maxDate, and time ranges using minTime and maxTime for fine-grained control.
+- **Strict Mode Validation:** Turn on `strictMode` to reject or auto-correct typed values that fall outside the supported format and the configured range.
 
-- **Strict Mode Validation:** Enable strictMode to validate and auto-correct invalid date-time input to the nearest valid value within configured ranges.
+- **[Popup Variants](https://react.syncfusion.com/react-ui/datetimepicker/#dialog-mode):** Present the picker as an `Inline` popup, a centered `Dialog`, or `Auto` using `pickerVariant` with `PopupSettings` for positioning and collision handling.
 
-- **Time Step Control:** Configure the time list interval using the step property (in minutes).
+- **[Custom Templates](https://react.syncfusion.com/react-ui/datetimepicker/#customization):** Personalize the calendar with `cellTemplate`, the header with `headerTemplate`, and each time row with `itemTemplate`.
 
-- **Popup Variants:** Choose between Inline (anchored to input), Dialog (centered overlay), or Auto (adapts to device).
-
-- **Custom Templates:** Customize calendar cells, headers, footers, and time list items using cellTemplate, headerTemplate, footerTemplate, and itemTemplate.
+- **[Islamic Calendar](https://react.syncfusion.com/react-ui/datetimepicker/#islamic-calendar):** Enable the Hijri calendar with `calendarType` so both date and time values follow Islamic month and day names.
 
 **Usage**
 
@@ -123,34 +177,42 @@ import { DateTimePicker } from '@syncfusion/react-calendars';
 
 export default function App() {
   return (
-    <DateTimePicker defaultValue= {new Date(2026, 3, 10, 15, 45)} />
+    <DateTimePicker
+      value={new Date(2026, 9, 7, 18, 45)}
+      format="MM/dd/yyyy h:mm a"
+      minDate={new Date(2026, 0, 1)}
+      maxDate={new Date(2027, 11, 31)}
+      step={15}
+      onChange={(e) => console.log(e.value)}
+    />
   );
 }
 ```
 
+**Resources**
+
+- [DateTimePicker Demo/Docs](https://react.syncfusion.com/react-ui/datetimepicker/)
+- [DateTimePicker API](https://react.syncfusion.com/api/DateTimePicker/overview/)
+
 ## React DateRangePicker
 
-The DateRangePicker component enables selection of date ranges with preset shortcuts, range duration constraints, and comprehensive validation. It supports both inline and dialog modes, custom formatting, and is ideal for filtering, reporting, and date range-based queries.
+The `DateRangePicker` component selects a continuous start and end date range, supporting preset shortcuts, range-duration constraints, and both inline and dialog presentation.
 
-**Key features**
+### Key Features
 
-- **Date Range Selection:** Select start and end dates with visual range preview on hover and validation to ensure valid ranges.
+- **[Range Selection](https://react.syncfusion.com/react-ui/daterangepicker/#controlled-vs-uncontrolled):** Pick a start and end date with a single input, and manage the values through `value` and `defaultValue` as a `[Date, Date]` pair.
 
-- **Preset Ranges:** Define shortcut presets (e.g., "Last 7 days", "This month") via the presets property for quick selection.
+- **[Duration Constraints](https://react.syncfusion.com/react-ui/daterangepicker/#range-restriction):** Restrict how long a selection may span using `minRangeDays` and `maxRangeDays`, and bound the overall dates with `minDate` and `maxDate`.
 
-- **Duration Constraints:** Enforce minimum and maximum range spans using minRangeDays and maxRangeDays to restrict user selection.
+- **[Preset Ranges](https://react.syncfusion.com/react-ui/daterangepicker/#presets):** Offer one-click shortcuts through the `presets` array of `DateRangePreset` objects, with an automatic Custom Range option.
 
-- **Custom Formatting:** Display and parse range values using the format property with configurable separator (default: ' - ').
+- **[Month and Year Ranges](https://react.syncfusion.com/react-ui/daterangepicker/#month-range-picker):** Select ranges at month or year granularity by setting `start` and `depth` to `CalendarView.Year` or `CalendarView.Decade`.
 
-- **Dual Calendar View:** Inline mode displays side-by-side calendars for easier range selection; dialog mode shows single calendar.
+- **[Custom Formatting and Separator](https://react.syncfusion.com/react-ui/daterangepicker/#separator):** Control how the range renders with `format`, and the text between dates with `separator` (default `' - '`).
 
-- **Range Validation:** Strict mode auto-corrects invalid ranges to the nearest valid duration within min/max constraints and date bounds.
+- **[Popup Variants](https://react.syncfusion.com/react-ui/daterangepicker/#dialog-mode):** Render as an `Inline` popup, a centered `Dialog`, or `Auto` using `pickerVariant` and `PopupSettings`.
 
-- **View Modes:** Navigate through Month, Year, and Decade views with multi-format input parsing support via inputFormats.
-
-- **Popup Variants:** Choose Inline, Dialog, or Auto mode for responsive behavior across desktop and mobile devices.
-
-- **Custom Templates:** Customize calendar cells, using cellTemplate.
+- **[Islamic Calendar](https://react.syncfusion.com/react-ui/daterangepicker/#islamic-calendar):** Enable the Hijri calendar with `calendarType` so the full range uses Islamic month and day names.
 
 **Usage**
 
@@ -158,38 +220,49 @@ The DateRangePicker component enables selection of date ranges with preset short
 import { DateRangePicker } from '@syncfusion/react-calendars';
 
 export default function App() {
-
   return (
-    <DateRangePicker defaultValue={[new Date(2026, 2, 10), new Date(2026, 3, 20)]}/>
+    <DateRangePicker
+      value={[new Date(2026, 2, 10), new Date(2026, 3, 20)]}
+      format="MM/dd/yyyy"
+      separator=" - "
+      minRangeDays={1}
+      maxRangeDays={60}
+      onChange={(e) => console.log(e.value)}
+    />
   );
 }
 ```
 
+**Resources**
+
+- [DateRangePicker Demo/Docs](https://react.syncfusion.com/react-ui/daterangepicker/)
+- [DateRangePicker API](https://react.syncfusion.com/api/DateRangePicker/overview/)
+
 <p align="center">
 Trusted by the world's leading companies
   <a href="https://www.syncfusion.com/">
-    <img src="https://raw.githubusercontent.com/SyncfusionExamples/nuget-img/master/syncfusion/syncfusion-trusted… alt="Syncfusion logo">
+    <img src="https://raw.githubusercontent.com/SyncfusionExamples/nuget-img/master/syncfusion/syncfusion-trusted-companies.webp" alt="Company logo">
   </a>
 </p>
- 
+
 ## Support
- 
+
 Product support is available through following mediums.
- 
+
 * [Support ticket](https://support.syncfusion.com/support/tickets/create) - Guaranteed Response in 24 hours | Unlimited tickets | Holiday support
 * Live chat
- 
+
 ## Changelog
- 
+
 Check the changelog [here](https://github.com/syncfusion/react-ui-components/blob/master/components/calendars/CHANGELOG.md). Get minor improvements and bug fixes every week to stay up to date with frequent updates.
- 
+
 ## License and copyright
- 
+
 > This is a commercial product and requires a paid license for possession or use. Syncfusion’s licensed software, including this component, is subject to the terms and conditions of Syncfusion's [EULA](https://www.syncfusion.com/eula/es/). To acquire a license for [React UI components](https://www.syncfusion.com/react-components), you can [purchase](https://www.syncfusion.com/sales/products) or [start a free 30-day trial](https://www.syncfusion.com/account/manage-trials/start-trials).
- 
+
 > A [free community license](https://www.syncfusion.com/products/communitylicense) is also available for companies and individuals whose organizations have less than $1 million USD in annual gross revenue and five or fewer developers.
- 
-See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campai…) for more info.
- 
+
+See [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campaign=notification) for more info.
+
 &copy; Copyright 2026 Syncfusion®, Inc. All Rights Reserved. The Syncfusion® Essential Studio® license and copyright applies to this distribution.
  

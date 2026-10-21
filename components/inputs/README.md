@@ -1,45 +1,76 @@
-# React Input Components
+# Syncfusion React Input Components
 
-The Syncfusion React Input package is a feature-rich collection of UI components, including Textbox, Textarea, Numeric-textbox and Form-validator, designed to capture user input in React applications.
+The Syncfusion React Input package is a feature-rich collection of UI components, including Form, NumericTextBox, TextArea, TextBox, and FileUpload, designed to capture user input in React applications.
 
 ## Setup
 
-To install `inputs` and its dependent packages, use the following command,
+To install `@syncfusion/react-inputs` and its dependent packages, use the following command:
 
 ```sh
 npm install @syncfusion/react-inputs
 ```
 
+Apply a theme by installing the corresponding theme package and importing its styles, for example with the [Material theme](https://www.npmjs.com/package/@syncfusion/react-material-theme):
+
+```sh
+npm install @syncfusion/react-material-theme
+```
+
+```css
+/* App.css */
+@import '../node_modules/@syncfusion/react-material-theme/styles/form/index.css';
+```
+
+> Note: For other themes, use the corresponding `index.css` files from their respective style folders.
+
 ## React Form
 
-The Form component provides comprehensive form validation and state management functionality with built-in validation rules and field interaction tracking. It offers a powerful way to handle complex forms with real-time validation, error handling, and submission management.
+The Form is a powerful validation tool for React applications that manages form state, validation rules, and submission handling with a comprehensive set of built-in validation rules and customizable error messages.
 
-**Key features**
+### Key Features
 
-- **Built-in Validation Rules:** Comprehensive set of 15+ validation rules including required, email, URL, date, number, length constraints, ranges, and custom pattern matching.
+- **[Built-in Validation Rules](https://react.syncfusion.com/react-ui/form/#built-in-validation-rules):** Comprehensive set of validation rules including `required`, `email`, `url`, `date`, `number`, `minLength`, `maxLength`, `range`, `regex`, and `equalTo` for password confirmation fields.
 
-- **Real-time Validation:** Support for immediate validation on field changes or validation on blur/submit.
+- **[Real-time Validation](https://react.syncfusion.com/react-ui/form/#real-time-validation):** Support for immediate validation on field changes by setting `validateOnChange` to `true`, providing instant feedback to users about field validity.
 
-- **State Management:** Complete form state tracking including field values, errors, touched/visited states, and modification tracking.
+- **[Custom Validation Rules](https://react.syncfusion.com/react-ui/form/#custom-validation-rules):** Support for `customValidator` property to implement complex validation logic beyond built-in rules, such as password strength validation or domain-specific requirements.
 
-- **Custom Validation:** Support for custom validation functions with full access to field values for complex business logic validation.
+- **[Conditional Validation](https://react.syncfusion.com/react-ui/form/#conditional-validation):** Dynamic validation rules that adapt based on values in other fields, enabling responsive forms that change validation requirements based on user choices.
 
-- **Cross-field Validation:** EqualTo validation for comparing field values such as password confirmation fields.
+- **[State Management](https://react.syncfusion.com/react-ui/form/#form-configuration):** Complete form state tracking through the `formState` object, providing access to `values`, `errors`, `allowSubmit` status, and methods like `onChange` and `onBlur`.
 
-- **Initial Values:** Support for pre-populated form fields with validation on initial load.
+- **[Multi-step Form Wizard](https://react.syncfusion.com/react-ui/form/#multi-step-form-wizard):** Ability to split large forms into smaller steps with separate validation for each step, improving user experience for complex forms.
+
+- **[Integration with Native HTML Inputs](https://react.syncfusion.com/react-ui/form/#integration-with-native-html-inputs):** Connects directly to standard HTML `<input>`, `<select>`, and `<checkbox>` elements while still delivering the full validation and state management behavior of the `Form` system.
+
+- **[Custom Error Placement](https://react.syncfusion.com/react-ui/form/#custom-error-placement):** Control where validation feedback appears by reading `formState.errors` and rendering messages at the field level or centralizing them in an error summary.
+
+- **[Initial Values](https://react.syncfusion.com/api/form/overview/#initialvalues):** Populate fields on load using the `initialValues` property, with validation applied against the pre-populated data.
 
 **Usage**
 
 ```tsx
-import React, { useState } from 'react';
-import { Form, FormField, FormState } from '@syncfusion/react-inputs';
+import { useState } from 'react';
+import { Form, FormField, FormState, ValidationRules } from '@syncfusion/react-inputs';
 
 export default function App() {
   const [formState, setFormState] = useState<FormState>();
 
+  const validationRules: ValidationRules = {
+    username: {
+      required: [true, 'Username is required'],
+      minLength: [3, 'Username must be at least 3 characters']
+    },
+    email: {
+      required: [true, 'Email is required'],
+      email: [true, 'Please enter a valid email address']
+    }
+  };
+
   return (
     <Form
-      rules={{ username: { required: [true, 'Username is required'] } }}
+      rules={validationRules}
+      validateOnChange={true}
       onSubmit={(data) => console.log(data)}
       onFormStateChange={setFormState}
     >
@@ -49,14 +80,13 @@ export default function App() {
           value={(formState?.values.username || '') as string}
           onChange={(e) => formState?.onChange('username', { value: e.target.value })}
           onBlur={() => formState?.onBlur('username')}
-          onFocus={() => formState?.onFocus('username')}
         />
         {formState?.errors?.username && (
           <div className="error">{formState.errors.username}</div>
         )}
       </FormField>
 
-      <button type="submit">Submit</button>
+      <button type="submit" disabled={!formState?.allowSubmit}>Submit</button>
     </Form>
   );
 }
@@ -64,26 +94,34 @@ export default function App() {
 
 **Resources**
 
-- [Form Demo/Docs](https://react.syncfusion.com/react-ui/form)
-- [Form API](https://react.syncfusion.com/api/form/overview)
+- [Form Demo/Docs](https://react.syncfusion.com/react-ui/form/)
+- [Form API](https://react.syncfusion.com/api/form/overview/)
 
 ## React Numeric TextBox
 
-The NumericTextBox component provides a specialized input field for numeric values with validation, formatting, and increment/decrement capabilities. It offers precise control over numeric input with support for various number formats, validation rules, and user interaction patterns.
+The NumericTextBox is a specialized input control for precise and flexible numeric data entry with validation, formatting, and increment/decrement capabilities.
 
-**Key features**
+### Key Features
 
-- **Value constraints:** Set minimum and maximum allowed values to restrict user input within specific numeric ranges.
+- **[Step Configuration](https://react.syncfusion.com/react-ui/numeric-textbox/#steps):** Set precise increment values using the `step` property, enabling users to adjust numeric inputs with spin buttons or keyboard controls.
 
-- **Step configuration:** Define increment/decrement step size for precise value adjustments using spin buttons or keyboard controls.
+- **[Spin Buttons](https://react.syncfusion.com/react-ui/numeric-textbox/#spin-buttons):** Optional increment and decrement buttons controlled via the `spinButton` property (default `true`) that allow users to adjust values without typing.
 
-- **Spin buttons:** Optional increment and decrement buttons that allow users to adjust values without typing.
+- **[Number Formatting](https://react.syncfusion.com/react-ui/numeric-textbox/#formats):** Customize display format using the `format` property with support for decimal places, currency symbols, and percentage formatting.
 
-- **Number formatting:** Comprehensive formatting options including decimal places, currency symbols, and percentage formatting.
- 
-- **LabelMode** Implements floating label functionality with configurable behavior modes to enhance form usability.
+- **[Value Range Constraint](https://react.syncfusion.com/react-ui/numeric-textbox/#value-range):** Use `min` and `max` properties to restrict input within specific numeric ranges, with `strictMode` to automatically correct out-of-range values.
 
-- **Keyboard navigation:** Enhanced keyboard support for incrementing/decrementing values using arrow keys.
+- **[Floating Label](https://react.syncfusion.com/react-ui/numeric-textbox/#float-label):** Implement floating label functionality using the `labelMode` property with modes `Never`, `Auto`, and `Always` to enhance form usability.
+
+- **[Mouse Wheel Support](https://react.syncfusion.com/react-ui/numeric-textbox/#mouse-wheel):** Enable mouse wheel scrolling via `mouseWheel` property to increment or decrement values, with `invertMouseWheel` to reverse scroll direction.
+
+- **[Helper Text and Adornments](https://react.syncfusion.com/react-ui/numeric-textbox/#helper-text):** Support for `helperText` to display contextual messages and `prefix`/`suffix` properties for icons or unit labels such as currency symbols or percentage indicators.
+
+- **[Value Parsing](https://react.syncfusion.com/react-ui/numeric-textbox/#value-parsing):** Define custom formatting and parsing methods to transform user input, for example converting miles to kilometers on the fly.
+
+- **[Validate on Type](https://react.syncfusion.com/react-ui/numeric-textbox/#validate-on-type):** Restrict typing to the configured precision using the `validateOnType` property, ensuring decimal values conform to the specified number of decimal places as the user types.
+
+- **[Sizes](https://react.syncfusion.com/react-ui/numeric-textbox/#sizes):** Control the input dimensions using the `size` property with options `Small`, `Medium` (default), and `Large`.
 
 **Usage**
 
@@ -92,31 +130,44 @@ import { NumericTextBox } from "@syncfusion/react-inputs";
 
 export default function App() {
   return (
-    <NumericTextBox defaultValue={100} min={0} max={1000} />
+    <NumericTextBox
+      placeholder="Enter value"
+      defaultValue={100}
+      min={0}
+      max={1000}
+      step={10}
+      format="c2"
+      spinButton={true}
+      helperText="Enter a value between 0 and 1000"
+    />
   );
 }
 ```
 
 **Resources**
 
-- [Numeric TextBox Demo/Docs](https://react.syncfusion.com/react-ui/numeric-textbox)
-- [Numeric TextBox API](https://react.syncfusion.com/api/numeric-textbox/overview)
+- [Numeric TextBox Demo/Docs](https://react.syncfusion.com/react-ui/numeric-textbox/)
+- [Numeric TextBox API](https://react.syncfusion.com/api/numeric-textbox/overview/)
 
 ## React TextArea
 
-The TextArea component provides a multi-line text input field with enhanced functionality for collecting longer text content from users. It offers various customization options to adapt to different application requirements and design systems.
+The TextArea component enables users to enter and display multiple lines of text with enhanced functionality for collecting longer text content.
 
-**Key features**
+### Key Features
 
-- **Resizing options:** Supports multiple resize modes including Both, Horizontal, and Vertical to control how users can resize the input area.
+- **[Variants](https://react.syncfusion.com/react-ui/textarea/#variants):** Three distinct visual styles using the `variant` property: `Standard` (default), `Outlined`, and `Filled` to match application design language.
 
-- **LabelMode:** Implements floating label functionality with configurable behavior modes to enhance form usability.
+- **[Resizing Options](https://react.syncfusion.com/react-ui/textarea/#resizing):** Control resize behavior using the `resizeMode` property with options `Both` (default), `Horizontal`, `Vertical`, and `None` for flexible layout control.
 
-- **Variants:** Offers multiple visual styles including Standard, Outlined, and Filled variants to match your application's design language.
+- **[Auto Resizing](https://react.syncfusion.com/react-ui/textarea/#auto-resizing):** Enable automatic height adjustment as users type by setting `autoResize` to `true`, providing dynamic content accommodation.
 
-- **Customizable dimensions:** Supports setting specific dimensions through rows and cols properties or through width styling.
+- **[Floating Label](https://react.syncfusion.com/react-ui/textarea/#float-label):** Implement floating label functionality using the `labelMode` property with modes `Never`, `Auto`, and `Always` for improved form usability.
 
-- **Controlled and uncontrolled modes:** Supports both controlled mode (using the `value` prop) and uncontrolled mode (using the `defaultValue` prop) to accommodate different state management approaches.
+- **[Character Constraints](https://react.syncfusion.com/react-ui/textarea/#maximum-length):** Set input limits using `rows`, `cols`, and `maxLength` properties to control textarea dimensions and character count.
+
+- **[Helper Text and Adornments](https://react.syncfusion.com/react-ui/textarea/#helper-text):** Support for `helperText` to display contextual messages, with `helperTextDirection` alignment options and `prefix`/`suffix` properties for visual enhancements.
+
+- **[Form Support](https://react.syncfusion.com/react-ui/textarea/#form-support):** Integrates seamlessly with the `Form` component for validation and state management, driven by the `value`, `defaultValue`, and `onChange` properties.
 
 **Usage**
 
@@ -125,33 +176,47 @@ import { TextArea } from '@syncfusion/react-inputs';
 
 export default function App() {
   return (
-    <TextArea defaultValue="Initial text" placeholder="Enter text" rows={5} cols={40} />
+    <TextArea
+      defaultValue="Enter your feedback..."
+      placeholder="Share your thoughts"
+      rows={5}
+      cols={40}
+      variant="Outlined"
+      labelMode="Auto"
+      maxLength={500}
+      helperText="Maximum 500 characters"
+      autoResize={true}
+    />
   );
 }
 ```
 
 **Resources**
 
-- [TextArea Demo/Docs](https://react.syncfusion.com/react-ui/textarea)
-- [TextArea API](https://react.syncfusion.com/api/textarea/overview)
+- [TextArea Demo/Docs](https://react.syncfusion.com/react-ui/textarea/)
+- [TextArea API](https://react.syncfusion.com/api/textarea/overview/)
 
 ## React TextBox
 
-The TextBox component provides a feature-rich input field for collecting user text input with enhanced styling options and validation states. It supports both controlled and uncontrolled input modes to fit various application requirements.
+The TextBox component provides a feature-rich input field for collecting user text input with enhanced styling options and validation states.
 
-**Key features**
+### Key Features
 
-- **Variants:** Offers multiple visual styles including Standard, Outlined, and Filled variants to match your application's design language.
+- **[Variants](https://react.syncfusion.com/react-ui/textbox/#variants):** Three distinct visual styles using the `variant` property: `Standard` (default), `Outlined`, and `Filled` to match application design language.
 
-- **Sizes:** Provides size options (Small and Medium) to control the component's dimensions for different UI contexts.
+- **[Size Options](https://react.syncfusion.com/react-ui/textbox/#sizes):** Control dimensions using the `size` property with options `Small`, `Medium` (default), and `Large` for different UI contexts.
 
-- **Color:** Supports different color schemes including Success, Warning, and Error to visually communicate validation states.
+- **[Validation Color States](https://react.syncfusion.com/react-ui/textbox/#color):** Visually communicate validation states using the `color` property with options `Success`, `Warning`, and `Error` for user feedback.
 
-- **LabelMode:** Implements floating label functionality with configurable behavior modes to enhance form usability.
+- **[Prefix and Suffix Adornments](https://react.syncfusion.com/react-ui/textbox/#adornments):** Add custom icons or elements at the beginning or end of the input using `prefix` and `suffix` properties for enhanced visual cues.
 
-- **Prefix and suffix:** Supports adding custom icons at the beginning or end of the input field for enhanced visual cues.
+- **[Floating Label](https://react.syncfusion.com/react-ui/textbox/#float-label):** Implement floating label functionality using the `labelMode` property with modes `Never`, `Auto`, and `Always` for improved form usability.
 
-- **Controlled and uncontrolled modes:** Supports both controlled mode (using the `value` prop) and uncontrolled mode (using the `defaultValue` prop) to accommodate different state management approaches.
+- **[Helper Text](https://react.syncfusion.com/react-ui/textbox/#helper-text):** Display contextual messages using `helperText` property with `helperTextDirection` alignment and `helperTextOnFocus` visibility control.
+
+- **[Adaptive Rendering](https://react.syncfusion.com/react-ui/textbox/#adaptive-rendering):** Provide context-sensitive behavior through the native `type` attribute, supporting `text`, `password`, `email`, and other HTML input types.
+
+- **[Form Support](https://react.syncfusion.com/react-ui/textbox/#form-support):** Integrates seamlessly with the `Form` component for validation and state management, driven by the `value`, `defaultValue`, and `onChange` properties.
 
 **Usage**
 
@@ -160,31 +225,47 @@ import { TextBox } from "@syncfusion/react-inputs";
 
 export default function App() {
   return (
-    <TextBox defaultValue="Initial text" placeholder="Enter text" />
+    <TextBox
+      placeholder="Enter your name"
+      defaultValue=""
+      variant="Outlined"
+      size="Medium"
+      labelMode="Auto"
+      helperText="Full name required"
+      color="Success"
+    />
   );
 }
 ```
 
 **Resources**
 
-- [TextBox Demo/Docs](https://react.syncfusion.com/react-ui/textbox)
-- [TextBox API](https://react.syncfusion.com/api/textbox/overview)
+- [TextBox Demo/Docs](https://react.syncfusion.com/react-ui/textbox/)
+- [TextBox API](https://react.syncfusion.com/api/textbox/overview/)
 
 ## React FileUpload
 
-The FileUpload component enables users to select and upload files or folders to a server with support for drag-and-drop, validation, chunk upload. It supports both single and multiple file, and exposes a flexible composition API for customizing, drop hint, file list, and action buttons.
+The FileUpload component enables users to select and upload files to a server with support for drag-and-drop, validation, chunk upload, and various file selection modes.
 
-**Key features**
+### Key Features
 
-- **Drag-and-drop:** Supports native drag-and-drop file selection and the optional use of an external element as the drop target through the `dropArea` ref.
+- **[Drag-and-Drop](https://react.syncfusion.com/react-ui/file-upload/#drag-and-drop):** Support native drag-and-drop file selection via the `dragDropEnabled` property (default `true`), with optional custom drop target through the `dropArea` ref.
 
-- **File validation:** Built-in validation for accepted file types, minimum and maximum file size, minimum and maximum file count, and duplicate detection, surfaced through the `onValidationError` event.
+- **[File Validation](https://react.syncfusion.com/react-ui/file-upload/#validations):** Built-in validation using `accept` for file types, `maxFileSize` and `minFileSize` for size limits, and `maxFiles` for file count restrictions, surfaced through the `onValidationError` event.
 
-- **Auto and manual upload:** Upload files immediately on selection with `autoUpload`, or queue them for manual upload via the provided `Upload` action.
+- **[Upload Modes](https://react.syncfusion.com/react-ui/file-upload/#upload-types):** Support for single file upload via `multiple` property, directory upload via `directory` property, and sequential upload via `sequential` property for controlled processing.
 
-- **Chunk upload:** Split large files into configurable chunk sizes for resilient, resumable uploads, with per-chunk pause, resume, and cancel controls.
+- **[Chunk Upload](https://react.syncfusion.com/react-ui/file-upload/#chunk-upload):** Split large files into configurable chunks using `chunkSize` property for resilient, resumable uploads with per-chunk pause, resume, and cancel controls.
 
-- **Composition API:** Customize the UI with compound children — `<BrowseButton>`, `<DragHint>`, `<FileList>`, and `<Actions>` — to tailor the trigger, hint, list, and action buttons.
+- **[Auto Upload](https://react.syncfusion.com/react-ui/file-upload/#auto-upload):** Upload files immediately on selection by setting `autoUpload` to `true`, or queue files for manual upload via action buttons.
+
+- **[Composition API](https://react.syncfusion.com/react-ui/file-upload/#fileupload-layout):** Customize UI with compound children—`BrowseButton`, `DragHint`, `FileList`, and `Actions`—to tailor trigger, hint, list, and action buttons.
+
+- **[Custom File List](https://react.syncfusion.com/react-ui/file-upload/#file-list):** Render each file with a custom template by passing a function-as-child to `FileList`, which receives the current `FileItem` plus a `helpers` bundle for per-row `retry`, `cancel`, `remove`, `pause`, and `resume` actions.
+
+- **[Preloaded Files](https://react.syncfusion.com/react-ui/file-upload/#preload-files):** Display already-uploaded files or initial file data using the `defaultFiles` property, useful when editing existing records.
+
+- **[Form Support](https://react.syncfusion.com/react-ui/file-upload/#form-support):** Integrates seamlessly with the `Form` component to include file uploads within a validated form submission.
 
 **Usage**
 
@@ -196,8 +277,12 @@ export default function App() {
     <FileUpload
       saveUrl="https://services.syncfusion.com/react/production/api/FileUploader/Save"
       removeUrl="https://services.syncfusion.com/react/production/api/FileUploader/Remove"
+      accept=".pdf,.doc,.docx"
+      maxFileSize={5242880}
+      multiple={true}
+      autoUpload={false}
     >
-      <BrowseButton>Select files</BrowseButton>
+      <BrowseButton>Select Files</BrowseButton>
       <DragHint>Or drag and drop files here</DragHint>
       <Actions>
         <UploadButton />
@@ -210,13 +295,13 @@ export default function App() {
 
 **Resources**
 
-- [FileUpload Demo/Docs](https://react.syncfusion.com/react-ui/file-upload)
-- [FileUpload API](https://react.syncfusion.com/api/file-upload/overview)
+- [FileUpload Demo/Docs](https://react.syncfusion.com/react-ui/file-upload/)
+- [FileUpload API](https://react.syncfusion.com/api/file-upload/overview/)
 
 <p align="center">
 Trusted by the world's leading companies
   <a href="https://www.syncfusion.com/">
-    <img src="https://raw.githubusercontent.com/SyncfusionExamples/nuget-img/master/syncfusion/syncfusion-trusted-companies.webp" alt="Syncfusion logo">
+    <img src="https://raw.githubusercontent.com/SyncfusionExamples/nuget-img/master/syncfusion/syncfusion-trusted-companies.webp" alt="Company logo">
   </a>
 </p>
 
