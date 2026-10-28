@@ -4,7 +4,7 @@ Syncfusion React UI Components library has been built from the ground up to be l
 
 > This is a commercial product requiring a paid license for possession or use. Syncfusion's licensed software, including this library, is governed by the terms and conditions of Syncfusion's [EULA](https://www.syncfusion.com/eula/es/). To acquire a license for [React UI Components](https://www.syncfusion.com/react-components), you can [purchase one](https://www.syncfusion.com/sales/products) or [start a free 30-day trial](https://www.syncfusion.com/account/manage-trials/start-trials).
 
-> A [free community license](https://www.syncfusion.com/products/communitylicense) is available for companies and individuals with less than $1 million USD in annual gross revenue and five or fewer developers.
+> A [free community license](https://www.syncfusion.com/products/communitylicense) is available for companies and individuals with less than $1M revenue, 5 or fewer devs, 10 or fewer employees, never greater than $3M outside capital.
 
 For additional licensing details, refer to the [LICENSE FILE](https://github.com/syncfusion/react-ui-components/blob/master/license?utm_source=npm&utm_campaign=notification).
 
@@ -566,6 +566,6 @@ The library is designed with performance in mind, minimizing renders, optimizing
 Check the license detail [here](https://github.com/syncfusion/react-ui-components/blob/master/license).
 
 ## Changelog
-Check the changelog [here](https://react.syncfusion.com/api/release-notes/32-1-19/). 
+Check the changelog [here](https://react.syncfusion.com/api/release-notes/35-1-39/). 
 
-&copy; Copyright 2026 Syncfusion, Inc. All Rights Reserved. The Syncfusion Essential Studio license and copyright applies to this distribution.
+&copy; Copyright 2026 Syncfusion, Inc. All Rights Reserved. The Syncfusion UI Component Suite license and copyright applies to this distribution.
